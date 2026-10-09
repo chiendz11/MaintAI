@@ -1,0 +1,79 @@
+name: MaintAI CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  structure:
+    name: Repository structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Check component folders
+        run: |
+          test -f README.md
+          for component in sensor backend frontend ml-service rag-service; do
+            test -d "$component"
+            printf 'Found %s/\n' "$component"
+          done
+
+      - name: Report skeleton status
+        run: |
+          printf '%s\n' \
+            '## MaintAI CI skeleton' \
+            'Repository structure checked.' \
+            'Component lint/test/build jobs are disabled until code and commands are added.' \
+            >> "$GITHUB_STEP_SUMMARY"
+
+  component-ci:
+    name: Component CI (${{ matrix.component }})
+    needs: structure
+    # TODO: Add real CI steps, then set repository variable ENABLE_COMPONENT_CI=true.
+    if: ${{ vars.ENABLE_COMPONENT_CI == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        component:
+          - sensor
+          - backend
+          - frontend
+          - ml-service
+          - rag-service
+    defaults:
+      run:
+        working-directory: ${{ matrix.component }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      # TODO: Set up the runtime and cache after the component stack is chosen.
+      # TODO: Install dependencies using the component's lockfile.
+      # TODO: Run lint.
+      # TODO: Run tests.
+      # TODO: Build and upload artifacts if this component needs them.
+      - name: Component CI not configured
+        run: |
+          printf '%s\n' 'Replace this placeholder with real CI steps before enabling this job.'
+          exit 1

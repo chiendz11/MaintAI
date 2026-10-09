@@ -56,3 +56,9 @@ tài liệu, tạo giải thích/khuyến nghị và kiểm tra citations; Postg
 là đích lưu trữ theo kiến trúc trong chat.
 
 GitOps và hạ tầng sẽ nằm ở hai repo riêng do bạn tạo.
+
+## CI skeleton
+
+GitHub Actions nằm ở [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+Hiện CI kiểm tra cấu trúc repo; matrix cho 5 component đã được chừa sẵn và tắt
+đến khi có lệnh lint/test/build thật. Xem [hướng dẫn CI](.github/README.md).
