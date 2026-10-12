@@ -30,7 +30,7 @@ jobs:
       - name: Check component folders
         run: |
           test -f README.md
-          for component in sensor backend frontend ml-service rag-service; do
+          for component in sensor backend frontend ml-service rag-service drift-worker; do
             test -d "$component"
             printf 'Found %s/\n' "$component"
           done
@@ -59,6 +59,7 @@ jobs:
           - frontend
           - ml-service
           - rag-service
+          - drift-worker
     defaults:
       run:
         working-directory: ${{ matrix.component }}

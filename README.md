@@ -35,14 +35,20 @@ MaintAI/
 │   ├── model/
 │   ├── prediction/
 │   └── artifacts/
-└── rag-service/
-    ├── query-builder/
-    ├── metadata-filter/
-    ├── vector-retriever/
-    ├── prompt-builder/
-    ├── llm-generator/
-    ├── citation-validator/
-    └── knowledge/
+├── rag-service/
+│   ├── query-builder/
+│   ├── metadata-filter/
+│   ├── vector-retriever/
+│   ├── prompt-builder/
+│   ├── llm-generator/
+│   ├── citation-validator/
+│   └── knowledge/
+└── drift-worker/
+    ├── src/
+    │   └── drift_monitor/
+    └── tests/
+        ├── unit/
+        └── integration/
 ```
 
 Sensor gửi readings tới backend. Backend kiểm tra chất lượng dữ liệu, gọi ML,
@@ -55,10 +61,15 @@ backend. ML phụ trách preprocessing và prediction. RAG/LLM phụ trách retr
 tài liệu, tạo giải thích/khuyến nghị và kiểm tra citations; PostgreSQL/pgvector
 là đích lưu trữ theo kiến trúc trong chat.
 
+Theo [chat bổ sung drift worker](https://chatgpt.com/s/t_6accf009315081918266e3664cba5a6d),
+`drift-worker/` là workload độc lập chạy định kỳ: đọc reference theo model version,
+đọc cửa sổ sensor readings hợp lệ từ database, phát hiện drift rồi lưu report và
+checkpoint cho monitoring. Xem [skeleton Drift Worker](drift-worker/README.md).
+
 GitOps và hạ tầng sẽ nằm ở hai repo riêng do bạn tạo.
 
 ## CI skeleton
 
 GitHub Actions nằm ở [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
-Hiện CI kiểm tra cấu trúc repo; matrix cho 5 component đã được chừa sẵn và tắt
+Hiện CI kiểm tra cấu trúc repo; matrix cho 6 component đã được chừa sẵn và tắt
 đến khi có lệnh lint/test/build thật. Xem [hướng dẫn CI](.github/README.md).
