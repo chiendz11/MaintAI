@@ -1,0 +1,5 @@
+name: normal
+seed: 42
+phases:
+  - name: baseline
+    events: 10000

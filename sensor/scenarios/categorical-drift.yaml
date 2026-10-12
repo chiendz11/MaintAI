@@ -1,0 +1,14 @@
+name: categorical-product-mix-drift
+seed: 42
+phases:
+  - name: baseline
+    events: 300
+  - name: categorical-drift
+    events: 700
+    transforms:
+      product_type:
+        type: categorical_mix
+        probabilities:
+          L: 0.05
+          M: 0.15
+          H: 0.80

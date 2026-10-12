@@ -40,8 +40,70 @@ jobs:
           printf '%s\n' \
             '## MaintAI CI skeleton' \
             'Repository structure checked.' \
-            'Component lint/test/build jobs are disabled until code and commands are added.' \
+            'Sensor CI runs lint/tests/build; other component jobs remain disabled.' \
             >> "$GITHUB_STEP_SUMMARY"
+
+  sensor-ci:
+    name: Sensor CI (Python ${{ matrix.python }})
+    needs: structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.12']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: sensor/requirements-dev.lock
+
+      - name: Install locked dependencies
+        run: |
+          python -m pip install -r sensor/requirements-dev.lock
+          python -m pip install --no-deps -e ./sensor
+
+      - name: Lint and format
+        run: |
+          ruff check sensor
+          ruff format --check sensor
+
+      - name: Unit, contract and mock HTTP integration tests
+        run: python -m pytest sensor/tests --cov=simulator --cov-report=term-missing
+
+      - name: Build Python distribution
+        run: python -m build sensor
+
+      - name: Audit runtime dependencies
+        if: matrix.python == '3.12'
+        run: pip-audit --disable-pip --no-deps -r sensor/requirements.lock
+
+  sensor-container:
+    name: Sensor container smoke test
+    needs: sensor-ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Build sensor image
+        run: docker build --tag maintai-sensor:ci sensor
+
+      - name: Run offline container smoke test
+        run: |
+          docker run --rm --network none \
+            --volume "$PWD/sensor/tests/fixtures/ai4i_sample.csv:/app/data/ai4i2020.csv:ro" \
+            maintai-sensor:ci replay --dry-run --limit 2
 
   component-ci:
     name: Component CI (${{ matrix.component }})
@@ -54,7 +116,6 @@ jobs:
       fail-fast: false
       matrix:
         component:
-          - sensor
           - backend
           - frontend
           - ml-service

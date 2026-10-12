@@ -1,15 +1,20 @@
 # MaintAI
 
 Skeleton thư mục theo [kiến trúc đã trao đổi](https://chatgpt.com/s/t_6ac8527fa2c081918c64c8929c655dee).
-Chưa chọn framework, chưa có code, dependency hay cấu hình triển khai.
-Các file `.gitkeep` giúp Git lưu được thư mục trống.
+`sensor/` đã có implementation Python theo Implementation Development Guide và
+System Contracts v1.1 DRIFT. Các component khác vẫn là skeleton; `.gitkeep`
+giúp Git lưu thư mục trống. GitOps và hạ tầng được quản lý ở hai repo riêng.
 
 ```text
 MaintAI/
 ├── sensor/
-│   ├── simulator/
+│   ├── src/simulator/
+│   ├── data/
 │   ├── scenarios/
-│   └── config/
+│   ├── tests/
+│   ├── Dockerfile
+│   ├── pyproject.toml
+│   └── README.md
 ├── backend/
 │   ├── api/
 │   ├── sensor-ingestion/
@@ -51,6 +56,17 @@ MaintAI/
         └── integration/
 ```
 
+JSON schema dùng chung cho sensor nằm trong `contracts/sensor-event.schema.json`.
+Xem [hướng dẫn sensor](sensor/README.md) để cài đặt, tải AI4I và replay:
+
+```bash
+python3.12 -m venv .venv
+.venv/bin/python -m pip install -r sensor/requirements-dev.lock
+.venv/bin/python -m pip install --no-deps -e ./sensor
+.venv/bin/maintai-sensor download-data
+.venv/bin/maintai-sensor replay --dry-run --limit 3
+```
+
 Sensor gửi readings tới backend. Backend kiểm tra chất lượng dữ liệu, gọi ML,
 quyết định risk rồi tạo/quản lý alert. Dữ liệu invalid được lưu cùng lỗi chất
 lượng và không gọi ML. Backend gọi RAG/LLM để giải thích cảnh báo HIGH/CRITICAL;
@@ -71,5 +87,6 @@ GitOps và hạ tầng sẽ nằm ở hai repo riêng do bạn tạo.
 ## CI skeleton
 
 GitHub Actions nằm ở [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
-Hiện CI kiểm tra cấu trúc repo; matrix cho 6 component đã được chừa sẵn và tắt
-đến khi có lệnh lint/test/build thật. Xem [hướng dẫn CI](.github/README.md).
+CI kiểm tra cấu trúc 6 component. Sensor có CI thật: lint/format, tests,
+build Python distribution, dependency audit và container smoke test. Matrix cho
+5 component còn lại đang tắt. Xem [hướng dẫn CI](.github/README.md).

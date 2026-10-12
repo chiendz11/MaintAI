@@ -1,0 +1,6 @@
+UDI,Product ID,Type,Air temperature [K],Process temperature [K],Rotational speed [rpm],Torque [Nm],Tool wear [min],Machine failure,TWF,HDF,PWF,OSF,RNF
+1,L47196,L,298.1,308.6,1551,42.8,0,0,0,0,0,0,0
+2,L47197,L,298.2,308.7,1408,46.3,3,0,0,0,0,0,0
+3,L47198,M,298.1,308.5,1498,49.4,5,0,0,0,0,0,0
+4,L47199,L,298.2,308.6,1433,39.5,7,0,0,0,0,0,0
+5,L47200,H,298.2,308.7,1408,40.0,9,1,1,0,0,0,0

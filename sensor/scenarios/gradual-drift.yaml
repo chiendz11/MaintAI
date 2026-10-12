@@ -1,0 +1,16 @@
+name: gradual-torque-drift
+seed: 42
+phases:
+  - name: baseline
+    events: 300
+  - name: gradual-drift
+    events: 700
+    transforms:
+      torque_nm:
+        type: linear_shift
+        start_delta: 0
+        end_delta: 8
+      rotational_speed_rpm:
+        type: linear_scale
+        start_factor: 1.0
+        end_factor: 0.93
