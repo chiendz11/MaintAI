@@ -1,8 +1,8 @@
 # MaintAI
 
 Skeleton thư mục theo [kiến trúc đã trao đổi](https://chatgpt.com/s/t_6ac8527fa2c081918c64c8929c655dee).
-`sensor/` đã có implementation Python theo Implementation Development Guide và
-System Contracts v1.1 DRIFT. Các component khác vẫn là skeleton; `.gitkeep`
+`sensor/` và `drift-worker/` đã có implementation Python theo Implementation
+Development Guide và System Contracts v1.1 DRIFT. Các component khác vẫn là skeleton; `.gitkeep`
 giúp Git lưu thư mục trống. GitOps và hạ tầng được quản lý ở hai repo riêng.
 
 ```text
@@ -80,13 +80,16 @@ là đích lưu trữ theo kiến trúc trong chat.
 Theo [chat bổ sung drift worker](https://chatgpt.com/s/t_6accf009315081918266e3664cba5a6d),
 `drift-worker/` là workload độc lập chạy định kỳ: đọc reference theo model version,
 đọc cửa sổ sensor readings hợp lệ từ database, phát hiện drift rồi lưu report và
-checkpoint cho monitoring. Xem [skeleton Drift Worker](drift-worker/README.md).
+checkpoint cho monitoring. Xem [hướng dẫn Drift Worker](drift-worker/README.md)
+để cấu hình reference, database, Pushgateway và kiểm tra cùng sensor.
 
 GitOps và hạ tầng sẽ nằm ở hai repo riêng do bạn tạo.
 
-## CI skeleton
+## CI
 
 GitHub Actions nằm ở [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 CI kiểm tra cấu trúc 6 component. Sensor có CI thật: lint/format, tests,
-build Python distribution, dependency audit và container smoke test. Matrix cho
-5 component còn lại đang tắt. Xem [hướng dẫn CI](.github/README.md).
+build Python distribution, dependency audit và container smoke test. Drift Worker
+có lint/format, tests với PostgreSQL thật, build/audit và integration container cùng
+sensor/Pushgateway. Matrix cho 4 component còn lại đang tắt.
+Xem [hướng dẫn CI](.github/README.md).

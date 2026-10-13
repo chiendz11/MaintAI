@@ -1,0 +1,208 @@
+{
+  "$defs": {
+    "CategoricalProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "categorical",
+          "title": "Type",
+          "type": "string"
+        },
+        "metric": {
+          "const": "PSI",
+          "default": "PSI",
+          "title": "Metric",
+          "type": "string"
+        },
+        "categories": {
+          "items": {
+            "enum": [
+              "L",
+              "M",
+              "H"
+            ],
+            "type": "string"
+          },
+          "title": "Categories",
+          "type": "array"
+        },
+        "probabilities": {
+          "items": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          "title": "Probabilities",
+          "type": "array"
+        }
+      },
+      "required": [
+        "type",
+        "categories",
+        "probabilities"
+      ],
+      "title": "CategoricalProfile",
+      "type": "object"
+    },
+    "NumericProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "numeric",
+          "title": "Type",
+          "type": "string"
+        },
+        "metric": {
+          "const": "PSI",
+          "default": "PSI",
+          "title": "Metric",
+          "type": "string"
+        },
+        "bins": {
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "title": "Bins",
+          "type": "array"
+        },
+        "probabilities": {
+          "items": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          "title": "Probabilities",
+          "type": "array"
+        }
+      },
+      "required": [
+        "type",
+        "bins",
+        "probabilities"
+      ],
+      "title": "NumericProfile",
+      "type": "object"
+    },
+    "PredictionReference": {
+      "additionalProperties": false,
+      "properties": {
+        "failure_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Failure Rate",
+          "type": "number"
+        }
+      },
+      "required": [
+        "failure_rate"
+      ],
+      "title": "PredictionReference",
+      "type": "object"
+    },
+    "ReferenceFeatures": {
+      "additionalProperties": false,
+      "properties": {
+        "product_type": {
+          "$ref": "#/$defs/CategoricalProfile"
+        },
+        "air_temperature_k": {
+          "$ref": "#/$defs/NumericProfile"
+        },
+        "process_temperature_k": {
+          "$ref": "#/$defs/NumericProfile"
+        },
+        "rotational_speed_rpm": {
+          "$ref": "#/$defs/NumericProfile"
+        },
+        "torque_nm": {
+          "$ref": "#/$defs/NumericProfile"
+        },
+        "tool_wear_min": {
+          "$ref": "#/$defs/NumericProfile"
+        }
+      },
+      "required": [
+        "product_type",
+        "air_temperature_k",
+        "process_temperature_k",
+        "rotational_speed_rpm",
+        "torque_nm",
+        "tool_wear_min"
+      ],
+      "title": "ReferenceFeatures",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "dataset_version": {
+      "minLength": 1,
+      "title": "Dataset Version",
+      "type": "string"
+    },
+    "model_version": {
+      "minLength": 1,
+      "title": "Model Version",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "sample_count": {
+      "minimum": 1,
+      "title": "Sample Count",
+      "type": "integer"
+    },
+    "features": {
+      "$ref": "#/$defs/ReferenceFeatures"
+    },
+    "prediction_reference": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PredictionReference"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "reference_source": {
+      "anyOf": [
+        {
+          "enum": [
+            "training",
+            "approved_reference",
+            "test_fixture"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reference Source"
+    }
+  },
+  "required": [
+    "dataset_version",
+    "model_version",
+    "created_at",
+    "sample_count",
+    "features"
+  ],
+  "title": "ReferenceProfile",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:maintai:contracts:drift-reference:1.0.0"
+}

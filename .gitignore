@@ -14,3 +14,4 @@ dist/
 !.env.example
 sensor/data/*.csv
 sensor/output/
+drift-worker/output/

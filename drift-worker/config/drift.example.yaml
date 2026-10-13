@@ -1,0 +1,18 @@
+drift:
+  # Replace these with the deployed model and approved reference dataset versions.
+  model_version: fixture-model-v1
+  dataset_version: fixture-ai4i-v1
+  reference_path: ../output/drift_reference.json
+  detector_version: drift-worker-1.0.0
+  window_size: 500
+  minimum_samples: 200
+  numeric_metric: PSI
+  categorical_metric: PSI
+  psi:
+    warning: 0.10
+    critical: 0.20
+    epsilon: 0.000001
+  aggregation:
+    critical_if_critical_features_gte: 2
+    warning_if_warning_features_gte: 1
+  pushgateway_required: false
