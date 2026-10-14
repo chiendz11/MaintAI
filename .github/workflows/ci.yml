@@ -215,3 +215,42 @@ jobs:
         run: |
           printf '%s\n' 'Replace this placeholder with real CI steps before enabling this job.'
           exit 1
+
+  required:
+    name: CI / required
+    if: ${{ always() }}
+    needs:
+      - structure
+      - sensor-ci
+      - sensor-container
+      - drift-ci
+      - drift-container
+      - component-ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require all enabled CI jobs to succeed
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          COMPONENT_CI_ENABLED: ${{ vars.ENABLE_COMPONENT_CI }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          failures = []
+          for job, info in sorted(json.loads(os.environ["NEEDS_JSON"]).items()):
+              result = info["result"]
+              print(f"{job}: {result}")
+              disabled_placeholder = (
+                  job == "component-ci"
+                  and os.environ["COMPONENT_CI_ENABLED"] != "true"
+                  and result == "skipped"
+              )
+              if result != "success" and not disabled_placeholder:
+                  failures.append(job)
+          if failures:
+              print("CI did not succeed: " + ", ".join(failures), file=sys.stderr)
+              sys.exit(1)
+          PY

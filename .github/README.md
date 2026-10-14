@@ -16,6 +16,10 @@ Workflow: [workflows/ci.yml](workflows/ci.yml), theo
 - Job `component-ci` dùng matrix cho `backend`, `frontend`,
   `ml-service`, `rag-service`; chỉ bật khi repository variable
   `ENABLE_COMPONENT_CI` có giá trị `true` (hiện chưa được đặt).
+- Job `required` có tên check cố định `CI / required`, chạy với `always()` và
+  tổng hợp toàn bộ các jobs trên. Job bắt buộc bị fail/cancel/skip đều làm check
+  này thất bại. Chỉ placeholder `component-ci` được phép skip khi chưa bật biến
+  `ENABLE_COMPONENT_CI=true`. Khi thêm CI job mới, thêm nó vào `required.needs`.
 - Quyền workflow là `contents: read`; chưa cần secrets.
 
 Với các component còn lại, thêm setup runtime, cache, install dependencies, lint,
@@ -30,3 +34,22 @@ nghiệp vụ của các component còn lại. Chưa có publish image, cập nh
 Container integration dùng fixture DB ingestion vì backend vẫn còn skeleton.
 Đây chưa phải E2E HTTP ingestion/inference/maintenance với backend production.
 Lịch chạy định kỳ của worker thuộc repo GitOps/hạ tầng, không phải lịch CI.
+
+## Bảo vệ main
+
+Ruleset `protect-main` áp dụng chính xác cho `refs/heads/main`:
+
+- Bắt buộc Pull Request, 0 required approvals và resolve hết review discussions.
+- Check `CI / required` từ GitHub Actions phải thành công; PR phải cập nhật theo
+  `main` trước khi merge (`strict_required_status_checks_policy=true`).
+- Chỉ Squash merge; merge commit và rebase merge bị tắt ở repository settings.
+- Chặn xóa `main` và force push; danh sách bypass rỗng.
+- Không yêu cầu CODEOWNERS approval, latest-push approval hoặc dismiss stale reviews.
+
+Payload cấu hình nằm ở [rulesets/protect-main.json](rulesets/protect-main.json).
+File là bản cấu hình được version bằng Git; trạng thái thực thi nằm trên GitHub,
+không tự đồng bộ chỉ bằng việc sửa JSON trong repository.
+
+```bash
+gh api repos/chiendz11/MaintAI/rules/branches/main
+```
