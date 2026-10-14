@@ -5,8 +5,18 @@ Skeleton thư mục theo [kiến trúc đã trao đổi](https://chatgpt.com/s/t
 Development Guide và System Contracts v1.1 DRIFT. Các component khác vẫn là skeleton; `.gitkeep`
 giúp Git lưu thư mục trống. GitOps và hạ tầng được quản lý ở hai repo riêng.
 
+Tài liệu thiết kế được quản lý trong [docs/](docs/README.md): System Contracts
+v1.1 DRIFT và Implementation Development Guide v1.1 DRIFT. Đọc contract để xác
+định giao tiếp/dữ liệu, rồi đọc hướng dẫn của module trước khi triển khai.
+[AGENTS.md](AGENTS.md) chỉ dẫn coding agent cách đọc và đối chiếu tài liệu.
+
 ```text
 MaintAI/
+├── AGENTS.md
+├── docs/
+│   ├── README.md
+│   ├── MaintAI_System_Contracts_v1_1_DRIFT.md
+│   └── MaintAI_Implementation_Development_Guide_v1_1_DRIFT.md
 ├── sensor/
 │   ├── src/simulator/
 │   ├── data/
