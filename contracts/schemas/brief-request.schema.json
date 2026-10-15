@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Backend-to-RAG MaintenanceBriefRequest (baseline section 13.2)",
+  "type": "object",
+  "properties": {
+    "alert": {
+      "type": "object",
+      "properties": {
+        "alert_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "machine_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "severity": {
+          "$ref": "common.schema.json#/$defs/AlertSeverity"
+        },
+        "status": {
+          "$ref": "common.schema.json#/$defs/AlertStatus"
+        },
+        "risk_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "policy_version": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "alert_id",
+        "machine_id",
+        "severity",
+        "status",
+        "risk_score",
+        "policy_version"
+      ],
+      "additionalProperties": false
+    },
+    "prediction": {
+      "type": "object",
+      "properties": {
+        "prediction_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prediction": {
+          "$ref": "common.schema.json#/$defs/PredictionLabel"
+        },
+        "failure_probability": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "model_version": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "prediction_id",
+        "prediction",
+        "failure_probability",
+        "model_version"
+      ],
+      "additionalProperties": false
+    },
+    "sensor_context": {
+      "$ref": "../sensor-event.schema.json#/$defs/Features"
+    },
+    "intent": {
+      "$ref": "common.schema.json#/$defs/Intent"
+    }
+  },
+  "required": [
+    "alert",
+    "prediction",
+    "sensor_context",
+    "intent"
+  ],
+  "additionalProperties": false
+}

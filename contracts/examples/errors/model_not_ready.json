@@ -1,0 +1,10 @@
+{
+  "error": {
+    "code": "MODEL_NOT_READY",
+    "message": "Model not ready",
+    "retryable": true,
+    "details": {},
+    "request_id": "req_001",
+    "correlation_id": "cor_001"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "status": "DEGRADED",
+  "observed_at": "2026-10-15T04:30:15Z",
+  "services": {
+    "backend": {
+      "status": "AVAILABLE",
+      "message": "Ready"
+    },
+    "ml": {
+      "status": "AVAILABLE",
+      "message": "Ready"
+    },
+    "rag": {
+      "status": "AVAILABLE",
+      "message": "Ready"
+    }
+  },
+  "drift": {
+    "worker_status": "NOT_AVAILABLE",
+    "last_success_at": null,
+    "stale_after_seconds": 900,
+    "latest_report": null
+  }
+}

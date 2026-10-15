@@ -6,6 +6,9 @@ Workflow: [workflows/ci.yml](workflows/ci.yml), theo
 - Chạy khi push hoặc mở/cập nhật pull request; có khai báo `workflow_dispatch`
   để chạy thủ công khi workflow đã có trên default branch.
 - Job `structure` kiểm tra README và 6 folder chính.
+- Job `api-contracts` kiểm tra ba OpenAPI, JSON Schemas, local references, examples
+  và các counterexamples; đối chiếu endpoints/enums với Markdown baseline rồi
+  thử xuất bản OpenAPI bundle độc lập cho viewer/codegen. Không import app service.
 - Job `sensor-ci` chạy trên Python 3.11/3.12: lint/format, unit/contract tests,
   mock HTTP integration, build wheel/sdist; Python 3.12 thêm runtime dependency audit.
 - Job `sensor-container` build image rồi chạy dry-run offline với CSV fixture.

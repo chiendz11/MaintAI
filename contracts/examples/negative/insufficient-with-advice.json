@@ -1,0 +1,21 @@
+{
+  "brief_id": "brf_002",
+  "alert_id": "alt_001",
+  "grounded_status": "INSUFFICIENT_EVIDENCE",
+  "summary": "Không đủ bằng chứng để tạo hướng dẫn có căn cứ.",
+  "uncertainty": "Yêu cầu manual review.",
+  "checklist": [
+    {
+      "step": 1,
+      "action": "Đối chiếu điều kiện torque với manual được truy xuất.",
+      "citation_ids": [
+        "cit_001"
+      ]
+    }
+  ],
+  "citations": [],
+  "retrieval": {
+    "top_k": 5,
+    "retrieved_chunk_ids": []
+  }
+}

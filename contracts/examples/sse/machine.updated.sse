@@ -1,0 +1,4 @@
+event: machine.updated
+id: stream_001
+data: {"machine_id": "M-001", "state": "CRITICAL"}
+

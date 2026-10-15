@@ -1,0 +1,92 @@
+{
+  "schema_version": "1.0.0",
+  "dataset_version": "fixture-ai4i-v1",
+  "model_version": "fixture-model-v1",
+  "created_at": "2026-10-15T04:30:15Z",
+  "sample_count": 1000,
+  "features": {
+    "air_temperature_k": {
+      "type": "numeric",
+      "metric": "PSI",
+      "bins": [
+        295.0,
+        300.0,
+        305.0
+      ],
+      "probabilities": [
+        0.5,
+        0.5
+      ]
+    },
+    "process_temperature_k": {
+      "type": "numeric",
+      "metric": "PSI",
+      "bins": [
+        305.0,
+        310.0,
+        315.0
+      ],
+      "probabilities": [
+        0.5,
+        0.5
+      ]
+    },
+    "rotational_speed_rpm": {
+      "type": "numeric",
+      "metric": "PSI",
+      "bins": [
+        1000.0,
+        1500.0,
+        2000.0
+      ],
+      "probabilities": [
+        0.5,
+        0.5
+      ]
+    },
+    "torque_nm": {
+      "type": "numeric",
+      "metric": "PSI",
+      "bins": [
+        20.0,
+        40.0,
+        60.0
+      ],
+      "probabilities": [
+        0.5,
+        0.5
+      ]
+    },
+    "tool_wear_min": {
+      "type": "numeric",
+      "metric": "PSI",
+      "bins": [
+        0.0,
+        100.0,
+        200.0
+      ],
+      "probabilities": [
+        0.5,
+        0.5
+      ]
+    },
+    "product_type": {
+      "type": "categorical",
+      "metric": "PSI",
+      "categories": [
+        "L",
+        "M",
+        "H"
+      ],
+      "probabilities": [
+        0.6,
+        0.3,
+        0.1
+      ]
+    }
+  },
+  "prediction_reference": {
+    "failure_rate": 0.1
+  },
+  "reference_source": "test_fixture"
+}

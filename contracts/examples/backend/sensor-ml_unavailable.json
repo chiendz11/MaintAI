@@ -1,0 +1,18 @@
+{
+  "error": {
+    "code": "ML_UNAVAILABLE",
+    "message": "Ml unavailable",
+    "retryable": true,
+    "details": {},
+    "request_id": "req_001",
+    "correlation_id": "cor_001"
+  },
+  "event_id": "evt_001",
+  "machine_id": "M-001",
+  "validation_status": "VALID",
+  "processing_status": "DEPENDENCY_FAILED",
+  "machine_state": "UNKNOWN",
+  "prediction_id": null,
+  "alert_id": null,
+  "correlation_id": "cor_001"
+}

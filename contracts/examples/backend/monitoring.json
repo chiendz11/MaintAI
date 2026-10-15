@@ -1,0 +1,30 @@
+{
+  "status": "AVAILABLE",
+  "observed_at": "2026-10-15T04:30:15Z",
+  "services": {
+    "backend": {
+      "status": "AVAILABLE",
+      "message": "Ready"
+    },
+    "ml": {
+      "status": "AVAILABLE",
+      "message": "Ready"
+    },
+    "rag": {
+      "status": "AVAILABLE",
+      "message": "Ready"
+    }
+  },
+  "drift": {
+    "worker_status": "FRESH",
+    "last_success_at": "2026-10-15T04:30:15Z",
+    "stale_after_seconds": 900,
+    "latest_report": {
+      "report_id": "drift_fixture_stable",
+      "computed_at": "2026-10-15T04:30:15Z",
+      "overall_status": "STABLE",
+      "window_end_at": "2026-10-15T04:30:15Z",
+      "model_version": "fixture-model-v1"
+    }
+  }
+}

@@ -1,0 +1,5 @@
+# Tooling for machine-readable API contracts; no application imports required.
+PyYAML>=6.0,<7
+jsonschema[format-nongpl]>=4.26,<5
+referencing>=0.37,<1
+openapi-spec-validator>=0.7,<1

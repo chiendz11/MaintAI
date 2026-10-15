@@ -1,0 +1,4 @@
+event: service.degraded
+id: stream_001
+data: {"service": "rag-service", "status": "UNAVAILABLE", "message": "Copilot unavailable; alerts remain independent."}
+

@@ -1,0 +1,16 @@
+{
+  "event_id": "evt_invalid",
+  "machine_id": "M-001",
+  "validation_status": "INVALID",
+  "machine_state": "INVALID",
+  "errors": [
+    {
+      "field": "features.rotational_speed_rpm",
+      "code": "INVALID_TYPE",
+      "message": "rotational_speed_rpm must be numeric"
+    }
+  ],
+  "prediction_id": null,
+  "alert_id": null,
+  "correlation_id": "cor_invalid"
+}
