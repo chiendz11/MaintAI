@@ -1,0 +1,10 @@
+{
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "Forbidden",
+    "retryable": false,
+    "details": {},
+    "request_id": "req_001",
+    "correlation_id": "cor_001"
+  }
+}

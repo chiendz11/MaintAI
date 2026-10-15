@@ -1,0 +1,8 @@
+{
+  "status": "DEGRADED",
+  "checks": {
+    "database": false,
+    "vector_store": false,
+    "llm_provider": false
+  }
+}

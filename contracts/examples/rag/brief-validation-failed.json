@@ -1,0 +1,13 @@
+{
+  "brief_id": "brf_003",
+  "alert_id": "alt_001",
+  "grounded_status": "VALIDATION_FAILED",
+  "summary": "Citation validation failed; no actionable advice returned.",
+  "uncertainty": "Yêu cầu manual review.",
+  "checklist": [],
+  "citations": [],
+  "retrieval": {
+    "top_k": 5,
+    "retrieved_chunk_ids": []
+  }
+}

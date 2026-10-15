@@ -1,0 +1,6 @@
+{
+  "status": "UP",
+  "checks": {
+    "model_loaded": false
+  }
+}

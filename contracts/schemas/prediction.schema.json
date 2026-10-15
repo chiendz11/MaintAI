@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ML PredictionResponse (baseline section 7)",
+  "type": "object",
+  "properties": {
+    "prediction_id": {
+      "$ref": "common.schema.json#/$defs/Identifier"
+    },
+    "event_id": {
+      "$ref": "common.schema.json#/$defs/Identifier"
+    },
+    "prediction": {
+      "$ref": "common.schema.json#/$defs/PredictionLabel"
+    },
+    "failure_probability": {
+      "$ref": "common.schema.json#/$defs/Probability"
+    },
+    "model_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "preprocessor_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model_threshold": {
+      "$ref": "common.schema.json#/$defs/Probability"
+    },
+    "inference_ms": {
+      "type": "number",
+      "minimum": 0
+    },
+    "predicted_at": {
+      "$ref": "common.schema.json#/$defs/Timestamp"
+    }
+  },
+  "required": [
+    "prediction_id",
+    "event_id",
+    "prediction",
+    "failure_probability",
+    "model_version",
+    "preprocessor_version",
+    "model_threshold",
+    "inference_ms",
+    "predicted_at"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "Request": {
+      "type": "object",
+      "properties": {
+        "event_id": {
+          "$ref": "common.schema.json#/$defs/Identifier"
+        },
+        "machine_id": {
+          "$ref": "common.schema.json#/$defs/Identifier"
+        },
+        "features": {
+          "$ref": "../sensor-event.schema.json#/$defs/Features"
+        }
+      },
+      "required": [
+        "event_id",
+        "machine_id",
+        "features"
+      ],
+      "additionalProperties": false
+    },
+    "Snapshot": {
+      "type": "object",
+      "properties": {
+        "prediction_id": {
+          "$ref": "common.schema.json#/$defs/Identifier"
+        },
+        "prediction": {
+          "$ref": "common.schema.json#/$defs/PredictionLabel"
+        },
+        "failure_probability": {
+          "$ref": "common.schema.json#/$defs/Probability"
+        },
+        "model_version": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "prediction_id",
+        "prediction",
+        "failure_probability",
+        "model_version"
+      ],
+      "additionalProperties": false
+    },
+    "AlertSnapshot": {
+      "type": "object",
+      "properties": {
+        "prediction_id": {
+          "$ref": "common.schema.json#/$defs/Identifier"
+        },
+        "prediction": {
+          "$ref": "common.schema.json#/$defs/PredictionLabel"
+        },
+        "failure_probability": {
+          "$ref": "common.schema.json#/$defs/Probability"
+        }
+      },
+      "required": [
+        "prediction_id",
+        "prediction",
+        "failure_probability"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

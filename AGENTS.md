@@ -15,6 +15,9 @@ Trước khi triển khai hoặc thay đổi một module:
    `docs/MaintAI_Implementation_Development_Guide_v1_1_DRIFT.md`.
 4. Xem JSON Schemas liên quan trong `contracts/`; kiểm tra cả provider và consumer
    của interface trước khi sửa payload hoặc semantics.
+5. Với HTTP API, đọc `contracts/README.md`, OpenAPI tương ứng và
+   `docs/api-contract-decisions.md`. Phụ lục bổ sung chi tiết baseline chưa chốt;
+   không dùng phụ lục để ghi đè invariants đã có trong System Contracts.
 
 Với thay đổi chỉ về tài liệu/CI, đọc phần đặc tả liên quan đến thay đổi; không
 cần triển khai module hoặc chạy toàn bộ app tests chỉ vì tài liệu có checklist.
@@ -56,6 +59,9 @@ cần triển khai module hoặc chạy toàn bộ app tests chỉ vì tài li�
   liên quan; không cập nhật schema để hợp thức hóa một thay đổi trái contract.
 - Chạy kiểm tra phù hợp với thay đổi và yêu cầu hiện tại. Với sensor/drift, dùng
   lệnh trong README component và jobs tương ứng ở `.github/workflows/ci.yml`.
+- Với thay đổi API docs/schemas/examples, chạy `python contracts/validate.py` bằng
+  environment đã cài `contracts/requirements.lock`; giữ job `api-contracts` trong
+  `CI / required`. Schema/docs validation không thay thế consumer/provider tests.
 - Phân biệt unit/contract tests, mock/fixture integration, DB/container tests và
   production validation. Báo rõ kiểm tra đã chạy, đã skip và giới hạn còn lại.
 - Nếu Docker chưa chạy, không coi container tests là đã pass local. Có thể dùng

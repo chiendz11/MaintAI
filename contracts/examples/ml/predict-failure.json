@@ -1,0 +1,11 @@
+{
+  "prediction_id": "pred_001",
+  "event_id": "evt_001",
+  "prediction": "FAILURE",
+  "failure_probability": 0.91,
+  "model_version": "maintai-ml-1.0.0",
+  "preprocessor_version": "maintai-preprocessor-1.0.0",
+  "model_threshold": 0.63,
+  "inference_ms": 18,
+  "predicted_at": "2026-10-15T04:30:15Z"
+}

@@ -9,6 +9,9 @@ Tài liệu thiết kế được quản lý trong [docs/](docs/README.md): Syst
 v1.1 DRIFT và Implementation Development Guide v1.1 DRIFT. Đọc contract để xác
 định giao tiếp/dữ liệu, rồi đọc hướng dẫn của module trước khi triển khai.
 [AGENTS.md](AGENTS.md) chỉ dẫn coding agent cách đọc và đối chiếu tài liệu.
+Ba [OpenAPI và examples](contracts/README.md) mô tả chi tiết API backend, ML,
+RAG; [phụ lục HTTP](docs/api-contract-decisions.md) ghi các quyết định hoàn thiện
+những phần baseline chưa đủ chi tiết, bao gồm HTTP status và trạng thái UI.
 
 ```text
 MaintAI/
@@ -102,4 +105,6 @@ CI kiểm tra cấu trúc 6 component. Sensor có CI thật: lint/format, tests,
 build Python distribution, dependency audit và container smoke test. Drift Worker
 có lint/format, tests với PostgreSQL thật, build/audit và integration container cùng
 sensor/Pushgateway. Matrix cho 4 component còn lại đang tắt.
+Job API contracts kiểm tra OpenAPI, schemas và examples; kết quả được tổng hợp
+trong check bắt buộc `CI / required`.
 Xem [hướng dẫn CI](.github/README.md).

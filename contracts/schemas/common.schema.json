@@ -1,0 +1,253 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Shared wire types and error envelope",
+  "$defs": {
+    "Identifier": {
+      "type": "string",
+      "minLength": 1
+    },
+    "Timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "Probability": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "MachineState": {
+      "type": "string",
+      "enum": [
+        "NORMAL",
+        "WATCH",
+        "HIGH",
+        "CRITICAL",
+        "INVALID",
+        "UNKNOWN"
+      ]
+    },
+    "ValidationStatus": {
+      "type": "string",
+      "enum": [
+        "VALID",
+        "INVALID"
+      ]
+    },
+    "PredictionLabel": {
+      "type": "string",
+      "enum": [
+        "NORMAL",
+        "FAILURE"
+      ]
+    },
+    "AlertSeverity": {
+      "type": "string",
+      "enum": [
+        "WATCH",
+        "HIGH",
+        "CRITICAL"
+      ]
+    },
+    "AlertStatus": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "ACKNOWLEDGED",
+        "IN_PROGRESS",
+        "ESCALATED",
+        "RESOLVED",
+        "FALSE_ALERT"
+      ]
+    },
+    "GroundedStatus": {
+      "type": "string",
+      "enum": [
+        "GROUNDED",
+        "INSUFFICIENT_EVIDENCE",
+        "VALIDATION_FAILED",
+        "UNAVAILABLE"
+      ]
+    },
+    "DependencyStatus": {
+      "type": "string",
+      "enum": [
+        "AVAILABLE",
+        "DEGRADED",
+        "UNAVAILABLE"
+      ]
+    },
+    "Intent": {
+      "type": "string",
+      "enum": [
+        "MAINTENANCE_BRIEF",
+        "TECHNICIAN_CHECKLIST",
+        "ALERT_EXPLANATION"
+      ]
+    },
+    "CopilotStatus": {
+      "type": "string",
+      "enum": [
+        "NOT_REQUESTED",
+        "PENDING",
+        "AVAILABLE",
+        "UNAVAILABLE"
+      ]
+    },
+    "ValidationIssue": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "minLength": 1
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "field",
+        "code",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "Error": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "INVALID_REQUEST",
+            "VALIDATION_FAILED",
+            "EVENT_CONFLICT",
+            "MACHINE_NOT_FOUND",
+            "ALERT_NOT_FOUND",
+            "INVALID_ALERT_TRANSITION",
+            "MODEL_NOT_READY",
+            "ML_UNAVAILABLE",
+            "ML_TIMEOUT",
+            "RAG_UNAVAILABLE",
+            "INTERNAL_ERROR",
+            "UNAUTHORIZED",
+            "FORBIDDEN",
+            "DRIFT_REPORT_NOT_FOUND",
+            "DEPENDENCY_UNAVAILABLE"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "details": {
+          "type": "object"
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "correlation_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retryable",
+        "details"
+      ],
+      "additionalProperties": false
+    },
+    "ErrorEnvelope": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "common.schema.json#/$defs/Error"
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "additionalProperties": false
+    },
+    "Liveness": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "const": "UP"
+        },
+        "service": {
+          "type": "string",
+          "enum": [
+            "backend",
+            "ml-inference",
+            "rag-service"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "status",
+        "service",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "Readiness": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "UP",
+            "DEGRADED",
+            "DOWN"
+          ]
+        },
+        "checks": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        }
+      },
+      "required": [
+        "status",
+        "checks"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "UP"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "checks": {
+                "additionalProperties": {
+                  "const": true
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

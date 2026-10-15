@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MaintenanceBriefResponse; insufficient evidence is a valid 200 result",
+  "type": "object",
+  "properties": {
+    "brief_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "alert_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "grounded_status": {
+      "type": "string",
+      "enum": [
+        "GROUNDED",
+        "INSUFFICIENT_EVIDENCE",
+        "VALIDATION_FAILED"
+      ]
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "uncertainty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "checklist": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "step": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "action": {
+            "type": "string",
+            "minLength": 1
+          },
+          "citation_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "step",
+          "action",
+          "citation_ids"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "citations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "citation_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "document_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "document_version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "chunk_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "citation_id",
+          "document_id",
+          "document_version",
+          "chunk_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "retrieval": {
+      "type": "object",
+      "properties": {
+        "top_k": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "retrieved_chunk_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "top_k",
+        "retrieved_chunk_ids"
+      ],
+      "additionalProperties": false
+    },
+    "generator": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "provider",
+        "model"
+      ],
+      "additionalProperties": false
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "brief_id",
+    "alert_id",
+    "grounded_status",
+    "summary",
+    "uncertainty",
+    "checklist",
+    "citations",
+    "retrieval"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "grounded_status": {
+            "const": "GROUNDED"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "generator",
+          "generated_at"
+        ],
+        "properties": {
+          "checklist": {
+            "minItems": 1
+          },
+          "citations": {
+            "minItems": 1
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "checklist": {
+            "maxItems": 0
+          },
+          "citations": {
+            "maxItems": 0
+          }
+        }
+      }
+    }
+  ]
+}

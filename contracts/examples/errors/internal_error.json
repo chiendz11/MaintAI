@@ -1,0 +1,10 @@
+{
+  "error": {
+    "code": "INTERNAL_ERROR",
+    "message": "Internal error",
+    "retryable": false,
+    "details": {},
+    "request_id": "req_001",
+    "correlation_id": "cor_001"
+  }
+}

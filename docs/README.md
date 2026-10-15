@@ -8,6 +8,11 @@ cung cấp. Chúng mô tả kiến trúc mục tiêu; mức độ hoàn thành t
 | --- | --- |
 | [System Contracts v1.1 DRIFT](MaintAI_System_Contracts_v1_1_DRIFT.md) | Chuẩn giao tiếp: payload, enums, API, database, artifact, lỗi, traceability và drift semantics. Contract version bên trong là `1.1.0`. |
 | [Implementation Development Guide v1.1 DRIFT](MaintAI_Implementation_Development_Guide_v1_1_DRIFT.md) | Hướng dẫn triển khai từng module, luồng xử lý, gợi ý stack, tests, integration và Definition of Done. |
+| [Phụ lục HTTP API](api-contract-decisions.md) | Các quyết định hoàn thiện pagination, nullability, lifecycle responses, brief facade, monitoring, auth profile và HTTP/UI states còn thiếu trong baseline. |
+
+Đặc tả máy đọc được nằm trong [contracts/](../contracts/README.md): ba OpenAPI,
+shared schemas và examples. Đây là contract mục tiêu để implement; không mặc định
+rằng mọi endpoint đã có service chạy. Hai file tài liệu gốc vẫn giữ nguyên nội dung.
 
 ## Cách dùng khi triển khai
 
@@ -60,9 +65,10 @@ việc tổ chức lại repository. Tên thư mục trong ví dụ không làm 
   được đưa vào repo là bản v1.1 DRIFT ở trên. BRD chưa được đính kèm tại đây.
 - Tên bản tài liệu `v1_1` và `schema_version=1.0.0` của một payload là hai cấp
   version khác nhau; không đổi schema version chỉ để khớp tên file tài liệu.
-- JSON Schemas trong [contracts/](../contracts/README.md) cụ thể hóa các phần
-  đã triển khai và phải khớp models. Chúng chưa đại diện cho tất cả module trong
-  đặc tả. Khi thấy khác biệt, đối chiếu contract trước khi sửa code/schema.
+- JSON Schemas trong [contracts/](../contracts/README.md) cụ thể hóa payloads.
+  Schema sensor/drift sinh từ models phải khớp runtime; schema cho backend/ML/RAG
+  mô tả contract mục tiêu, kể cả module chưa được triển khai. Đọc phụ lục HTTP
+  cùng baseline; khi có khác biệt về invariant đã chốt, baseline được ưu tiên.
 - Thay đổi contract theo quy tắc ở Contracts mục 25, ghi rõ thay đổi và kiểm tra
   tương thích của cả bên cung cấp lẫn bên sử dụng interface.
 

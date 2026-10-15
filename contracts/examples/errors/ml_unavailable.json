@@ -1,0 +1,10 @@
+{
+  "error": {
+    "code": "ML_UNAVAILABLE",
+    "message": "Ml unavailable",
+    "retryable": true,
+    "details": {},
+    "request_id": "req_001",
+    "correlation_id": "cor_001"
+  }
+}
