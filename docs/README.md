@@ -6,6 +6,7 @@ cung cấp. Chúng mô tả kiến trúc mục tiêu; mức độ hoàn thành t
 
 | Tài liệu | Vai trò |
 | --- | --- |
+| [Mô tả chức năng hệ thống](MaintAI_Functional_Overview.md) | Các chức năng mục tiêu, vai trò người dùng, luồng sử dụng, trạng thái UI và ranh giới phạm vi; phân biệt đặc tả với mức độ đã triển khai. |
 | [System Contracts v1.1 DRIFT](MaintAI_System_Contracts_v1_1_DRIFT.md) | Chuẩn giao tiếp: payload, enums, API, database, artifact, lỗi, traceability và drift semantics. Contract version bên trong là `1.1.0`. |
 | [Implementation Development Guide v1.1 DRIFT](MaintAI_Implementation_Development_Guide_v1_1_DRIFT.md) | Hướng dẫn triển khai từng module, luồng xử lý, gợi ý stack, tests, integration và Definition of Done. |
 | [Phụ lục HTTP API](api-contract-decisions.md) | Các quyết định hoàn thiện pagination, nullability, lifecycle responses, brief facade, monitoring, auth profile và HTTP/UI states còn thiếu trong baseline. |
