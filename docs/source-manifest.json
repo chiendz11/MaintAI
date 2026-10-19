@@ -1,0 +1,145 @@
+{
+  "schema_version": "3.0.0",
+  "target_contract_revision": "1.4.0",
+  "upstream_target_contract_revision": "1.4.0",
+  "imported_on": "2026-10-17",
+  "amended_on": "2026-10-19",
+  "hash_semantics": "documents contains active paths with current sha256; upstream_sha256 preserves supplied/imported bytes; retired_documents preserves old checksums without active files",
+  "documents": [
+    {
+      "path": "docs/MaintAI_Functional_Overview.md",
+      "source_filename": "MaintAI_Functional_Overview.md",
+      "sha256": "55bb97ac4f2df436d2a21d6724da3d472dc8e9d90eef30043f96000f3b2fff27",
+      "upstream_sha256": "c7e2a75c3db895eebcfd6973a906786f355ed67ec2eb041408e647d5bd38b4d9"
+    },
+    {
+      "path": "docs/README.md",
+      "source_filename": "README.md",
+      "sha256": "27743deba47f29cbd93784795d57466e65726178a60d05e911ba8baa6de60c9d",
+      "upstream_sha256": "b8f3731050d7cba47d5eecebd8ecfa7457dc4a7c427e9f408a1a22dd89c9b0d7"
+    },
+    {
+      "path": "docs/api-contract-decisions.md",
+      "source_filename": "api-contract-decisions.md",
+      "sha256": "bd9580d69359b33fb6ec6bb7d8ce26a14aa5a49ecc8612775052c2519621403c",
+      "upstream_sha256": "153aea7b6f92e25fd11e9689092711f9806c59b0204099ae807e113fa830037b"
+    },
+    {
+      "path": "docs/history-storage-contract.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "763be9ea2f42c0bb5203e46ac0c8729f28dac42b36a5f7739784a07e51c3ace2"
+    },
+    {
+      "path": "docs/recovery-jobs-operations.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "56f0eb21e1532d1cc4efce816fbe968160e264477e9f51068c6c4bbe7fbafc0b"
+    },
+    {
+      "path": "docs/implementation-readiness.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "8b1f40906a35292c2f9876a22bff21f78aa6d9bc4e470a8acd2c02ad3a17f18c"
+    },
+    {
+      "path": "docs/repository-layout.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "b130da508730e40784698571cbed67e6dce9fd15191c515b3b530ee092fac835"
+    },
+    {
+      "path": "docs/legacy-artifact-audit.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "331bf83ee3a044b28288cc7e76debfa49b0a9eb4550bfdb26647bf5babdbb54e"
+    },
+    {
+      "path": "docs/DEPLOYMENT_ARCHITECTURE.md",
+      "source_filename": "DEPLOYMENT_ARCHITECTURE.md",
+      "imported_on": "2026-10-19",
+      "source_document_revision": "1.4.0",
+      "upstream_sha256": "dcce56143a210b1aa733483c93c73e84cd498fc4521fe03d3e25425ebf5e8c5c",
+      "sha256": "c3fc35f89796993de3338bf98859b3822d57e0efa1f0ff2bbd1c9b004e9c726c"
+    },
+    {
+      "path": "docs/RUNTIME_DATAFLOW.md",
+      "source_filename": "RUNTIME_DATAFLOW.md",
+      "imported_on": "2026-10-19",
+      "source_document_revision": "1.4.0",
+      "upstream_sha256": "b117c5c7758832b6200488726733e51c07bd9c3e58a2b3a0b263e3e9c8cdfdae",
+      "sha256": "04dfc85583e28ba124605e449b42a775cba64445769d234af07a0d9ab77bc5e9"
+    },
+    {
+      "path": "docs/VERSIONING_AND_PROVENANCE.md",
+      "source_filename": "VERSIONING_AND_PROVENANCE.md",
+      "imported_on": "2026-10-19",
+      "source_document_revision": "1.4.0",
+      "upstream_sha256": "38bbeeec5ef366877f9797508bdc8951f8df54ebe6002aed78820035d849a6ad",
+      "sha256": "854c97bdd4d23e4667200800ca76bfd34ddc06d1128129e3a7c33666c73e2d98"
+    },
+    {
+      "path": "docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md",
+      "source_filename": "MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md",
+      "imported_on": "2026-10-19",
+      "source_document_revision": "1.4.0",
+      "upstream_sha256": "c677d5a991814c37392d2bb9cfafd2ed86535fd01eb044c4f9a6e457069f9f55",
+      "sha256": "1fac5f75ac56cb6fa7457ae25ea70eb27c301644226250f770a9516381003db6"
+    },
+    {
+      "path": "docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md",
+      "source_filename": "MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md",
+      "imported_on": "2026-10-19",
+      "source_document_revision": "1.4.0",
+      "upstream_sha256": "89f141f1a8695a7ce056a99512633ba7e2edd9f2311b7bf935ae94f2ecd6ffcc",
+      "sha256": "767ddb4ca3974eddc167d48b321da1dd27e4bb2baed3524eef5e2296e5dcfd59"
+    },
+    {
+      "path": "docs/IMPLEMENTATION_PLAN.md",
+      "source_filename": "IMPLEMENTATION_PLAN.md",
+      "imported_on": "2026-10-19",
+      "source_document_revision": "1.4.0",
+      "upstream_sha256": "1b3f1654df22ded81be0808c88db746abeda6ddc6ce2c500f1115172d6bb3b58",
+      "sha256": "bcc0a91d006256d85ed722a8f44112a3e2588cd4ada4ee28b839ccec5078be23"
+    },
+    {
+      "path": "docs/KAFKA_DEVELOPMENT_GUIDE.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "added_on": "2026-10-19",
+      "sha256": "101c8659ce795c9a4074fce9468c5f84c6d9f1269fb099d88d4aa9b828c525ba"
+    }
+  ],
+  "upstream_inherited_contract_revision": "1.3.1",
+  "machine_contract_revision": "1.3.2",
+  "retired_documents": [
+    {
+      "path": "docs/MaintAI_Implementation_Development_Guide_v1_3_REALTIME_UI.md",
+      "source_filename": "MaintAI_Implementation_Development_Guide_v1_3_REALTIME_UI.md",
+      "sha256": "824d4228e5b2b30c231b0c3d590909083051e8b7cb00bcaea6386d70ff4ce446",
+      "upstream_sha256": "7f18b5ac563ff4edf95134c245b04306d29ef7cba7d8cd831e0dedcaf4ade2a0",
+      "retired_on": "2026-10-19",
+      "replacement": "docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md"
+    },
+    {
+      "path": "docs/MaintAI_System_Contracts_v1_3_REALTIME_UI.md",
+      "source_filename": "MaintAI_System_Contracts_v1_3_REALTIME_UI.md",
+      "sha256": "44f51a344a4e48b780087f6ddd804baba1c7dc437664fe09d2269b009d0474e0",
+      "upstream_sha256": "be2c1b1ce6560182afcc55c50eb4c39d3ce0ce703ba2b5255b36eec740769627",
+      "retired_on": "2026-10-19",
+      "replacement": "docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md"
+    },
+    {
+      "path": "docs/architecture-decisions-v1.3.2.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "28229d374f8df8abaa2591ba9534531884332f4af3be9b5ab257a9ba7e0e2b1a",
+      "retired_on": "2026-10-19",
+      "replacement": "docs/README.md"
+    }
+  ],
+  "latest_imported_on": "2026-10-19",
+  "kafka_contract_bundle_version": "1.0.0",
+  "kafka_contract_manifest_sha256": "911ddd0c216ff6fd1a0b3166b68ed8e84eb8b56e5adc2f8d294513931e033cc3",
+  "kafka_sdk_version": "0.1.0"
+}

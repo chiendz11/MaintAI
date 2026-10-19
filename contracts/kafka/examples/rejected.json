@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.4.0",
+  "rejection_id": "rej_fixture",
+  "source_identity": "fixture-sensor",
+  "request_id": "req_fixture",
+  "correlation_id": "cor_fixture",
+  "rejected_at": "2026-10-18T00:00:00Z",
+  "reason": "VALIDATION_FAILED",
+  "payload_disposition": "HASH_ONLY",
+  "payload_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+  "payload_size_bytes": 32,
+  "validation_errors": [
+    {
+      "field": "event_id",
+      "code": "REQUIRED"
+    }
+  ]
+}

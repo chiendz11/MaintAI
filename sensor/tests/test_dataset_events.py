@@ -57,15 +57,18 @@ def test_ai4i_mapping_and_canonical_wire_contract(sample_csv, validator):
     assert forbidden.isdisjoint(payload["features"])
 
 
-def test_seed_mapping_payload_clock_and_run_identity(sample_csv):
+def test_seeded_round_robin_payload_clock_and_run_identity(sample_csv):
     features = next(iter(DatasetReader(sample_csv))).features
     first, second = factory(), factory()
     one = [first.create(features, i) for i in range(50)]
     two = [second.create(features, i) for i in range(50)]
     assert one == two
     assert len({event.event_id for event in one}) == 50
-    assert len({event.machine_id for event in one}) > 1
-    assert one[-1].received_at - one[0].received_at == timedelta(seconds=49)
+    machine_order = [event.machine_id for event in one[:5]]
+    assert set(machine_order) == {f"M-{i:03d}" for i in range(1, 6)}
+    assert [event.machine_id for event in one] == machine_order * 10
+    assert one[-1].received_at - one[0].received_at == timedelta(milliseconds=9800)
+    assert one[5].received_at - one[0].received_at == timedelta(seconds=1)
     assert factory(run_id="other-run").create(features, 0).event_id != one[0].event_id
     assert factory(run_id=None).create(features, 0).event_id != one[0].event_id
 

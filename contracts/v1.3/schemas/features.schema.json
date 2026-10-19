@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Features",
+  "additionalProperties": false,
+  "properties": {
+    "product_type": {
+      "enum": [
+        "L",
+        "M",
+        "H"
+      ],
+      "title": "Product Type",
+      "type": "string"
+    },
+    "air_temperature_k": {
+      "title": "Air Temperature K",
+      "type": "number"
+    },
+    "process_temperature_k": {
+      "title": "Process Temperature K",
+      "type": "number"
+    },
+    "rotational_speed_rpm": {
+      "exclusiveMinimum": 0,
+      "title": "Rotational Speed Rpm",
+      "type": "number"
+    },
+    "torque_nm": {
+      "title": "Torque Nm",
+      "type": "number"
+    },
+    "tool_wear_min": {
+      "minimum": 0,
+      "title": "Tool Wear Min",
+      "type": "number"
+    }
+  },
+  "required": [
+    "product_type",
+    "air_temperature_k",
+    "process_temperature_k",
+    "rotational_speed_rpm",
+    "torque_nm",
+    "tool_wear_min"
+  ],
+  "type": "object"
+}

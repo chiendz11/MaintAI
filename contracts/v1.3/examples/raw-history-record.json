@@ -1,0 +1,25 @@
+{
+  "event_id": "evt_fixture_1",
+  "machine_id": "M-001",
+  "stream_epoch": "fixture-run",
+  "sequence_number": 1,
+  "received_at": "2026-10-18T00:00:00Z",
+  "server_accepted_at": "2026-10-18T00:00:00Z",
+  "features_raw": {
+    "product_type": "M",
+    "air_temperature_k": 298.1,
+    "process_temperature_k": 308.6,
+    "rotational_speed_rpm": 1551,
+    "torque_nm": 42.8,
+    "tool_wear_min": 108
+  },
+  "validation_status": "UNVERIFIED",
+  "result_id": null,
+  "validation_errors": [],
+  "receipt_id": "sensor.readings:0:42",
+  "kafka": {
+    "topic": "sensor.readings",
+    "partition": 0,
+    "offset": 42
+  }
+}

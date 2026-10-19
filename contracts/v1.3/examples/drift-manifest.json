@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "report_id": "drift_fixture_1",
+  "computed_at": "2026-10-18T00:00:00Z",
+  "publication_at": "2026-10-18T00:00:00Z",
+  "model_version": "fixture-model-v1",
+  "dataset_version": "fixture-dataset-v1",
+  "overall_status": "STABLE",
+  "report_ref": {
+    "bucket": "maintai-contract-fixture",
+    "key": "fixtures/part-000.parquet",
+    "version_id": "fixture-version",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "size_bytes": 128
+  }
+}

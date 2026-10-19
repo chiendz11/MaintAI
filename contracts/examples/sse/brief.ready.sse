@@ -1,4 +1,0 @@
-event: brief.ready
-id: stream_001
-data: {"alert_id": "alt_001", "brief_id": "brf_001", "grounded_status": "GROUNDED"}
-

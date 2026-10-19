@@ -102,6 +102,10 @@ class ReplayRunner:
             seed=self.scenario.seed if self.config.seed is None else self.config.seed,
             dry_run=self.config.dry_run,
             planned_events=count,
+            machine_count=self.config.machine_count,
+            interval_ms_per_machine=self.config.interval_ms,
+            speed=self.config.speed,
+            send_interval_ms=self.config.delay_seconds * 1000,
         )
         try:
             for sequence in range(count):

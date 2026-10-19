@@ -1,0 +1,414 @@
+openapi: 3.1.1
+info:
+  title: MaintAI RAG API
+  version: 1.3.2
+  description: Provider wire protocol remains1.1.0. Target architecture amendment1.3.2; internal service authentication
+    required. Runtime remains skeleton.
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+servers:
+- url: https://rag.example.invalid
+  description: Illustrative only; configure environment routing.
+externalDocs:
+  description: Design target v1.4; this OpenAPI remains the 1.3.2 baseline pending migration.
+  url: https://github.com/chiendz11/MaintAI/blob/main/docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md
+x-maintai-decisions: ../../../docs/api-contract-decisions.md
+tags:
+- name: Briefs
+  description: Backend-only grounded brief generation
+- name: Operations
+  description: Platform health and metrics
+security:
+- BearerAuth: []
+paths:
+  /api/v1/briefs:
+    post:
+      operationId: generateMaintenanceBrief
+      tags:
+      - Briefs
+      summary: Generate a grounded brief for an existing alert
+      description: Called by backend after alert creation or from accepted technician work. 200 GROUNDED requires
+        every actionable step to reference an emitted citation whose chunk was actually retrieved. 200 INSUFFICIENT_EVIDENCE
+        or VALIDATION_FAILED contains no actionable checklist or citations. Neither state is HTTP 5xx. Provider
+        failure is 503 RAG_UNAVAILABLE; backend keeps alert severity/lifecycle and exposes copilot UNAVAILABLE.
+        Authentication is required on shared deployment. For all shared deployment requests, enforce the listed
+        roles; 401/403 are explicit failures. See completion decision AUTH-01.
+      x-maintai-source: baseline 13; completion RAG-01
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Completed business result; branch on grounded_status.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceBrief'
+              examples:
+                brief_grounded:
+                  externalValue: ../examples/http/rag/brief-grounded.json
+                brief_insufficient_evidence:
+                  externalValue: ../examples/http/rag/brief-insufficient-evidence.json
+                brief_validation_failed:
+                  externalValue: ../examples/http/rag/brief-validation-failed.json
+        '400':
+          $ref: '#/components/responses/INVALID_REQUEST'
+        '401':
+          $ref: '#/components/responses/UNAUTHORIZED'
+        '403':
+          $ref: '#/components/responses/FORBIDDEN'
+        '422':
+          $ref: '#/components/responses/VALIDATION_FAILED'
+        '500':
+          $ref: '#/components/responses/INTERNAL_ERROR'
+        '503':
+          $ref: '#/components/responses/RAG_UNAVAILABLE'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaintenanceBriefRequest'
+            examples:
+              brief_request:
+                externalValue: ../examples/http/rag/brief-request.json
+      x-maintai-roles:
+      - BUSINESS_SERVICE
+      security:
+      - BearerAuth: []
+  /health/live:
+    get:
+      operationId: ragserviceLiveness
+      tags:
+      - Operations
+      summary: Process liveness
+      description: 200 means process is alive. Do not depend on external DB/LLM readiness in liveness checks; avoid
+        restart loops.
+      x-maintai-source: baseline 19.1
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Process alive.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Liveness'
+              examples:
+                rag_service_live:
+                  externalValue: ../examples/http/operations/rag-service-live.json
+      security: []
+  /health/ready:
+    get:
+      operationId: ragserviceReadiness
+      tags:
+      - Operations
+      summary: Dependency readiness
+      description: 200 only when ready for the service function; 503 when required checks fail, including DEGRADED
+        RAG. Readiness bodies intentionally use the health schema rather than the business error envelope. Platform
+        may configure RAG separately because RAG failure must not remove backend alert functionality.
+      x-maintai-source: baseline 19.2; completion HEALTH-01
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Ready.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/Readiness'
+                - properties:
+                    status:
+                      const: UP
+              examples:
+                rag_service_ready:
+                  externalValue: ../examples/http/operations/rag-service-ready.json
+        '503':
+          description: Not ready; inspect checks.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            Retry-After:
+              description: Optional retry delay in seconds. Honor it before bounded retries.
+              schema:
+                type: string
+                pattern: ^[0-9]+$
+              example: '2'
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/Readiness'
+                - properties:
+                    status:
+                      type: string
+                      enum:
+                      - DEGRADED
+                      - DOWN
+              examples:
+                rag_service_not_ready:
+                  externalValue: ../examples/http/operations/rag-service-not-ready.json
+      security: []
+  /metrics:
+    get:
+      operationId: ragserviceMetrics
+      tags:
+      - Operations
+      summary: Prometheus metrics
+      description: Platform scrape endpoint, not a frontend data API. Example is illustrative; actual service metrics
+        follow baseline section 20. Do not label metrics with unique event/machine/report IDs.
+      x-maintai-source: baseline 20
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Prometheus text exposition.
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                exposition:
+                  externalValue: ../examples/http/operations/rag-service-metrics.prom
+      security: []
+components:
+  schemas:
+    Liveness:
+      $ref: ../schemas/common.schema.json#/$defs/Liveness
+    Readiness:
+      $ref: ../schemas/common.schema.json#/$defs/Readiness
+    MaintenanceBriefRequest:
+      $ref: ../schemas/brief-request.schema.json
+    MaintenanceBrief:
+      $ref: ../schemas/maintenance-brief.schema.json
+  parameters:
+    RequestId:
+      name: X-Request-ID
+      in: header
+      required: false
+      description: Forward when available; the service generates an identifier when absent.
+      schema:
+        type: string
+        minLength: 1
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      description: Keep the same correlation across sensor, prediction, alert and RAG hops.
+      schema:
+        type: string
+        minLength: 1
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    INVALID_REQUEST:
+      description: Invalid request. See error.retryable; never infer a normal business state from this error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: INVALID_REQUEST
+          examples:
+            invalid_request:
+              externalValue: ../examples/http/errors/invalid_request.json
+    UNAUTHORIZED:
+      description: Unauthorized. See error.retryable; never infer a normal business state from this error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: UNAUTHORIZED
+          examples:
+            unauthorized:
+              externalValue: ../examples/http/errors/unauthorized.json
+    FORBIDDEN:
+      description: Forbidden. See error.retryable; never infer a normal business state from this error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: FORBIDDEN
+          examples:
+            forbidden:
+              externalValue: ../examples/http/errors/forbidden.json
+    VALIDATION_FAILED:
+      description: Validation failed. See error.retryable; never infer a normal business state from this error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: VALIDATION_FAILED
+          examples:
+            validation_failed:
+              externalValue: ../examples/http/errors/validation_failed.json
+    INTERNAL_ERROR:
+      description: Internal error. See error.retryable; never infer a normal business state from this error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: INTERNAL_ERROR
+          examples:
+            internal_error:
+              externalValue: ../examples/http/errors/internal_error.json
+    RAG_UNAVAILABLE:
+      description: Rag unavailable. See error.retryable; never infer a normal business state from this error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        Retry-After:
+          description: Optional retry delay in seconds. Honor it before bounded retries.
+          schema:
+            type: string
+            pattern: ^[0-9]+$
+          example: '2'
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: RAG_UNAVAILABLE
+          examples:
+            rag_unavailable:
+              externalValue: ../examples/http/errors/rag_unavailable.json
+x-maintai-provider-protocol: 1.1.0
+x-maintai-source: System Contracts §34 / design amendment1.3.2

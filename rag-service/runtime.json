@@ -1,0 +1,31 @@
+{
+  "descriptor_kind": "MaintAIRuntime",
+  "schema_version": "1.0.0",
+  "target_contract_revision": "1.3.2",
+  "runtime_id": "rag-service",
+  "workload_kind": "Deployment",
+  "code_owner": "knowledge",
+  "implementation_status": "skeleton",
+  "image_group": "rag-service",
+  "image_digest": null,
+  "entrypoint_status": "not_implemented_for_v1.3.2",
+  "purpose": "Retrieval/LLM/citation validation và knowledge ingestion modules ngoài critical alert path.",
+  "source_paths": [
+    "rag-service"
+  ],
+  "logical_database": "knowledge_db",
+  "kafka_subscriptions": [],
+  "kafka_publications": [],
+  "interfaces": [
+    "Business RAG client",
+    "S3 manuals",
+    "LLM/embedding provider"
+  ],
+  "boundaries": [
+    "knowledge_db có pgvector; Business chỉ giữ brief/business references, không SQL JOIN qua DB.",
+    "Ingestion/evaluation trong codebase này là module, chưa được khai báo thành deployment khác."
+  ],
+  "dockerfile": "rag-service/Dockerfile",
+  "dockerfile_status": "placeholder",
+  "implemented_contract_revision": null
+}

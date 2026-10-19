@@ -1,0 +1,13 @@
+{
+  "job_id": "brief_job_fixture_1",
+  "status": "QUEUED",
+  "created_at": "2026-10-18T00:00:00Z",
+  "updated_at": "2026-10-18T00:00:00Z",
+  "attempts": 0,
+  "error_code": null,
+  "status_url": "/api/v1/brief-jobs/brief_job_fixture_1",
+  "alert_id": "alert_fixture_1",
+  "intent": "MAINTENANCE_BRIEF",
+  "copilot_status": "PENDING",
+  "brief_id": null
+}

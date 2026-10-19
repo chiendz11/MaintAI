@@ -26,7 +26,7 @@ def test_committed_schemas_match_runtime(tmp_path):
     assert main(["export-schemas", "--directory", str(tmp_path)]) == 0
     for name in ["drift-reference", "drift-report"]:
         assert json.loads((tmp_path / f"{name}.schema.json").read_text()) == json.loads(
-            (ROOT / "contracts" / f"{name}.schema.json").read_text()
+            (ROOT / "contracts/v1.3/schemas" / f"{name}.schema.json").read_text()
         )
 
 

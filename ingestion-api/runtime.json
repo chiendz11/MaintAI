@@ -1,0 +1,31 @@
+{
+  "descriptor_kind": "MaintAIRuntime",
+  "schema_version": "1.0.0",
+  "target_contract_revision": "1.3.2",
+  "runtime_id": "ingestion-api",
+  "workload_kind": "Deployment",
+  "code_owner": "ingestion",
+  "implementation_status": "skeleton",
+  "image_group": "ingestion-api",
+  "image_digest": null,
+  "entrypoint_status": "not_implemented_for_v1.3.2",
+  "purpose": "HTTP edge độc lập: auth/envelope/size guard, Kafka publish, trả 202 chỉ sau broker ACK.",
+  "source_paths": [
+    "ingestion-api/src"
+  ],
+  "logical_database": null,
+  "kafka_subscriptions": [],
+  "kafka_publications": [
+    "sensor.readings"
+  ],
+  "interfaces": [
+    "HTTP POST /api/v1/sensor-readings"
+  ],
+  "boundaries": [
+    "Không deep Data Quality, không gọi ML, không ghi business_db và không phát SSE.",
+    "Machine key/order/correlation theo System Contracts; invalid envelope không đi vào Kafka raw archive."
+  ],
+  "dockerfile": "ingestion-api/Dockerfile",
+  "dockerfile_status": "placeholder",
+  "implemented_contract_revision": null
+}

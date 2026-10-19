@@ -1,0 +1,34 @@
+{
+  "descriptor_kind": "MaintAIRuntime",
+  "schema_version": "1.0.0",
+  "target_contract_revision": "1.3.2",
+  "runtime_id": "storage-consumer",
+  "workload_kind": "Deployment",
+  "code_owner": "raw-archive",
+  "implementation_status": "skeleton",
+  "image_group": "storage-consumer",
+  "image_digest": null,
+  "entrypoint_status": "not_implemented_for_v1.3.2",
+  "purpose": "Archive mọi raw event được Kafka chấp nhận thành JSONL.gz batches trên S3/MinIO.",
+  "source_paths": [
+    "storage-consumer/src"
+  ],
+  "logical_database": null,
+  "kafka_subscriptions": [
+    {
+      "topic": "sensor.readings",
+      "group": "raw-archive-v1"
+    }
+  ],
+  "kafka_publications": [],
+  "interfaces": [
+    "S3/MinIO raw archive"
+  ],
+  "boundaries": [
+    "Lưu cả raw feature-invalid đã được Kafka nhận; không lưu malformed HTTP chưa vào topic.",
+    "Idempotent batch/checkpoint; không ghi business_db, không chạy ML."
+  ],
+  "dockerfile": "storage-consumer/Dockerfile",
+  "dockerfile_status": "placeholder",
+  "implemented_contract_revision": null
+}

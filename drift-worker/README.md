@@ -1,5 +1,7 @@
 # Drift Worker
 
+**Target 1.3.1:** xem [Dockerfile](Dockerfile). Code/commands bên dưới là worker v1.1 dùng PostgreSQL loader; target Processing API/curated S3 adapters và drift_db ownership chưa migrate. Không dùng implementation direct DB hiện tại làm template truy cập SQL xuyên owner cho kiến trúc mới.
+
 Worker Python 3.12 chạy một lượt rồi kết thúc, theo System Contracts và Implementation Development Guide v1.1 DRIFT. Đọc reference theo model/dataset version, lấy cửa sổ sensor `VALID` từ PostgreSQL, tính PSI, lưu report, xuất metrics và cập nhật checkpoint. Worker không gọi inference, không retrain và không thay đổi machine state, risk hay maintenance alerts.
 
 ## Cài đặt
@@ -110,8 +112,17 @@ CI chạy unit/contract tests, integration PostgreSQL thật và bài container 
 | `worker.py`, `cli.py` | Điều phối one-shot và CLI |
 | `metrics.py`, `logging.py` | Pushgateway và structured logs |
 
-Schema chung nằm trong `contracts/drift-reference.schema.json` và `contracts/drift-report.schema.json`. Xuất lại từ runtime:
+Schema hiện hành nằm trong
+[drift-reference.schema.json](../contracts/v1.3/schemas/drift-reference.schema.json)
+và [drift-report.schema.json](../contracts/v1.3/schemas/drift-report.schema.json).
+Payload version vẫn1.0.0, khớp runtime. Xuất bản đối chiếu vào output ngoài Git:
 
 ```bash
-.venv/bin/maintai-drift export-schemas --directory contracts
+.venv/bin/maintai-drift export-schemas --directory drift-worker/output/schemas
 ```
+
+
+> **Thiết kế v1.4:** Xem [docs index](../docs/README.md),
+> [Guide v1.4](../docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md) và
+> [readiness](../docs/implementation-readiness.md). Runtime metadata hiện có vẫn
+> baseline1.3.2; source chưa tự migrate theo việc nhập tài liệu.

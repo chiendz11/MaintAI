@@ -1,0 +1,109 @@
+{
+  "schema_version": "1.0.0",
+  "target_design": "1.4.0",
+  "topics": {
+    "sensor.readings": {
+      "partitions": 12,
+      "replicas": 3,
+      "min_insync_replicas": 2,
+      "retention_ms": 604800000,
+      "max_message_bytes": 1048576,
+      "writer_version": "1.3.0",
+      "reader_schemas": {
+        "1.3.0": "events/sensor-reading.schema.json"
+      },
+      "publishers": [
+        "ingestion"
+      ],
+      "consumer_groups": [
+        "processing-v1",
+        "raw-archive-v1",
+        "business-live-v1"
+      ]
+    },
+    "sensor.rejected": {
+      "partitions": 12,
+      "replicas": 3,
+      "min_insync_replicas": 2,
+      "retention_ms": 604800000,
+      "max_message_bytes": 1048576,
+      "writer_version": "1.4.0",
+      "reader_schemas": {
+        "1.4.0": "events/sensor-rejected.schema.json"
+      },
+      "publishers": [
+        "ingestion"
+      ],
+      "consumer_groups": [
+        "raw-rejected-archive-v1"
+      ]
+    },
+    "inference.results": {
+      "partitions": 12,
+      "replicas": 3,
+      "min_insync_replicas": 2,
+      "retention_ms": 604800000,
+      "max_message_bytes": 1048576,
+      "writer_version": "1.4.0",
+      "reader_schemas": {
+        "1.4.0": "events/inference-result.schema.json",
+        "2.0.0": "events/legacy-outcome.schema.json"
+      },
+      "publishers": [
+        "outbox"
+      ],
+      "consumer_groups": [
+        "business-prediction-v1",
+        "outcome-archive-v1"
+      ]
+    },
+    "alert.signals": {
+      "partitions": 12,
+      "replicas": 3,
+      "min_insync_replicas": 2,
+      "retention_ms": 604800000,
+      "max_message_bytes": 1048576,
+      "writer_version": "1.0.0",
+      "reader_schemas": {
+        "1.0.0": "events/alert-signal.schema.json"
+      },
+      "publishers": [
+        "outbox"
+      ],
+      "consumer_groups": [
+        "business-alert-v1"
+      ]
+    }
+  },
+  "profiles": {
+    "processing": {
+      "topic": "sensor.readings",
+      "group_id": "processing-v1"
+    },
+    "business-live": {
+      "topic": "sensor.readings",
+      "group_id": "business-live-v1"
+    },
+    "business-prediction": {
+      "topic": "inference.results",
+      "group_id": "business-prediction-v1"
+    },
+    "business-alert": {
+      "topic": "alert.signals",
+      "group_id": "business-alert-v1"
+    },
+    "storage-accepted": {
+      "topic": "sensor.readings",
+      "group_id": "raw-archive-v1"
+    },
+    "storage-rejected": {
+      "topic": "sensor.rejected",
+      "group_id": "raw-rejected-archive-v1"
+    },
+    "storage-outcomes": {
+      "topic": "inference.results",
+      "group_id": "outcome-archive-v1",
+      "optional": true
+    }
+  }
+}

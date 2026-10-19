@@ -1,49 +1,44 @@
-# Phụ lục hoàn thiện HTTP API contract
+# HTTP API baseline1.3.2 — migration đến target v1.4
 
-Ngày: 2026-10-15. API description version: `1.1.0`; OpenAPI format: `3.1.1`.
+Ngày cập nhật: 2026-10-19. **Machine API description version: `1.3.2`**; OpenAPI
+format `3.1.1`. `contracts/v1.3/` là baseline tự chứa còn được CI kiểm tra.
+Target docs mới là1.4.0; quarantine/provenance và compatibility migration chưa có
+trong bundle này. Các rows phía dưới mô tả baseline1.3.2, không tự override v1.4.
 
 Phụ lục cụ thể hóa những phần chưa đủ chi tiết trong
-[System Contracts v1.1 DRIFT](MaintAI_System_Contracts_v1_1_DRIFT.md), không thay
-đổi nội dung file gốc. Các mục dưới đây là quyết định bổ sung cho đặc tả mục tiêu,
+[System Contracts v1.4](MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md)
+§34–39 ưu tiên khi migrate; xem [readiness](implementation-readiness.md) về field,
+version, history cursor và artifact còn thiếu. Các mục dưới đây giữ chi tiết HTTP kế thừa,
 không phải bằng chứng backend/ML/RAG đã được implement hoặc deploy.
 
-Baseline vẫn là chuẩn cho invariants, tên field đã có và giao tiếp giữa các
-component. OpenAPI ghi `x-maintai-source` để truy về baseline hoặc quyết định
+Baseline ghi lại tên field/giao tiếp đang có để lập compatibility migration.
+OpenAPI ghi `x-maintai-source` để truy về baseline hoặc quyết định
 dưới đây. Nếu implementation khác contract, cần sửa implementation hoặc review
 thay đổi contract; không sửa schema chỉ để làm CI xanh.
 
-## STATE-01 — Phân biệt HTTP, nghiệp vụ và giao diện
+## STATE-01 — Tách HTTP ingress ACK khỏi kết quả nghiệp vụ (BREAKING v1.2)
 
-| Tình huống | HTTP/body | UI xử lý |
-| --- | --- | --- |
-| Đọc dữ liệu thành công | `200` + DTO | Render state backend trả |
-| Danh sách không có kết quả | `200`, `items=[]` | EMPTY, không phải lỗi server |
-| Sensor hợp lệ, ML hoàn tất | `200`, VALID/COMPLETED | Hiển thị prediction và machine state |
-| Sensor invalid, có IDs hợp lệ để ghi nhận | `422`, SensorInvalid | INVALID + validation issues; prediction/alert null |
-| Payload không có IDs hợp lệ để ghi nhận | `422`, error VALIDATION_FAILED | Lỗi request; không bịa IDs hoặc tạo prediction |
-| JSON không parse được | `400`, INVALID_REQUEST | Sửa request, không retry tự động |
-| ML unavailable/timeout sau retry | `503/504`, SensorDependencyFailure | UNKNOWN, prediction/alert null; không hiển thị NORMAL |
-| Đọc alert khi RAG đang lỗi | `200`, copilot UNAVAILABLE | Alert vẫn hiển thị và xử lý được |
-| RAG không đủ bằng chứng | `200`, INSUFFICIENT_EVIDENCE | Hiển thị manual review, không có actionable checklist |
-| RAG citation validation thất bại | `200`, VALIDATION_FAILED | Không hiển thị advice chưa được grounded |
-| Đọc report drift có overall_status=ERROR | `200` + report đã lưu | Hiển thị lỗi monitoring; không đổi machine state |
-| Resource không tồn tại | `404` + error envelope | Hiển thị not found; khác danh sách rỗng |
-| Chuyển alert state sai | `409`, INVALID_ALERT_TRANSITION | Refresh alert, cập nhật actions được phép |
-| DB/service transient failure | `503`, DEPENDENCY_UNAVAILABLE | Lỗi dependency rõ ràng; chỉ retry có giới hạn |
+| Tình huống | HTTP/body tại edge | UI/consumer xử lý |
+|---|---|---|
+| Sensor envelope hợp lệ + Kafka ACK | **`202 Accepted`**, `ingestion_status=ACCEPTED`, `processing_status=PENDING`, `status_url` | Không hiển thị prediction như đã xử lý; tra cứu trạng thái hoặc nhận SSE sau này |
+| Feature type/range invalid nhưng envelope đúng | `202` | Processing ghi `INVALID`, `validation_errors`, không gọi ML; hiển thị khi query status/history |
+| Missing `event_id`/`machine_id`, timestamp sai cú pháp, `features` không phải object | `422 VALIDATION_FAILED` | Client sửa payload, không retry mù |
+| JSON không parse được | `400 INVALID_REQUEST` | Client sửa payload |
+| Kafka unavailable hoặc không xác nhận publish | `503 KAFKA_UNAVAILABLE` / `504 DEPENDENCY_UNAVAILABLE` | Simulator retry có backoff với cùng event_id; không coi event đã nhận |
+| Rate limited | `429 RATE_LIMITED` | Retry có giới hạn theo Retry-After |
+| Event đã accept nhưng worker chưa materialize status | `GET /sensor-events/{id}/status` tạm `404 EVENT_NOT_MATERIALIZED` | Retry/poll có giới hạn; không suy luận kết quả cuối |
+| Processing VALID/COMPLETED | Status GET `200` + prediction/risk | Render latest event state |
+| Processing INVALID | Status GET `200`, `processing_status=INVALID` | Prediction/alert null, giữ details |
+| ML timeout exhausted | Status GET `200` với `FAILED/UNKNOWN` | Không render NORMAL |
+| Existing fleet/alerts empty | `200`, `items=[]` | EMPTY |
+| Machine/alert detail không tồn tại | `404` + resource error | Not found |
+| Alert action invalid transition | `409 INVALID_ALERT_TRANSITION` | Refresh state |
+| RAG unavailable | Alert GET `200`, copilot UNAVAILABLE | Alert lifecycle vẫn hoạt động |
+| Drift stored ERROR | Report GET `200` | Monitoring cảnh báo lỗi, không đổi machine state |
 
-Machine `state` luôn là enum nghiệp vụ, không null. `latest_risk_score` và
-`latest_prediction` của event hiện tại là null khi INVALID/UNKNOWN; không lấy
-prediction cũ làm kết luận cho event mới. Lịch sử vẫn giữ prediction cũ. Máy đã
-khai báo nhưng chưa có event dùng UNKNOWN, `data_status=null`, `last_seen_at=null`.
-Null ở đây biểu thị dữ liệu chưa có, không thay thế trạng thái nghiệp vụ.
+Machine `state` vẫn giữ `NORMAL/WATCH/HIGH/CRITICAL/INVALID/UNKNOWN`. `PENDING/PROCESSING/RETRYING/COMPLETED/FAILED` thuộc **event processing status**, không thêm vào `MachineOperationalState`. INVALID/UNKNOWN không tự đóng cảnh báo đang active từ trước. `LOADING/EMPTY/ERROR` chỉ là UI render states.
 
-INVALID/UNKNOWN không tự xóa các alerts đang active từ trước. `LOADING`, `EMPTY`
-và `ERROR` của giao diện là trạng thái request/render, không thêm vào MachineState.
-
-Sensor `machine_id` phải được provision/seed trước; không tự tạo machine khi
-ingest nhầm ID. Unknown machine trả MACHINE_NOT_FOUND. Đây là chi tiết bổ sung
-cho mục 5. Cùng event_id và canonical payload trả outcome đã lưu mà không tạo
-prediction/alert thứ hai; payload khác trả EVENT_CONFLICT. Ingestion không đợi RAG.
+**Breaking change rõ ràng:** mô tả v1.1 "sensor hợp lệ → HTTP 200 COMPLETED" và "sensor invalid features → HTTP 422" không còn áp dụng cho entrypoint Kafka-backed v1.2. Không thể vừa trả 202 ngay sau ACK vừa biết kết quả ML như luồng synchronous cũ.
 
 ## PAGE-01 — Phân trang fleet và alerts
 
@@ -158,31 +153,24 @@ Backend resolve deployed model và worker được cấu hình trước khi tổ
 trộn checkpoint/model khác. Không có checkpoint thì last_success_at null và
 worker_status NOT_AVAILABLE; vẫn có thể có report ERROR từ lượt chạy thất bại.
 
-## MON-02 — Đọc persisted drift reports
+## MON-02 — Đọc persisted drift reports (amendment1.3.2)
 
-Endpoints bổ sung: `GET /api/v1/drift-reports` và `GET /api/v1/drift-reports/{report_id}`.
-List mặc định model đang deploy, cho phép model_version/overall_status filter,
-limit mặc định 20, tối đa 100; order computed_at DESC, report_id DESC. Phân trang
-keyset bằng before/ before_report_id, response next_before/next_before_report_id.
-Hai cursor cùng null khi hết trang; before_report_id thiếu before trả 422.
+GET `/api/v1/drift-reports` đọc Business catalog metadata từ committed S3 manifests;
+GET `/{report_id}` tải exact version + checksum. Không chạy detector hoặc SQL drift_db.
+List filter model_version/overall_status, limit default20/max100, keyset opaque
+cursor bind filters + publication snapshot; order computed_at DESC, report_id DESC.
+Response có catalog_as_of/stale. Catalog stale không giả realtime; detail source
+unavailable503; no report404; persisted ERROR/INSUFFICIENT_DATA vẫn200.
+Không thêm machine_id filter cho global rolling reports. RECOVERY-01 §4 chốt bridge.
 
-Đọc nguyên report đã lưu, không chạy detector lại, không sửa computed_at hoặc
-policy snapshot. Report không tồn tại trả 404 DRIFT_REPORT_NOT_FOUND. Report
-ERROR/INSUFFICIENT_DATA tồn tại vẫn trả 200. Reports hiện là global rolling
-windows; API không thêm machine_id filter như thể có drift report cho từng máy.
+## AUTH-01 — Auth bắt buộc ở shared deployment (amendment1.3.2)
 
-## AUTH-01 — Profile xác thực tùy chọn trong baseline MVP
-
-Baseline 22 chưa chốt auth prototype/issuer/login flow. OpenAPI mô tả hai profile
-qua `security: [<scheme>, {}]`: auth-enabled dùng bearerAuth cho người dùng hoặc
-X-Service-API-Key cho sensor/backend service; auth-disabled chỉ dành cho prototype.
-Không hiểu nhánh anonymous trong tài liệu là quyền bỏ xác thực ở deployment đã bật auth.
-
-Khi bật auth: read dùng VIEWER/TECHNICIAN/ADMIN; mutate alert/feedback/brief dùng
-TECHNICIAN/ADMIN. SENSOR_SERVICE/BACKEND_SERVICE là service identities, không phải
-user roles mới. `x-maintai-roles` ghi quyền cho từng operation. Thiếu/sai credential
-trả 401 UNAUTHORIZED, thiếu quyền trả 403 FORBIDDEN; không retry tự động các lỗi này.
-Health/metrics là platform endpoints, không phải frontend business API.
+External OIDC cấp token; Business/Sensor kiểm tra issuer/audience/expiry/scope và
+machine authorization. Shared/demo deployment không cho anonymous; local-only
+profile phải explicit. Roles/scopes đầy đủ ở architecture decisions §5. Main UI
+và Simulator UI dùng public clients riêng; không nhúng service credentials.
+Missing/invalid token401; permission/machine scope thiếu403. SSE dùng authenticated
+fetch streaming, không token query string. Health/metrics là platform observations.
 
 ## HTTP-01, HEALTH-01 và SSE-01 — Quy ước transport
 
@@ -190,20 +178,19 @@ Health/metrics là platform endpoints, không phải frontend business API.
   ràng buộc theo response; không tự dùng error code của service khác cho cùng status.
   Các code UNAUTHORIZED, FORBIDDEN, DRIFT_REPORT_NOT_FOUND và
   DEPENDENCY_UNAVAILABLE là bổ sung để cụ thể hóa auth/resource/dependency failures.
-- Sensor 422 có hai dạng đã nêu ở STATE-01; health readiness cũng dùng schema
+- Sensor 422 chỉ phản ánh envelope-level validation trước Kafka; health readiness cũng dùng schema
   riêng thay vì error envelope vì đó là platform observation.
 - X-Request-ID/X-Correlation-ID đi trong response; edge tạo IDs khi incoming thiếu,
   backend truyền correlation ID xuyên service và request ID cho từng hop. Body
   error giữ trace IDs tùy chọn để tương thích các ví dụ rút gọn trong baseline.
 - `Retry-After` trên 503/504 là tùy chọn, dùng số giây trong profile này. Chỉ retry
   có giới hạn khi retryable=true và operation có semantics cho phép; không retry
-  400/401/403/409/422 như lỗi transient. ML client giữ timeout 2 giây, tối đa 1 retry
+  400/401/403/409/422 như lỗi transient. Processing ML client giữ timeout 2 giây, tối đa 1 retry
   cho connection/transient failure theo baseline 7.5.
-- Liveness 200 UP phản ánh process. Readiness 200 UP khi các checks bắt buộc đạt;
+- Liveness 200 UP phản ánh process. Readiness 200 UP khi các checks bắt buộc đạt; Ingestion cần Kafka connectivity, Processing Worker cần Kafka + processing_db, Storage Consumer cần Kafka + S3, Business Consumer cần Kafka + business_db;
   503 DEGRADED/DOWN khi chưa sẵn sàng. Backend readiness không phụ thuộc RAG;
   baseline brief/alert independence vẫn giữ nguyên.
-- SSE tùy chọn có năm loại events trong baseline 16. Các payload bổ sung được
-  mô tả ở sse-event.schema.json. Last-Event-ID chỉ là reconnect hint; không hứa
+- SSE cho Live Telemetry + Latest Prediction được bổ sung ở REALTIME-API-01: telemetry.received, prediction.completed, processing.status_changed cùng các event alert/brief/service/drift; schema máy đọc cần cập nhật tương ứng. Last-Event-ID chỉ là reconnect hint; không hứa
   replay không mất event. Sau reconnect, UI fetch lại REST. Lỗi sau khi stream
   đã gửi headers không thể đổi thành HTTP error response mới.
 
@@ -213,3 +200,175 @@ Không thêm HTTP API cho drift worker, không thêm login/token issuance, admin
 policy mutation hoặc auto-retraining endpoint. Các spec là đầu vào để implement
 và viết consumer/provider tests. Việc schemas/examples pass CI không chứng minh
 service thật đã thực thi đúng các invariants này.
+
+
+---
+
+## KAFKA-API-01 — Semantics Ingestion HTTP 202 (mới v1.2)
+
+```http
+POST /api/v1/sensor-readings
+Content-Type: application/json
+X-Correlation-ID: cor_001
+```
+
+```http
+HTTP/1.1 202 Accepted
+Location: https://business.example.invalid/api/v1/sensor-events/evt_fixture_1/status
+```
+
+```json
+{"event_id": "evt_fixture_1", "machine_id": "M-001", "ingestion_status": "ACCEPTED", "processing_status": "PENDING", "server_accepted_at": "2026-10-18T00:00:00Z", "status_url": "https://business.example.invalid/api/v1/sensor-events/evt_fixture_1/status", "correlation_id": "cor_fixture_1"}
+```
+
+Ingestion publish `sensor.readings` keyed `machine_id`, chờ broker ACK (acks=all). Chỉ nhận syntax/transport/envelope guard; feature validation tại Processing. Source of truth cho `machine_state` là kết quả xử lý đã persisted, không phải HTTP 202.
+
+## KAFKA-API-02 — Status polling và query consistency
+
+`GET /api/v1/sensor-events/{event_id}/status` trả trạng thái persisted nếu đã materialize trong `processing_db`. `404 EVENT_NOT_MATERIALIZED` trong thời gian Kafka→consumer chưa hoàn tất **không nhất thiết** đồng nghĩa event không tồn tại; client retry giới hạn/backoff. `COMPLETED` / `INVALID` / `FAILED` là trạng thái kết thúc của lượt xử lý theo policy; prediction có thể null với INVALID/FAILED. Business facade muốn trả alert_id phải query business-owned alert, không suy luận alert tạo thành công chỉ từ `alert.signals` sent.
+
+## KAFKA-API-03 — Không dùng chung credentials/database xuyên service
+
+Business API → Processing read API để lấy sensor history/latest prediction; Drift CronJob → Processing runtime-window read API hoặc S3 curated, không đọc SQL `processing_db`; Business owns `machines`, `alerts`, `feedback`, `rag_briefs`; Processing owns `sensor_events`, `predictions`, `risk_decisions`. `POST /api/v1/briefs` vẫn là internal RAG endpoint; `POST /api/v1/alerts/{id}/brief` vẫn accept asynchronous work như trước, tách khỏi sensor-ingest.
+
+## KAFKA-API-04 — Quy trình đồng bộ lại machine-readable specs
+
+Ghi chú migration v1.2: specs hiện hành tự chứa ở `contracts/v1.3/`, bộ kiến trúc cũ đã gỡ. Runtime vẫn cần migrate: change sensor POST response 200/422, thêm accepted/status DTO, `EVENT_NOT_MATERIALIZED`, Kafka envelope và alert signal schemas, fixtures, consumer/provider tests. Giữ invariant các endpoint lifecycle, pagination, RAG grounding, ML threshold, monitoring và SSE trong tài liệu này trừ khi có quyết định khác.
+
+
+---
+
+## REALTIME-API-01 — Realtime Frontend contract v1.3 (quyết định mới)
+
+**Nguồn:** hai cuộc trao đổi UI/architecture người dùng cung cấp. Frontend chọn **phương án C** thay vì “chỉ update UI khi ML done” hoặc “nhấp nháy Pending trên mỗi event”. Topic đã chốt trong System Contracts §32 là `sensor.readings` (thay tên `sensor.raw` ở 1.2), `inference.results` và `alert.signals`.
+
+### REST bootstrap của Machine Detail
+
+```http
+GET /api/v1/machines/{machine_id}/live
+```
+
+200 JSON có `machine_id`, `telemetry`, `latest_valid_prediction`, `latest_processing`, `as_of`; chi tiết shape ở System Contracts §32.4. `telemetry` và `latest_valid_prediction` **không cần cùng source_event_id**; prediction không tồn tại → null, không hiển thị `NORMAL`. `last_valid_prediction` của lần trước **không bị xóa** chỉ vì event hiện hành INVALID/FAILED, nhưng phải gắn label historical/stale. Business API quản lý UI-facing projection trong `business_db`, không query trực tiếp SQL của Processing DB.
+
+```http
+GET /api/v1/events/stream?machine_id=M-001
+Accept: text/event-stream
+```
+
+SSE types mới: `telemetry.received`, `prediction.completed`, `processing.status_changed`; tiếp tục có `alert.created`, `alert.updated`, `brief.ready`, `service.degraded` và có thể `drift.updated`. Chi tiết payload và sequence ở System Contracts §32.5. `GET /api/v1/machines` có thể trả summary fields `last_telemetry_at`, `latest_valid_prediction_at`, `prediction_source_event_id`, `prediction_freshness` làm optional additions; không tự gọi ML từ read endpoint.
+
+### Error and freshness semantics
+
+- `POST /api/v1/sensor-readings` vẫn **202 sau Kafka ACK**, không trả prediction; UI không trông chờ kết quả đồng bộ.
+- `telemetry.received` là **raw accepted / unvalidated**; nếu status sau đó INVALID, UI trình bày data-quality issue, không lấy raw làm kết luận “ổn định”.
+- Chỉ `prediction.completed` của `COMPLETED + VALID` mới thay đổi Latest Valid Prediction; stale/out-of-order results vẫn được lưu lịch sử nhưng không overwrite read model.
+- `processing.status_changed` cho INVALID/FAILED không tự động xóa/resolve alert hoặc xóa last valid prediction.
+- Chế độ aging minh hoạ cấu hình `<2s FRESH`, `2–5s DELAYED`, `>5s STALE`; dùng source reading accepted time để tính độ cũ của input dự đoán, không dùng `completed_at` một mình.
+- Client SSE nhận event out-of-order phải so ordering token theo máy; replay after reconnect dựa REST GET snapshot, không dựa `Last-Event-ID` như bảo đảm durable.
+- Mất fan-out notifications có thể khôi phục bằng REST resync, nhưng để realtime trên nhiều replicas phải sử dụng broadcast layer (pub/sub) hoặc topology được chứng minh phát đến mọi SSE Pod, không dùng single shared Kafka consumer group làm broadcast.
+
+### Snapshot sample khi inference chậm
+
+```json
+{
+  "machine_id": "M-001",
+  "telemetry": {"event_id":"R4","sequence_number":4,"server_accepted_at":"2026-10-17T00:00:03.050Z","features_raw":{"rotational_speed_rpm":1500}},
+  "latest_valid_prediction": {"source_event_id":"R2","sequence_number":2,"failure_probability":0.12,"prediction":"NORMAL","completed_at":"2026-10-17T00:00:03.000Z"},
+  "latest_processing": {"source_event_id":"R4","processing_status":"PENDING"},
+  "as_of":"2026-10-17T00:00:03.060Z"
+}
+```
+
+**UI:** Live Telemetry hiển thị R4; Latest Valid Prediction hiển thị R2 kèm “based on R2 · older than latest telemetry”, trạng thái updating/delayed theo ngưỡng; không gộp hai event làm một kết luận.
+
+### Contract testing
+
+Tạo OpenAPI schema cho live snapshot + SSE event JSON schemas / examples; contract tests phải cover out-of-order results, multiple API replicas, reconnect, auth filtering và data-invalid preservation. Target machine specs đã được bổ sung ở `contracts/v1.3/`; CI kiểm tra trực tiếp bộ này.
+
+
+---
+
+## OWNERSHIP-API-01 — Không nhập nhằng Ingestion, Processing và Business
+
+| HTTP endpoint/stream | Owner / deployment | Dữ liệu |
+|---|---|---|
+| `POST /api/v1/sensor-readings` | **Ingestion API** riêng (không thuộc Business Backend) | Envelopes tối thiểu, `202` chỉ khi Kafka ACK |
+| `GET /api/v1/sensor-events/{event_id}/status` | Processing read API nội bộ, Business API facade có thể proxy nếu scope UI cần | VALID/INVALID/FAILED/UNKNOWN; eventual consistency |
+| `GET /api/v1/machines/{id}/live` | Business API | Latest UI read models trong `business_db`, không raw history |
+| `GET /api/v1/events/stream` | Business API | SSE telemetry, prediction, processing, alerts, brief/drift updates |
+| Alert lifecycle/feedback/brief endpoints | Business API | Business DB & RAG facade |
+| Simulator control endpoints | Sensor Control API <- Simulator UI riêng | Demo-only control state; không qua Business |
+
+Business Consumer đọc các topics `sensor.readings`, `inference.results`, `alert.signals` với ba **handlers** trong một business codebase, chạy khác Deployment Business API; không phải ba inference services. Processing tạo prediction, Business chỉ materialize UI projection. `business_db` không lưu full raw history; Storage Consumer lưu S3, Processing lưu validation/predictions/risk history. PostgreSQL NOTIFY/pubsub sau projector commit để mọi SSE replica nhận thông báo; snapshot REST khôi phục notification loss. SSE không yêu cầu DB raw recording.
+
+## INGEST-ERROR-02 — HTTP rejection không dừng toàn bộ Simulator
+
+- `400` JSON malformed: record rejected local log/quarantine; Simulator tiếp tục record tiếp theo nếu `RUNNING`.
+- `422` envelope missing machine/event IDs hoặc `features` không phải object: reject **record**, không retry vô hạn và không publish Kafka.
+- `202` basic envelope hợp lệ, nhưng giá trị feature sai type/range: Data Quality Worker đánh INVALID, không gọi ML; raw Kafka event được Storage Consumer archive S3.
+- `503/504` Kafka unavailable or ack timeout: Simulator giữ pending event cùng event_id/payload trong durable retry spool, backoff; chỉ coi accepted khi có broker ACK.
+- `429`: bounded retry / `Retry-After`; `401/403`: configuration or auth error requiring operator intervention.
+- Không tự khẳng định 409 EVENT_CONFLICT synchronous nếu không có ingress durable dedupe ledger; Processing record conflict/validation outcome.
+
+## REALTIME-API-02 — Processing outcome và projection boundaries
+
+`inference.results` (giữ tên topic v1.3) dùng union có `result_kind`:
+
+| `result_kind` | Prediction fields | Effect trên Business UI |
+|---|---|---|
+| `PREDICTION_COMPLETED` | Required, VALID, COMPLETED | Update latest_valid_prediction theo source ordering; SSE `prediction.completed` |
+| `DATA_INVALID` | null | Update latest_processing + validation issues; SSE `processing.status_changed`, không xóa prediction cũ |
+| `INFERENCE_UNAVAILABLE` | null | Update latest_processing FAILED/UNKNOWN; SSE `processing.status_changed`, không hiển thị NORMAL giả |
+
+SSE `telemetry.received` phản ánh Kafka ACK accepted (UNVERIFIED) chứ không xác nhận DQ. `sequence_number` của mỗi máy phải tăng đơn điệu bền vững qua Pause/Resume và restart; `stream_epoch` là lineage metadata (không dùng sort); nếu không thể bảo đảm thì ingress phải cấp durable per-machine ordering token; `event_id` opaque và `completed_at` không dùng để sort nguồn sensor. Business API multiple replicas dùng PG LISTEN/NOTIFY / pubsub; UI REST after SSE reconnect.
+
+## SIM-CONTROL-API-01 — Simulator Pause/Resume/Scenario (demo only)
+
+```http
+GET  /api/v1/simulator/machines/{machine_id}/control
+POST /api/v1/simulator/machines/{machine_id}/pause
+POST /api/v1/simulator/machines/{machine_id}/resume
+PUT  /api/v1/simulator/machines/{machine_id}/scenario
+```
+
+GET example:
+
+```json
+{
+  "machine_id": "M-001",
+  "stream_state": "PAUSED",
+  "scenario": "degradation",
+  "updated_at": "2026-10-17T05:10:00Z",
+  "source": "SIMULATOR_CONTROL"
+}
+```
+
+Simulator UI gọi Sensor trực tiếp qua management origin; không Business facade. Mutation `pause/resume` return `200` **sau khi Simulator internal API ACK control state**; repeated command same state is idempotent; `PUT scenario` validates whitelist, changes future data only and doesn't auto-resume. Internal timeout/non-ACK must not be treated as successful control; query GET to reconcile. User role/access must explicitly permit demo control; `VIEWER` cannot send controls.
+
+`PAUSED` means no **new** sensor records for that machine, not Kafka backlog canceled; retry queue for previously generated readings remains explicitly controlled. `simulator.control_changed` optional SSE after confirmed state + pubsub fan-out. Pause/Resume does not update Risk State/AlertStatus, and Simulator is not an industrial actuator. UI must distinguish explicit `PAUSED` from inferred `STALE`; as soon as no fresh data, label `Last Telemetry` not Live.
+
+
+## COMPLETE-1.3.2 — Quyết định ưu tiên cho HTTP/API
+
+[System Contracts §34](MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md) và các normative
+specs ưu tiên mọi baseline cũ. Six provider descriptions:
+`contracts/v1.3/openapi/openapi-{ingestion,processing,business,simulator,ml,rag}.yaml`.
+ML/RAG provider payload vẫn1.1.0, description version1.3.2. Union result schema2.0.0.
+
+- HISTORY-01 chốt range/point/raw/chart/export routes, HMAC cursor + snapshot10m,
+  limits, full coverage/error410/503 và private download303.
+- RECOVERY-01 chốt durable brief jobs và GET `/brief-jobs/{job_id}`. POST brief202
+  phải có job_id/status_url sau commit; GET không tự chạy LLM.
+- Drift list dùng opaque cursor + catalog_as_of/stale, thay before/before_report_id
+  của MON-02; report detail lấy exact S3 version, không chạy detector hoặc SQL drift_db.
+- Simulator control routes do Sensor phục vụ, không thuộc Business. Mutation có
+  Idempotency-Key + expected_control_version; state ACK chỉ sau persistent write.
+- Schema SSE data dùng envelope schema1.0.0 có type/machine_id/data/occurred_at;
+  event name khớp type. Thêm brief.updated/projection.resync. REST resync luôn cần.
+
+Document/API revision không tự đổi behavior của executable Sensor/Drift hiện có.
+Bộ OpenAPI kiến trúc cũ đã gỡ; runtime migration và DB schemas vẫn phải implement
+theo Guide v1.4 §42–47 cùng chi tiết history/recovery kế thừa. Provider ML/RAG1.1.0 và Drift schema1.0.0 vẫn còn hiệu lực.
+
+Ingestion status_url/Location phải là absolute Business API URL được cấu hình;
+Sensor gọi Ingestion internal origin không được resolve relative URL về Ingestion.
