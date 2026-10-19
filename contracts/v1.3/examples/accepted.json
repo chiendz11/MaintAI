@@ -1,0 +1,9 @@
+{
+  "event_id": "evt_fixture_1",
+  "machine_id": "M-001",
+  "ingestion_status": "ACCEPTED",
+  "processing_status": "PENDING",
+  "server_accepted_at": "2026-10-18T00:00:00Z",
+  "status_url": "https://business.example.invalid/api/v1/sensor-events/evt_fixture_1/status",
+  "correlation_id": "cor_fixture_1"
+}

@@ -1,0 +1,30 @@
+{
+  "descriptor_kind": "MaintAIRuntime",
+  "schema_version": "1.0.0",
+  "target_contract_revision": "1.3.2",
+  "runtime_id": "frontend",
+  "workload_kind": "Deployment",
+  "code_owner": "frontend",
+  "implementation_status": "skeleton",
+  "image_group": "frontend",
+  "image_digest": null,
+  "entrypoint_status": "not_implemented_for_v1.3.2",
+  "purpose": "Main Realtime UI C: fleet/live/prediction/processing/history/charts/alerts/Copilot/drift. No Simulator controls.",
+  "source_paths": [
+    "frontend/src"
+  ],
+  "logical_database": null,
+  "kafka_subscriptions": [],
+  "kafka_publications": [],
+  "interfaces": [
+    "Business REST API",
+    "Business SSE"
+  ],
+  "boundaries": [
+    "Mở SSE và REST bootstrap/resync; giữ source event/age và ordering riêng mỗi trục dữ liệu.",
+    "Không gọi trực tiếp Ingestion/ML/RAG/DB hoặc Simulator control API nội bộ."
+  ],
+  "dockerfile": "frontend/Dockerfile",
+  "dockerfile_status": "placeholder",
+  "implemented_contract_revision": null
+}

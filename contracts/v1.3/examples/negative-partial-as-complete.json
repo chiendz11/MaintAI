@@ -1,0 +1,14 @@
+{
+  "snapshot_id": "snap_fixture_1",
+  "as_of": "2026-10-18T00:00:00Z",
+  "expires_at": "2026-10-18T00:10:00Z",
+  "coverage": "PARTIAL",
+  "tiers_used": [
+    "HOT",
+    "ARCHIVE"
+  ],
+  "available_from": "2025-10-18T00:00:00Z",
+  "available_through": "2026-10-18T00:00:00Z",
+  "next_cursor": null,
+  "items": []
+}

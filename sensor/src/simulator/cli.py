@@ -26,10 +26,16 @@ def parser() -> argparse.ArgumentParser:
     replay = commands.add_parser("replay", help="Replay AI4I features as sensor events")
     replay.add_argument("--dataset", dest="dataset_path", type=Path)
     replay.add_argument("--backend-url", dest="backend_base_url")
-    replay.add_argument("--interval-ms", type=float)
-    replay.add_argument("--speed", type=float)
+    replay.add_argument(
+        "--interval-ms",
+        type=float,
+        help="Logical interval per machine in ms (default: 1000; 0: no wait)",
+    )
+    replay.add_argument("--speed", type=float, help="Replay speed multiplier (default: 1)")
     replay.add_argument("--seed", type=int)
-    replay.add_argument("--machine-count", type=int)
+    replay.add_argument(
+        "--machine-count", type=int, help="Machines visited in round-robin order (default: 5)"
+    )
     replay.add_argument("--scenario", help="Built-in scenario name")
     replay.add_argument("--scenario-path", type=Path, help="Scenario directory")
     replay.add_argument("--scenario-file", type=Path, help="Explicit custom YAML file")

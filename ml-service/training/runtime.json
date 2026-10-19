@@ -1,0 +1,33 @@
+{
+  "descriptor_kind": "MaintAIRuntime",
+  "schema_version": "1.0.0",
+  "target_contract_revision": "1.3.2",
+  "runtime_id": "training",
+  "workload_kind": "WorkflowTask",
+  "code_owner": "ml",
+  "implementation_status": "skeleton",
+  "image_group": "training",
+  "image_digest": null,
+  "entrypoint_status": "not_implemented_for_v1.3.2",
+  "purpose": "Batch training/evaluation trên approved curated dataset, xuất model bundle và drift reference.",
+  "source_paths": [
+    "ml-service/training",
+    "ml-service/shared"
+  ],
+  "logical_database": null,
+  "kafka_subscriptions": [],
+  "kafka_publications": [],
+  "interfaces": [
+    "Curated S3",
+    "MLflow API",
+    "Model artifacts S3",
+    "GitOps model release PR"
+  ],
+  "boundaries": [
+    "Chạy theo task Argo Workflow rồi kết thúc; không phải HTTP Deployment.",
+    "Raw S3 upload/drift/feedback không tự retrain/promote; mlflow_db do MLflow Server sở hữu."
+  ],
+  "dockerfile": "ml-service/training/Dockerfile",
+  "dockerfile_status": "placeholder",
+  "implemented_contract_revision": null
+}

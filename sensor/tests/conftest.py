@@ -8,7 +8,6 @@ import pytest
 from jsonschema import Draft202012Validator, FormatChecker
 
 SENSOR_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = SENSOR_ROOT.parent
 
 
 @pytest.fixture
@@ -23,7 +22,7 @@ def scenario_dir():
 
 @pytest.fixture
 def validator():
-    schema = json.loads((REPO_ROOT / "contracts/sensor-event.schema.json").read_text())
+    schema = json.loads((SENSOR_ROOT / "tests/fixtures/sensor-wire.schema.json").read_text())
     return Draft202012Validator(schema, format_checker=FormatChecker())
 
 

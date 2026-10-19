@@ -30,7 +30,7 @@ jobs:
       - name: Check component folders
         run: |
           test -f README.md
-          for component in sensor backend frontend ml-service rag-service drift-worker; do
+          for component in sensor ingestion-api processing storage-consumer backend frontend ml-service rag-service drift-worker messaging; do
             test -d "$component"
             printf 'Found %s/\n' "$component"
           done
@@ -64,8 +64,92 @@ jobs:
       - name: Install contract validation tools
         run: python -m pip install -r contracts/requirements.lock
 
-      - name: Validate OpenAPI, schemas, examples and baseline compatibility
-        run: python contracts/validate.py --bundle-dir "$RUNNER_TEMP/maintai-openapi"
+      - name: Validate current OpenAPI, schemas and examples
+        run: python contracts/v1.3/validate.py
+
+  kafka-ci:
+    name: Kafka SDK (Python ${{ matrix.python }})
+    needs: structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.12']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: messaging/requirements-dev.lock
+
+      - name: Install locked SDK dependencies
+        run: |
+          python -m pip install -r messaging/requirements-dev.lock
+          python -m pip install --no-deps -e ./messaging
+
+      - name: Lint, immutable schemas and failure semantics
+        run: |
+          ruff check messaging
+          ruff format --check messaging
+          python messaging/scripts/lock_contracts.py --check
+          maintai-kafka validate-contracts
+          python -m pytest messaging/tests/unit
+
+      - name: Build source distribution and wheel with bundled contracts
+        run: python -m build messaging
+
+      - name: Verify installed wheel without repository fallback
+        run: |
+          python -m venv "$RUNNER_TEMP/messaging-wheel"
+          "$RUNNER_TEMP/messaging-wheel/bin/python" -m pip install -r messaging/requirements.lock
+          "$RUNNER_TEMP/messaging-wheel/bin/python" -m pip install --no-deps messaging/dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/messaging-wheel/bin/maintai-kafka" validate-contracts
+
+  kafka-integration:
+    name: Kafka and PostgreSQL durable delivery
+    needs: kafka-ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      COMPOSE_PROJECT_NAME: maintai-kafka-ci
+      MAINTAI_KAFKA_INTEGRATION: '1'
+      KAFKA_TEST_BOOTSTRAP_SERVERS: 127.0.0.1:19092
+      KAFKA_TEST_DATABASE_URL: postgresql://maintai_dev:maintai_dev@127.0.0.1:15432/maintai_messaging_dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: messaging/requirements-dev.lock
+
+      - name: Install locked SDK dependencies
+        run: |
+          python -m pip install -r messaging/requirements-dev.lock
+          python -m pip install --no-deps -e ./messaging
+
+      - name: Start isolated development broker and database
+        run: docker compose -f messaging/tests/integration/compose.yaml up -d --wait --wait-timeout 180
+
+      - name: Verify real broker ACK, owner transactions, dedupe and outbox fencing
+        run: python -m pytest messaging/tests/integration
+
+      - name: Remove CI-only containers and volumes
+        if: ${{ always() }}
+        run: docker compose -f messaging/tests/integration/compose.yaml down --volumes
 
   sensor-ci:
     name: Sensor CI (Python ${{ matrix.python }})
@@ -217,6 +301,9 @@ jobs:
       fail-fast: false
       matrix:
         component:
+          - ingestion-api
+          - processing
+          - storage-consumer
           - backend
           - frontend
           - ml-service
@@ -246,6 +333,8 @@ jobs:
     needs:
       - structure
       - api-contracts
+      - kafka-ci
+      - kafka-integration
       - sensor-ci
       - sensor-container
       - drift-ci

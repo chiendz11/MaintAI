@@ -1,0 +1,30 @@
+{
+  "descriptor_kind": "MaintAIRuntime",
+  "schema_version": "1.0.0",
+  "target_contract_revision": "1.3.2",
+  "runtime_id": "ml-service",
+  "workload_kind": "Deployment",
+  "code_owner": "ml",
+  "implementation_status": "skeleton",
+  "image_group": "ml-service",
+  "image_digest": null,
+  "entrypoint_status": "not_implemented_for_v1.3.2",
+  "purpose": "Online preprocessing + model inference; caller nghiệp vụ là Processing Worker.",
+  "source_paths": [
+    "ml-service/inference",
+    "ml-service/shared"
+  ],
+  "logical_database": null,
+  "kafka_subscriptions": [],
+  "kafka_publications": [],
+  "interfaces": [
+    "HTTP POST /api/v1/predict",
+    "Approved model artifacts"
+  ],
+  "boundaries": [
+    "Image riêng với training; không fit/train trên request, không quyết định severity hoặc tạo alert."
+  ],
+  "dockerfile": "ml-service/inference/Dockerfile",
+  "dockerfile_status": "placeholder",
+  "implemented_contract_revision": null
+}

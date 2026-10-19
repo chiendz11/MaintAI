@@ -1,0 +1,30 @@
+{
+  "descriptor_kind": "MaintAIRuntime",
+  "schema_version": "1.0.0",
+  "target_contract_revision": "1.3.2",
+  "runtime_id": "sensor",
+  "workload_kind": "Deployment",
+  "code_owner": "sensor",
+  "implementation_status": "legacy_partial",
+  "image_group": "sensor",
+  "image_digest": null,
+  "entrypoint_status": "not_implemented_for_v1.3.2",
+  "purpose": "Simulator scheduler + authenticated Sensor Control API for separate Simulator UI; durable per-machine state/sequence/spool.",
+  "source_paths": [
+    "sensor/src/simulator"
+  ],
+  "logical_database": null,
+  "kafka_subscriptions": [],
+  "kafka_publications": [],
+  "interfaces": [
+    "HTTP Ingestion API",
+    "Sensor Control API for Simulator UI"
+  ],
+  "boundaries": [
+    "Code hiện có là CLI replay theo contract v1.1; control/scheduling/retry_spool/ordering mới là skeleton.",
+    "Một controller demo; pause chỉ dừng readings mới, không hủy retry/in-flight events; cần sequence bền vững qua restart."
+  ],
+  "dockerfile": "sensor/Dockerfile",
+  "dockerfile_status": "implemented_legacy",
+  "implemented_contract_revision": "1.1.0"
+}

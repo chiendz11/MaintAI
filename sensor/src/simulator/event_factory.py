@@ -19,8 +19,10 @@ class EventFactory:
             raise ValueError("machine_count must be positive")
         if start_time is not None and start_time.utcoffset() is None:
             raise ValueError("start_time must include a timezone")
-        self.random = random.Random(seed)
         self.machine_count = machine_count
+        self.machine_ids = [f"M-{index:03d}" for index in range(1, machine_count + 1)]
+        # Shuffle once: each cycle visits every machine once in the same seeded order.
+        random.Random(seed).shuffle(self.machine_ids)
         self.interval_ms = interval_ms
         self.start_time = (start_time or datetime.now(UTC)).astimezone(UTC)
         # A fresh run ID prevents a second replay from colliding with prior events.
@@ -31,8 +33,9 @@ class EventFactory:
     def create(self, features: Features, sequence: int) -> SensorEvent:
         return SensorEvent(
             event_id=f"evt_{uuid5(self.namespace, str(sequence))}",
-            machine_id=f"M-{self.random.randint(1, self.machine_count):03d}",
-            received_at=self.start_time + timedelta(milliseconds=sequence * self.interval_ms),
+            machine_id=self.machine_ids[sequence % self.machine_count],
+            received_at=self.start_time
+            + timedelta(milliseconds=sequence * self.interval_ms / self.machine_count),
             source="AI4I_SIMULATOR",
             features=features,
         )

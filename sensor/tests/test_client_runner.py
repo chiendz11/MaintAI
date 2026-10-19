@@ -1,6 +1,6 @@
 import io
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
@@ -226,15 +226,29 @@ def test_backend_down_does_not_crash_replay(sample_csv, scenario_dir, policy, ge
     assert stats.exit_code == 1
 
 
-def test_rate_control_uses_speed_and_preserves_logical_clock(sample_csv, scenario_dir, backend):
-    cfg = config(sample_csv, scenario_dir).model_copy(update={"interval_ms": 1000, "speed": 4})
-    clock, sleeps = [0.0], []
+@pytest.mark.parametrize("machine_count", [1, 5, 10])
+@pytest.mark.parametrize("speed", [1, 4])
+def test_rate_control_balances_machines_and_preserves_logical_clock(
+    sample_csv, scenario_dir, backend, machine_count, speed
+):
+    cfg = config(sample_csv, scenario_dir, loop_dataset=True).model_copy(
+        update={
+            "interval_ms": 1000,
+            "speed": speed,
+            "machine_count": machine_count,
+            "limit": machine_count * 3,
+        }
+    )
+    clock, sent_at = [0.0], []
 
     def sleep(delay):
-        sleeps.append(delay)
         clock[0] += delay
 
-    with BackendClient("http://backend", transport=httpx.MockTransport(backend.handle)) as client:
+    def handle(request):
+        sent_at.append(clock[0])
+        return backend.handle(request)
+
+    with BackendClient("http://backend", transport=httpx.MockTransport(handle)) as client:
         stats = ReplayRunner(
             cfg,
             ScenarioLoader.load(cfg.scenario_yaml),
@@ -242,11 +256,21 @@ def test_rate_control_uses_speed_and_preserves_logical_clock(sample_csv, scenari
             sleep=sleep,
             monotonic=lambda: clock[0],
         ).run()
-    assert sleeps == [0.25, 0.25]
-    assert stats.duration_ms == 500
+    assert stats.generated == stats.accepted == machine_count * 3
+    assert sent_at == pytest.approx([i / machine_count / speed for i in range(cfg.limit)])
     events = [json.loads(request.content) for request in backend.requests]
-    assert events[0]["received_at"] == "2026-10-12T00:00:00Z"
-    assert events[2]["received_at"] == "2026-10-12T00:00:02Z"
+    timestamps = [datetime.fromisoformat(event["received_at"]) for event in events]
+    assert timestamps == [
+        cfg.start_time + timedelta(milliseconds=i * 1000 / machine_count) for i in range(cfg.limit)
+    ]
+    assert {event["machine_id"] for event in events} == {
+        f"M-{i:03d}" for i in range(1, machine_count + 1)
+    }
+    for slot in range(machine_count):
+        readings = events[slot::machine_count]
+        assert len({event["machine_id"] for event in readings}) == 1
+        assert timestamps[slot + machine_count] - timestamps[slot] == timedelta(seconds=1)
+        assert sent_at[slot + machine_count] - sent_at[slot] == pytest.approx(1 / speed)
 
 
 def test_dry_run_payloads_are_reproducible_and_no_sleep(sample_csv, scenario_dir):

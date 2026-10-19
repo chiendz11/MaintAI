@@ -1,0 +1,81 @@
+{
+  "fixtures_only": true,
+  "warning": "Fixture hashes are syntactic examples, not deployable releases.",
+  "cases": [
+    {
+      "file": "sensor-reading.json",
+      "topic": "sensor.readings",
+      "valid": true
+    },
+    {
+      "file": "rejected.json",
+      "topic": "sensor.rejected",
+      "valid": true
+    },
+    {
+      "file": "completed.json",
+      "topic": "inference.results",
+      "valid": true
+    },
+    {
+      "file": "invalid.json",
+      "topic": "inference.results",
+      "valid": true
+    },
+    {
+      "file": "unavailable.json",
+      "topic": "inference.results",
+      "valid": true
+    },
+    {
+      "file": "alert-signal.json",
+      "topic": "alert.signals",
+      "valid": true
+    },
+    {
+      "file": "legacy-completed.json",
+      "topic": "inference.results",
+      "valid": true
+    },
+    {
+      "file": "legacy-invalid.json",
+      "topic": "inference.results",
+      "valid": true
+    },
+    {
+      "file": "legacy-unavailable.json",
+      "topic": "inference.results",
+      "valid": true
+    },
+    {
+      "file": "negative-invalid-with-prediction.json",
+      "topic": "inference.results",
+      "valid": false
+    },
+    {
+      "file": "negative-unavailable-with-probability.json",
+      "topic": "inference.results",
+      "valid": false
+    },
+    {
+      "file": "negative-wrong-label.json",
+      "topic": "inference.results",
+      "valid": false
+    },
+    {
+      "file": "negative-unknown-version.json",
+      "topic": "inference.results",
+      "valid": false
+    },
+    {
+      "file": "negative-invalid-source-offset.json",
+      "topic": "inference.results",
+      "valid": false
+    },
+    {
+      "file": "negative-invalid-image.json",
+      "topic": "inference.results",
+      "valid": false
+    }
+  ]
+}

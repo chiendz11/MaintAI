@@ -1,0 +1,2951 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MaintAI target 1.3.2 wire contracts; design only",
+  "$defs": {
+    "ObjectRef": {
+      "type": "object",
+      "properties": {
+        "bucket": {
+          "type": "string",
+          "minLength": 1
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "bucket",
+        "key",
+        "version_id",
+        "sha256",
+        "size_bytes"
+      ],
+      "additionalProperties": false
+    },
+    "ValidationIssue": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "minLength": 1
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "field",
+        "code"
+      ],
+      "additionalProperties": false
+    },
+    "Error": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "minLength": 1
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1
+            },
+            "retryable": {
+              "type": "boolean"
+            },
+            "details": {
+              "type": "object"
+            },
+            "request_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "correlation_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "additionalProperties": false
+    },
+    "SensorRequest": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": "1.3.0"
+        },
+        "event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "machine_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stream_epoch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sequence_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "received_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "source": {
+          "const": "AI4I_SIMULATOR"
+        },
+        "features": {
+          "type": "object"
+        },
+        "correlation_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "schema_version",
+        "event_id",
+        "machine_id",
+        "stream_epoch",
+        "sequence_number",
+        "received_at",
+        "source",
+        "features"
+      ],
+      "additionalProperties": false
+    },
+    "SensorEvent": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": "1.3.0"
+        },
+        "event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "machine_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stream_epoch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sequence_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "received_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "source": {
+          "const": "AI4I_SIMULATOR"
+        },
+        "features": {
+          "type": "object"
+        },
+        "correlation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "server_accepted_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "schema_version",
+        "event_id",
+        "machine_id",
+        "stream_epoch",
+        "sequence_number",
+        "received_at",
+        "source",
+        "features",
+        "correlation_id",
+        "server_accepted_at"
+      ],
+      "additionalProperties": false
+    },
+    "IngestAck": {
+      "type": "object",
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "machine_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ingestion_status": {
+          "const": "ACCEPTED"
+        },
+        "processing_status": {
+          "const": "PENDING"
+        },
+        "server_accepted_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "correlation_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "event_id",
+        "machine_id",
+        "ingestion_status",
+        "processing_status",
+        "server_accepted_at",
+        "status_url",
+        "correlation_id"
+      ],
+      "additionalProperties": false
+    },
+    "CompletedResult": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": "2.0.0"
+        },
+        "result_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "machine_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stream_epoch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sequence_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "source_server_accepted_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "occurred_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "correlation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "result_kind": {
+          "const": "PREDICTION_COMPLETED"
+        },
+        "processing_status": {
+          "const": "COMPLETED"
+        },
+        "validation_status": {
+          "const": "VALID"
+        },
+        "prediction": {
+          "type": "string",
+          "enum": [
+            "NORMAL",
+            "FAILURE"
+          ]
+        },
+        "prediction_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "failure_probability": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "model_threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "model_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "preprocessor_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dataset_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policy_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "machine_state": {
+          "type": "string",
+          "enum": [
+            "NORMAL",
+            "WATCH",
+            "HIGH",
+            "CRITICAL"
+          ]
+        },
+        "completed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "failure_code": {
+          "type": "null"
+        },
+        "validation_errors": {
+          "type": "array",
+          "maxItems": 0
+        }
+      },
+      "required": [
+        "schema_version",
+        "result_id",
+        "source_event_id",
+        "machine_id",
+        "stream_epoch",
+        "sequence_number",
+        "source_server_accepted_at",
+        "occurred_at",
+        "correlation_id",
+        "result_kind",
+        "processing_status",
+        "validation_status",
+        "prediction",
+        "prediction_id",
+        "failure_probability",
+        "model_threshold",
+        "model_version",
+        "preprocessor_version",
+        "dataset_version",
+        "policy_version",
+        "machine_state",
+        "completed_at",
+        "failure_code",
+        "validation_errors"
+      ],
+      "additionalProperties": false
+    },
+    "InvalidResult": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": "2.0.0"
+        },
+        "result_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "machine_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stream_epoch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sequence_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "source_server_accepted_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "occurred_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "correlation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "result_kind": {
+          "const": "DATA_INVALID"
+        },
+        "processing_status": {
+          "const": "INVALID"
+        },
+        "validation_status": {
+          "const": "INVALID"
+        },
+        "prediction": {
+          "type": "null"
+        },
+        "prediction_id": {
+          "type": "null"
+        },
+        "failure_probability": {
+          "type": "null"
+        },
+        "model_threshold": {
+          "type": "null"
+        },
+        "model_version": {
+          "type": "null"
+        },
+        "preprocessor_version": {
+          "type": "null"
+        },
+        "dataset_version": {
+          "type": "null"
+        },
+        "policy_version": {
+          "type": "null"
+        },
+        "machine_state": {
+          "type": "null"
+        },
+        "completed_at": {
+          "type": "null"
+        },
+        "failure_code": {
+          "type": "null"
+        },
+        "validation_errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ValidationIssue"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "schema_version",
+        "result_id",
+        "source_event_id",
+        "machine_id",
+        "stream_epoch",
+        "sequence_number",
+        "source_server_accepted_at",
+        "occurred_at",
+        "correlation_id",
+        "result_kind",
+        "processing_status",
+        "validation_status",
+        "prediction",
+        "prediction_id",
+        "failure_probability",
+        "model_threshold",
+        "model_version",
+        "preprocessor_version",
+        "dataset_version",
+        "policy_version",
+        "machine_state",
+        "completed_at",
+        "failure_code",
+        "validation_errors"
+      ],
+      "additionalProperties": false
+    },
+    "UnavailableResult": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": "2.0.0"
+        },
+        "result_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "machine_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stream_epoch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sequence_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "source_server_accepted_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "occurred_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "correlation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "result_kind": {
+          "const": "INFERENCE_UNAVAILABLE"
+        },
+        "processing_status": {
+          "const": "FAILED"
+        },
+        "validation_status": {
+          "const": "VALID"
+        },
+        "prediction": {
+          "type": "null"
+        },
+        "prediction_id": {
+          "type": "null"
+        },
+        "failure_probability": {
+          "type": "null"
+        },
+        "model_threshold": {
+          "type": "null"
+        },
+        "model_version": {
+          "type": "null"
+        },
+        "preprocessor_version": {
+          "type": "null"
+        },
+        "dataset_version": {
+          "type": "null"
+        },
+        "policy_version": {
+          "type": "null"
+        },
+        "machine_state": {
+          "type": "null"
+        },
+        "completed_at": {
+          "type": "null"
+        },
+        "failure_code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "validation_errors": {
+          "type": "array",
+          "maxItems": 0
+        }
+      },
+      "required": [
+        "schema_version",
+        "result_id",
+        "source_event_id",
+        "machine_id",
+        "stream_epoch",
+        "sequence_number",
+        "source_server_accepted_at",
+        "occurred_at",
+        "correlation_id",
+        "result_kind",
+        "processing_status",
+        "validation_status",
+        "prediction",
+        "prediction_id",
+        "failure_probability",
+        "model_threshold",
+        "model_version",
+        "preprocessor_version",
+        "dataset_version",
+        "policy_version",
+        "machine_state",
+        "completed_at",
+        "failure_code",
+        "validation_errors"
+      ],
+      "additionalProperties": false
+    },
+    "ProcessingResult": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/CompletedResult"
+        },
+        {
+          "$ref": "#/$defs/InvalidResult"
+        },
+        {
+          "$ref": "#/$defs/UnavailableResult"
+        }
+      ]
+    },
+    "RiskSnapshot": {
+      "type": "object",
+      "properties": {
+        "risk_decision_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "machine_state": {
+          "type": "string",
+          "enum": [
+            "NORMAL",
+            "WATCH",
+            "HIGH",
+            "CRITICAL"
+          ]
+        },
+        "policy_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "risk_score": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "risk_decision_id",
+        "machine_state",
+        "policy_version"
+      ],
+      "additionalProperties": false
+    },
+    "HistoryRecord": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": "1.0.0"
+        },
+        "result_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "machine_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_server_accepted_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "outcome": {
+          "$ref": "#/$defs/ProcessingResult"
+        },
+        "features_raw": {
+          "type": "object"
+        },
+        "raw_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ObjectRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "risk_snapshot": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RiskSnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "result_id",
+        "source_event_id",
+        "machine_id",
+        "source_server_accepted_at",
+        "outcome",
+        "features_raw",
+        "raw_ref",
+        "risk_snapshot"
+      ],
+      "additionalProperties": false
+    },
+    "HistoryPage": {
+      "type": "object",
+      "properties": {
+        "snapshot_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "coverage": {
+          "const": "COMPLETE"
+        },
+        "tiers_used": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "HOT",
+              "ARCHIVE"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "available_from": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "available_through": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/HistoryRecord"
+          }
+        }
+      },
+      "required": [
+        "snapshot_id",
+        "as_of",
+        "expires_at",
+        "coverage",
+        "tiers_used",
+        "available_from",
+        "available_through",
+        "next_cursor",
+        "items"
+      ],
+      "additionalProperties": false
+    },
+    "RawHistoryRecord": {
+      "type": "object",
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "machine_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stream_epoch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sequence_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "received_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "server_accepted_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "features_raw": {
+          "type": "object"
+        },
+        "validation_status": {
+          "type": "string",
+          "enum": [
+            "UNVERIFIED",
+            "VALID",
+            "INVALID"
+          ]
+        },
+        "result_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "validation_errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ValidationIssue"
+          }
+        },
+        "receipt_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kafka": {
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "minLength": 1
+            },
+            "partition": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "topic",
+            "partition",
+            "offset"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "event_id",
+        "machine_id",
+        "stream_epoch",
+        "sequence_number",
+        "received_at",
+        "server_accepted_at",
+        "features_raw",
+        "validation_status",
+        "result_id",
+        "validation_errors",
+        "receipt_id",
+        "kafka"
+      ],
+      "additionalProperties": false
+    },
+    "RawHistoryPage": {
+      "type": "object",
+      "properties": {
+        "snapshot_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "coverage": {
+          "const": "COMPLETE"
+        },
+        "tiers_used": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "HOT",
+              "ARCHIVE"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "available_from": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "available_through": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RawHistoryRecord"
+          }
+        }
+      },
+      "required": [
+        "snapshot_id",
+        "as_of",
+        "expires_at",
+        "coverage",
+        "tiers_used",
+        "available_from",
+        "available_through",
+        "next_cursor",
+        "items"
+      ],
+      "additionalProperties": false
+    },
+    "ChartBucket": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "avg": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "invalid_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "min",
+        "max",
+        "avg",
+        "count",
+        "invalid_count"
+      ],
+      "additionalProperties": false
+    },
+    "ChartMarker": {
+      "type": "object",
+      "properties": {
+        "source_event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_server_accepted_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "ALERT",
+            "PREDICTION"
+          ]
+        },
+        "reference_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "source_event_id",
+        "source_server_accepted_at",
+        "kind",
+        "reference_id"
+      ],
+      "additionalProperties": false
+    },
+    "TimeSeriesPage": {
+      "type": "object",
+      "properties": {
+        "snapshot_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "coverage": {
+          "const": "COMPLETE"
+        },
+        "tiers_used": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "HOT",
+              "ARCHIVE"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "available_from": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "available_through": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "metric": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resolution": {
+          "type": "string",
+          "enum": [
+            "1s",
+            "10s",
+            "1m",
+            "5m",
+            "1h",
+            "1d"
+          ]
+        },
+        "buckets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ChartBucket"
+          }
+        },
+        "markers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ChartMarker"
+          }
+        },
+        "markers_next_cursor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "snapshot_id",
+        "as_of",
+        "expires_at",
+        "coverage",
+        "tiers_used",
+        "available_from",
+        "available_through",
+        "next_cursor",
+        "metric",
+        "unit",
+        "resolution",
+        "buckets",
+        "markers",
+        "markers_next_cursor"
+      ],
+      "additionalProperties": false
+    },
+    "ExportRequest": {
+      "type": "object",
+      "properties": {
+        "machine_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true
+        },
+        "from": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "to": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "PARQUET",
+            "CSV"
+          ]
+        },
+        "resource": {
+          "type": "string",
+          "enum": [
+            "PROCESSING",
+            "RAW"
+          ]
+        },
+        "model_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "result_kind": {
+          "type": "string",
+          "enum": [
+            "PREDICTION_COMPLETED",
+            "DATA_INVALID",
+            "INFERENCE_UNAVAILABLE"
+          ]
+        }
+      },
+      "required": [
+        "machine_ids",
+        "from",
+        "to",
+        "format",
+        "resource"
+      ],
+      "additionalProperties": false
+    },
+    "ExportJob": {
+      "type": "object",
+      "properties": {
+        "job_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "QUEUED",
+            "RUNNING",
+            "SUCCEEDED",
+            "FAILED",
+            "EXPIRED"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "attempts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "error_code": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status_url": {
+          "type": "string",
+          "format": "uri-reference"
+        },
+        "artifact_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ObjectRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expires_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "download_url": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uri-reference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "job_id",
+        "status",
+        "created_at",
+        "updated_at",
+        "attempts",
+        "error_code",
+        "status_url",
+        "artifact_ref",
+        "expires_at",
+        "download_url"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "SUCCEEDED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "artifact_ref": {
+                "$ref": "#/$defs/ObjectRef"
+              },
+              "expires_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "download_url": {
+                "type": "string",
+                "format": "uri-reference"
+              },
+              "error_code": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "FAILED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "error_code": {
+                "type": "string",
+                "minLength": 1
+              },
+              "artifact_ref": {
+                "type": "null"
+              },
+              "download_url": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "QUEUED",
+                  "RUNNING",
+                  "EXPIRED"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "artifact_ref": {
+                "type": "null"
+              },
+              "download_url": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "BriefJob": {
+      "type": "object",
+      "properties": {
+        "job_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "QUEUED",
+            "RUNNING",
+            "SUCCEEDED",
+            "FAILED",
+            "EXPIRED"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "attempts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "error_code": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status_url": {
+          "type": "string",
+          "format": "uri-reference"
+        },
+        "alert_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "intent": {
+          "type": "string",
+          "enum": [
+            "MAINTENANCE_BRIEF",
+            "TECHNICIAN_CHECKLIST",
+            "ALERT_EXPLANATION"
+          ]
+        },
+        "copilot_status": {
+          "type": "string",
+          "enum": [
+            "PENDING",
+            "AVAILABLE",
+            "UNAVAILABLE",
+            "INSUFFICIENT_EVIDENCE",
+            "VALIDATION_FAILED"
+          ]
+        },
+        "brief_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "job_id",
+        "status",
+        "created_at",
+        "updated_at",
+        "attempts",
+        "error_code",
+        "status_url",
+        "alert_id",
+        "intent",
+        "copilot_status",
+        "brief_id"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "QUEUED",
+                  "RUNNING"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "copilot_status": {
+                "const": "PENDING"
+              },
+              "brief_id": {
+                "type": "null"
+              },
+              "error_code": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "SUCCEEDED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "copilot_status": {
+                "enum": [
+                  "AVAILABLE",
+                  "INSUFFICIENT_EVIDENCE",
+                  "VALIDATION_FAILED"
+                ]
+              },
+              "error_code": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "FAILED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "copilot_status": {
+                "const": "UNAVAILABLE"
+              },
+              "error_code": {
+                "type": "string",
+                "minLength": 1
+              },
+              "brief_id": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "copilot_status": {
+                "const": "AVAILABLE"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "brief_id": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "BriefAccepted": {
+      "type": "object",
+      "properties": {
+        "job_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "alert_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "copilot_status": {
+          "const": "PENDING"
+        },
+        "status_url": {
+          "type": "string",
+          "format": "uri-reference"
+        }
+      },
+      "required": [
+        "job_id",
+        "alert_id",
+        "copilot_status",
+        "status_url"
+      ],
+      "additionalProperties": false
+    },
+    "ControlState": {
+      "type": "object",
+      "properties": {
+        "machine_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stream_state": {
+          "type": "string",
+          "enum": [
+            "RUNNING",
+            "PAUSED"
+          ]
+        },
+        "scenario": {
+          "type": "string",
+          "minLength": 1
+        },
+        "control_version": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_controlled_by": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "const": "SIMULATOR_CONTROL"
+        }
+      },
+      "required": [
+        "machine_id",
+        "stream_state",
+        "scenario",
+        "control_version",
+        "updated_at",
+        "last_controlled_by",
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "ControlCommand": {
+      "type": "object",
+      "properties": {
+        "expected_control_version": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "expected_control_version"
+      ],
+      "additionalProperties": false
+    },
+    "ScenarioCommand": {
+      "type": "object",
+      "properties": {
+        "expected_control_version": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "scenario": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "expected_control_version",
+        "scenario"
+      ],
+      "additionalProperties": false
+    },
+    "ControlList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ControlState"
+          }
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "items",
+        "as_of"
+      ],
+      "additionalProperties": false
+    },
+    "LiveSnapshot": {
+      "type": "object",
+      "properties": {
+        "machine_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "telemetry": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "event_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "stream_epoch": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sequence_number": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "server_accepted_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "received_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "validation_status": {
+                  "type": "string",
+                  "enum": [
+                    "UNVERIFIED",
+                    "VALID",
+                    "INVALID"
+                  ]
+                },
+                "features_raw": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "event_id",
+                "stream_epoch",
+                "sequence_number",
+                "server_accepted_at",
+                "received_at",
+                "validation_status",
+                "features_raw"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "latest_valid_prediction": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "source_event_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "stream_epoch": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sequence_number": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "source_server_accepted_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "prediction_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "failure_probability": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "prediction": {
+                  "type": "string",
+                  "enum": [
+                    "NORMAL",
+                    "FAILURE"
+                  ]
+                },
+                "machine_state_at_prediction": {
+                  "type": "string",
+                  "enum": [
+                    "NORMAL",
+                    "WATCH",
+                    "HIGH",
+                    "CRITICAL"
+                  ]
+                },
+                "model_version": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "preprocessor_version": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "dataset_version": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "policy_version": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "completed_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "source_event_id",
+                "stream_epoch",
+                "sequence_number",
+                "source_server_accepted_at",
+                "prediction_id",
+                "failure_probability",
+                "prediction",
+                "machine_state_at_prediction",
+                "model_version",
+                "preprocessor_version",
+                "dataset_version",
+                "policy_version",
+                "completed_at"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "latest_processing": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "source_event_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "stream_epoch": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sequence_number": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "processing_status": {
+                  "type": "string",
+                  "enum": [
+                    "PENDING",
+                    "PROCESSING",
+                    "RETRYING",
+                    "COMPLETED",
+                    "INVALID",
+                    "FAILED"
+                  ]
+                },
+                "validation_status": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "VALID",
+                        "INVALID"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "failure_code": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "source_event_id",
+                "stream_epoch",
+                "sequence_number",
+                "processing_status",
+                "validation_status",
+                "updated_at",
+                "failure_code"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "machine_id",
+        "telemetry",
+        "latest_valid_prediction",
+        "latest_processing",
+        "as_of"
+      ],
+      "additionalProperties": false
+    },
+    "ProcessingStatus": {
+      "type": "object",
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "machine_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "processing_status": {
+          "type": "string",
+          "enum": [
+            "PENDING",
+            "PROCESSING",
+            "RETRYING",
+            "COMPLETED",
+            "INVALID",
+            "FAILED"
+          ]
+        },
+        "result_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "validation_status": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "VALID",
+                "INVALID"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "failure_code": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "event_id",
+        "machine_id",
+        "processing_status",
+        "result_id",
+        "validation_status",
+        "updated_at",
+        "failure_code"
+      ],
+      "additionalProperties": false
+    },
+    "RuntimeWindow": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "allOf": [
+              {
+                "$ref": "#/$defs/HistoryRecord"
+              },
+              {
+                "properties": {
+                  "outcome": {
+                    "$ref": "#/$defs/CompletedResult"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "model_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dataset_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "window_start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "window_end": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "snapshot_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "next_before": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "snapshot_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "items",
+        "model_version",
+        "dataset_version",
+        "window_start",
+        "window_end",
+        "snapshot_at",
+        "next_before",
+        "snapshot_id"
+      ],
+      "additionalProperties": false
+    },
+    "ArchiveManifest": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": "1.0.0"
+        },
+        "batch_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "record_schema_version": {
+          "const": "1.0.0"
+        },
+        "row_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "membership_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "min_source_server_accepted_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "max_source_server_accepted_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "min_occurred_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "max_occurred_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "members_index": {
+          "$ref": "#/$defs/ObjectRef"
+        },
+        "objects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ObjectRef"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "schema_version",
+        "batch_id",
+        "created_at",
+        "record_schema_version",
+        "row_count",
+        "membership_sha256",
+        "min_source_server_accepted_at",
+        "max_source_server_accepted_at",
+        "min_occurred_at",
+        "max_occurred_at",
+        "members_index",
+        "objects"
+      ],
+      "additionalProperties": false
+    },
+    "DriftManifest": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": "1.0.0"
+        },
+        "report_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "computed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "publication_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "model_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dataset_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "overall_status": {
+          "type": "string",
+          "enum": [
+            "STABLE",
+            "WARNING",
+            "CRITICAL",
+            "ERROR",
+            "INSUFFICIENT_DATA"
+          ]
+        },
+        "report_ref": {
+          "$ref": "#/$defs/ObjectRef"
+        }
+      },
+      "required": [
+        "schema_version",
+        "report_id",
+        "computed_at",
+        "publication_at",
+        "model_version",
+        "dataset_version",
+        "overall_status",
+        "report_ref"
+      ],
+      "additionalProperties": false
+    },
+    "DriftReportList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/DriftManifest"
+          }
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "catalog_as_of": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "stale": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor",
+        "catalog_as_of",
+        "stale"
+      ],
+      "additionalProperties": false
+    },
+    "SSEEvent": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "schema_version": {
+              "const": "1.0.0"
+            },
+            "type": {
+              "const": "telemetry.received"
+            },
+            "machine_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "event_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "stream_epoch": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sequence_number": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "server_accepted_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "received_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "validation_status": {
+                  "type": "string",
+                  "enum": [
+                    "UNVERIFIED",
+                    "VALID",
+                    "INVALID"
+                  ]
+                },
+                "features_raw": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "event_id",
+                "stream_epoch",
+                "sequence_number",
+                "server_accepted_at",
+                "received_at",
+                "validation_status",
+                "features_raw"
+              ],
+              "additionalProperties": false
+            },
+            "occurred_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "schema_version",
+            "type",
+            "machine_id",
+            "data",
+            "occurred_at"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schema_version": {
+              "const": "1.0.0"
+            },
+            "type": {
+              "const": "prediction.completed"
+            },
+            "machine_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "source_event_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "stream_epoch": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sequence_number": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "source_server_accepted_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "prediction_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "failure_probability": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "prediction": {
+                  "type": "string",
+                  "enum": [
+                    "NORMAL",
+                    "FAILURE"
+                  ]
+                },
+                "machine_state_at_prediction": {
+                  "type": "string",
+                  "enum": [
+                    "NORMAL",
+                    "WATCH",
+                    "HIGH",
+                    "CRITICAL"
+                  ]
+                },
+                "model_version": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "preprocessor_version": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "dataset_version": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "policy_version": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "completed_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "source_event_id",
+                "stream_epoch",
+                "sequence_number",
+                "source_server_accepted_at",
+                "prediction_id",
+                "failure_probability",
+                "prediction",
+                "machine_state_at_prediction",
+                "model_version",
+                "preprocessor_version",
+                "dataset_version",
+                "policy_version",
+                "completed_at"
+              ],
+              "additionalProperties": false
+            },
+            "occurred_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "schema_version",
+            "type",
+            "machine_id",
+            "data",
+            "occurred_at"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schema_version": {
+              "const": "1.0.0"
+            },
+            "type": {
+              "const": "processing.status_changed"
+            },
+            "machine_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "source_event_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "stream_epoch": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sequence_number": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "processing_status": {
+                  "type": "string",
+                  "enum": [
+                    "PENDING",
+                    "PROCESSING",
+                    "RETRYING",
+                    "COMPLETED",
+                    "INVALID",
+                    "FAILED"
+                  ]
+                },
+                "validation_status": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "VALID",
+                        "INVALID"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "failure_code": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "source_event_id",
+                "stream_epoch",
+                "sequence_number",
+                "processing_status",
+                "validation_status",
+                "updated_at",
+                "failure_code"
+              ],
+              "additionalProperties": false
+            },
+            "occurred_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "schema_version",
+            "type",
+            "machine_id",
+            "data",
+            "occurred_at"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schema_version": {
+              "const": "1.0.0"
+            },
+            "type": {
+              "const": "alert.created"
+            },
+            "machine_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "alert_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "machine_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "severity": {
+                  "type": "string",
+                  "enum": [
+                    "WATCH",
+                    "HIGH",
+                    "CRITICAL"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "OPEN",
+                    "ACKNOWLEDGED",
+                    "IN_PROGRESS",
+                    "ESCALATED",
+                    "RESOLVED",
+                    "FALSE_ALERT"
+                  ]
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "alert_id",
+                "machine_id",
+                "severity",
+                "status",
+                "updated_at"
+              ],
+              "additionalProperties": false
+            },
+            "occurred_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "schema_version",
+            "type",
+            "machine_id",
+            "data",
+            "occurred_at"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schema_version": {
+              "const": "1.0.0"
+            },
+            "type": {
+              "const": "alert.updated"
+            },
+            "machine_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "alert_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "machine_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "severity": {
+                  "type": "string",
+                  "enum": [
+                    "WATCH",
+                    "HIGH",
+                    "CRITICAL"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "OPEN",
+                    "ACKNOWLEDGED",
+                    "IN_PROGRESS",
+                    "ESCALATED",
+                    "RESOLVED",
+                    "FALSE_ALERT"
+                  ]
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "alert_id",
+                "machine_id",
+                "severity",
+                "status",
+                "updated_at"
+              ],
+              "additionalProperties": false
+            },
+            "occurred_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "schema_version",
+            "type",
+            "machine_id",
+            "data",
+            "occurred_at"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schema_version": {
+              "const": "1.0.0"
+            },
+            "type": {
+              "const": "brief.ready"
+            },
+            "machine_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "job_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "alert_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "job_id",
+                "alert_id",
+                "updated_at"
+              ],
+              "additionalProperties": false
+            },
+            "occurred_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "schema_version",
+            "type",
+            "machine_id",
+            "data",
+            "occurred_at"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schema_version": {
+              "const": "1.0.0"
+            },
+            "type": {
+              "const": "brief.updated"
+            },
+            "machine_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "job_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "alert_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "job_id",
+                "alert_id",
+                "updated_at"
+              ],
+              "additionalProperties": false
+            },
+            "occurred_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "schema_version",
+            "type",
+            "machine_id",
+            "data",
+            "occurred_at"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schema_version": {
+              "const": "1.0.0"
+            },
+            "type": {
+              "const": "service.degraded"
+            },
+            "machine_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "service": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "DEGRADED",
+                    "UNAVAILABLE"
+                  ]
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "service",
+                "status",
+                "updated_at"
+              ],
+              "additionalProperties": false
+            },
+            "occurred_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "schema_version",
+            "type",
+            "machine_id",
+            "data",
+            "occurred_at"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schema_version": {
+              "const": "1.0.0"
+            },
+            "type": {
+              "const": "drift.updated"
+            },
+            "machine_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "report_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "report_id",
+                "updated_at"
+              ],
+              "additionalProperties": false
+            },
+            "occurred_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "schema_version",
+            "type",
+            "machine_id",
+            "data",
+            "occurred_at"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schema_version": {
+              "const": "1.0.0"
+            },
+            "type": {
+              "const": "projection.resync"
+            },
+            "machine_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "generation_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "generation_id",
+                "updated_at"
+              ],
+              "additionalProperties": false
+            },
+            "occurred_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "schema_version",
+            "type",
+            "machine_id",
+            "data",
+            "occurred_at"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

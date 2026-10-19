@@ -1,0 +1,32 @@
+{
+  "descriptor_kind": "MaintAIRuntime",
+  "schema_version": "1.0.0",
+  "target_contract_revision": "1.3.2",
+  "runtime_id": "drift-worker",
+  "workload_kind": "CronJob",
+  "code_owner": "drift",
+  "implementation_status": "legacy_partial",
+  "image_group": "drift-worker",
+  "image_digest": null,
+  "entrypoint_status": "not_implemented_for_v1.3.2",
+  "purpose": "Periodic drift từ Processing read API/curated S3, persist drift_db và report artifacts.",
+  "source_paths": [
+    "drift-worker/src/drift_monitor"
+  ],
+  "logical_database": "drift_db",
+  "kafka_subscriptions": [],
+  "kafka_publications": [],
+  "interfaces": [
+    "Processing read API",
+    "Curated S3",
+    "Drift report S3",
+    "Pushgateway"
+  ],
+  "boundaries": [
+    "Detector/CLI v1.1 hiện có; API/S3 adapters và tách DB ownership chưa migrate.",
+    "Không dùng direct processing_db access trong target; không consume raw Kafka mặc định; không retrain/promote."
+  ],
+  "dockerfile": "drift-worker/Dockerfile",
+  "dockerfile_status": "implemented_legacy",
+  "implemented_contract_revision": "1.1.0"
+}

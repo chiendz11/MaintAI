@@ -1,0 +1,31 @@
+{
+  "descriptor_kind": "MaintAIRuntime",
+  "schema_version": "1.0.0",
+  "target_contract_revision": "1.3.2",
+  "runtime_id": "processing-outbox-relay",
+  "workload_kind": "Deployment",
+  "code_owner": "processing",
+  "implementation_status": "skeleton",
+  "image_group": "processing",
+  "image_digest": null,
+  "entrypoint_status": "not_implemented_for_v1.3.2",
+  "purpose": "Publish durable Processing outbox sang Kafka rồi đánh dấu kết quả publish.",
+  "source_paths": [
+    "processing/outbox-relay/src",
+    "processing/shared"
+  ],
+  "logical_database": "processing_db",
+  "kafka_subscriptions": [],
+  "kafka_publications": [
+    "inference.results",
+    "alert.signals"
+  ],
+  "interfaces": [],
+  "boundaries": [
+    "Skeleton chọn relay thành Deployment riêng để thấy rõ ranh giới scale/restart; không thêm DB ownership.",
+    "Delivery at least once; stable IDs và idempotent consumers, không hứa exactly-once end-to-end."
+  ],
+  "dockerfile": "processing/outbox-relay/Dockerfile",
+  "dockerfile_status": "placeholder",
+  "implemented_contract_revision": null
+}

@@ -78,7 +78,9 @@ def main():
                 capture=True,
             )
             (artifacts / "reference.json").write_text(reference)
-            schema = json.loads((ROOT / "contracts/drift-report.schema.json").read_text())
+            schema = json.loads(
+                (ROOT / "contracts/v1.3/schemas/drift-report.schema.json").read_text()
+            )
             validator = Draft202012Validator(schema, format_checker=FormatChecker())
             for index, (scenario, expected) in enumerate(
                 [

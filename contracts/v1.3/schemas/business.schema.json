@@ -1,0 +1,830 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Backend DTOs and action payloads",
+  "$defs": {
+    "MachineListItem": {
+      "type": "object",
+      "properties": {
+        "machine_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state": {
+          "$ref": "common.schema.json#/$defs/MachineState"
+        },
+        "latest_risk_score": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "active_alert_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "last_seen_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "data_status": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/ValidationStatus"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "machine_id",
+        "display_name",
+        "state",
+        "latest_risk_score",
+        "active_alert_count",
+        "last_seen_at",
+        "data_status"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "INVALID",
+                  "UNKNOWN"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "latest_risk_score": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "INVALID"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data_status": {
+                "const": "INVALID"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "NORMAL",
+                  "WATCH",
+                  "HIGH",
+                  "CRITICAL"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "latest_risk_score": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "data_status": {
+                "const": "VALID"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "MachineList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "business.schema.json#/$defs/MachineListItem"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "additionalProperties": false
+    },
+    "MachineDetail": {
+      "type": "object",
+      "properties": {
+        "machine_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state": {
+          "$ref": "common.schema.json#/$defs/MachineState"
+        },
+        "data_status": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/ValidationStatus"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "last_seen_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "latest_sensor": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "event_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "features": {
+                  "type": "object"
+                },
+                "received_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "event_id",
+                "features"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "latest_prediction": {
+          "anyOf": [
+            {
+              "$ref": "prediction.schema.json#/$defs/Snapshot"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "active_alerts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "machine_id",
+        "display_name",
+        "state",
+        "data_status",
+        "last_seen_at",
+        "latest_sensor",
+        "latest_prediction",
+        "active_alerts"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "INVALID",
+                  "UNKNOWN"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "latest_prediction": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "data_status": {
+                "const": "VALID"
+              }
+            },
+            "required": [
+              "data_status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "latest_sensor": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "properties": {
+                      "features": {
+                        "$ref": "features.schema.json"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "NORMAL",
+                  "WATCH",
+                  "HIGH",
+                  "CRITICAL"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "latest_prediction": {
+                "$ref": "prediction.schema.json#/$defs/Snapshot"
+              },
+              "data_status": {
+                "const": "VALID"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "INVALID"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data_status": {
+                "const": "INVALID"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "AlertListItem": {
+      "type": "object",
+      "properties": {
+        "alert_id": {
+          "$ref": "common.schema.json#/$defs/Identifier"
+        },
+        "machine_id": {
+          "$ref": "common.schema.json#/$defs/Identifier"
+        },
+        "severity": {
+          "$ref": "common.schema.json#/$defs/AlertSeverity"
+        },
+        "status": {
+          "$ref": "common.schema.json#/$defs/AlertStatus"
+        },
+        "risk_score": {
+          "$ref": "common.schema.json#/$defs/Probability"
+        },
+        "created_at": {
+          "$ref": "common.schema.json#/$defs/Timestamp"
+        }
+      },
+      "required": [
+        "alert_id",
+        "machine_id",
+        "severity",
+        "status",
+        "risk_score",
+        "created_at"
+      ],
+      "additionalProperties": false
+    },
+    "AlertList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "business.schema.json#/$defs/AlertListItem"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "additionalProperties": false
+    },
+    "AlertSnapshot": {
+      "type": "object",
+      "properties": {
+        "alert_id": {
+          "$ref": "common.schema.json#/$defs/Identifier"
+        },
+        "machine_id": {
+          "$ref": "common.schema.json#/$defs/Identifier"
+        },
+        "severity": {
+          "$ref": "common.schema.json#/$defs/AlertSeverity"
+        },
+        "status": {
+          "$ref": "common.schema.json#/$defs/AlertStatus"
+        },
+        "risk_score": {
+          "$ref": "common.schema.json#/$defs/Probability"
+        },
+        "model_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policy_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "created_at": {
+          "$ref": "common.schema.json#/$defs/Timestamp"
+        }
+      },
+      "required": [
+        "alert_id",
+        "machine_id",
+        "severity",
+        "status",
+        "risk_score",
+        "model_version",
+        "policy_version",
+        "created_at"
+      ],
+      "additionalProperties": false
+    },
+    "CopilotSummary": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "common.schema.json#/$defs/CopilotStatus"
+        },
+        "brief_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "grounded_status": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/GroundedStatus"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "status",
+        "brief_id",
+        "grounded_status"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "AVAILABLE"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "brief_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "grounded_status": {
+                "type": "string",
+                "enum": [
+                  "GROUNDED",
+                  "INSUFFICIENT_EVIDENCE",
+                  "VALIDATION_FAILED"
+                ]
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "brief_id": {
+                "type": "null"
+              },
+              "grounded_status": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "const": "UNAVAILABLE"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "AlertHistoryEvent": {
+      "type": "object",
+      "properties": {
+        "alert_event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "event_type": {
+          "type": "string",
+          "enum": [
+            "CREATED",
+            "ACKNOWLEDGED",
+            "IN_PROGRESS",
+            "ESCALATED",
+            "RESOLVED",
+            "FALSE_ALERT"
+          ]
+        },
+        "from_status": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/AlertStatus"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "to_status": {
+          "$ref": "common.schema.json#/$defs/AlertStatus"
+        },
+        "actor_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "alert_event_id",
+        "event_type",
+        "from_status",
+        "to_status",
+        "actor_id",
+        "note",
+        "timestamp"
+      ],
+      "additionalProperties": false
+    },
+    "AlertDetail": {
+      "type": "object",
+      "properties": {
+        "alert": {
+          "$ref": "business.schema.json#/$defs/AlertSnapshot"
+        },
+        "sensor_event": {
+          "type": "object",
+          "properties": {
+            "event_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "validation_status": {
+              "const": "VALID"
+            },
+            "features": {
+              "$ref": "features.schema.json"
+            }
+          },
+          "required": [
+            "event_id",
+            "validation_status",
+            "features"
+          ],
+          "additionalProperties": false
+        },
+        "prediction": {
+          "$ref": "prediction.schema.json#/$defs/AlertSnapshot"
+        },
+        "copilot": {
+          "$ref": "business.schema.json#/$defs/CopilotSummary"
+        },
+        "history": {
+          "type": "array",
+          "items": {
+            "$ref": "business.schema.json#/$defs/AlertHistoryEvent"
+          }
+        }
+      },
+      "required": [
+        "alert",
+        "sensor_event",
+        "prediction",
+        "copilot",
+        "history"
+      ],
+      "additionalProperties": false
+    },
+    "ActorNote": {
+      "type": "object",
+      "properties": {
+        "actor_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "actor_id"
+      ],
+      "additionalProperties": false
+    },
+    "ResolveRequest": {
+      "type": "object",
+      "properties": {
+        "actor_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resolution": {
+          "type": "string",
+          "minLength": 1
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "actor_id",
+        "resolution"
+      ],
+      "additionalProperties": false
+    },
+    "FalseAlertRequest": {
+      "type": "object",
+      "properties": {
+        "actor_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "actor_id",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "AlertTransitionResult": {
+      "type": "object",
+      "properties": {
+        "alert_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "previous_status": {
+          "$ref": "common.schema.json#/$defs/AlertStatus"
+        },
+        "status": {
+          "$ref": "common.schema.json#/$defs/AlertStatus"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "alert_id",
+        "previous_status",
+        "status",
+        "updated_at"
+      ],
+      "additionalProperties": false
+    },
+    "FeedbackRequest": {
+      "type": "object",
+      "properties": {
+        "technician_verdict": {
+          "type": "string",
+          "enum": [
+            "CONFIRMED_ISSUE",
+            "FALSE_ALERT",
+            "INCONCLUSIVE"
+          ]
+        },
+        "recommendation_feedback": {
+          "type": "string",
+          "enum": [
+            "USEFUL",
+            "PARTIALLY_USEFUL",
+            "NOT_USEFUL",
+            "NOT_AVAILABLE"
+          ]
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "technician_verdict",
+        "recommendation_feedback"
+      ],
+      "additionalProperties": false
+    },
+    "FeedbackCreated": {
+      "type": "object",
+      "properties": {
+        "feedback_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "alert_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recorded_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "feedback_id",
+        "alert_id",
+        "recorded_at"
+      ],
+      "additionalProperties": false
+    },
+    "GenerateBriefRequest": {
+      "type": "object",
+      "properties": {
+        "intent": {
+          "$ref": "common.schema.json#/$defs/Intent"
+        }
+      },
+      "required": [
+        "intent"
+      ],
+      "additionalProperties": false
+    },
+    "CopilotResult": {
+      "type": "object",
+      "properties": {
+        "copilot_status": {
+          "$ref": "common.schema.json#/$defs/CopilotStatus"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "brief": {
+          "anyOf": [
+            {
+              "$ref": "maintenance-brief.schema.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "copilot_status",
+        "message",
+        "brief"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "copilot_status": {
+                "const": "AVAILABLE"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "brief": {
+                "$ref": "maintenance-brief.schema.json"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "brief": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

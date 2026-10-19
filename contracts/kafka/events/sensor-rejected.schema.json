@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "1.4.0"
+    },
+    "rejection_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "source_identity": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "correlation_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "rejected_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reason": {
+      "enum": [
+        "MALFORMED_JSON",
+        "VALIDATION_FAILED"
+      ]
+    },
+    "payload_disposition": {
+      "const": "HASH_ONLY"
+    },
+    "payload_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "payload_size_bytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 524288
+    },
+    "validation_errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "field",
+          "code"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "maxItems": 128
+    }
+  },
+  "required": [
+    "schema_version",
+    "rejection_id",
+    "source_identity",
+    "request_id",
+    "correlation_id",
+    "rejected_at",
+    "reason",
+    "payload_disposition",
+    "payload_sha256",
+    "payload_size_bytes",
+    "validation_errors"
+  ],
+  "additionalProperties": false
+}

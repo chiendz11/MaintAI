@@ -44,7 +44,7 @@ def test_normal_window_contract_and_no_forbidden_features(config, samples):
     assert len(report.features) == 6
     assert all(result.score == 0 for result in report.features)
     root = Path(__file__).resolve().parents[3]
-    schema = json.loads((root / "contracts/drift-report.schema.json").read_text())
+    schema = json.loads((root / "contracts/v1.3/schemas/drift-report.schema.json").read_text())
     Draft202012Validator(schema, format_checker=FormatChecker()).validate(
         report.model_dump(mode="json")
     )

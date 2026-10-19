@@ -1,0 +1,4 @@
+# Generated bundles stay outside Git; retain only the directory placeholder.
+*
+!.gitignore
+!.gitkeep

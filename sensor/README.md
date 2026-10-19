@@ -1,5 +1,7 @@
 # MaintAI Sensor Simulator
 
+**Target 1.3.1:** xem [Dockerfile](Dockerfile). Code/commands bên dưới là simulator CLI v1.1 interface (package 0.2.0); Kafka ACK 202, internal control API, durable ordering và retry spool chưa implement. Các folder mới chỉ là skeleton; không dùng CLI hiện tại làm bằng chứng target long-running Deployment đã chạy.
+
 Triển khai theo **MaintAI Implementation Development Guide v1.1 DRIFT §5** và
 **MaintAI System Contracts v1.1 DRIFT §2, §5, §25A.5**. Folder giữ tên `sensor/`
 theo cấu trúc repo đã thống nhất; package Python dùng `src/simulator/` như guide.
@@ -56,18 +58,25 @@ Chỉ gửi 6 feature theo allowlist. `UDI`, `Product ID`, `Machine failure`,
 Không dùng label gốc để kết luận failure cho các record đã biến đổi bằng drift.
 
 Features được kiểm tra kiểu, finite number, category L/M/H, rpm > 0 và wear >= 0.
-Không tự thêm ngưỡng torque/temperature ngoài contract. JSON schema chung nằm ở
-[`contracts/sensor-event.schema.json`](../contracts/sensor-event.schema.json).
+Không tự thêm ngưỡng torque/temperature ngoài contract. Frozen schema cho wire
+synchronous hiện có nằm ở [tests/fixtures/sensor-wire.schema.json](tests/fixtures/sensor-wire.schema.json).
+Đây là fixture kiểm thử độc lập của module. Contract Ingestion mục tiêu nằm trong
+[contracts/v1.3/](../contracts/v1.3/README.md); code Sensor chưa migrate sang ACK202.
 
 ## Replay và tính lặp lại
 
 - Mỗi lượt chạy tạo run ID mới, tránh trùng event với lượt trước.
-- Seed quyết định machine mapping và categorical transforms bằng hai RNG riêng.
-  Mặc định dùng seed trong scenario; `--seed`/`SIM_SEED` có thể override.
+- Các máy gửi luân phiên: mỗi vòng đi qua đủ `machine_count` máy đúng một lần.
+  Seed quyết định thứ tự máy cố định cho các vòng và categorical transforms bằng
+  hai RNG riêng. Mặc định dùng seed trong scenario; `--seed`/`SIM_SEED` có thể override.
 - Để tái tạo toàn bộ payload, giữ cùng dataset/scenario/seed, `--run-id` và
   `--start-time`. Tái dùng run ID với payload khác có thể dẫn tới `409 EVENT_CONFLICT`.
-- Logical timestamp tăng theo `interval_ms`; tốc độ gửi là `interval_ms / speed`.
-  Tăng speed không làm đổi timestamp/features. Độ trễ backend có thể giảm throughput.
+- Từ sensor **0.2.0**, `interval_ms` là chu kỳ logical **của mỗi máy**. Các event
+  toàn luồng cách nhau `interval_ms / machine_count` milliseconds; thời gian chờ
+  gửi là `interval_ms / machine_count / speed`. Mỗi máy có chu kỳ gửi mục tiêu
+  `interval_ms / speed`, tăng số máy không làm giảm tốc độ mục tiêu của từng máy.
+  Tăng speed không làm đổi timestamp/features. HTTP gửi tuần tự; backend chậm hoặc
+  retry có thể làm tốc độ thực tế thấp hơn mục tiêu. `interval_ms=0` tắt chờ gửi.
 - Replay dừng khi hết dataset, hết phases hoặc đạt `--limit`. Chỉ lặp CSV nếu có
   `--loop-dataset`; ngay cả khi lặp, số event vẫn bị giới hạn bởi scenario/limit.
 - Dry-run không gọi HTTP, không sleep; in JSONL ra stdout, logs JSON ra stderr.
@@ -79,6 +88,24 @@ Không tự thêm ngưỡng torque/temperature ngoài contract. JSON schema chun
   --run-id demo-001 --start-time 2026-10-12T04:30:15Z \
   --output sensor/output/events.jsonl --metrics-file sensor/output/metrics.prom
 ```
+
+Với `--interval-ms 1000 --speed 1`, 5 máy có tổng tốc độ mục tiêu 5 bản ghi/giây;
+đổi `--machine-count 10` thì thành 10 bản ghi/giây. Đây là nhiều sensor/máy giả
+lập trong một tiến trình; không phải dữ liệu lịch sử thật của nhiều máy trong AI4I.
+Mỗi event đọc một dòng CSV tiếp theo, không nhân cùng một dòng cho tất cả máy.
+`--limit` và số event trong scenario vẫn tính cho toàn luồng, không phải từng máy.
+
+```bash
+.venv/bin/maintai-sensor replay --machine-count 5 --interval-ms 1000 --speed 1 --limit 100
+.venv/bin/maintai-sensor replay --machine-count 10 --interval-ms 1000 --speed 1 --limit 100
+```
+
+**Chuyển từ 0.1.0:** trước đây interval áp dụng cho toàn luồng và máy được chọn
+ngẫu nhiên ở mỗi event. Để giữ tổng tốc độ cũ, đặt interval mới bằng interval cũ
+nhân số máy (ví dụ 5 máy, `--interval-ms 5000` giữ khoảng 1 event/giây ở speed 1).
+Không tái dùng `run_id` của bản cũ để gửi payload mới. Wire payload vẫn giữ nguyên
+System Contracts 1.1.0; GitOps dùng schema cấu hình mới `sensor-config-2.0.0` để
+ghi rõ thay đổi ý nghĩa interval, đồng thời giữ schema 1.0.0 cho lịch sử.
 
 ## Drift scenarios
 
@@ -179,3 +206,9 @@ và network do repo deployment quản lý.
 CI sensor chạy lint/format, unit/contract tests, mock HTTP integration, wheel/sdist
 build, dependency audit, Docker build và container dry-run smoke test. Không publish
 image hay deploy. Các component còn lại tiếp tục giữ skeleton.
+
+
+> **Thiết kế v1.4:** Xem [docs index](../docs/README.md),
+> [Guide v1.4](../docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md) và
+> [readiness](../docs/implementation-readiness.md). Runtime metadata hiện có vẫn
+> baseline1.3.2; source chưa tự migrate theo việc nhập tài liệu.

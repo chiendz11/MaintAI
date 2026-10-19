@@ -30,7 +30,9 @@ class SimulatorConfig(BaseModel):
 
     backend_base_url: AnyHttpUrl = AnyHttpUrl("http://localhost:8000")
     dataset_path: Path = Field(default_factory=default_dataset_path)
-    interval_ms: float = Field(default=1000, ge=0)
+    interval_ms: float = Field(
+        default=1000, ge=0, description="Logical interval between readings from the same machine"
+    )
     speed: float = Field(default=1, gt=0)
     seed: int | None = None  # None uses the scenario's deterministic seed.
     machine_count: int = Field(default=5, ge=1)
@@ -94,4 +96,5 @@ class SimulatorConfig(BaseModel):
 
     @property
     def delay_seconds(self) -> float:
-        return self.interval_ms / 1000 / self.speed
+        # Stagger the machines evenly while keeping each machine's sampling interval.
+        return self.interval_ms / 1000 / self.machine_count / self.speed

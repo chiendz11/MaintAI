@@ -1,0 +1,874 @@
+openapi: 3.1.1
+info:
+  title: MaintAI Processing Read API
+  version: 1.3.2
+  description: Design contract, not a running service. Document amendment1.3.2; event schemas versioned independently.
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+servers:
+- url: https://processing.example.invalid
+  description: Illustrative only; configure environment routing.
+security:
+- BearerAuth: []
+x-maintai-audience: processing-internal
+paths:
+  /api/v1/internal/machines/{machine_id}/predictions:
+    get:
+      operationId: internalListProcessingHistory
+      summary: List immutable outcomes across hot/archive tiers
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented.'
+      x-maintai-roles:
+      - BUSINESS_SERVICE
+      parameters:
+      - &id003
+        name: machine_id
+        in: path
+        required: true
+        schema: &id002
+          type: string
+          minLength: 1
+      - &id004
+        name: from
+        in: query
+        required: false
+        schema: &id001
+          type: string
+          format: date-time
+      - &id005
+        name: to
+        in: query
+        required: false
+        schema: *id001
+      - &id006
+        name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 500
+          default: 100
+      - &id007
+        name: cursor
+        in: query
+        required: false
+        schema: *id002
+      - name: model_version
+        in: query
+        required: false
+        schema: *id002
+      - name: result_kind
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - PREDICTION_COMPLETED
+          - DATA_INVALID
+          - INFERENCE_UNAVAILABLE
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '200':
+          description: Persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/HistoryPage
+      security:
+      - BearerAuth: []
+  /api/v1/internal/predictions/{result_id}:
+    get:
+      operationId: internalGetProcessingHistory
+      summary: Read one original processing outcome
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented.'
+      x-maintai-roles:
+      - BUSINESS_SERVICE
+      parameters:
+      - name: result_id
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '200':
+          description: Persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/HistoryRecord
+      security:
+      - BearerAuth: []
+  /api/v1/internal/machines/{machine_id}/sensor-readings:
+    get:
+      operationId: internalListRawHistory
+      summary: Read accepted raw history with explicit coverage
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented.'
+      x-maintai-roles:
+      - BUSINESS_SERVICE
+      parameters:
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '200':
+          description: Persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/RawHistoryPage
+      security:
+      - BearerAuth: []
+  /api/v1/internal/machines/{machine_id}/timeseries:
+    get:
+      operationId: internalGetMachineTimeSeries
+      summary: Read bounded min/max/avg/count chart buckets
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented.'
+      x-maintai-roles:
+      - BUSINESS_SERVICE
+      parameters:
+      - *id003
+      - *id004
+      - *id005
+      - name: metric
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - air_temperature_k
+          - process_temperature_k
+          - rotational_speed_rpm
+          - torque_nm
+          - tool_wear_min
+          - failure_probability
+          - risk_score
+      - name: resolution
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - auto
+          - 1s
+          - 10s
+          - 1m
+          - 5m
+          - 1h
+          - 1d
+      - name: max_points
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 2000
+          default: 1000
+      - name: markers_cursor
+        in: query
+        required: false
+        schema: *id002
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '200':
+          description: Persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/TimeSeriesPage
+      security:
+      - BearerAuth: []
+  /api/v1/internal/history-exports:
+    post:
+      operationId: internalCreateHistoryExport
+      summary: Durably enqueue an authorized frozen history export
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented.'
+      x-maintai-roles:
+      - BUSINESS_SERVICE
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id002
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '202':
+          description: Persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/ExportJob
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/runtime.schema.json#/$defs/ExportRequest
+      security:
+      - BearerAuth: []
+  /api/v1/internal/history-exports/{job_id}:
+    get:
+      operationId: internalGetHistoryExport
+      summary: Read persisted export state
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented.'
+      x-maintai-roles:
+      - BUSINESS_SERVICE
+      parameters:
+      - &id008
+        name: job_id
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '200':
+          description: Persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/ExportJob
+      security:
+      - BearerAuth: []
+  /api/v1/internal/history-exports/{job_id}/download:
+    get:
+      operationId: internalDownloadHistoryExport
+      summary: Authorize and redirect to a short-lived private download
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented.'
+      x-maintai-roles:
+      - BUSINESS_SERVICE
+      parameters:
+      - *id008
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '303':
+          description: Private signed URL, TTL <=5 minutes.
+          headers:
+            Location:
+              required: true
+              schema:
+                type: string
+                format: uri
+      security:
+      - BearerAuth: []
+  /api/v1/internal/sensor-events/{event_id}/status:
+    get:
+      operationId: internalGetEventStatus
+      summary: Read persisted status
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented.'
+      x-maintai-roles:
+      - BUSINESS_SERVICE
+      parameters:
+      - name: event_id
+        in: path
+        required: true
+        schema: &id009
+          type: string
+          minLength: 1
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '200':
+          description: Persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/ProcessingStatus
+      security:
+      - BearerAuth: []
+  /api/v1/internal/runtime-windows:
+    get:
+      operationId: internalGetValidWindow
+      summary: Read stable VALID model/dataset-matched runtime window
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented.'
+      x-maintai-roles:
+      - DRIFT_SERVICE
+      - BUSINESS_SERVICE
+      parameters:
+      - name: model_version
+        in: query
+        required: true
+        schema: *id009
+      - name: dataset_version
+        in: query
+        required: true
+        schema: *id009
+      - name: before
+        in: query
+        required: false
+        schema: *id009
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 500
+          default: 500
+      - name: window_start
+        in: query
+        required: true
+        schema: &id010
+          type: string
+          format: date-time
+      - name: window_end
+        in: query
+        required: true
+        schema: *id010
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '200':
+          description: Persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/RuntimeWindow
+      security:
+      - BearerAuth: []
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+x-maintai-decisions: ../../../docs/api-contract-decisions.md
+x-maintai-source: System Contracts §34 / design amendment1.3.2

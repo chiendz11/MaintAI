@@ -1,0 +1,4 @@
+event: telemetry.received
+id: fixture-sse-1
+data: {"schema_version": "1.0.0", "type": "telemetry.received", "machine_id": "M-001", "data": {"event_id": "evt_fixture_1", "stream_epoch": "fixture-run", "sequence_number": 1, "server_accepted_at": "2026-10-18T00:00:00Z", "received_at": "2026-10-18T00:00:00Z", "validation_status": "UNVERIFIED", "features_raw": {"product_type": "M", "air_temperature_k": 298.1, "process_temperature_k": 308.6, "rotational_speed_rpm": 1551, "torque_nm": 42.8, "tool_wear_min": 108}}, "occurred_at": "2026-10-18T00:00:00Z"}
+

@@ -1,110 +1,96 @@
 # MaintAI
 
-Skeleton thư mục theo [kiến trúc đã trao đổi](https://chatgpt.com/s/t_6ac8527fa2c081918c64c8929c655dee).
-`sensor/` và `drift-worker/` đã có implementation Python theo Implementation
-Development Guide và System Contracts v1.1 DRIFT. Các component khác vẫn là skeleton; `.gitkeep`
-giúp Git lưu thư mục trống. GitOps và hạ tầng được quản lý ở hai repo riêng.
+Application monorepo với **target design1.4: Deployment + Versioning/Provenance**.
+Sáu tài liệu v1.4 nằm trong [docs/](docs/README.md), nhập ngày2026-10-19; thay thế
+hai tài liệu phiên bản v1.3. Source vẫn skeleton/legacy, machine contracts và
+runtime metadata vẫn baseline1.3.2. Kafka có SDK Python và bundle wire riêng;
+application runtime chưa tự migrate theo việc cập nhật tài liệu.
 
-Tài liệu thiết kế được quản lý trong [docs/](docs/README.md): System Contracts
-v1.1 DRIFT và Implementation Development Guide v1.1 DRIFT. Đọc contract để xác
-định giao tiếp/dữ liệu, rồi đọc hướng dẫn của module trước khi triển khai.
-[AGENTS.md](AGENTS.md) chỉ dẫn coding agent cách đọc và đối chiếu tài liệu.
-Ba [OpenAPI và examples](contracts/README.md) mô tả chi tiết API backend, ML,
-RAG; [phụ lục HTTP](docs/api-contract-decisions.md) ghi các quyết định hoàn thiện
-những phần baseline chưa đủ chi tiết, bao gồm HTTP status và trạng thái UI.
+## Nhìn folder để biết deployment
+
+**Mỗi thư mục runtime có `Dockerfile` riêng để thể hiện một đơn vị triển khai mục tiêu.**
+`runtime.json` bổ sung loại workload, source owner và trạng thái implementation.
+`backend/`, `processing/`, `ml-service/` là codebase/ownership containers; `shared/`
+và các handler bên trong là module. Image có thể dùng chung cho nhiều deployment
+với entrypoint khác. Chi tiết ở [deployment map](architecture/README.md) và
+[index máy đọc được](architecture/runtime-map.json).
 
 ```text
 MaintAI/
-├── AGENTS.md
-├── docs/
-│   ├── README.md
-│   ├── MaintAI_System_Contracts_v1_1_DRIFT.md
-│   └── MaintAI_Implementation_Development_Guide_v1_1_DRIFT.md
-├── sensor/
-│   ├── src/simulator/
-│   ├── data/
-│   ├── scenarios/
-│   ├── tests/
-│   ├── Dockerfile
-│   ├── pyproject.toml
-│   └── README.md
-├── backend/
-│   ├── api/
-│   ├── sensor-ingestion/
-│   ├── data-quality/
-│   ├── inference-client/
-│   ├── risk-decision-engine/
-│   ├── alert-manager/
-│   ├── audit-logger/
-│   ├── feedback-manager/
-│   ├── rag-client/
-│   └── persistence/
-├── frontend/
-│   ├── fleet-dashboard/
-│   ├── machine-detail/
-│   ├── sensor-history/
-│   ├── alert-detail/
-│   ├── ai-explanation/
-│   ├── monitoring/
-│   ├── api/
-│   └── shared/
-├── ml-service/
-│   ├── preprocessing/
-│   ├── model/
-│   ├── prediction/
-│   └── artifacts/
-├── rag-service/
-│   ├── query-builder/
-│   ├── metadata-filter/
-│   ├── vector-retriever/
-│   ├── prompt-builder/
-│   ├── llm-generator/
-│   ├── citation-validator/
-│   └── knowledge/
-└── drift-worker/
-    ├── src/
-    │   └── drift_monitor/
-    └── tests/
-        ├── unit/
-        └── integration/
+├── architecture/                    # Index 13 planned workloads; không phải manifests
+├── docs/                            # Target v1.4 + chức năng/readiness/chi tiết kế thừa
+├── contracts/                       # v1.3/ là baseline máy đọc được1.3.2
+├── messaging/                       # Thư viện Kafka Python dùng chung; không deployment
+├── sensor/                          # [Deployment] target simulator + control API
+├── ingestion-api/                   # [Deployment] HTTP envelope → Kafka ACK 202
+├── processing/                      # OWNER Processing; không là một Deployment
+│   ├── worker/                      # [Deployment] DQ → ML client → risk → outbox
+│   ├── read-api/                    # [Deployment] internal status/history/window API
+│   ├── outbox-relay/                # [Deployment] outbox → Kafka results/signals
+│   ├── shared/                      # Modules riêng của Processing
+│   └── migrations/                  # processing_db
+├── storage-consumer/                # [Deployment] Kafka → S3/MinIO raw archive
+├── backend/                         # OWNER Business; không chứa ingestion/DQ/risk
+│   ├── business-api/                # [Deployment] REST/SSE/history + jobs facade
+│   ├── business-consumer/           # [Deployment] telemetry/prediction/alert handlers
+│   ├── shared/                      # Business modules, latest projections/inbox/alerts
+│   └── migrations/                  # business_db
+├── ml-service/                      # OWNER ML; hai image group riêng
+│   ├── inference/                   # [Deployment] model serving /predict
+│   ├── training/                    # [WorkflowTask] batch training/evaluation/export
+│   ├── shared/preprocessing/        # Code dùng chung, không phải deployment
+│   └── artifacts/                   # Generated bundles ngoài Git
+├── rag-service/                     # [Deployment] knowledge/RAG/LLM/citations
+├── drift-worker/                    # [CronJob] Processing API/S3 → drift_db/report
+└── frontend/                        # [Deployment] chỉ Business REST/SSE
+    └── src/                        # Live telemetry/latest prediction/control/realtime
 ```
 
-JSON schema dùng chung cho sensor nằm trong `contracts/sensor-event.schema.json`.
-Xem [hướng dẫn sensor](sensor/README.md) để cài đặt, tải AI4I và replay:
+Kafka, PostgreSQL (5 logical DBs), S3/MinIO, MLflow Server, Argo và monitoring thuộc
+các repo `MaintAI-gitops`/`Maint-infrastructure`. `runtime.json` là metadata kiến trúc,
+không phải Kubernetes YAML, image đã build hoặc entrypoint hoạt động.
 
-```bash
-python3.12 -m venv .venv
-.venv/bin/python -m pip install -r sensor/requirements-dev.lock
-.venv/bin/python -m pip install --no-deps -e ./sensor
-.venv/bin/maintai-sensor download-data
-.venv/bin/maintai-sensor replay --dry-run --limit 3
-```
+## Luồng mục tiêu
 
-Sensor gửi readings tới backend. Backend kiểm tra chất lượng dữ liệu, gọi ML,
-quyết định risk rồi tạo/quản lý alert. Dữ liệu invalid được lưu cùng lỗi chất
-lượng và không gọi ML. Backend gọi RAG/LLM để giải thích cảnh báo HIGH/CRITICAL;
-frontend hiển thị dữ liệu và kết quả qua backend.
+Sensor → Ingestion API → Kafka `sensor.readings`, sau đó có ba consumer groups:
+Processing (DQ/ML/risk), Business live projection và Storage raw archive. Processing
+outbox phát `inference.results`/`alert.signals`; Business Consumer cập nhật latest
+snapshots/alerts, rồi PG NOTIFY/pubsub → Business API replicas → SSE/UI.
 
-Risk Decision Engine, Alert Manager, Audit Logger và Feedback Manager nằm trong
-backend. ML phụ trách preprocessing và prediction. RAG/LLM phụ trách retrieval
-tài liệu, tạo giải thích/khuyến nghị và kiểm tra citations; PostgreSQL/pgvector
-là đích lưu trữ theo kiến trúc trong chat.
+UI giữ riêng **Live Telemetry**, **Latest Valid Prediction** và **Latest Processing**,
+cùng source event/age và ordering guard. Simulator UI riêng gọi Sensor Control API; pause không xóa backlog hoặc resolve alert.
+Business DB chỉ chứa latest projections và business data, không full raw history.
 
-Theo [chat bổ sung drift worker](https://chatgpt.com/s/t_6accf009315081918266e3664cba5a6d),
-`drift-worker/` là workload độc lập chạy định kỳ: đọc reference theo model version,
-đọc cửa sổ sensor readings hợp lệ từ database, phát hiện drift rồi lưu report và
-checkpoint cho monitoring. Xem [hướng dẫn Drift Worker](drift-worker/README.md)
-để cấu hình reference, database, Pushgateway và kiểm tra cùng sensor.
+## Đã có gì và còn thiếu gì
 
-GitOps và hạ tầng sẽ nằm ở hai repo riêng do bạn tạo.
+- Sensor 0.2.0 có replay per-machine cadence, faults và drift scenarios theo
+  interface v1.1; chưa migrate Kafka ACK 202, durable ordering/retry/control API.
+- Drift Worker có detector/CLI/persistence/metrics v1.1; target API/S3 adapters và
+  ownership `drift_db` còn skeleton. Xem [sensor](sensor/README.md) và
+  [drift worker](drift-worker/README.md) để dùng implementation hiện có.
+- [messaging/](messaging/README.md) có Kafka ACK/consumer, owner-local inbox/outbox,
+  relay và raw S3 adapter; [Kafka guide](docs/KAFKA_DEVELOPMENT_GUIDE.md) hướng dẫn
+  4 người tích hợp. Nghiệp vụ/entrypoint của Ingestion/Processing/Business,
+  ML/RAG/Frontend và SSE/control/history vẫn cần implement.
+- Cả 13 runtime folders đều có Dockerfile. 11 file mới là placeholder có runtime
+  ID/workload/source rõ ràng, chưa build/run; Dockerfile thật của sensor/drift giữ nguyên.
+- [OpenAPI/schemas/examples](contracts/README.md) hiện tập trung tại
+  [v1.3/](contracts/v1.3/README.md): sáu OpenAPI cùng schema/examples tự chứa,
+  baseline union2.0.0. [Kafka bundle](contracts/kafka/README.md) bổ sung writer1.4,
+  quarantine và reader legacy; HTTP/provider/release migrations chưa hoàn tất. Xem
+  [migration notes](docs/repository-layout.md).
 
-## CI
+CI structure kiểm tra9 source-owner folders và messaging; API validation kiểm tra
+đặc tả1.3.2, Kafka SDK có unit/contract và real broker/DB integration jobs,
+còn tests Sensor/Drift kiểm tra implementation hiện có v1.1. Các job component skeleton
+vẫn tắt. Xem [.github/README.md](.github/README.md) và [AGENTS.md](AGENTS.md).
 
-GitHub Actions nằm ở [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
-CI kiểm tra cấu trúc 6 component. Sensor có CI thật: lint/format, tests,
-build Python distribution, dependency audit và container smoke test. Drift Worker
-có lint/format, tests với PostgreSQL thật, build/audit và integration container cùng
-sensor/Pushgateway. Matrix cho 4 component còn lại đang tắt.
-Job API contracts kiểm tra OpenAPI, schemas và examples; kết quả được tổng hợp
-trong check bắt buộc `CI / required`.
-Xem [hướng dẫn CI](.github/README.md).
+
+## Tài liệu thiết kế v1.4
+
+[System Contracts §34–39](docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md)
+và [Guide §42–47](docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md)
+bổ sung rejected archive, Read API read-only, MLflow/dataset/model/release lineage
+và rollout/rollback. [Docs index](docs/README.md) giữ quyết định nhóm 4 người,
+Simulator UI riêng và phân cấp tài liệu. [Readiness](docs/implementation-readiness.md)
+ghi các khác biệt cần freeze và artifacts chưa có; không coi docs là runtime evidence.

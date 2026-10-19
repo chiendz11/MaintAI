@@ -1,4 +1,0 @@
-event: alert.updated
-id: stream_001
-data: {"alert_id": "alt_001", "machine_id": "M-001", "severity": "CRITICAL", "status": "ACKNOWLEDGED"}
-
