@@ -1,6 +1,6 @@
 # HTTP API baseline1.3.2 — migration đến target v1.4
 
-Ngày cập nhật: 2026-10-19. **Machine API description version: `1.3.2`**; OpenAPI
+Ngày cập nhật: 2026-10-20. **Machine API description version: `1.3.2`**; OpenAPI
 format `3.1.1`. `contracts/v1.3/` là baseline tự chứa còn được CI kiểm tra.
 Target docs mới là1.4.0; quarantine/provenance và compatibility migration chưa có
 trong bundle này. Các rows phía dưới mô tả baseline1.3.2, không tự override v1.4.
@@ -372,3 +372,56 @@ theo Guide v1.4 §42–47 cùng chi tiết history/recovery kế thừa. Provide
 
 Ingestion status_url/Location phải là absolute Business API URL được cấu hình;
 Sensor gọi Ingestion internal origin không được resolve relative URL về Ingestion.
+
+## UI-01 — Ranh giới HTTP của bốn UI (2026-10-20)
+
+[UI Architecture](UI_ARCHITECTURE.md) và System Contracts §40 chốt ownership;
+lượt docs này không sửa OpenAPI/schema hoặc tăng protocol version.
+
+- Business UI chỉ gọi Business REST/SSE; history/RAG/drift do Business facade
+  theo scope. Giữ monitoring summary và report list/detail đã có; Grafana không
+  làm mất các endpoint hoặc chuyển browser qua DB/Processing API trực tiếp.
+- Simulator UI chỉ gọi Sensor Control trên management origin. Baseline Simulator
+  có5 operations: GET `/api/v1/simulator/machines`, GET `/{machine_id}/control`,
+  POST `/{machine_id}/pause`, POST `/{machine_id}/resume`, PUT `/{machine_id}/scenario`
+  dưới cùng collection path. Mutation có Idempotency-Key/expected_control_version;
+  ScenarioCommand thêm scenario. Roles SIMULATOR_OPERATOR/ADMIN và machine scope.
+- ControlState hiện không có rate/counters/queue/preview/ACK-detail. Chưa có rate
+  mutation, batch control, control SSE hoặc toggle RAG. Không tự thêm properties
+  vào DTO đóng; cần PR freeze request/response/error/auth/idempotency/persistence
+  và schema version trước khi bật chức năng tương ứng trong UI thật.
+- Unknown command outcome dùng GET reconcile, không suy ra PAUSED từ timeout;
+ 409 đọc state mới trước ý định mới, cùng command retry giữ key/body theo semantics
+  đã chốt. Business severity/Alert lifecycle không bị simulator command thay đổi.
+- Grafana browser gọi Grafana server; report datasource phải owner-approved,
+  read-only/bounded nếu dùng SQL, server giữ credentials. Không phát minh Drift
+  HTTP deployment; Business report catalog APIs giữ owner/dataflow hiện có.
+- MLflow browser gọi MLflow Server theo quyền platform; server giữ DB/artifact
+  access. UI registry không là API bỏ qua approved model release PR.
+- Public origins/links/capabilities là runtime config riêng của mỗi frontend;
+  schema config immutable hiện có cần revision mới nếu thêm keys. Không dùng
+  wildcard CORS, token query string hoặc frontend service credentials làm shortcut.
+
+Tách release không thay API compatibility: UI cũ còn mở phải tiếp tục được provider
+hỗ trợ hoặc có kế hoạch migration/refresh rõ. CI selection chưa implement; frontend
+image/build độc lập không miễn provider/consumer tests khi shared contract thay đổi.
+
+
+## OBS-01 / MLFLOW-01 — Metrics và tracking không thay HTTP DTO (2026-10-20)
+
+System Contracts §41 chốt [metrics catalog](OBSERVABILITY_IMPLEMENTATION.md) và
+[MLflow workflow](MLFLOW_INTEGRATION_GUIDE.md) revision1.0.0. Internal metrics
+exposition, bounded labels/buckets và run/artifact metadata không tự thêm fields
+vào Business/Simulator/OpenAPI DTO, Kafka events hoặc strict model-result-v1.
+
+Alert Signal1.0 chưa có accepted timestamp. Histogram event-to-alert cần exact
+source-event lookup qua owner interface hoặc event/DTO migration được review;
+không dùng sensor received_at/latest telemetry hoặc direct processing_db SQL.
+Thiếu source thì metrics coverage unavailable, alert vẫn được xử lý bình thường.
+
+Internal Registry receipt có name/numeric version/run/source/payload hash; các
+fields đó vào verified serving metadata/release. Canonical Kafka outcome1.4 có
+mlflow_run_id nhưng chưa explicit registry name/version; thêm wire fields cần
+provider-consumer fixtures/version migration riêng, không sửa JSON cho khớp ví dụ.
+HTTP200/202, run FINISHED, registry READY và release deployment là các trạng thái
+khác nhau, không thay semantics bằng một monitoring status chung.

@@ -1,0 +1,8 @@
+name: degradation
+seed: 42
+phases:
+  - name: degradation
+    events: 300
+    transforms:
+      torque_nm: {type: linear_shift, start_delta: 0, end_delta: 12}
+      rotational_speed_rpm: {type: linear_scale, start_factor: 1, end_factor: 0.90}

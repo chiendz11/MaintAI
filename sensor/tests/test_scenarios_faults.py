@@ -100,6 +100,14 @@ def test_fault_injection_is_separate_and_non_mutating(sample_csv, validator, mod
     injected = FaultInjector(mode, every=2).apply(event, 1)
     assert event["features"] == before
     assert injected.payload["event_id"] == event["event_id"]
-    assert validator.is_valid(injected.payload) == (not injected.expect_rejection)
+    assert validator.is_valid(injected.payload) == (
+        mode
+        not in {
+            FaultMode.MISSING_FIELD,
+            FaultMode.INVALID_TYPE,
+            FaultMode.OUT_OF_RANGE,
+            FaultMode.INVALID_ENVELOPE,
+        }
+    )
     assert injected.duplicate == (mode == FaultMode.DUPLICATE_EVENT)
     assert FaultInjector(mode, every=2).apply(event, 0).payload == event

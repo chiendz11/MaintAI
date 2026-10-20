@@ -26,8 +26,8 @@ Trước khi triển khai hoặc thay đổi một module:
 5. Với HTTP API, đọc `contracts/README.md`, `contracts/v1.3/README.md` (six target OpenAPIs + schemas/examples) và
    `docs/api-contract-decisions.md`. Đây là baseline máy đọc được1.3.2, tự chứa toàn bộ
    schema/example; không chứng minh đã có quarantine/provenance v1.4. Freeze schemas
-   và migration trước khi thay producer/consumer. Schema kiểm thử wire cũ của Sensor
-   nằm riêng trong `sensor/tests/fixtures/`.
+   và migration trước khi thay producer/consumer. Sensor tests dùng SensorRequest/IngestAck/Control DTO hiện hành; generated features
+   vẫn kiểm allowlist sáu trường. Không phục hồi wire synchronous v1.1.
 6. Với Kafka, đọc `docs/KAFKA_DEVELOPMENT_GUIDE.md`, `contracts/kafka/README.md`
    và `messaging/`. Canonical bundle1.0.0 writer outcome1.4.0 (`kind`), reader thêm
    legacy2.0.0 (`result_kind`), không writer1.1.0. SHA lock và SQL immutable theo
@@ -44,7 +44,9 @@ cần triển khai module hoặc chạy toàn bộ app tests chỉ vì tài li�
   không âm thầm coi baseline1.3.2 đã đáp ứng v1.4.
 - Stack/layout ghi là đề xuất trong Guide không bắt buộc. Source owners hiện có:
   `sensor/`, `ingestion-api/`, `processing/`, `storage-consumer/`, `backend/`
-  (Business Backend), `frontend/`, `ml-service/`, `rag-service/`, `drift-worker/`.
+  (Business Backend), `frontend/`, `sensor-simulator-UI/`, `ml-service/`, `rag-service/`, `drift-worker/`.
+  Simulator UI có client/demo riêng; đọc `sensor-simulator-UI/README.md` để chạy checks
+  và phân biệt mock tests với browser/provider HTTP integration và TLS OIDC fixtures.
 - Thư mục có `runtime.json` + `Dockerfile` là một planned workload. `backend/`,
   `processing/`, `ml-service/` là codebase containers; `shared/` không phải runtime.
   Dockerfile/image không quyết định số deployment. Metadata runtime không phải

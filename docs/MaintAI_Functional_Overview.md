@@ -1,10 +1,10 @@
 # MaintAI — Mô tả chức năng hệ thống
 
-> **Target v1.4 — 2026-10-19:** System Contracts §34–39 và [quyết định dự án](README.md)
+> **Target v1.4 + UI-01 — 2026-10-20:** System Contracts §34–40 và [quyết định dự án](README.md)
 > ưu tiên phần kế thừa. Giữ Simulator UI riêng và các chi tiết history/jobs/recovery;
 > bổ sung schema quarantine và provenance. Machine contracts vẫn baseline1.3.2.
 
-Ngày cập nhật: 2026-10-19. **Target: System Contracts `1.4.0` (Deployment / Kafka /
+Ngày cập nhật: 2026-10-20. **Target: System Contracts `1.4.0` (Deployment / Kafka /
 Realtime UI / History DB–S3 / Versioning & Provenance)**. Các API/UI chi tiết kế thừa
 được giữ, cần đối chiếu migration trước khi gọi là đã implement.
 
@@ -40,6 +40,7 @@ Tài liệu này diễn giải chức năng, không định nghĩa lại payload
 | [Phụ lục HTTP API](api-contract-decisions.md) | Các chi tiết bổ sung về phân trang, vòng đời cảnh báo, brief, monitoring và trạng thái HTTP/UI. |
 | `contracts/README.md` (machine-readable source trong repository, **không được đính kèm bộ Markdown này**) | Đường dẫn API, request/response, lỗi và dữ liệu mẫu cụ thể. |
 | [Implementation Guide](MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md) | Hướng dẫn tổ chức và triển khai từng module; các phần đề xuất không mặc định là yêu cầu bắt buộc. |
+| [UI Architecture — UI-01](UI_ARCHITECTURE.md) | Bốn UI, nhóm người dùng, ownership/auth/API, prototype gaps và phát hành độc lập. |
 
 ## 2. Người dùng và các thành phần tham gia
 
@@ -56,6 +57,23 @@ Auth bắt buộc ở shared/demo deployment; anonymous chỉ local explicit. Ex
 OIDC cung cấp identity; Business/Sensor enforce roles và machine scope. Không
 thêm auth service riêng hoặc self-registration API. SIMULATOR_OPERATOR là quyền
 cho Simulator UI riêng; TECHNICIAN không mặc định có control permission.
+
+### 2.1.1. Bốn UI theo nhóm người dùng — UI-01
+
+| UI | Người sử dụng chính | Chức năng và ranh giới |
+| --- | --- | --- |
+| Business | Người quản lý/kỹ thuật viên có business scope | Máy, prediction, history, Alert/Copilot/feedback, summary monitoring; chỉ Business REST/SSE |
+| Sensor Simulator | Người demo/kiểm thử có simulator scope | Xem/điều khiển stream theo máy qua Sensor Control API; không thay Alert lifecycle |
+| Grafana | DevOps/MLOps | Năm dashboard kỹ thuật tham chiếu: overview, inference, Kafka/Processing, infrastructure, drift; dùng Grafana thật |
+| MLflow | ML Engineer/MLOps | Experiments, runs, artifacts, registry và lineage; dùng MLflow UI thật |
+
+Business và Simulator có image/Deployment/release riêng. Grafana/MLflow do platform
+vận hành với quyền truy cập riêng, không mặc định cấp qua role ADMIN của Business.
+Portal chỉ là trang chọn bốn UI; không là UI nghiệp vụ/runtime thứ năm.
+Business vẫn có summary và context drift/model cần cho người dùng; tách Grafana
+không xóa các APIs monitoring/drift đã chốt hoặc buộc mọi người dùng phải vào Grafana.
+Chi tiết UX/API/release và các chức năng demo còn thiếu contract ở
+[UI Architecture](UI_ARCHITECTURE.md).
 
 ### 2.2. Các thành phần hệ thống (thiết kế mục tiêu 1.3.2)
 
@@ -115,8 +133,12 @@ sáu features:
 | `torque_nm` | Mô-men xoắn | Nm |
 | `tool_wear_min` | Thời gian mòn dụng cụ | Phút |
 
-Người chạy có thể chọn dataset, scenario, seed, tốc độ replay, giới hạn số event và **Pause/Resume riêng từng máy** qua Simulator Control API (đề xuất cần implement). Chế độ dry-run xuất payload để kiểm tra mà không gọi backend. Có thể xuất
-JSONL, log và metrics phục vụ kiểm tra lượt chạy.
+CLI hiện cho cấu hình dataset/scenario/seed/tốc độ/giới hạn event và dry-run,
+xuất JSONL/log/metrics. HTTP baseline đặc tả danh sách máy, đọc control state,
+**Pause/Resume riêng từng máy** và đổi scenario; Control API còn cần implement.
+Rate mutation, retry/reject counters và preview reading của HTML demo chưa có DTO
+đầy đủ. Không coi mọi tùy chọn CLI là API browser; cần freeze contract trước khi
+bật các nút đó theo [UI-01 §4](UI_ARCHITECTURE.md#4-api-simulator-phần-đã-đặc-tả-và-khoảng-cách-với-demo).
 
 Theo behavior hiện có sensor 0.2.0, mỗi vòng gửi luân phiên đủ số máy cấu hình, theo thứ tự cố định
 được quyết định bởi seed. Mặc định chu kỳ mỗi máy là 1.000 ms, speed 1: mỗi máy
@@ -234,6 +256,10 @@ mục tiêu cần đo và báo cáo, không phải kết quả hiện đã đạ
 training split hoặc approved reference; không lấy test set làm baseline production.
 
 ## 7. Theo dõi đội máy và xem chi tiết máy
+
+Đây là phạm vi Business UI. Bố cục ZIP tham chiếu ba menu Tổng quan/Thiết bị/
+Cảnh báo; history/chart, detail, brief/feedback và summary có thể ở trang con/tab.
+Số menu không thay thế phạm vi chức năng, không xóa các khả năng đã mô tả.
 
 ### 7.1. Fleet Dashboard — tình trạng fleet và freshness
 
@@ -463,6 +489,10 @@ có thể cảnh báo drift/stale/error bằng Prometheus rules ở repo GitOps 
 
 ### 11.4. Xem danh sách và chi tiết báo cáo
 
+Business cung cấp report summary/detail theo contract cho người dùng được phép;
+Grafana cung cấp điều tra kỹ thuật PSI/trend/reference/current qua datasource
+riêng được duyệt. Hai UI không tạo hai detector hoặc hai nguồn quyết định drift.
+
 Drift CronJob giữ detector/checkpoint trong drift_db và công bố versioned S3
 report + committed manifest. Business job runner sync metadata catalog, không
 đọc drift_db và không thêm Drift HTTP server cho one-shot worker.
@@ -478,7 +508,7 @@ khi thiếu/cũ dữ liệu; `drift.updated` phát sau catalog commit. Chi tiế
 
 **API:** `GET /api/v1/monitoring/summary`.
 
-Màn hình monitoring cho biết trạng thái backend/ML/RAG, thông báo dependency,
+Summary/panel trạng thái trong Business UI cho biết trạng thái backend/ML/RAG, thông báo dependency,
 thời điểm quan sát, report drift gần nhất và tình trạng worker. Dependency có
 thể là `AVAILABLE`, `DEGRADED` hoặc `UNAVAILABLE`; đọc được observation degraded
 vẫn là request HTTP `200` thành công.
@@ -497,6 +527,12 @@ tính report làm heartbeat. Ngưỡng stale là cấu hình môi trường.
 
 ### 12.2. Health, metrics và logs cho vận hành
 
+Instrumentation theo [OBS-01](OBSERVABILITY_IMPLEMENTATION.md): từng module owner
+tạo metrics với names/types/labels/buckets và commit/retry semantics đã chốt;
+Người4 nối Prometheus/exporters/Grafana trong GitOps. Training tạo experiments/
+metrics/artifacts/Registry evidence theo [MLFLOW-01](MLFLOW_INTEGRATION_GUIDE.md).
+MLflow UI không tự có dữ liệu nếu app chưa log; docs không chứng minh deployment.
+
 Ingestion API, Business API, ML và RAG cần `/health/live`, `/health/ready` và `/metrics`; Kafka workers expose metrics/health qua exporter hoặc probe tương ứng. Liveness
 cho biết process sống; readiness cho biết khả năng phục vụ. RAG không sẵn sàng
 không được tự làm backend mất readiness của luồng cảnh báo.
@@ -510,6 +546,8 @@ Prometheus/Grafana cung cấp quan sát kỹ thuật sâu hơn. API monitoring h
 trả các chỉ số p95/error rate đầy đủ và chưa có URL Grafana trong DTO; việc thêm
 dashboard/link trên UI cần cấu hình hoặc bổ sung contract phù hợp. Manifests,
 lịch worker, alert rules và Grafana dashboards thuộc repo GitOps/hạ tầng riêng.
+Grafana outage không được làm chặn chức năng Alert/History của Business. Link
+Grafana/MLflow lấy từ public runtime config đã duyệt, không gắn credentials vào URL.
 
 ## 13. Cập nhật giao diện và xử lý trạng thái
 
@@ -596,7 +634,7 @@ Nếu mở rộng phạm vi, cập nhật contract, API docs và chức năng li
 
 | Nhóm chức năng | Owner/source hiện hành | System Contracts |
 | --- | --- | --- |
-| Replay/fault/scenario/control | sensor; Simulator UI riêng chưa có source | 5, 33.6, 34 |
+| Replay/fault/scenario/control | sensor0.3.0 có ACK202/durable state/control/auth; UI có demo/live client/provider HTTP tests | 5, 33.6, 34 |
 | Ingestion ACK202 | ingestion-api | 5, 31–34 |
 | DQ/idempotency/inference client/risk | processing | 6–9, 31–34 |
 | Model training/inference artifacts | ml-service/training + inference | 7–8, 34 |

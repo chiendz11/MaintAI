@@ -1,4 +1,4 @@
-# Implementation readiness — target v1.4, machine baseline1.3.2
+# Implementation readiness — target v1.4 + UI-01, machine baseline1.3.2
 
 Tài liệu v1.4 nhập ngày2026-10-19. Inventory app kế thừa snapshot2026-10-18;
 lượt nhập docs không đổi source/runtime. Sau đó đã thêm Kafka SDK Python,
@@ -9,8 +9,10 @@ broker/DB/S3 integration, benchmark, Docker image build hoặc deployment của 
 
 - Sáu Markdown mới: target1.4.0, đã nhập và hiệu chỉnh đường dẫn/phân công dự án.
 - `contracts/v1.3/`: sáu OpenAPI/schemas/examples baseline1.3.2, chưa migrate v1.4.
-- Runtime map và13 descriptors: planned baseline1.3.2; không bump metadata chỉ vì nhập docs.
-- Sensor/Drift executable source: implementation1.1; app runtimes khác vẫn skeleton.
+- Runtime map và14 descriptors: baseline1.3.2; đã thêm Simulator UI client/descriptor,
+  không bump wire version hoặc khẳng định đã deploy.
+- Sensor0.3.0: wire1.3.0/Control1.3.2; Drift executable1.1; Simulator UI client0.1.0;
+  application runtimes còn lại vẫn skeleton.
 - Kafka library0.1.0 + canonical bundle1.0.0: wire target1.4, legacy result reader2.0.
 
 `IMPLEMENTATION_PLAN.md` mô tả các bước implementation tương lai. Những yêu cầu
@@ -40,7 +42,7 @@ validate; các invariant transaction/cursor/authorization cần runtime tests ri
 
 | Component | Đang có trong app | Cần implement |
 | --- | --- | --- |
-| Sensor | Legacy replay/fault/scenario và per-machine cadence | ACK202, durable sequence/spool/control API, token validation |
+| Sensor | 0.3.0: ACK202, SQLite state/sequence/spool,5 Control APIs, JWT/scopes, metrics | Persistent volume/recovery vận hành, production IdP/Kafka và image/rollout evidence |
 | Drift | Legacy CLI/detector/persistence/metrics | API/S3 input, owner migration, committed report publication |
 | Ingestion | SDK gateway/envelope/publisher/ACK; app runtime skeleton | HTTP wrapper, auth, dependency lifecycle/probes và application tests |
 | Processing | SDK durable runner/inbox/outbox/relay/SQL; app callbacks skeleton | DQ/ML/risk/history, owner migrations/read API và archive/export/snapshot jobs |
@@ -49,7 +51,7 @@ validate; các invariant transaction/cursor/authorization cần runtime tests ri
 | ML | Skeleton hai images | Model loader/serving, trainer/evaluator, versioned bundles |
 | RAG | Skeleton | Retrieval, evidence checks, provider integration, citations |
 | Main UI | Skeleton | Snapshot/SSE reducer, histories/charts, alerts/Copilot/drift UX |
-| Simulator UI | Chưa có source/runtime folder | UI/control client và deployment descriptor riêng |
+| Simulator UI | React demo/live client, actor, provider HTTP browser tests, descriptor riêng | Production IdP/browser exchange và image/rollout evidence |
 | GitOps/Infrastructure | Hai repo code được soạn riêng | Đồng bộ amendment, cấu hình thật, validate và triển khai khi được yêu cầu |
 
 ## 3. Thứ tự implementation và deliverables
@@ -148,8 +150,8 @@ Báo cáo dependency/giữ-xóa:
 | Hot/cold/archive | Chi tiết HISTORY-01 giữ original outcomes và coverage; v1.4 cho phép optional outcome archive qua Storage | Chọn writer/membership/manifest contract tương thích; không làm mất bằng chứng gốc hoặc cleanup chưa verify |
 | Retention | HISTORY-01 có profile30d/365d; provenance v1.4 chưa chốt thời hạn cụ thể | Các con số cũ là tham khảo, owner phê duyệt theo dữ liệu/ngân sách trước khi bật cleanup |
 | Release/provenance | Mới có Markdown yêu cầu dataset/split/model/image/policy/document digests | Bổ sung schemas/examples/manifests, MLflow metadata, provider DTOs, migration và CI gates bằng bằng chứng thật |
-| Simulator UI | Quyết định người dùng: UI riêng gọi Sensor, Người4 sở hữu | Áp dụng docs index thay inherited Business facade; chưa có source/runtime descriptor |
-| Deployment inventory | App có13 descriptors baseline1.3.2; bảng v1.4 còn liệt kê MLflow platform | Phân biệt app/Simulator UI/platform; không coi việc nhập sơ đồ là tạo workloads |
+| Simulator UI | React demo/live client0.1.0, OIDC/recovery/build/descriptor riêng | Provider/browser HTTP đã test; production IdP, container build và rollout chưa verify |
+| Deployment inventory | App có14 descriptors baseline1.3.2, gồm Simulator UI; bảng v1.4 còn liệt kê MLflow platform | Phân biệt app/platform; không coi source/descriptor là deployment |
 
 Các đường dẫn `contracts/events/`, `contracts/provenance/`, root `examples/`,
 `implementation/python/`, `implementation/scripts/`, `implementation/tests/`
@@ -196,3 +198,103 @@ mỗi thư mục. `NOT_AVAILABLE`/provenance_incomplete chỉ dùng theo schema 
   SHA gates. Workloads vẫn disabled; không run platform render/test/build/deploy.
 
 Hướng dẫn chính: [KAFKA_DEVELOPMENT_GUIDE.md](KAFKA_DEVELOPMENT_GUIDE.md).
+
+## 12. UI-01 — Readiness bốn UI, 2026-10-20
+
+[UI Architecture](UI_ARCHITECTURE.md) chốt Business/Simulator/Grafana/MLflow và
+release độc lập. Đây là cập nhật thiết kế; UI prototype1.6 không tăng API/model/
+Kafka versions. Sau lượt docs đã triển khai Simulator frontend riêng; phần
+evidence frontend ở §13; provider upgrade ở §15. Không suy ra đã deploy.
+
+| Phần việc | Đang có | Còn phải implement/verify |
+| --- | --- | --- |
+| Business frontend | frontend/ skeleton + API/SSE specification | React, auth, reducer/resync/history/lifecycle/Copilot, image/config release riêng |
+| Simulator frontend | sensor-simulator-UI/ React/demo/live client, config/descriptor/Dockerfile, local build/tests và CI job | Production IdP integration, actual container build/digest và rollout |
+| Sensor Control provider | 5 frozen APIs đã implement: JWT/auth scope, SQLite receipts/version, scheduler/spool | Production IdP/Kafka, volume failover và deployment validation |
+| Demo-only capabilities | HTML có rate và các counters/preview mock | DTO/endpoint/capability/version review trước enable; chưa có live evidence |
+| Grafana | Thiết kế metrics/Pushgateway; ZIP mô phỏng5 dashboards | Provisioning thật, datasource permissions, report/histogram contract và query budgets |
+| MLflow UI | Platform design/blueprint; HTML mô phỏng | Server/config/access/lineage links thật; model release gates vẫn bắt buộc |
+| Independent release | Decision và ma trận checks/deployment đã ghi trong docs | CI affected-component selection, per-image/config GitOps, before/after template/rollback evidence |
+| Portal | HTML launcher | Optional, không là runtime/API/DB mới hoặc điều kiện E2E bắt buộc |
+
+Giữ Business monitoring/drift contracts và data ownership hiện có. Grafana report
+datasource SELECT drift_db chỉ là đề xuất prototype, chưa có approved views/grants
+trong app; cần Drift owner freeze SQL view/role hoặc adapter trước provisioning.
+Không tự nới schema ControlState/public runtime config chỉ để UI giống mock.
+
+Các acceptance items UI-01 §8 chỉ hoàn tất khi có runtime evidence tương ứng.
+Browser tests của frontend không thay kiểm thử E2E Sensor/IdP/Kafka, container
+build hoặc rollout/rollback. Lượt docs trước chỉ kiểm tra tài liệu; lượt frontend
+tiếp theo có source và checks riêng ở §13.
+
+## 13. Simulator UI0.1.0 — implementation20/10
+
+- Source: [sensor-simulator-UI/README.md](../sensor-simulator-UI/README.md); React/TypeScript/Vite
+  app độc lập Business/Sensor, lockfile, public runtime config và Dockerfile riêng.
+- Demo5 máy có control/scenario, preview sáu features/RPM/reading feed; demo state
+  trong tab, không gửi reading/control tới external API.
+- Live adapter chỉ gọi5 frozen operations, schema guards, OIDC Code+PKCE (tokens
+  ở memory), polling/backoff/freshness, version merge và session command recovery.
+- Command200 mới ACK;409 reconcile; network/timeout/5xx giữ unknown; GET không
+  chứng minh command đã hoàn tất; explicit retry giữ key/body.401/403 không auto-retry.
+- Local production build/typecheck/format,18 unit/contract/recovery tests và8
+  Chromium scenarios đã chạy. Browser API/IdP là fixtures/login gate, không phải
+  kết nối provider thật. OIDC có browser fixture kiểm tra code + S256 PKCE redirect,
+  chưa test token exchange với IdP thật. Local dùng Node26.7.0; CI khai báo Node24.
+  CI job mới nối required gate nhưng chưa chạy trên GitHub
+  ở lượt này. Desktop1440/mobile390 kiểm tra không page overflow hoặc page errors.
+- Sensor0.3.0 tiếp theo đã thêm provider, TLS JWKS/OAuth fixtures và browser HTTP checks.
+  Production IdP/browser exchange, Docker image build/output digest và rollout chưa verify.
+  Rate/counters/preview/SSE/batch capabilities chưa có live contract; UI không bịa.
+
+
+## 14. OBS-01 / MLFLOW-01 — chuẩn hóa thiết kế20/10
+
+Đã có [OBSERVABILITY_IMPLEMENTATION.md](OBSERVABILITY_IMPLEMENTATION.md) và
+[MLFLOW_INTEGRATION_GUIDE.md](MLFLOW_INTEGRATION_GUIDE.md), System Contracts §41,
+Guide §49. Hai quyết định revision1.0.0 chốt names/types/labels/units/buckets,
+one-hot drift, commit/retry semantics, SDK reference, registry identity, durable
+operation intents và strict schema mapping. Các short aliases đã gỡ khỏi phần
+hướng dẫn active; mapping cũ→mới giữ trong OBS-01 để migration có chủ đích.
+
+| Phần việc | Evidence hiện có | Còn phải implement/verify |
+| --- | --- | --- |
+| App metrics | Normative catalog + Python reference; phần lớn runtimes vẫn skeleton | Owner collectors/endpoints/callbacks, locks, type/label/bucket fixtures, error/retry/restart and replica tests |
+| Drift metrics | Source render one-hot, PUT snapshot và checkpoint/heartbeat baseline | New data adapters, strict single writer/lease; durable cumulative report counts khi thêm retention; real scrape/panel evidence |
+| Alert visibility timing | Canonical accepted/outcome chứa server accepted timestamp | Alert Signal1.0 chưa có accepted time; exact-event owner lookup hoặc versioned migration; không fabricate p95 từ received_at |
+| GitOps monitoring | ServiceMonitor/exporter/rules/dashboard2 panels, observability root disabled | Target labels/honor_labels verification, metric coverage + absent/stale guards, full5 dashboards, datasource/report access |
+| MLflow compatibility | Server/client API profile trong docs; server image/base digest chưa pin | Exact client/server patches, trainer locks, artifact/serialization compatibility tests, namespace/auth configuration |
+| MLflow operation recovery | training_id/owner/lease/model-result checkpoint trong helper hiện có | Step-level run/registry intents/IDs, generation fencing/heartbeat, immutable evidence refs, unknown-side-effect triage và concurrency/crash tests |
+| Registry provenance/wire | Metadata/release requirements; outcome1.4 có mlflow_run_id | Numeric registry fields chưa explicit trong canonical outcome; strict model-result/release/HTTP mapping và fixtures trước schema changes |
+| App SDK implementation | Reference snippets create/log/register/search trong Markdown | Trainer implementation, read-back artifact/hash verification, real server/DB/S3 tests; không claim snippets đã được chạy |
+
+Lượt này chỉ sửa docs và source-manifest: kiểm tra local links/heading anchors,
+fences, Python AST, catalog names/types và hashes; giữ upstream/retired metadata.
+Không chạy training/SDK network/Prometheus/Grafana/DB/Docker/deploy, không thay
+app source, HTTP/Kafka schemas, runtime descriptors hoặc hai repo platform.
+Schema target còn thiếu tiếp tục được ghi rõ, không tạo fake digests hoặc empty
+schemas để đánh dấu hoàn tất.
+
+
+## 15. Sensor0.3.0 — provider/durable runtime20/10
+
+Đã implement trong app: ACK202 client (không đợi inference), SensorRequest1.3.0,
+SQLite/WAL transaction sequence+payload, cursor/scenario step, persistent control
+state/version/receipts/audit, process lock, bounded scheduler/sender, spool quota/
+TTL/rejected/auth states và maintenance. Auth kiểm JWT signature/issuer/audience/
+expiry/iat/role/scope/machine permissions, JWKS cache; outbound service token file
+hoặc OAuth client-credentials. Bốn scenario UI khớp YAML; không ép risk/Alert.
+Probes và OBS-01 metrics nằm trong Sensor runtime; UI đã hiện last_controlled_by.
+
+Bằng chứng local được ghi chi tiết ở [Sensor implementation report](SENSOR_IMPLEMENTATION_REPORT.md).
+Có tests restart thật qua CLI/HTTP, lost-ACK retry, durable sequence/receipt,
+parallel CAS, quota/TTL/auth, TLS JWKS/OAuth RSA fixture; browser integration gọi
+provider Python thật (Ingestion fixture202/local auth). Unit/contract/schema,
+Drift regression, build/lock audit và checks UI được phân biệt trong report.
+
+Chưa có Docker daemon nên chưa build/run image; chưa có output image digest,
+GitHub CI của changes chưa commit, Kubernetes/PVC/rolling/failover/load evidence,
+production IdP provisioning/browser authorization-code exchange hoặc Kafka E2E.
+Một persistent local/block volume, một controller/Recreate; không claim HA.
+Rate/counters/queue/preview live/SSE/batch controls chưa được thêm vào wire;
+đó là capability extension cần review, không phải số mock để hiển thị live.

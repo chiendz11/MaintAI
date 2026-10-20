@@ -1,0 +1,27 @@
+{
+  "descriptor_kind": "MaintAIRuntime",
+  "schema_version": "1.0.0",
+  "target_contract_revision": "1.3.2",
+  "runtime_id": "simulator-ui",
+  "workload_kind": "Deployment",
+  "code_owner": "simulator-ui",
+  "implementation_status": "frontend_and_sensor_provider_implemented",
+  "image_group": "simulator-ui",
+  "image_digest": null,
+  "entrypoint_status": "implemented_static_spa",
+  "purpose": "Independent Simulator React UI; demo preview or Sensor Control API baseline1.3.2.",
+  "source_paths": ["sensor-simulator-UI/src"],
+  "logical_database": null,
+  "kafka_subscriptions": [],
+  "kafka_publications": [],
+  "interfaces": ["Sensor Control API", "OIDC Authorization Code + PKCE"],
+  "boundaries": [
+    "Demo browser preview is explicit and never publishes readings or commands to live services.",
+    "Live calls only the five frozen Sensor Control operations; no Business proxy or Kafka credentials.",
+    "Sensor provider is implemented separately in sensor/; browser integration uses fixture ingestion and explicit loopback auth.",
+    "Independent image/config; Kubernetes manifests and platform releases remain in GitOps."
+  ],
+  "dockerfile": "sensor-simulator-UI/Dockerfile",
+  "dockerfile_status": "implemented_requires_pinned_base_images_not_built",
+  "implemented_contract_revision": null
+}

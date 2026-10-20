@@ -30,7 +30,7 @@ jobs:
       - name: Check component folders
         run: |
           test -f README.md
-          for component in sensor ingestion-api processing storage-consumer backend frontend ml-service rag-service drift-worker messaging; do
+          for component in sensor ingestion-api processing storage-consumer backend frontend sensor-simulator-UI ml-service rag-service drift-worker messaging; do
             test -d "$component"
             printf 'Found %s/\n' "$component"
           done
@@ -66,6 +66,20 @@ jobs:
 
       - name: Validate current OpenAPI, schemas and examples
         run: python contracts/v1.3/validate.py
+
+  repo-metadata:
+    name: Docs and runtime metadata
+    needs: structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Verify document hashes, local references and runtime inventory
+        run: python3 .github/scripts/check_repository.py
 
   kafka-ci:
     name: Kafka SDK (Python ${{ matrix.python }})
@@ -180,14 +194,49 @@ jobs:
 
       - name: Lint and format
         run: |
-          ruff check sensor
-          ruff format --check sensor
+          ruff check sensor .github/scripts sensor-simulator-UI/tests/provider --config sensor/pyproject.toml
+          ruff format --check sensor .github/scripts sensor-simulator-UI/tests/provider --config sensor/pyproject.toml
 
-      - name: Unit, contract and mock HTTP integration tests
-        run: python -m pytest sensor/tests --cov=simulator --cov-report=term-missing
+      - name: Contract, persistence, restart, scoped JWT and TLS OAuth tests
+        run: |
+          mkdir -p "$RUNNER_TEMP/sensor-test-results"
+          python -m pytest sensor/tests --cov=simulator --cov-report=term-missing \
+            --cov-report="xml:$RUNNER_TEMP/sensor-test-results/coverage.xml" \
+            --junitxml="$RUNNER_TEMP/sensor-test-results/junit.xml"
+
+      - name: Retain Sensor test reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sensor-tests-python-${{ matrix.python }}
+          path: ${{ runner.temp }}/sensor-test-results/
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Build Python distribution
         run: python -m build sensor
+
+      - name: Verify wheel and bundled scenarios outside checkout
+        run: |
+          python -m venv "$RUNNER_TEMP/sensor-wheel"
+          "$RUNNER_TEMP/sensor-wheel/bin/python" -m pip install -r sensor/requirements.lock
+          "$RUNNER_TEMP/sensor-wheel/bin/python" -m pip install --no-deps sensor/dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/sensor-wheel/bin/python" - <<'PY'
+          import importlib
+          from pathlib import Path
+          import sys
+
+          for module in (
+              "simulator.control.api", "simulator.control.auth", "simulator.ordering.store",
+              "simulator.scheduling.engine", "simulator.retry_spool.replay", "simulator.metrics",
+          ):
+              importlib.import_module(module)
+          for name in ("normal", "degradation", "critical", "recovery"):
+              assert (Path(sys.prefix) / "share/maintai-sensor/scenarios" / (name + ".yaml")).is_file()
+          PY
+          "$RUNNER_TEMP/sensor-wheel/bin/maintai-sensor" replay \
+            --dataset "$GITHUB_WORKSPACE/sensor/tests/fixtures/ai4i_sample.csv" --dry-run --limit 2
 
       - name: Audit runtime dependencies
         if: matrix.python == '3.12'
@@ -212,6 +261,9 @@ jobs:
           docker run --rm --network none \
             --volume "$PWD/sensor/tests/fixtures/ai4i_sample.csv:/app/data/ai4i2020.csv:ro" \
             maintai-sensor:ci replay --dry-run --limit 2
+
+      - name: Verify Sensor runtime, non-root state and restart persistence in container
+        run: python3 .github/scripts/container_smoke.py sensor --image maintai-sensor:ci
 
   drift-ci:
     name: Drift Worker CI
@@ -243,11 +295,13 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
-          cache-dependency-path: drift-worker/requirements-dev.lock
+          cache-dependency-path: |
+            drift-worker/requirements-dev.lock
+            sensor/requirements.lock
 
       - name: Install locked dependencies and test sensor
         run: |
-          python -m pip install -r drift-worker/requirements-dev.lock
+          python -m pip install -r drift-worker/requirements-dev.lock -r sensor/requirements.lock
           python -m pip install --no-deps -e ./drift-worker -e ./sensor
 
       - name: Lint and format
@@ -289,6 +343,98 @@ jobs:
 
       - name: Verify sensor scenarios, reports, checkpoints and metrics in containers
         run: python drift-worker/tests/integration/run_docker_demo.py
+
+  simulator-ui-ci:
+    name: Simulator UI
+    needs: structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: sensor-simulator-UI
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: sensor-simulator-UI/package-lock.json
+
+      - name: Set up Python for Sensor provider browser integration
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: sensor/requirements.lock
+
+      - name: Install locked Sensor provider
+        run: |
+          python -m pip install -r ../sensor/requirements.lock
+          python -m pip install --no-deps -e ../sensor
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Typecheck, format and contract/recovery tests
+        run: |
+          npm run check
+          npm test
+
+      - name: Build independent Simulator frontend
+        run: npm run build
+
+      - name: Install Chromium
+        run: npx --no-install playwright install --with-deps chromium
+
+      - name: Browser interactions, failure semantics and real Sensor provider
+        env:
+          PLAYWRIGHT_JUNIT_OUTPUT_FILE: ${{ runner.temp }}/simulator-ui-junit.xml
+        run: npm run test:e2e -- --reporter=line,junit
+
+      - name: Retain browser results and failure traces
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: simulator-ui-browser-results
+          path: |
+            ${{ runner.temp }}/simulator-ui-junit.xml
+            sensor-simulator-UI/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  simulator-ui-container:
+    name: Simulator UI container
+    needs: simulator-ui-ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Build independent frontend with pinned CI base images
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import subprocess
+
+          images = json.loads(Path("sensor-simulator-UI/ci-images.json").read_text())
+          subprocess.run([
+              "docker", "build", "--build-arg", "NODE_IMAGE=" + images["node_image"],
+              "--build-arg", "NGINX_IMAGE=" + images["nginx_image"],
+              "--tag", "maintai-simulator-ui:ci", "sensor-simulator-UI",
+          ], check=True)
+          PY
+
+      - name: Verify static image, config, probes and API boundary
+        run: python3 .github/scripts/container_smoke.py ui --image maintai-simulator-ui:ci
 
   component-ci:
     name: Component CI (${{ matrix.component }})
@@ -333,12 +479,15 @@ jobs:
     needs:
       - structure
       - api-contracts
+      - repo-metadata
       - kafka-ci
       - kafka-integration
       - sensor-ci
       - sensor-container
       - drift-ci
       - drift-container
+      - simulator-ui-ci
+      - simulator-ui-container
       - component-ci
     runs-on: ubuntu-latest
     timeout-minutes: 5

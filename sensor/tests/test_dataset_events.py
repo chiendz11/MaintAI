@@ -37,7 +37,16 @@ def test_ai4i_mapping_and_canonical_wire_contract(sample_csv, validator):
     assert records[-1].ground_truth == 1
     payload = factory().create(record.features, 0).model_dump(mode="json")
     validator.validate(payload)
-    assert set(payload) == {"event_id", "machine_id", "received_at", "source", "features"}
+    assert set(payload) == {
+        "schema_version",
+        "event_id",
+        "machine_id",
+        "stream_epoch",
+        "sequence_number",
+        "received_at",
+        "source",
+        "features",
+    }
     assert payload["source"] == "AI4I_SIMULATOR"
     assert payload["received_at"] == "2026-10-12T04:30:15Z"
     forbidden = {
@@ -141,5 +150,18 @@ def test_missing_dataset_is_actionable(tmp_path):
         list(DatasetReader(tmp_path / "missing.csv"))
 
 
-def test_committed_contract_matches_export(validator):
+def test_export_matches_current_ingestion_envelope(sample_csv, validator):
+    from pathlib import Path
+
+    from jsonschema import Draft202012Validator, FormatChecker
+
+    schema = json.loads(
+        (
+            Path(__file__).resolve().parents[2] / "contracts/v1.3/schemas/runtime.schema.json"
+        ).read_text()
+    )["$defs"]["SensorRequest"]
+    event = (
+        factory().create(next(iter(DatasetReader(sample_csv))).features, 0).model_dump(mode="json")
+    )
+    Draft202012Validator(schema, format_checker=FormatChecker()).validate(event)
     assert validator.schema == sensor_event_schema()

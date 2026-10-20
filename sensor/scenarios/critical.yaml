@@ -1,0 +1,8 @@
+name: critical
+seed: 42
+phases:
+  - name: stressed-features
+    events: 300
+    transforms:
+      torque_nm: {type: shift, delta: 16}
+      rotational_speed_rpm: {type: scale, factor: 0.85}
