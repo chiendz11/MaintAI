@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "maintai-sensor"
+version = "0.2.0"
+description = "AI4I sensor replay, fault injection and drift scenarios for MaintAI"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["httpx>=0.28,<1", "pydantic>=2.10,<3", "PyYAML>=6.0,<7"]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<10",
+  "pytest-cov>=6,<8",
+  "jsonschema[format-nongpl]>=4.23,<5",
+  "ruff>=0.11,<1",
+  "build>=1,<2",
+  "pip-audit>=2.9,<3",
+]
+
+[project.scripts]
+maintai-sensor = "simulator.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.data-files]
+"share/maintai-sensor/scenarios" = ["scenarios/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--import-mode=importlib -q"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

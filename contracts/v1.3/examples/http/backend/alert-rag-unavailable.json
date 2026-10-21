@@ -1,0 +1,45 @@
+{
+  "alert": {
+    "alert_id": "alt_001",
+    "machine_id": "M-001",
+    "severity": "CRITICAL",
+    "status": "OPEN",
+    "risk_score": 0.91,
+    "model_version": "maintai-ml-1.0.0",
+    "policy_version": "risk-policy-1.0.0",
+    "created_at": "2026-10-15T04:30:15Z"
+  },
+  "sensor_event": {
+    "event_id": "evt_001",
+    "validation_status": "VALID",
+    "features": {
+      "product_type": "M",
+      "air_temperature_k": 298.1,
+      "process_temperature_k": 308.6,
+      "rotational_speed_rpm": 1551,
+      "torque_nm": 42.8,
+      "tool_wear_min": 108
+    }
+  },
+  "prediction": {
+    "prediction_id": "pred_001",
+    "prediction": "FAILURE",
+    "failure_probability": 0.91
+  },
+  "copilot": {
+    "status": "UNAVAILABLE",
+    "brief_id": null,
+    "grounded_status": "UNAVAILABLE"
+  },
+  "history": [
+    {
+      "alert_event_id": "aevt_001",
+      "event_type": "CREATED",
+      "from_status": null,
+      "to_status": "OPEN",
+      "actor_id": null,
+      "note": null,
+      "timestamp": "2026-10-15T04:30:15Z"
+    }
+  ]
+}

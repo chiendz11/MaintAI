@@ -1,0 +1,2734 @@
+openapi: 3.1.1
+info:
+  title: MaintAI Business REST/SSE API
+  version: 1.3.2
+  description: Target business API; normative amendment1.3.2. Legacy unchanged business DTOs are explicitly reused.
+    Auth required, main UI only. No ingestion or simulator control routes.
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+servers:
+- url: https://business.example.invalid
+  description: Illustrative only; configure environment routing.
+externalDocs:
+  description: Design target v1.4; this OpenAPI remains the 1.3.2 baseline pending migration.
+  url: https://github.com/chiendz11/MaintAI/blob/main/docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md
+x-maintai-decisions: ../../../docs/api-contract-decisions.md
+tags:
+- name: Sensor
+  description: Simulator ingestion and idempotency
+- name: Machines
+  description: Fleet, current machine state and historical readings
+- name: Alerts
+  description: Alert reads and lifecycle
+- name: Feedback
+  description: Technician feedback without automatic retraining
+- name: Copilot
+  description: Backend facade for cached/generated RAG briefs
+- name: Monitoring
+  description: Service status and persisted batch reports
+- name: Realtime
+  description: Optional SSE invalidation notifications
+- name: Operations
+  description: Platform health and metrics
+security:
+- BearerAuth: []
+paths:
+  /api/v1/machines:
+    get:
+      operationId: listMachines
+      tags:
+      - Machines
+      summary: List fleet state
+      description: Order machine_id ASC. Empty filtered results return 200 with items=[] and total=0. INVALID/UNKNOWN
+        are explicit states with no current risk score; do not render them as NORMAL. Authentication is required
+        on shared deployment. For all shared deployment requests, enforce the listed roles; 401/403 are explicit
+        failures. See completion decision AUTH-01. Amendment1.3.2 requires authentication and machine-scope checks;
+        any legacy optional-auth wording is superseded.
+      x-maintai-source: baseline 15.1; completion PAGE-01, STATE-01
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: limit
+        in: query
+        required: false
+        description: Maximum items returned.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
+      - name: offset
+        in: query
+        required: false
+        description: Offset into the filtered, ordered collection. total is the count before pagination.
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      - name: state
+        in: query
+        required: false
+        description: Optional operational-state filter.
+        schema:
+          $ref: ../schemas/common.schema.json#/$defs/MachineState
+      responses:
+        '200':
+          description: Fleet page.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MachineList'
+              examples:
+                machines:
+                  externalValue: ../examples/http/backend/machines.json
+                machines_empty:
+                  externalValue: ../examples/http/backend/machines-empty.json
+        '400':
+          $ref: '#/components/responses/INVALID_REQUEST'
+        '401':
+          $ref: '#/components/responses/UNAUTHORIZED'
+        '403':
+          $ref: '#/components/responses/FORBIDDEN'
+        '422':
+          $ref: '#/components/responses/VALIDATION_FAILED'
+        '500':
+          $ref: '#/components/responses/INTERNAL_ERROR'
+        '503':
+          $ref: '#/components/responses/DEPENDENCY_UNAVAILABLE'
+      x-maintai-roles:
+      - VIEWER
+      - TECHNICIAN
+      - ADMIN
+      security:
+      - BearerAuth: []
+  /api/v1/machines/{machine_id}:
+    get:
+      operationId: getMachine
+      tags:
+      - Machines
+      summary: Get current machine detail
+      description: latest_prediction describes the current event only; it is null for INVALID/UNKNOWN. Historical
+        predictions remain available through historical records; do not silently reuse an old prediction as the
+        current result. Authentication is required on shared deployment. For all shared deployment requests, enforce
+        the listed roles; 401/403 are explicit failures. See completion decision AUTH-01. Amendment1.3.2 requires
+        authentication and machine-scope checks; any legacy optional-auth wording is superseded.
+      x-maintai-source: baseline 15.2; completion STATE-01
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: machine_id
+        in: path
+        required: true
+        description: Opaque identifier; do not parse identity or ordering from its format.
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        '200':
+          description: Current state with nullable absent data.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MachineDetail'
+              examples:
+                machine_detail:
+                  externalValue: ../examples/http/backend/machine-detail.json
+                machine_unknown:
+                  externalValue: ../examples/http/backend/machine-unknown.json
+        '400':
+          $ref: '#/components/responses/INVALID_REQUEST'
+        '401':
+          $ref: '#/components/responses/UNAUTHORIZED'
+        '403':
+          $ref: '#/components/responses/FORBIDDEN'
+        '422':
+          $ref: '#/components/responses/VALIDATION_FAILED'
+        '500':
+          $ref: '#/components/responses/INTERNAL_ERROR'
+        '503':
+          $ref: '#/components/responses/DEPENDENCY_UNAVAILABLE'
+        '404':
+          $ref: '#/components/responses/MACHINE_NOT_FOUND'
+      x-maintai-roles:
+      - VIEWER
+      - TECHNICIAN
+      - ADMIN
+      security:
+      - BearerAuth: []
+  /api/v1/machines/{machine_id}/sensor-readings:
+    get:
+      operationId: listRawHistory
+      summary: Read accepted raw history with explicit coverage
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
+        wording is superseded.'
+      x-maintai-roles:
+      - VIEWER
+      - TECHNICIAN
+      - ADMIN
+      parameters:
+      - &id004
+        name: machine_id
+        in: path
+        required: true
+        schema: &id002
+          type: string
+          minLength: 1
+      - &id005
+        name: from
+        in: query
+        required: false
+        schema: &id001
+          type: string
+          format: date-time
+      - &id006
+        name: to
+        in: query
+        required: false
+        schema: *id001
+      - &id007
+        name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 500
+          default: 100
+      - &id008
+        name: cursor
+        in: query
+        required: false
+        schema: *id002
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '200':
+          description: Persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/RawHistoryPage
+      security:
+      - BearerAuth: []
+  /api/v1/alerts:
+    get:
+      operationId: listAlerts
+      tags:
+      - Alerts
+      summary: List alerts
+      description: Order created_at DESC, alert_id DESC; total counts matching rows before limit/offset. An unknown
+        filter machine_id produces an empty result rather than claiming the machine resource exists. Authentication
+        is required on shared deployment. For all shared deployment requests, enforce the listed roles; 401/403
+        are explicit failures. See completion decision AUTH-01. Amendment1.3.2 requires authentication and machine-scope
+        checks; any legacy optional-auth wording is superseded.
+      x-maintai-source: baseline 15.4; completion PAGE-01
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: limit
+        in: query
+        required: false
+        description: Maximum items returned.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
+      - name: offset
+        in: query
+        required: false
+        description: Offset into the filtered, ordered collection. total is the count before pagination.
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      - name: status
+        in: query
+        required: false
+        description: Optional lifecycle status.
+        schema:
+          $ref: ../schemas/common.schema.json#/$defs/AlertStatus
+      - name: severity
+        in: query
+        required: false
+        description: Optional severity.
+        schema:
+          $ref: ../schemas/common.schema.json#/$defs/AlertSeverity
+      - name: machine_id
+        in: query
+        required: false
+        description: Optional machine filter.
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        '200':
+          description: Alert page.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertList'
+              examples:
+                alerts:
+                  externalValue: ../examples/http/backend/alerts.json
+                alerts_empty:
+                  externalValue: ../examples/http/backend/alerts-empty.json
+        '400':
+          $ref: '#/components/responses/INVALID_REQUEST'
+        '401':
+          $ref: '#/components/responses/UNAUTHORIZED'
+        '403':
+          $ref: '#/components/responses/FORBIDDEN'
+        '422':
+          $ref: '#/components/responses/VALIDATION_FAILED'
+        '500':
+          $ref: '#/components/responses/INTERNAL_ERROR'
+        '503':
+          $ref: '#/components/responses/DEPENDENCY_UNAVAILABLE'
+      x-maintai-roles:
+      - VIEWER
+      - TECHNICIAN
+      - ADMIN
+      security:
+      - BearerAuth: []
+  /api/v1/alerts/{alert_id}:
+    get:
+      operationId: getAlert
+      tags:
+      - Alerts
+      summary: Get alert detail
+      description: Alert severity and lifecycle remain independent of copilot availability. Return current CopilotSummary
+        and history ordered timestamp ASC, alert_event_id ASC. Fetch full brief via the backend /brief endpoint;
+        frontend never calls RAG directly. Authentication is required on shared deployment. For all shared deployment
+        requests, enforce the listed roles; 401/403 are explicit failures. See completion decision AUTH-01. Amendment1.3.2
+        requires authentication and machine-scope checks; any legacy optional-auth wording is superseded.
+      x-maintai-source: baseline 15.5; completion BRIEF-01, AUDIT-01
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: alert_id
+        in: path
+        required: true
+        description: Opaque identifier; do not parse identity or ordering from its format.
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        '200':
+          description: Alert, source context, prediction, copilot status and audit history.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertDetail'
+              examples:
+                alert_detail:
+                  externalValue: ../examples/http/backend/alert-detail.json
+                alert_rag_unavailable:
+                  externalValue: ../examples/http/backend/alert-rag-unavailable.json
+        '400':
+          $ref: '#/components/responses/INVALID_REQUEST'
+        '401':
+          $ref: '#/components/responses/UNAUTHORIZED'
+        '403':
+          $ref: '#/components/responses/FORBIDDEN'
+        '422':
+          $ref: '#/components/responses/VALIDATION_FAILED'
+        '500':
+          $ref: '#/components/responses/INTERNAL_ERROR'
+        '503':
+          $ref: '#/components/responses/DEPENDENCY_UNAVAILABLE'
+        '404':
+          $ref: '#/components/responses/ALERT_NOT_FOUND'
+      x-maintai-roles:
+      - VIEWER
+      - TECHNICIAN
+      - ADMIN
+      security:
+      - BearerAuth: []
+  /api/v1/alerts/{alert_id}/ack:
+    post:
+      operationId: alertAck
+      tags:
+      - Alerts
+      summary: Ack alert
+      description: 'Allowed source statuses: OPEN; target: ACKNOWLEDGED. Atomically validate transition, update
+        status and append audit history. Every other transition, including repeating a completed action, returns
+        409. With auth enabled actor_id must match the authenticated principal (otherwise 403); actor_id alone grants
+        no authority. Authentication is required on shared deployment. For all shared deployment requests, enforce
+        the listed roles; 401/403 are explicit failures. See completion decision AUTH-01. Amendment1.3.2 requires
+        authentication and machine-scope checks; any legacy optional-auth wording is superseded.'
+      x-maintai-source: baseline 10.3/11; completion ACTION-01
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: alert_id
+        in: path
+        required: true
+        description: Opaque identifier; do not parse identity or ordering from its format.
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        '200':
+          description: Transition committed; refresh alert detail after success.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/AlertTransitionResult'
+                - properties:
+                    previous_status:
+                      enum:
+                      - OPEN
+                    status:
+                      const: ACKNOWLEDGED
+              examples:
+                ack_response:
+                  externalValue: ../examples/http/backend/ack-response.json
+        '400':
+          $ref: '#/components/responses/INVALID_REQUEST'
+        '401':
+          $ref: '#/components/responses/UNAUTHORIZED'
+        '403':
+          $ref: '#/components/responses/FORBIDDEN'
+        '422':
+          $ref: '#/components/responses/VALIDATION_FAILED'
+        '500':
+          $ref: '#/components/responses/INTERNAL_ERROR'
+        '503':
+          $ref: '#/components/responses/DEPENDENCY_UNAVAILABLE'
+        '404':
+          $ref: '#/components/responses/ALERT_NOT_FOUND'
+        '409':
+          $ref: '#/components/responses/INVALID_ALERT_TRANSITION'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActorNote'
+            examples:
+              ack_request:
+                externalValue: ../examples/http/backend/ack-request.json
+      x-maintai-roles:
+      - TECHNICIAN
+      - ADMIN
+      security:
+      - BearerAuth: []
+      x-maintai-transitions:
+        from:
+        - OPEN
+        to: ACKNOWLEDGED
+  /api/v1/alerts/{alert_id}/start:
+    post:
+      operationId: alertStart
+      tags:
+      - Alerts
+      summary: Start alert
+      description: 'Allowed source statuses: ACKNOWLEDGED, ESCALATED; target: IN_PROGRESS. Atomically validate transition,
+        update status and append audit history. Every other transition, including repeating a completed action,
+        returns 409. With auth enabled actor_id must match the authenticated principal (otherwise 403); actor_id
+        alone grants no authority. Authentication is required on shared deployment. For all shared deployment requests,
+        enforce the listed roles; 401/403 are explicit failures. See completion decision AUTH-01. Amendment1.3.2
+        requires authentication and machine-scope checks; any legacy optional-auth wording is superseded.'
+      x-maintai-source: baseline 10.3/11; completion ACTION-01
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: alert_id
+        in: path
+        required: true
+        description: Opaque identifier; do not parse identity or ordering from its format.
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        '200':
+          description: Transition committed; refresh alert detail after success.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/AlertTransitionResult'
+                - properties:
+                    previous_status:
+                      enum:
+                      - ACKNOWLEDGED
+                      - ESCALATED
+                    status:
+                      const: IN_PROGRESS
+              examples:
+                start_response:
+                  externalValue: ../examples/http/backend/start-response.json
+        '400':
+          $ref: '#/components/responses/INVALID_REQUEST'
+        '401':
+          $ref: '#/components/responses/UNAUTHORIZED'
+        '403':
+          $ref: '#/components/responses/FORBIDDEN'
+        '422':
+          $ref: '#/components/responses/VALIDATION_FAILED'
+        '500':
+          $ref: '#/components/responses/INTERNAL_ERROR'
+        '503':
+          $ref: '#/components/responses/DEPENDENCY_UNAVAILABLE'
+        '404':
+          $ref: '#/components/responses/ALERT_NOT_FOUND'
+        '409':
+          $ref: '#/components/responses/INVALID_ALERT_TRANSITION'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActorNote'
+            examples:
+              start_request:
+                externalValue: ../examples/http/backend/start-request.json
+      x-maintai-roles:
+      - TECHNICIAN
+      - ADMIN
+      security:
+      - BearerAuth: []
+      x-maintai-transitions:
+        from:
+        - ACKNOWLEDGED
+        - ESCALATED
+        to: IN_PROGRESS
+  /api/v1/alerts/{alert_id}/escalate:
+    post:
+      operationId: alertEscalate
+      tags:
+      - Alerts
+      summary: Escalate alert
+      description: 'Allowed source statuses: OPEN, ACKNOWLEDGED, IN_PROGRESS; target: ESCALATED. Atomically validate
+        transition, update status and append audit history. Every other transition, including repeating a completed
+        action, returns 409. With auth enabled actor_id must match the authenticated principal (otherwise 403);
+        actor_id alone grants no authority. Authentication is required on shared deployment. For all shared deployment
+        requests, enforce the listed roles; 401/403 are explicit failures. See completion decision AUTH-01. Amendment1.3.2
+        requires authentication and machine-scope checks; any legacy optional-auth wording is superseded.'
+      x-maintai-source: baseline 10.3/11; completion ACTION-01
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: alert_id
+        in: path
+        required: true
+        description: Opaque identifier; do not parse identity or ordering from its format.
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        '200':
+          description: Transition committed; refresh alert detail after success.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/AlertTransitionResult'
+                - properties:
+                    previous_status:
+                      enum:
+                      - OPEN
+                      - ACKNOWLEDGED
+                      - IN_PROGRESS
+                    status:
+                      const: ESCALATED
+              examples:
+                escalate_response:
+                  externalValue: ../examples/http/backend/escalate-response.json
+        '400':
+          $ref: '#/components/responses/INVALID_REQUEST'
+        '401':
+          $ref: '#/components/responses/UNAUTHORIZED'
+        '403':
+          $ref: '#/components/responses/FORBIDDEN'
+        '422':
+          $ref: '#/components/responses/VALIDATION_FAILED'
+        '500':
+          $ref: '#/components/responses/INTERNAL_ERROR'
+        '503':
+          $ref: '#/components/responses/DEPENDENCY_UNAVAILABLE'
+        '404':
+          $ref: '#/components/responses/ALERT_NOT_FOUND'
+        '409':
+          $ref: '#/components/responses/INVALID_ALERT_TRANSITION'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActorNote'
+            examples:
+              escalate_request:
+                externalValue: ../examples/http/backend/escalate-request.json
+      x-maintai-roles:
+      - TECHNICIAN
+      - ADMIN
+      security:
+      - BearerAuth: []
+      x-maintai-transitions:
+        from:
+        - OPEN
+        - ACKNOWLEDGED
+        - IN_PROGRESS
+        to: ESCALATED
+  /api/v1/alerts/{alert_id}/resolve:
+    post:
+      operationId: alertResolve
+      tags:
+      - Alerts
+      summary: Resolve alert
+      description: 'Allowed source statuses: ACKNOWLEDGED, IN_PROGRESS, ESCALATED; target: RESOLVED. Atomically
+        validate transition, update status and append audit history. Every other transition, including repeating
+        a completed action, returns 409. With auth enabled actor_id must match the authenticated principal (otherwise
+        403); actor_id alone grants no authority. Authentication is required on shared deployment. For all shared
+        deployment requests, enforce the listed roles; 401/403 are explicit failures. See completion decision AUTH-01.
+        Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth wording is superseded.'
+      x-maintai-source: baseline 10.3/11; completion ACTION-01
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: alert_id
+        in: path
+        required: true
+        description: Opaque identifier; do not parse identity or ordering from its format.
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        '200':
+          description: Transition committed; refresh alert detail after success.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/AlertTransitionResult'
+                - properties:
+                    previous_status:
+                      enum:
+                      - ACKNOWLEDGED
+                      - IN_PROGRESS
+                      - ESCALATED
+                    status:
+                      const: RESOLVED
+              examples:
+                resolve_response:
+                  externalValue: ../examples/http/backend/resolve-response.json
+        '400':
+          $ref: '#/components/responses/INVALID_REQUEST'
+        '401':
+          $ref: '#/components/responses/UNAUTHORIZED'
+        '403':
+          $ref: '#/components/responses/FORBIDDEN'
+        '422':
+          $ref: '#/components/responses/VALIDATION_FAILED'
+        '500':
+          $ref: '#/components/responses/INTERNAL_ERROR'
+        '503':
+          $ref: '#/components/responses/DEPENDENCY_UNAVAILABLE'
+        '404':
+          $ref: '#/components/responses/ALERT_NOT_FOUND'
+        '409':
+          $ref: '#/components/responses/INVALID_ALERT_TRANSITION'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveRequest'
+            examples:
+              resolve_request:
+                externalValue: ../examples/http/backend/resolve-request.json
+      x-maintai-roles:
+      - TECHNICIAN
+      - ADMIN
+      security:
+      - BearerAuth: []
+      x-maintai-transitions:
+        from:
+        - ACKNOWLEDGED
+        - IN_PROGRESS
+        - ESCALATED
+        to: RESOLVED
+  /api/v1/alerts/{alert_id}/false-alert:
+    post:
+      operationId: alertFalseAlert
+      tags:
+      - Alerts
+      summary: False alert alert
+      description: 'Allowed source statuses: OPEN, ACKNOWLEDGED, IN_PROGRESS; target: FALSE_ALERT. Atomically validate
+        transition, update status and append audit history. Every other transition, including repeating a completed
+        action, returns 409. With auth enabled actor_id must match the authenticated principal (otherwise 403);
+        actor_id alone grants no authority. Authentication is required on shared deployment. For all shared deployment
+        requests, enforce the listed roles; 401/403 are explicit failures. See completion decision AUTH-01. Amendment1.3.2
+        requires authentication and machine-scope checks; any legacy optional-auth wording is superseded.'
+      x-maintai-source: baseline 10.3/11; completion ACTION-01
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: alert_id
+        in: path
+        required: true
+        description: Opaque identifier; do not parse identity or ordering from its format.
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        '200':
+          description: Transition committed; refresh alert detail after success.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/AlertTransitionResult'
+                - properties:
+                    previous_status:
+                      enum:
+                      - OPEN
+                      - ACKNOWLEDGED
+                      - IN_PROGRESS
+                    status:
+                      const: FALSE_ALERT
+              examples:
+                false_alert_response:
+                  externalValue: ../examples/http/backend/false-alert-response.json
+        '400':
+          $ref: '#/components/responses/INVALID_REQUEST'
+        '401':
+          $ref: '#/components/responses/UNAUTHORIZED'
+        '403':
+          $ref: '#/components/responses/FORBIDDEN'
+        '422':
+          $ref: '#/components/responses/VALIDATION_FAILED'
+        '500':
+          $ref: '#/components/responses/INTERNAL_ERROR'
+        '503':
+          $ref: '#/components/responses/DEPENDENCY_UNAVAILABLE'
+        '404':
+          $ref: '#/components/responses/ALERT_NOT_FOUND'
+        '409':
+          $ref: '#/components/responses/INVALID_ALERT_TRANSITION'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FalseAlertRequest'
+            examples:
+              false_alert_request:
+                externalValue: ../examples/http/backend/false-alert-request.json
+      x-maintai-roles:
+      - TECHNICIAN
+      - ADMIN
+      security:
+      - BearerAuth: []
+      x-maintai-transitions:
+        from:
+        - OPEN
+        - ACKNOWLEDGED
+        - IN_PROGRESS
+        to: FALSE_ALERT
+  /api/v1/alerts/{alert_id}/feedback:
+    post:
+      operationId: createFeedback
+      tags:
+      - Feedback
+      summary: Record technician feedback
+      description: Append feedback to the existing alert and trace the authenticated actor. This does not change
+        alert lifecycle, risk policy or trigger training. A false-alert lifecycle action is a separate endpoint.
+        Authentication is required on shared deployment. For all shared deployment requests, enforce the listed
+        roles; 401/403 are explicit failures. See completion decision AUTH-01. Amendment1.3.2 requires authentication
+        and machine-scope checks; any legacy optional-auth wording is superseded.
+      x-maintai-source: baseline 12; completion ACTION-02 (201 status)
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: alert_id
+        in: path
+        required: true
+        description: Opaque identifier; do not parse identity or ordering from its format.
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        '201':
+          description: Feedback durably recorded.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackCreated'
+              examples:
+                feedback_created:
+                  externalValue: ../examples/http/backend/feedback-created.json
+        '400':
+          $ref: '#/components/responses/INVALID_REQUEST'
+        '401':
+          $ref: '#/components/responses/UNAUTHORIZED'
+        '403':
+          $ref: '#/components/responses/FORBIDDEN'
+        '422':
+          $ref: '#/components/responses/VALIDATION_FAILED'
+        '500':
+          $ref: '#/components/responses/INTERNAL_ERROR'
+        '503':
+          $ref: '#/components/responses/DEPENDENCY_UNAVAILABLE'
+        '404':
+          $ref: '#/components/responses/ALERT_NOT_FOUND'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+            examples:
+              feedback_request:
+                externalValue: ../examples/http/backend/feedback-request.json
+      x-maintai-roles:
+      - TECHNICIAN
+      - ADMIN
+      security:
+      - BearerAuth: []
+  /api/v1/alerts/{alert_id}/brief:
+    get:
+      operationId: getAlertBrief
+      tags:
+      - Copilot
+      summary: Read latest cached maintenance brief
+      description: Always read through backend. PENDING, NOT_REQUESTED and UNAVAILABLE return 200 with brief=null
+        and an explicit copilot_status. AVAILABLE includes a full brief; inspect grounded_status because insufficient
+        evidence is a completed business result. Does not trigger RAG or wait for generation. Authentication is
+        required on shared deployment. For all shared deployment requests, enforce the listed roles; 401/403 are
+        explicit failures. See completion decision AUTH-01. Amendment1.3.2 requires authentication and machine-scope
+        checks; any legacy optional-auth wording is superseded.
+      x-maintai-source: completion BRIEF-01
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: alert_id
+        in: path
+        required: true
+        description: Opaque identifier; do not parse identity or ordering from its format.
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        '200':
+          description: Cached brief or explicit non-available state.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CopilotResult'
+              examples:
+                copilot_grounded:
+                  externalValue: ../examples/http/backend/copilot-grounded.json
+                copilot_insufficient_evidence:
+                  externalValue: ../examples/http/backend/copilot-insufficient-evidence.json
+                copilot_validation_failed:
+                  externalValue: ../examples/http/backend/copilot-validation-failed.json
+                copilot_pending:
+                  externalValue: ../examples/http/backend/copilot-pending.json
+                copilot_not_requested:
+                  externalValue: ../examples/http/backend/copilot-not_requested.json
+                copilot_unavailable:
+                  externalValue: ../examples/http/backend/copilot-unavailable.json
+        '400':
+          $ref: '#/components/responses/INVALID_REQUEST'
+        '401':
+          $ref: '#/components/responses/UNAUTHORIZED'
+        '403':
+          $ref: '#/components/responses/FORBIDDEN'
+        '422':
+          $ref: '#/components/responses/VALIDATION_FAILED'
+        '500':
+          $ref: '#/components/responses/INTERNAL_ERROR'
+        '503':
+          $ref: '#/components/responses/DEPENDENCY_UNAVAILABLE'
+        '404':
+          $ref: '#/components/responses/ALERT_NOT_FOUND'
+      x-maintai-roles:
+      - VIEWER
+      - TECHNICIAN
+      - ADMIN
+      security:
+      - BearerAuth: []
+    post:
+      operationId: requestMaintenanceBrief
+      summary: Enqueue a durable brief job after authorization
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
+        wording is superseded.'
+      x-maintai-roles:
+      - TECHNICIAN
+      - ADMIN
+      parameters:
+      - name: alert_id
+        in: path
+        required: true
+        schema: &id003
+          type: string
+          minLength: 1
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id003
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '202':
+          description: Persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/BriefAccepted
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateBriefRequest'
+            examples:
+              request_brief:
+                externalValue: ../examples/http/backend/request-brief.json
+      security:
+      - BearerAuth: []
+  /api/v1/monitoring/summary:
+    get:
+      operationId: getMonitoringSummary
+      tags:
+      - Monitoring
+      summary: Read service and drift monitoring summary
+      description: A successful observation can be DEGRADED and still return 200. Worker freshness is derived from
+        checkpoint last_success_at and configured stale_after_seconds (900 is illustrative), not report.computed_at,
+        because reports may be reused. latest_report.window_end_at exposes data recency separately. Drift does not
+        change machine or alert severity. Resolve the deployed model and configured worker; do not merge unrelated
+        checkpoints. Authentication is required on shared deployment. For all shared deployment requests, enforce
+        the listed roles; 401/403 are explicit failures. See completion decision AUTH-01. Amendment1.3.2 requires
+        authentication and machine-scope checks; any legacy optional-auth wording is superseded.
+      x-maintai-source: completion MON-01
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Monitoring observation, including missing/stale reports.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonitoringSummary'
+              examples:
+                monitoring:
+                  externalValue: ../examples/http/backend/monitoring.json
+                monitoring_degraded:
+                  externalValue: ../examples/http/backend/monitoring-degraded.json
+                monitoring_no_report:
+                  externalValue: ../examples/http/backend/monitoring-no-report.json
+        '400':
+          $ref: '#/components/responses/INVALID_REQUEST'
+        '401':
+          $ref: '#/components/responses/UNAUTHORIZED'
+        '403':
+          $ref: '#/components/responses/FORBIDDEN'
+        '422':
+          $ref: '#/components/responses/VALIDATION_FAILED'
+        '500':
+          $ref: '#/components/responses/INTERNAL_ERROR'
+        '503':
+          $ref: '#/components/responses/DEPENDENCY_UNAVAILABLE'
+      x-maintai-roles:
+      - VIEWER
+      - TECHNICIAN
+      - ADMIN
+      security:
+      - BearerAuth: []
+  /api/v1/drift-reports:
+    get:
+      operationId: listPublishedDriftReports
+      summary: Read Business metadata catalog; surface catalog staleness
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
+        wording is superseded.'
+      x-maintai-roles:
+      - VIEWER
+      - TECHNICIAN
+      - ADMIN
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema: *id003
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: model_version
+        in: query
+        required: false
+        schema: *id003
+      - name: overall_status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - STABLE
+          - WARNING
+          - CRITICAL
+          - ERROR
+          - INSUFFICIENT_DATA
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '200':
+          description: Persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/DriftReportList
+      security:
+      - BearerAuth: []
+  /api/v1/drift-reports/{report_id}:
+    get:
+      operationId: getDriftReport
+      tags:
+      - Monitoring
+      summary: Read one persisted drift report
+      description: Fetch exact S3 report version from authorized catalog and verify SHA-256; never query drift_db
+        or run detector. Missing/corrupt source ->503. Amendment1.3.2 requires authentication and machine-scope
+        checks; any legacy optional-auth wording is superseded.
+      x-maintai-source: completion MON-02
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: report_id
+        in: path
+        required: true
+        description: Opaque identifier; do not parse identity or ordering from its format.
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        '200':
+          description: Persisted report; inspect overall_status independently of HTTP success.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriftReport'
+              examples:
+                report_stable:
+                  externalValue: ../examples/http/drift/report-stable.json
+                report_warning:
+                  externalValue: ../examples/http/drift/report-warning.json
+                report_critical:
+                  externalValue: ../examples/http/drift/report-critical.json
+                report_insufficient_data:
+                  externalValue: ../examples/http/drift/report-insufficient_data.json
+                report_error:
+                  externalValue: ../examples/http/drift/report-error.json
+        '400':
+          $ref: '#/components/responses/INVALID_REQUEST'
+        '401':
+          $ref: '#/components/responses/UNAUTHORIZED'
+        '403':
+          $ref: '#/components/responses/FORBIDDEN'
+        '422':
+          $ref: '#/components/responses/VALIDATION_FAILED'
+        '500':
+          $ref: '#/components/responses/INTERNAL_ERROR'
+        '503':
+          $ref: '#/components/responses/DEPENDENCY_UNAVAILABLE'
+        '404':
+          $ref: '#/components/responses/DRIFT_REPORT_NOT_FOUND'
+      x-maintai-roles:
+      - VIEWER
+      - TECHNICIAN
+      - ADMIN
+      security:
+      - BearerAuth: []
+  /api/v1/events/stream:
+    get:
+      operationId: streamLiveUpdates
+      summary: Authenticated SSE; REST resync after reconnect; no durable replay
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
+        wording is superseded.'
+      x-maintai-roles:
+      - VIEWER
+      - TECHNICIAN
+      - ADMIN
+      parameters:
+      - name: machine_id
+        in: query
+        required: false
+        schema: *id003
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '200':
+          description: SSE event name equals JSON envelope type. Snapshot/schema details in SSEEvent.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              examples:
+                telemetry:
+                  externalValue: ../examples/telemetry.sse
+      x-maintai-event-schema: ../events/sse-event.schema.json
+      security:
+      - BearerAuth: []
+  /health/live:
+    get:
+      operationId: backendLiveness
+      tags:
+      - Operations
+      summary: Process liveness
+      description: 200 means process is alive. Do not depend on external DB/LLM readiness in liveness checks; avoid
+        restart loops.
+      x-maintai-source: baseline 19.1
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Process alive.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Liveness'
+              examples:
+                backend_live:
+                  externalValue: ../examples/http/operations/backend-live.json
+      security: []
+  /health/ready:
+    get:
+      operationId: backendReadiness
+      tags:
+      - Operations
+      summary: Dependency readiness
+      description: 200 only when ready for the service function; 503 when required checks fail, including DEGRADED
+        RAG. Readiness bodies intentionally use the health schema rather than the business error envelope. Platform
+        may configure RAG separately because RAG failure must not remove backend alert functionality.
+      x-maintai-source: baseline 19.2; completion HEALTH-01
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Ready.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/Readiness'
+                - properties:
+                    status:
+                      const: UP
+              examples:
+                backend_ready:
+                  externalValue: ../examples/http/operations/backend-ready.json
+        '503':
+          description: Not ready; inspect checks.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            Retry-After:
+              description: Optional retry delay in seconds. Honor it before bounded retries.
+              schema:
+                type: string
+                pattern: ^[0-9]+$
+              example: '2'
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/Readiness'
+                - properties:
+                    status:
+                      type: string
+                      enum:
+                      - DEGRADED
+                      - DOWN
+              examples:
+                backend_not_ready:
+                  externalValue: ../examples/http/operations/backend-not-ready.json
+      security: []
+  /metrics:
+    get:
+      operationId: backendMetrics
+      tags:
+      - Operations
+      summary: Prometheus metrics
+      description: Platform scrape endpoint, not a frontend data API. Example is illustrative; actual service metrics
+        follow baseline section 20. Do not label metrics with unique event/machine/report IDs.
+      x-maintai-source: baseline 20
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Prometheus text exposition.
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                exposition:
+                  externalValue: ../examples/http/operations/backend-metrics.prom
+      security: []
+  /api/v1/machines/{machine_id}/predictions:
+    get:
+      operationId: listProcessingHistory
+      summary: List immutable outcomes across hot/archive tiers
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
+        wording is superseded.'
+      x-maintai-roles:
+      - VIEWER
+      - TECHNICIAN
+      - ADMIN
+      parameters:
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: model_version
+        in: query
+        required: false
+        schema: *id002
+      - name: result_kind
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - PREDICTION_COMPLETED
+          - DATA_INVALID
+          - INFERENCE_UNAVAILABLE
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '200':
+          description: Persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/HistoryPage
+      security:
+      - BearerAuth: []
+  /api/v1/predictions/{result_id}:
+    get:
+      operationId: getProcessingHistory
+      summary: Read one original processing outcome
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
+        wording is superseded.'
+      x-maintai-roles:
+      - VIEWER
+      - TECHNICIAN
+      - ADMIN
+      parameters:
+      - name: result_id
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '200':
+          description: Persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/HistoryRecord
+      security:
+      - BearerAuth: []
+  /api/v1/machines/{machine_id}/timeseries:
+    get:
+      operationId: getMachineTimeSeries
+      summary: Read bounded min/max/avg/count chart buckets
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
+        wording is superseded.'
+      x-maintai-roles:
+      - VIEWER
+      - TECHNICIAN
+      - ADMIN
+      parameters:
+      - *id004
+      - *id005
+      - *id006
+      - name: metric
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - air_temperature_k
+          - process_temperature_k
+          - rotational_speed_rpm
+          - torque_nm
+          - tool_wear_min
+          - failure_probability
+          - risk_score
+      - name: resolution
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - auto
+          - 1s
+          - 10s
+          - 1m
+          - 5m
+          - 1h
+          - 1d
+      - name: max_points
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 2000
+          default: 1000
+      - name: markers_cursor
+        in: query
+        required: false
+        schema: *id002
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '200':
+          description: Persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/TimeSeriesPage
+      security:
+      - BearerAuth: []
+  /api/v1/history-exports:
+    post:
+      operationId: createHistoryExport
+      summary: Durably enqueue an authorized frozen history export
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
+        wording is superseded.'
+      x-maintai-roles:
+      - VIEWER
+      - TECHNICIAN
+      - ADMIN
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: *id002
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '202':
+          description: Persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/ExportJob
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/runtime.schema.json#/$defs/ExportRequest
+      security:
+      - BearerAuth: []
+  /api/v1/history-exports/{job_id}:
+    get:
+      operationId: getHistoryExport
+      summary: Read persisted export state
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
+        wording is superseded.'
+      x-maintai-roles:
+      - VIEWER
+      - TECHNICIAN
+      - ADMIN
+      parameters:
+      - &id009
+        name: job_id
+        in: path
+        required: true
+        schema: *id002
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '200':
+          description: Persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/ExportJob
+      security:
+      - BearerAuth: []
+  /api/v1/history-exports/{job_id}/download:
+    get:
+      operationId: downloadHistoryExport
+      summary: Authorize and redirect to a short-lived private download
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
+        wording is superseded.'
+      x-maintai-roles:
+      - VIEWER
+      - TECHNICIAN
+      - ADMIN
+      parameters:
+      - *id009
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '303':
+          description: Private signed URL, TTL <=5 minutes.
+          headers:
+            Location:
+              required: true
+              schema:
+                type: string
+                format: uri
+      security:
+      - BearerAuth: []
+  /api/v1/machines/{machine_id}/live:
+    get:
+      operationId: getLiveSnapshot
+      summary: Read separate telemetry, prediction and processing axes
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
+        wording is superseded.'
+      x-maintai-roles:
+      - VIEWER
+      - TECHNICIAN
+      - ADMIN
+      parameters:
+      - name: machine_id
+        in: path
+        required: true
+        schema: *id003
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '200':
+          description: Persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/LiveSnapshot
+      security:
+      - BearerAuth: []
+  /api/v1/sensor-events/{event_id}/status:
+    get:
+      operationId: getEventStatus
+      summary: Proxy authorized persisted Processing status
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
+        wording is superseded.'
+      x-maintai-roles:
+      - VIEWER
+      - TECHNICIAN
+      - ADMIN
+      - SENSOR_SERVICE
+      parameters:
+      - name: event_id
+        in: path
+        required: true
+        schema: *id003
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '200':
+          description: Persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/ProcessingStatus
+      security:
+      - BearerAuth: []
+  /api/v1/brief-jobs/{job_id}:
+    get:
+      operationId: getBriefJob
+      summary: Read a durable Copilot job; never invoke LLM from GET
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
+        wording is superseded.'
+      x-maintai-roles:
+      - VIEWER
+      - TECHNICIAN
+      - ADMIN
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema: *id003
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '409':
+          description: Idempotency, state or version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '410':
+          description: History/snapshot/artifact expired.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '200':
+          description: Persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/BriefJob
+      security:
+      - BearerAuth: []
+components:
+  schemas:
+    Liveness:
+      $ref: ../schemas/common.schema.json#/$defs/Liveness
+    Readiness:
+      $ref: ../schemas/common.schema.json#/$defs/Readiness
+    MachineList:
+      $ref: ../schemas/business.schema.json#/$defs/MachineList
+    MachineDetail:
+      $ref: ../schemas/business.schema.json#/$defs/MachineDetail
+    AlertList:
+      $ref: ../schemas/business.schema.json#/$defs/AlertList
+    AlertDetail:
+      $ref: ../schemas/business.schema.json#/$defs/AlertDetail
+    ActorNote:
+      $ref: ../schemas/business.schema.json#/$defs/ActorNote
+    ResolveRequest:
+      $ref: ../schemas/business.schema.json#/$defs/ResolveRequest
+    FalseAlertRequest:
+      $ref: ../schemas/business.schema.json#/$defs/FalseAlertRequest
+    AlertTransitionResult:
+      $ref: ../schemas/business.schema.json#/$defs/AlertTransitionResult
+    FeedbackRequest:
+      $ref: ../schemas/business.schema.json#/$defs/FeedbackRequest
+    FeedbackCreated:
+      $ref: ../schemas/business.schema.json#/$defs/FeedbackCreated
+    GenerateBriefRequest:
+      $ref: ../schemas/business.schema.json#/$defs/GenerateBriefRequest
+    CopilotResult:
+      $ref: ../schemas/business.schema.json#/$defs/CopilotResult
+    DriftReport:
+      $ref: ../schemas/drift-report.schema.json
+    MonitoringSummary:
+      $ref: ../schemas/monitoring.schema.json#/$defs/Summary
+  parameters:
+    RequestId:
+      name: X-Request-ID
+      in: header
+      required: false
+      description: Forward when available; the service generates an identifier when absent.
+      schema:
+        type: string
+        minLength: 1
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      description: Keep the same correlation across sensor, prediction, alert and RAG hops.
+      schema:
+        type: string
+        minLength: 1
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    INVALID_REQUEST:
+      description: Invalid request. See error.retryable; never infer a normal business state from this error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: INVALID_REQUEST
+          examples:
+            invalid_request:
+              externalValue: ../examples/http/errors/invalid_request.json
+    UNAUTHORIZED:
+      description: Unauthorized. See error.retryable; never infer a normal business state from this error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: UNAUTHORIZED
+          examples:
+            unauthorized:
+              externalValue: ../examples/http/errors/unauthorized.json
+    FORBIDDEN:
+      description: Forbidden. See error.retryable; never infer a normal business state from this error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: FORBIDDEN
+          examples:
+            forbidden:
+              externalValue: ../examples/http/errors/forbidden.json
+    MACHINE_NOT_FOUND:
+      description: Machine not found. See error.retryable; never infer a normal business state from this error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: MACHINE_NOT_FOUND
+          examples:
+            machine_not_found:
+              externalValue: ../examples/http/errors/machine_not_found.json
+    INTERNAL_ERROR:
+      description: Internal error. See error.retryable; never infer a normal business state from this error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: INTERNAL_ERROR
+          examples:
+            internal_error:
+              externalValue: ../examples/http/errors/internal_error.json
+    VALIDATION_FAILED:
+      description: Validation failed. See error.retryable; never infer a normal business state from this error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: VALIDATION_FAILED
+          examples:
+            validation_failed:
+              externalValue: ../examples/http/errors/validation_failed.json
+    DEPENDENCY_UNAVAILABLE:
+      description: Dependency unavailable. See error.retryable; never infer a normal business state from this error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        Retry-After:
+          description: Optional retry delay in seconds. Honor it before bounded retries.
+          schema:
+            type: string
+            pattern: ^[0-9]+$
+          example: '2'
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: DEPENDENCY_UNAVAILABLE
+          examples:
+            dependency_unavailable:
+              externalValue: ../examples/http/errors/dependency_unavailable.json
+    ALERT_NOT_FOUND:
+      description: Alert not found. See error.retryable; never infer a normal business state from this error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: ALERT_NOT_FOUND
+          examples:
+            alert_not_found:
+              externalValue: ../examples/http/errors/alert_not_found.json
+    INVALID_ALERT_TRANSITION:
+      description: Invalid alert transition. See error.retryable; never infer a normal business state from this
+        error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: INVALID_ALERT_TRANSITION
+          examples:
+            invalid_alert_transition:
+              externalValue: ../examples/http/errors/invalid_alert_transition.json
+    DRIFT_REPORT_NOT_FOUND:
+      description: Drift report not found. See error.retryable; never infer a normal business state from this error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: DRIFT_REPORT_NOT_FOUND
+          examples:
+            drift_report_not_found:
+              externalValue: ../examples/http/errors/drift_report_not_found.json
+x-maintai-source: System Contracts §34 / design amendment1.3.2

@@ -1,0 +1,41 @@
+{
+  "items": [
+    {
+      "machine_id": "M-001",
+      "display_name": "Machine 001",
+      "state": "CRITICAL",
+      "latest_risk_score": 0.91,
+      "active_alert_count": 1,
+      "last_seen_at": "2026-10-15T04:30:15Z",
+      "data_status": "VALID"
+    },
+    {
+      "machine_id": "M-002",
+      "display_name": "Machine 002",
+      "state": "UNKNOWN",
+      "latest_risk_score": null,
+      "active_alert_count": 0,
+      "last_seen_at": "2026-10-15T04:30:15Z",
+      "data_status": "VALID"
+    },
+    {
+      "machine_id": "M-003",
+      "display_name": "Machine 003",
+      "state": "INVALID",
+      "latest_risk_score": null,
+      "active_alert_count": 0,
+      "last_seen_at": "2026-10-15T04:30:15Z",
+      "data_status": "INVALID"
+    },
+    {
+      "machine_id": "M-NEW",
+      "display_name": "New machine",
+      "state": "UNKNOWN",
+      "latest_risk_score": null,
+      "active_alert_count": 0,
+      "last_seen_at": null,
+      "data_status": null
+    }
+  ],
+  "total": 4
+}

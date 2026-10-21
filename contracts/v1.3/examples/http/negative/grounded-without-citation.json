@@ -1,0 +1,35 @@
+{
+  "brief_id": "brf_001",
+  "alert_id": "alt_001",
+  "grounded_status": "GROUNDED",
+  "summary": "Risk score cao; kết quả model không khẳng định nguyên nhân hỏng hóc.",
+  "uncertainty": "Cần kiểm tra thực tế và tuân thủ quy trình an toàn.",
+  "checklist": [
+    {
+      "step": 1,
+      "action": "Đối chiếu điều kiện torque với manual được truy xuất.",
+      "citation_ids": []
+    }
+  ],
+  "citations": [
+    {
+      "citation_id": "cit_001",
+      "document_id": "manual-001",
+      "document_version": "2.0",
+      "section": "4.2",
+      "page": 18,
+      "chunk_id": "chunk-123"
+    }
+  ],
+  "retrieval": {
+    "top_k": 5,
+    "retrieved_chunk_ids": [
+      "chunk-123"
+    ]
+  },
+  "generator": {
+    "provider": "configured-provider",
+    "model": "configured-model"
+  },
+  "generated_at": "2026-10-15T04:30:15Z"
+}

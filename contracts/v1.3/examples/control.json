@@ -1,0 +1,9 @@
+{
+  "machine_id": "M-001",
+  "stream_state": "PAUSED",
+  "scenario": "normal",
+  "control_version": 2,
+  "updated_at": "2026-10-18T00:00:00Z",
+  "last_controlled_by": "fixture-operator",
+  "source": "SIMULATOR_CONTROL"
+}

@@ -1,0 +1,298 @@
+{
+  "schema_version": "1.0.0",
+  "fixtures_only": true,
+  "cases": [
+    {
+      "file": "sensor-request.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/SensorRequest",
+      "valid": true
+    },
+    {
+      "file": "sensor-event.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/SensorEvent",
+      "valid": true
+    },
+    {
+      "file": "accepted.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/IngestAck",
+      "valid": true
+    },
+    {
+      "file": "completed.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/ProcessingResult",
+      "valid": true
+    },
+    {
+      "file": "invalid.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/ProcessingResult",
+      "valid": true
+    },
+    {
+      "file": "unavailable.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/ProcessingResult",
+      "valid": true
+    },
+    {
+      "file": "history-page.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/HistoryPage",
+      "valid": true
+    },
+    {
+      "file": "history-empty.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/HistoryPage",
+      "valid": true
+    },
+    {
+      "file": "chart.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/TimeSeriesPage",
+      "valid": true
+    },
+    {
+      "file": "archive-manifest.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/ArchiveManifest",
+      "valid": true
+    },
+    {
+      "file": "drift-manifest.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/DriftManifest",
+      "valid": true
+    },
+    {
+      "file": "control.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/ControlState",
+      "valid": true
+    },
+    {
+      "file": "export-job.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/ExportJob",
+      "valid": true
+    },
+    {
+      "file": "brief-job.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/BriefJob",
+      "valid": true
+    },
+    {
+      "file": "telemetry-event.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/SSEEvent",
+      "valid": true
+    },
+    {
+      "file": "negative-invalid-with-prediction.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/ProcessingResult",
+      "valid": false
+    },
+    {
+      "file": "negative-old-union-version.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/ProcessingResult",
+      "valid": false
+    },
+    {
+      "file": "negative-unknown-outcome.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/ProcessingResult",
+      "valid": false
+    },
+    {
+      "file": "negative-partial-as-complete.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/HistoryPage",
+      "valid": false
+    },
+    {
+      "file": "negative-naive-timestamp.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/SensorEvent",
+      "valid": false
+    },
+    {
+      "file": "negative-export-success-without-artifact.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/ExportJob",
+      "valid": false
+    },
+    {
+      "file": "negative-label-threshold.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/ProcessingResult",
+      "valid": false
+    },
+    {
+      "file": "negative-history-lineage.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/HistoryPage",
+      "valid": false
+    },
+    {
+      "file": "sensor-invalid-features-envelope.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/SensorRequest",
+      "valid": true
+    },
+    {
+      "file": "alert-signal.json",
+      "schema": "../events/alert-signal.schema.json",
+      "valid": true
+    },
+    {
+      "file": "raw-history-record.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/RawHistoryRecord",
+      "valid": true
+    },
+    {
+      "file": "http/errors/invalid_request.json",
+      "schema": "../schemas/common.schema.json#/$defs/ErrorEnvelope",
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "file": "http/errors/unauthorized.json",
+      "schema": "../schemas/common.schema.json#/$defs/ErrorEnvelope",
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "file": "http/errors/forbidden.json",
+      "schema": "../schemas/common.schema.json#/$defs/ErrorEnvelope",
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "file": "http/errors/machine_not_found.json",
+      "schema": "../schemas/common.schema.json#/$defs/ErrorEnvelope",
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "file": "http/errors/alert_not_found.json",
+      "schema": "../schemas/common.schema.json#/$defs/ErrorEnvelope",
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "file": "http/errors/drift_report_not_found.json",
+      "schema": "../schemas/common.schema.json#/$defs/ErrorEnvelope",
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "file": "http/errors/invalid_alert_transition.json",
+      "schema": "../schemas/common.schema.json#/$defs/ErrorEnvelope",
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "file": "http/errors/validation_failed.json",
+      "schema": "../schemas/common.schema.json#/$defs/ErrorEnvelope",
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "file": "http/errors/internal_error.json",
+      "schema": "../schemas/common.schema.json#/$defs/ErrorEnvelope",
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "file": "http/errors/model_not_ready.json",
+      "schema": "../schemas/common.schema.json#/$defs/ErrorEnvelope",
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "file": "http/errors/rag_unavailable.json",
+      "schema": "../schemas/common.schema.json#/$defs/ErrorEnvelope",
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "file": "http/errors/dependency_unavailable.json",
+      "schema": "../schemas/common.schema.json#/$defs/ErrorEnvelope",
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "file": "http/drift/reference.json",
+      "schema": "../schemas/drift-reference.schema.json",
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "file": "http/drift/report-stable.json",
+      "schema": "../schemas/drift-report.schema.json",
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "file": "http/drift/report-warning.json",
+      "schema": "../schemas/drift-report.schema.json",
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "file": "http/drift/report-critical.json",
+      "schema": "../schemas/drift-report.schema.json",
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "file": "http/drift/report-insufficient_data.json",
+      "schema": "../schemas/drift-report.schema.json",
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "file": "http/drift/report-error.json",
+      "schema": "../schemas/drift-report.schema.json",
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "file": "http/negative/prediction-probability.json",
+      "schema": "../schemas/prediction.schema.json",
+      "valid": false,
+      "reason": "Probability must be in [0,1]."
+    },
+    {
+      "file": "http/negative/unknown-as-zero-risk.json",
+      "schema": "../schemas/business.schema.json#/$defs/MachineListItem",
+      "valid": false,
+      "reason": "Unknown cannot be represented as a normal zero-risk score."
+    },
+    {
+      "file": "http/negative/grounded-without-citation.json",
+      "schema": "../schemas/maintenance-brief.schema.json",
+      "valid": false,
+      "reason": "Actionable advice needs citations."
+    },
+    {
+      "file": "http/negative/insufficient-with-advice.json",
+      "schema": "../schemas/maintenance-brief.schema.json",
+      "valid": false,
+      "reason": "Insufficient evidence must not contain actionable steps."
+    },
+    {
+      "file": "http/negative/unretrieved-citation.json",
+      "schema": "../schemas/maintenance-brief.schema.json",
+      "valid": false,
+      "reason": "Citation chunk must occur in retrieval context."
+    },
+    {
+      "file": "http/negative/stale-as-drift-status.json",
+      "schema": "../schemas/drift-report.schema.json",
+      "valid": false,
+      "reason": "Worker freshness is not DriftStatus."
+    },
+    {
+      "file": "http/negative/prediction-threshold.json",
+      "schema": "../schemas/prediction.schema.json",
+      "valid": false,
+      "reason": "Label contradicts threshold."
+    },
+    {
+      "file": "http/negative/ack-terminal.json",
+      "schema": "../openapi/openapi-business.yaml#/paths/~1api~1v1~1alerts~1{alert_id}~1ack/post/responses/200/content/application~1json/schema",
+      "valid": false,
+      "reason": "Terminal alerts cannot be acknowledged."
+    },
+    {
+      "file": "http/negative/ready-with-failed-check.json",
+      "schema": "../schemas/common.schema.json#/$defs/Readiness",
+      "valid": false,
+      "reason": "UP readiness cannot contain a failed required check."
+    }
+  ]
+}

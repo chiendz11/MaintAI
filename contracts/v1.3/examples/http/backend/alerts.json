@@ -1,0 +1,13 @@
+{
+  "items": [
+    {
+      "alert_id": "alt_001",
+      "machine_id": "M-001",
+      "severity": "CRITICAL",
+      "status": "OPEN",
+      "risk_score": 0.91,
+      "created_at": "2026-10-15T04:30:15Z"
+    }
+  ],
+  "total": 1
+}

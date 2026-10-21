@@ -1,37 +1,33 @@
-from langchain_core.documents import Document
+from knowledge.pdf_parser import load_pdf
+from knowledge.processor import KnowledgeProcessor
 from vector_retriever.retriever import VectorRetriever
 
+# 1. Đọc PDF
+pages = load_pdf("documents/pdffile.pdf")
 
-documents = [
-    Document(
-        page_content="Máy CNC lỗi E101, động cơ quá nhiệt, cần kiểm tra quạt làm mát.",
-        metadata={"id": "D1"}
-    ),
-    Document(
-        page_content="Máy CNC lỗi E202, áp suất dầu thấp, cần kiểm tra bơm dầu.",
-        metadata={"id": "D2"}
-    ),
-    Document(
-        page_content="Máy CNC cần vệ sinh và bảo dưỡng định kỳ.",
-        metadata={"id": "D3"}
+# 2. Chia chunks
+processor = KnowledgeProcessor()
+all_chunks = []
+
+for page in pages:
+    chunks = processor.load_document_from_text(
+        text=page["text"],
+        metadata=page["metadata"]
     )
-]
+    all_chunks.extend(chunks)
 
+# 3. Khởi tạo VectorRetriever
 retriever = VectorRetriever()
 
-# Nạp tài liệu
-retriever.add_document(documents)
+# 4. Embedding + lưu vào FAISS
+retriever.add_document(all_chunks)
 
-# Câu hỏi
-query = "Động cơ máy CNC bị nóng quá mức thì phải làm gì?"
+# 5. Thử tìm kiếm
+query = "What are the causes of motor overheating?"
 
-# Tìm một tài liệu phù hợp nhất
-result = retriever.search(query, top_k=1)
+results = retriever.search(query, top_k=3)
 
-# In kết quả
-if result:
-    print("ID:", result[0].metadata["id"])
-    print("Content:", result[0].page_content)
-else:
-    print("Không tìm thấy tài liệu.") 
-
+for i, doc in enumerate(results, start=1):
+    print(f"\n===== RESULT {i} =====")
+    print("Nguồn:", doc.metadata)
+    print("Nội dung:", doc.page_content[:700])

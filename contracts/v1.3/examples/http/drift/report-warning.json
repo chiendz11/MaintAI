@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0.0",
+  "report_id": "drift_fixture_warning",
+  "computed_at": "2026-10-15T04:30:15Z",
+  "detector_version": "drift-worker-1.0.0",
+  "reference": {
+    "model_version": "fixture-model-v1",
+    "dataset_version": "fixture-ai4i-v1"
+  },
+  "current_window": {
+    "start_at": "2026-10-15T04:20:00Z",
+    "end_at": "2026-10-15T04:30:15Z",
+    "sample_count": 500
+  },
+  "overall_status": "WARNING",
+  "summary": {
+    "total_features": 6,
+    "warning_features": 0,
+    "critical_features": 1
+  },
+  "features": [
+    {
+      "feature": "air_temperature_k",
+      "feature_type": "numeric",
+      "metric": "PSI",
+      "score": 0.3,
+      "warning_threshold": 0.1,
+      "critical_threshold": 0.2,
+      "status": "CRITICAL"
+    },
+    {
+      "feature": "process_temperature_k",
+      "feature_type": "numeric",
+      "metric": "PSI",
+      "score": 0.01,
+      "warning_threshold": 0.1,
+      "critical_threshold": 0.2,
+      "status": "STABLE"
+    },
+    {
+      "feature": "rotational_speed_rpm",
+      "feature_type": "numeric",
+      "metric": "PSI",
+      "score": 0.01,
+      "warning_threshold": 0.1,
+      "critical_threshold": 0.2,
+      "status": "STABLE"
+    },
+    {
+      "feature": "torque_nm",
+      "feature_type": "numeric",
+      "metric": "PSI",
+      "score": 0.01,
+      "warning_threshold": 0.1,
+      "critical_threshold": 0.2,
+      "status": "STABLE"
+    },
+    {
+      "feature": "tool_wear_min",
+      "feature_type": "numeric",
+      "metric": "PSI",
+      "score": 0.01,
+      "warning_threshold": 0.1,
+      "critical_threshold": 0.2,
+      "status": "STABLE"
+    },
+    {
+      "feature": "product_type",
+      "feature_type": "categorical",
+      "metric": "PSI",
+      "score": 0.01,
+      "warning_threshold": 0.1,
+      "critical_threshold": 0.2,
+      "status": "STABLE"
+    }
+  ],
+  "prediction_drift": null,
+  "reason": null,
+  "policy": {
+    "version": "drift-policy-1.0.0",
+    "warning": 0.1,
+    "critical": 0.2,
+    "epsilon": 1e-06,
+    "critical_if_critical_features_gte": 2,
+    "warning_if_warning_features_gte": 1,
+    "minimum_samples": 200,
+    "window_size": 500,
+    "prediction_can_raise_to_warning": true
+  }
+}

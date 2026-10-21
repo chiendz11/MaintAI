@@ -1,0 +1,12 @@
+{
+  "event_id": "evt_001",
+  "machine_id": "M-001",
+  "features": {
+    "product_type": "M",
+    "air_temperature_k": 298.1,
+    "process_temperature_k": 308.6,
+    "rotational_speed_rpm": 1551,
+    "torque_nm": 42.8,
+    "tool_wear_min": 108
+  }
+}

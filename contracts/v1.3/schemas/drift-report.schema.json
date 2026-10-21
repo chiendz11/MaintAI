@@ -1,0 +1,296 @@
+{
+  "$defs": {
+    "CurrentWindow": {
+      "additionalProperties": false,
+      "properties": {
+        "start_at": {
+          "format": "date-time",
+          "title": "Start At",
+          "type": "string"
+        },
+        "end_at": {
+          "format": "date-time",
+          "title": "End At",
+          "type": "string"
+        },
+        "sample_count": {
+          "minimum": 0,
+          "title": "Sample Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start_at",
+        "end_at",
+        "sample_count"
+      ],
+      "title": "CurrentWindow",
+      "type": "object"
+    },
+    "DriftStatus": {
+      "enum": [
+        "STABLE",
+        "WARNING",
+        "CRITICAL",
+        "INSUFFICIENT_DATA",
+        "ERROR"
+      ],
+      "title": "DriftStatus",
+      "type": "string"
+    },
+    "FeatureResult": {
+      "additionalProperties": false,
+      "properties": {
+        "feature": {
+          "enum": [
+            "product_type",
+            "air_temperature_k",
+            "process_temperature_k",
+            "rotational_speed_rpm",
+            "torque_nm",
+            "tool_wear_min"
+          ],
+          "title": "Feature",
+          "type": "string"
+        },
+        "feature_type": {
+          "enum": [
+            "numeric",
+            "categorical"
+          ],
+          "title": "Feature Type",
+          "type": "string"
+        },
+        "metric": {
+          "const": "PSI",
+          "default": "PSI",
+          "title": "Metric",
+          "type": "string"
+        },
+        "score": {
+          "minimum": 0,
+          "title": "Score",
+          "type": "number"
+        },
+        "warning_threshold": {
+          "title": "Warning Threshold",
+          "type": "number"
+        },
+        "critical_threshold": {
+          "title": "Critical Threshold",
+          "type": "number"
+        },
+        "status": {
+          "$ref": "#/$defs/DriftStatus"
+        }
+      },
+      "required": [
+        "feature",
+        "feature_type",
+        "score",
+        "warning_threshold",
+        "critical_threshold",
+        "status"
+      ],
+      "title": "FeatureResult",
+      "type": "object"
+    },
+    "PredictionDrift": {
+      "additionalProperties": false,
+      "properties": {
+        "reference_failure_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Reference Failure Rate",
+          "type": "number"
+        },
+        "current_failure_rate": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Current Failure Rate"
+        },
+        "sample_count": {
+          "minimum": 0,
+          "title": "Sample Count",
+          "type": "integer"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Score"
+        },
+        "metric": {
+          "const": "PSI",
+          "default": "PSI",
+          "title": "Metric",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/DriftStatus"
+        },
+        "warning_threshold": {
+          "title": "Warning Threshold",
+          "type": "number"
+        },
+        "critical_threshold": {
+          "title": "Critical Threshold",
+          "type": "number"
+        }
+      },
+      "required": [
+        "reference_failure_rate",
+        "current_failure_rate",
+        "sample_count",
+        "status",
+        "warning_threshold",
+        "critical_threshold"
+      ],
+      "title": "PredictionDrift",
+      "type": "object"
+    },
+    "ReferenceIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "dataset_version": {
+          "title": "Dataset Version",
+          "type": "string"
+        },
+        "model_version": {
+          "title": "Model Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dataset_version",
+        "model_version"
+      ],
+      "title": "ReferenceIdentity",
+      "type": "object"
+    },
+    "Summary": {
+      "additionalProperties": false,
+      "properties": {
+        "total_features": {
+          "const": 6,
+          "default": 6,
+          "title": "Total Features",
+          "type": "integer"
+        },
+        "warning_features": {
+          "default": 0,
+          "maximum": 6,
+          "minimum": 0,
+          "title": "Warning Features",
+          "type": "integer"
+        },
+        "critical_features": {
+          "default": 0,
+          "maximum": 6,
+          "minimum": 0,
+          "title": "Critical Features",
+          "type": "integer"
+        }
+      },
+      "title": "Summary",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "report_id": {
+      "title": "Report Id",
+      "type": "string"
+    },
+    "computed_at": {
+      "format": "date-time",
+      "title": "Computed At",
+      "type": "string"
+    },
+    "detector_version": {
+      "title": "Detector Version",
+      "type": "string"
+    },
+    "reference": {
+      "$ref": "#/$defs/ReferenceIdentity"
+    },
+    "current_window": {
+      "$ref": "#/$defs/CurrentWindow"
+    },
+    "overall_status": {
+      "$ref": "#/$defs/DriftStatus"
+    },
+    "summary": {
+      "$ref": "#/$defs/Summary"
+    },
+    "features": {
+      "items": {
+        "$ref": "#/$defs/FeatureResult"
+      },
+      "title": "Features",
+      "type": "array"
+    },
+    "prediction_drift": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PredictionDrift"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reason"
+    },
+    "policy": {
+      "additionalProperties": true,
+      "title": "Policy",
+      "type": "object"
+    }
+  },
+  "required": [
+    "report_id",
+    "computed_at",
+    "detector_version",
+    "reference",
+    "current_window",
+    "overall_status",
+    "policy"
+  ],
+  "title": "DriftReport",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:maintai:contracts:drift-report:1.0.0"
+}

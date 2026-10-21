@@ -1,0 +1,100 @@
+openapi: 3.1.1
+info:
+  title: MaintAI Ingestion API
+  version: 1.3.2
+  description: Design contract, not a running service. Document amendment1.3.2; event schemas versioned independently.
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+servers:
+- url: https://ingestion.example.invalid
+  description: Illustrative only; configure environment routing.
+security:
+- BearerAuth: []
+x-maintai-audience: ingestion
+paths:
+  /api/v1/sensor-readings:
+    post:
+      operationId: acceptSensorReading
+      summary: Accept envelope only after Kafka broker ACK
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
+        not implemented.'
+      x-maintai-roles:
+      - SENSOR_SERVICE
+      parameters: []
+      responses:
+        '400':
+          description: Invalid request/cursor.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '401':
+          description: Missing or invalid credential.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '403':
+          description: Insufficient permission or machine scope.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '404':
+          description: Resource not found/not materialized.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '422':
+          description: Invalid query/payload or query budget exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '429':
+          description: Admission limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '503':
+          description: Required dependency/coverage unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '504':
+          description: Dependency timed out.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+        '202':
+          description: Persisted result.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/IngestAck
+          headers:
+            Location:
+              required: true
+              description: Absolute configured Business status URL, not an Ingestion route.
+              schema:
+                type: string
+                format: uri
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/runtime.schema.json#/$defs/SensorRequest
+      security:
+      - BearerAuth: []
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+x-maintai-decisions: ../../../docs/api-contract-decisions.md
+x-maintai-source: System Contracts §34 / design amendment1.3.2

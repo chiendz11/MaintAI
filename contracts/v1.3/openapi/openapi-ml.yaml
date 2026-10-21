@@ -1,0 +1,425 @@
+openapi: 3.1.1
+info:
+  title: MaintAI ML Inference API
+  version: 1.3.2
+  description: Provider wire protocol remains1.1.0. Target architecture amendment1.3.2; internal service authentication
+    required. Runtime remains skeleton.
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+servers:
+- url: https://ml.example.invalid
+  description: Illustrative only; configure environment routing.
+externalDocs:
+  description: Design target v1.4; this OpenAPI remains the 1.3.2 baseline pending migration.
+  url: https://github.com/chiendz11/MaintAI/blob/main/docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md
+x-maintai-decisions: ../../../docs/api-contract-decisions.md
+tags:
+- name: Inference
+  description: Backend-only model inference
+- name: Operations
+  description: Platform health and metrics
+security:
+- BearerAuth: []
+paths:
+  /api/v1/predict:
+    post:
+      operationId: predictFailure
+      tags:
+      - Inference
+      summary: Predict failure for validated raw features
+      description: Backend sends only VALID events. IDs are trace metadata, not model features. ML owns encoding/scaling.
+        FAILURE means failure_probability >= model_threshold; otherwise NORMAL. Prediction is binary and does not
+        determine maintenance severity or create alerts. Backend timeout is 2 seconds with at most one retry for
+        connection/transient failures; no retry for validation errors. Exhaustion becomes UNKNOWN on the backend,
+        never NORMAL. Authentication is required on shared deployment. For all shared deployment requests, enforce
+        the listed roles; 401/403 are explicit failures. See completion decision AUTH-01.
+      x-maintai-source: baseline 7; completion ML-01
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Prediction with model/preprocessor versions and threshold.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PredictionResponse'
+              examples:
+                predict_failure:
+                  externalValue: ../examples/http/ml/predict-failure.json
+                predict_normal:
+                  externalValue: ../examples/http/ml/predict-normal.json
+                predict_boundary:
+                  externalValue: ../examples/http/ml/predict-boundary.json
+        '400':
+          $ref: '#/components/responses/INVALID_REQUEST'
+        '401':
+          $ref: '#/components/responses/UNAUTHORIZED'
+        '403':
+          $ref: '#/components/responses/FORBIDDEN'
+        '422':
+          $ref: '#/components/responses/VALIDATION_FAILED'
+        '500':
+          $ref: '#/components/responses/INTERNAL_ERROR'
+        '503':
+          $ref: '#/components/responses/MODEL_NOT_READY'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PredictionRequest'
+            examples:
+              predict_request:
+                externalValue: ../examples/http/ml/predict-request.json
+      x-maintai-roles:
+      - PROCESSING_SERVICE
+      security:
+      - BearerAuth: []
+      x-maintai-client-policy:
+        timeout_seconds: 2
+        max_retries: 1
+        retryable_failures:
+        - connection_error
+        - transient_503
+        never_retry_statuses:
+        - 400
+        - 401
+        - 403
+        - 422
+  /health/live:
+    get:
+      operationId: mlinferenceLiveness
+      tags:
+      - Operations
+      summary: Process liveness
+      description: 200 means process is alive. Do not depend on external DB/LLM readiness in liveness checks; avoid
+        restart loops.
+      x-maintai-source: baseline 19.1
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Process alive.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Liveness'
+              examples:
+                ml_inference_live:
+                  externalValue: ../examples/http/operations/ml-inference-live.json
+      security: []
+  /health/ready:
+    get:
+      operationId: mlinferenceReadiness
+      tags:
+      - Operations
+      summary: Dependency readiness
+      description: 200 only when ready for the service function; 503 when required checks fail, including DEGRADED
+        RAG. Readiness bodies intentionally use the health schema rather than the business error envelope. Platform
+        may configure RAG separately because RAG failure must not remove backend alert functionality.
+      x-maintai-source: baseline 19.2; completion HEALTH-01
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Ready.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/Readiness'
+                - properties:
+                    status:
+                      const: UP
+              examples:
+                ml_inference_ready:
+                  externalValue: ../examples/http/operations/ml-inference-ready.json
+        '503':
+          description: Not ready; inspect checks.
+          headers:
+            X-Request-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            X-Correlation-ID:
+              description: Generated or propagated identifier for tracing this response.
+              schema:
+                type: string
+                minLength: 1
+            Retry-After:
+              description: Optional retry delay in seconds. Honor it before bounded retries.
+              schema:
+                type: string
+                pattern: ^[0-9]+$
+              example: '2'
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/Readiness'
+                - properties:
+                    status:
+                      type: string
+                      enum:
+                      - DEGRADED
+                      - DOWN
+              examples:
+                ml_inference_not_ready:
+                  externalValue: ../examples/http/operations/ml-inference-not-ready.json
+      security: []
+  /metrics:
+    get:
+      operationId: mlinferenceMetrics
+      tags:
+      - Operations
+      summary: Prometheus metrics
+      description: Platform scrape endpoint, not a frontend data API. Example is illustrative; actual service metrics
+        follow baseline section 20. Do not label metrics with unique event/machine/report IDs.
+      x-maintai-source: baseline 20
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Prometheus text exposition.
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                exposition:
+                  externalValue: ../examples/http/operations/ml-inference-metrics.prom
+      security: []
+components:
+  schemas:
+    Liveness:
+      $ref: ../schemas/common.schema.json#/$defs/Liveness
+    Readiness:
+      $ref: ../schemas/common.schema.json#/$defs/Readiness
+    PredictionRequest:
+      $ref: ../schemas/prediction.schema.json#/$defs/Request
+    PredictionResponse:
+      $ref: ../schemas/prediction.schema.json
+  parameters:
+    RequestId:
+      name: X-Request-ID
+      in: header
+      required: false
+      description: Forward when available; the service generates an identifier when absent.
+      schema:
+        type: string
+        minLength: 1
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      description: Keep the same correlation across sensor, prediction, alert and RAG hops.
+      schema:
+        type: string
+        minLength: 1
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    INVALID_REQUEST:
+      description: Invalid request. See error.retryable; never infer a normal business state from this error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: INVALID_REQUEST
+          examples:
+            invalid_request:
+              externalValue: ../examples/http/errors/invalid_request.json
+    UNAUTHORIZED:
+      description: Unauthorized. See error.retryable; never infer a normal business state from this error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: UNAUTHORIZED
+          examples:
+            unauthorized:
+              externalValue: ../examples/http/errors/unauthorized.json
+    FORBIDDEN:
+      description: Forbidden. See error.retryable; never infer a normal business state from this error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: FORBIDDEN
+          examples:
+            forbidden:
+              externalValue: ../examples/http/errors/forbidden.json
+    VALIDATION_FAILED:
+      description: Validation failed. See error.retryable; never infer a normal business state from this error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: VALIDATION_FAILED
+          examples:
+            validation_failed:
+              externalValue: ../examples/http/errors/validation_failed.json
+    INTERNAL_ERROR:
+      description: Internal error. See error.retryable; never infer a normal business state from this error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: INTERNAL_ERROR
+          examples:
+            internal_error:
+              externalValue: ../examples/http/errors/internal_error.json
+    MODEL_NOT_READY:
+      description: Model not ready. See error.retryable; never infer a normal business state from this error.
+      headers:
+        X-Request-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        X-Correlation-ID:
+          description: Generated or propagated identifier for tracing this response.
+          schema:
+            type: string
+            minLength: 1
+        Retry-After:
+          description: Optional retry delay in seconds. Honor it before bounded retries.
+          schema:
+            type: string
+            pattern: ^[0-9]+$
+          example: '2'
+      content:
+        application/json:
+          schema:
+            allOf:
+            - $ref: ../schemas/common.schema.json#/$defs/ErrorEnvelope
+            - properties:
+                error:
+                  properties:
+                    code:
+                      const: MODEL_NOT_READY
+          examples:
+            model_not_ready:
+              externalValue: ../examples/http/errors/model_not_ready.json
+x-maintai-provider-protocol: 1.1.0
+x-maintai-source: System Contracts §34 / design amendment1.3.2

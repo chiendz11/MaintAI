@@ -1,0 +1,9 @@
+{
+  "machine_id": "M-002",
+  "display_name": "Machine 002",
+  "state": "UNKNOWN",
+  "latest_risk_score": 0.0,
+  "active_alert_count": 0,
+  "last_seen_at": "2026-10-15T04:30:15Z",
+  "data_status": "VALID"
+}

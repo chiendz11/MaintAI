@@ -30,7 +30,7 @@ jobs:
       - name: Check component folders
         run: |
           test -f README.md
-          for component in sensor backend frontend ml-service rag-service drift-worker; do
+          for component in sensor ingestion-api processing storage-consumer backend frontend ml-service rag-service drift-worker messaging; do
             test -d "$component"
             printf 'Found %s/\n' "$component"
           done
@@ -38,10 +38,257 @@ jobs:
       - name: Report skeleton status
         run: |
           printf '%s\n' \
-            '## MaintAI CI skeleton' \
+            '## MaintAI CI' \
             'Repository structure checked.' \
-            'Component lint/test/build jobs are disabled until code and commands are added.' \
+            'API contracts are validated; Sensor and Drift Worker CI run tests/build and container integration.' \
             >> "$GITHUB_STEP_SUMMARY"
+
+  api-contracts:
+    name: API contracts
+    needs: structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: contracts/requirements.lock
+
+      - name: Install contract validation tools
+        run: python -m pip install -r contracts/requirements.lock
+
+      - name: Validate current OpenAPI, schemas and examples
+        run: python contracts/v1.3/validate.py
+
+  kafka-ci:
+    name: Kafka SDK (Python ${{ matrix.python }})
+    needs: structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.12']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: messaging/requirements-dev.lock
+
+      - name: Install locked SDK dependencies
+        run: |
+          python -m pip install -r messaging/requirements-dev.lock
+          python -m pip install --no-deps -e ./messaging
+
+      - name: Lint, immutable schemas and failure semantics
+        run: |
+          ruff check messaging
+          ruff format --check messaging
+          python messaging/scripts/lock_contracts.py --check
+          maintai-kafka validate-contracts
+          python -m pytest messaging/tests/unit
+
+      - name: Build source distribution and wheel with bundled contracts
+        run: python -m build messaging
+
+      - name: Verify installed wheel without repository fallback
+        run: |
+          python -m venv "$RUNNER_TEMP/messaging-wheel"
+          "$RUNNER_TEMP/messaging-wheel/bin/python" -m pip install -r messaging/requirements.lock
+          "$RUNNER_TEMP/messaging-wheel/bin/python" -m pip install --no-deps messaging/dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/messaging-wheel/bin/maintai-kafka" validate-contracts
+
+  kafka-integration:
+    name: Kafka and PostgreSQL durable delivery
+    needs: kafka-ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      COMPOSE_PROJECT_NAME: maintai-kafka-ci
+      MAINTAI_KAFKA_INTEGRATION: '1'
+      KAFKA_TEST_BOOTSTRAP_SERVERS: 127.0.0.1:19092
+      KAFKA_TEST_DATABASE_URL: postgresql://maintai_dev:maintai_dev@127.0.0.1:15432/maintai_messaging_dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: messaging/requirements-dev.lock
+
+      - name: Install locked SDK dependencies
+        run: |
+          python -m pip install -r messaging/requirements-dev.lock
+          python -m pip install --no-deps -e ./messaging
+
+      - name: Start isolated development broker and database
+        run: docker compose -f messaging/tests/integration/compose.yaml up -d --wait --wait-timeout 180
+
+      - name: Verify real broker ACK, owner transactions, dedupe and outbox fencing
+        run: python -m pytest messaging/tests/integration
+
+      - name: Remove CI-only containers and volumes
+        if: ${{ always() }}
+        run: docker compose -f messaging/tests/integration/compose.yaml down --volumes
+
+  sensor-ci:
+    name: Sensor CI (Python ${{ matrix.python }})
+    needs: structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.12']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: sensor/requirements-dev.lock
+
+      - name: Install locked dependencies
+        run: |
+          python -m pip install -r sensor/requirements-dev.lock
+          python -m pip install --no-deps -e ./sensor
+
+      - name: Lint and format
+        run: |
+          ruff check sensor
+          ruff format --check sensor
+
+      - name: Unit, contract and mock HTTP integration tests
+        run: python -m pytest sensor/tests --cov=simulator --cov-report=term-missing
+
+      - name: Build Python distribution
+        run: python -m build sensor
+
+      - name: Audit runtime dependencies
+        if: matrix.python == '3.12'
+        run: pip-audit --disable-pip --no-deps -r sensor/requirements.lock
+
+  sensor-container:
+    name: Sensor container smoke test
+    needs: sensor-ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Build sensor image
+        run: docker build --tag maintai-sensor:ci sensor
+
+      - name: Run offline container smoke test
+        run: |
+          docker run --rm --network none \
+            --volume "$PWD/sensor/tests/fixtures/ai4i_sample.csv:/app/data/ai4i2020.csv:ro" \
+            maintai-sensor:ci replay --dry-run --limit 2
+
+  drift-ci:
+    name: Drift Worker CI
+    needs: structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: maintai_test
+          POSTGRES_USER: maintai_test
+          POSTGRES_PASSWORD: maintai_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U maintai_test -d maintai_test"
+          --health-interval 2s --health-timeout 3s --health-retries 30
+    env:
+      DRIFT_TEST_DATABASE_URL: postgresql://maintai_test:maintai_test@localhost:5432/maintai_test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: drift-worker/requirements-dev.lock
+
+      - name: Install locked dependencies and test sensor
+        run: |
+          python -m pip install -r drift-worker/requirements-dev.lock
+          python -m pip install --no-deps -e ./drift-worker -e ./sensor
+
+      - name: Lint and format
+        run: |
+          ruff check drift-worker
+          ruff format --check drift-worker
+
+      - name: Unit, contract, PostgreSQL and sensor scenario tests
+        run: python -m pytest drift-worker/tests --cov=drift_monitor --cov-report=term-missing
+
+      - name: Build Python distribution
+        run: python -m build drift-worker
+
+      - name: Audit runtime dependencies
+        run: pip-audit --disable-pip --no-deps -r drift-worker/requirements.lock
+
+  drift-container:
+    name: Sensor and Drift Worker container integration
+    needs: drift-ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: drift-worker/requirements-dev.lock
+
+      - name: Install test harness dependencies
+        run: |
+          python -m pip install -r drift-worker/requirements-dev.lock
+          python -m pip install --no-deps -e ./drift-worker
+
+      - name: Verify sensor scenarios, reports, checkpoints and metrics in containers
+        run: python drift-worker/tests/integration/run_docker_demo.py
 
   component-ci:
     name: Component CI (${{ matrix.component }})
@@ -54,12 +301,13 @@ jobs:
       fail-fast: false
       matrix:
         component:
-          - sensor
+          - ingestion-api
+          - processing
+          - storage-consumer
           - backend
           - frontend
           - ml-service
           - rag-service
-          - drift-worker
     defaults:
       run:
         working-directory: ${{ matrix.component }}
@@ -78,3 +326,45 @@ jobs:
         run: |
           printf '%s\n' 'Replace this placeholder with real CI steps before enabling this job.'
           exit 1
+
+  required:
+    name: CI / required
+    if: ${{ always() }}
+    needs:
+      - structure
+      - api-contracts
+      - kafka-ci
+      - kafka-integration
+      - sensor-ci
+      - sensor-container
+      - drift-ci
+      - drift-container
+      - component-ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require all enabled CI jobs to succeed
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          COMPONENT_CI_ENABLED: ${{ vars.ENABLE_COMPONENT_CI }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          failures = []
+          for job, info in sorted(json.loads(os.environ["NEEDS_JSON"]).items()):
+              result = info["result"]
+              print(f"{job}: {result}")
+              disabled_placeholder = (
+                  job == "component-ci"
+                  and os.environ["COMPONENT_CI_ENABLED"] != "true"
+                  and result == "skipped"
+              )
+              if result != "success" and not disabled_placeholder:
+                  failures.append(job)
+          if failures:
+              print("CI did not succeed: " + ", ".join(failures), file=sys.stderr)
+              sys.exit(1)
+          PY

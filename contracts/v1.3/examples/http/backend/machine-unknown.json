@@ -1,0 +1,23 @@
+{
+  "machine_id": "M-001",
+  "display_name": "Machine 001",
+  "state": "UNKNOWN",
+  "data_status": "VALID",
+  "last_seen_at": "2026-10-15T04:30:15Z",
+  "latest_sensor": {
+    "event_id": "evt_001",
+    "features": {
+      "product_type": "M",
+      "air_temperature_k": 298.1,
+      "process_temperature_k": 308.6,
+      "rotational_speed_rpm": 1551,
+      "torque_nm": 42.8,
+      "tool_wear_min": 108
+    },
+    "received_at": "2026-10-15T04:30:15Z"
+  },
+  "latest_prediction": null,
+  "active_alerts": [
+    "alt_001"
+  ]
+}

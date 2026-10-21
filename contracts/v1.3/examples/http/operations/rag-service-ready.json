@@ -1,0 +1,8 @@
+{
+  "status": "UP",
+  "checks": {
+    "database": true,
+    "vector_store": true,
+    "llm_provider": true
+  }
+}

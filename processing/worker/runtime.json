@@ -1,0 +1,42 @@
+{
+  "descriptor_kind": "MaintAIRuntime",
+  "schema_version": "1.0.0",
+  "target_contract_revision": "1.3.2",
+  "runtime_id": "processing-worker",
+  "workload_kind": "Deployment",
+  "code_owner": "processing",
+  "implementation_status": "skeleton",
+  "image_group": "processing",
+  "image_digest": null,
+  "entrypoint_status": "not_implemented_for_v1.3.2",
+  "purpose": "Consume sensor.readings -> DQ/ML/risk/history/outbox; bounded archive/export maintenance jobs.",
+  "source_paths": [
+    "processing/worker/src",
+    "processing/shared",
+    "processing/migrations"
+  ],
+  "logical_database": "processing_db",
+  "kafka_subscriptions": [
+    {
+      "topic": "sensor.readings",
+      "group": "processing-v1"
+    }
+  ],
+  "kafka_publications": [],
+  "interfaces": [
+    "ML POST /api/v1/predict",
+    "Versioned processed S3 archive/manifests"
+  ],
+  "boundaries": [
+    "Persist outcome + outbox trước commit Kafka offset; không tạo business alert trực tiếp.",
+    "Outbox chứa inference.results terminal union và alert.signals; union schema2.0.0 đã chốt; consumer-first cutover."
+  ],
+  "dockerfile": "processing/worker/Dockerfile",
+  "dockerfile_status": "placeholder",
+  "implemented_contract_revision": null,
+  "planned_background_tasks": [
+    "processing-archive",
+    "history-export",
+    "verified-retention-cleanup"
+  ]
+}

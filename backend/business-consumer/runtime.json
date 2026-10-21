@@ -1,0 +1,51 @@
+{
+  "descriptor_kind": "MaintAIRuntime",
+  "schema_version": "1.0.0",
+  "target_contract_revision": "1.3.2",
+  "runtime_id": "business-consumer",
+  "workload_kind": "Deployment",
+  "code_owner": "business-backend",
+  "implementation_status": "skeleton",
+  "image_group": "business-backend",
+  "image_digest": null,
+  "entrypoint_status": "not_implemented_for_v1.3.2",
+  "purpose": "Telemetry/prediction/alert handlers + latest projections/lifecycle and bounded durable brief/drift-catalog job loop.",
+  "source_paths": [
+    "backend/business-consumer/src",
+    "backend/shared",
+    "backend/migrations"
+  ],
+  "logical_database": "business_db",
+  "kafka_subscriptions": [
+    {
+      "topic": "sensor.readings",
+      "group": "business-live-v1"
+    },
+    {
+      "topic": "inference.results",
+      "group": "business-prediction-v1"
+    },
+    {
+      "topic": "alert.signals",
+      "group": "business-alert-v1"
+    }
+  ],
+  "kafka_publications": [],
+  "interfaces": [
+    "PG NOTIFY after durable projection commit",
+    "RAG API from leased brief jobs",
+    "Committed drift report S3 manifests"
+  ],
+  "boundaries": [
+    "Ba handlers là module của một deployment; không tạo telemetry-service/prediction-service riêng.",
+    "Chỉ latest telemetry/latest valid prediction/latest processing và business data; không full raw/history.",
+    "Inbox/CAS trên sequence_number bền vững; không sort epoch/event_id; không xóa last valid prediction khi event mới INVALID."
+  ],
+  "dockerfile": "backend/business-consumer/Dockerfile",
+  "dockerfile_status": "placeholder",
+  "implemented_contract_revision": null,
+  "planned_background_tasks": [
+    "brief-jobs",
+    "drift-catalog-sync"
+  ]
+}

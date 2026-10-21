@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0.0",
+  "target_contract_revision": "1.3.2",
+  "description": "Planned target1.3.2 source/workload inventory; implementation_status remains independent. Source owners are not deployments.",
+  "runtime_descriptors": [
+    "sensor/runtime.json",
+    "ingestion-api/runtime.json",
+    "processing/worker/runtime.json",
+    "processing/read-api/runtime.json",
+    "processing/outbox-relay/runtime.json",
+    "storage-consumer/runtime.json",
+    "backend/business-api/runtime.json",
+    "backend/business-consumer/runtime.json",
+    "ml-service/inference/runtime.json",
+    "ml-service/training/runtime.json",
+    "rag-service/runtime.json",
+    "frontend/runtime.json",
+    "drift-worker/runtime.json"
+  ],
+  "logical_databases": {
+    "processing_db": "processing",
+    "business_db": "business-backend",
+    "drift_db": "drift",
+    "mlflow_db": "MLflow Server (platform managed)",
+    "knowledge_db": "knowledge"
+  },
+  "platform_owned": [
+    "Kafka",
+    "PostgreSQL instance with five logical DBs",
+    "S3/MinIO",
+    "MLflow Server",
+    "Argo Events/Workflows",
+    "Observability"
+  ],
+  "planned_runtimes_without_source": [
+    {
+      "runtime_id": "simulator-ui",
+      "workload_kind": "Deployment",
+      "code_owner": "simulator-ui",
+      "implementation_status": "not_created",
+      "interfaces": [
+        "Sensor Control API"
+      ],
+      "design_document": "docs/README.md"
+    }
+  ]
+}

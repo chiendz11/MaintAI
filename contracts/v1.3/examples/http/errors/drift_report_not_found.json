@@ -1,0 +1,10 @@
+{
+  "error": {
+    "code": "DRIFT_REPORT_NOT_FOUND",
+    "message": "Drift report not found",
+    "retryable": false,
+    "details": {},
+    "request_id": "req_001",
+    "correlation_id": "cor_001"
+  }
+}

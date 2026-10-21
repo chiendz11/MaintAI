@@ -1,0 +1,10 @@
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Unauthorized",
+    "retryable": false,
+    "details": {},
+    "request_id": "req_001",
+    "correlation_id": "cor_001"
+  }
+}

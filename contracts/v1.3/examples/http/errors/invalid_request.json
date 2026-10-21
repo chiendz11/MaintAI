@@ -1,0 +1,10 @@
+{
+  "error": {
+    "code": "INVALID_REQUEST",
+    "message": "Invalid request",
+    "retryable": false,
+    "details": {},
+    "request_id": "req_001",
+    "correlation_id": "cor_001"
+  }
+}

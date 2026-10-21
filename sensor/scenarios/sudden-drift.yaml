@@ -1,0 +1,14 @@
+name: sudden-torque-drift
+seed: 42
+phases:
+  - name: baseline
+    events: 300
+  - name: sudden-drift
+    events: 700
+    transforms:
+      torque_nm:
+        type: shift
+        delta: 8
+      rotational_speed_rpm:
+        type: scale
+        factor: 0.93

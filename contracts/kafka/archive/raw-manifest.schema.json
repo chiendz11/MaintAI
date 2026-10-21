@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "topic": {"enum": ["sensor.readings", "sensor.rejected", "inference.results"]},
+    "partition": {"type": "integer", "minimum": 0},
+    "first_offset": {"type": "integer", "minimum": 0},
+    "last_offset": {"type": "integer", "minimum": 0},
+    "record_count": {"const": 1},
+    "format": {"const": "jsonl.gz"},
+    "object": {
+      "type": "object",
+      "properties": {
+        "bucket": {"type": "string", "minLength": 1},
+        "key": {"type": "string", "minLength": 1},
+        "version_id": {"type": ["string", "null"], "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      },
+      "required": ["bucket", "key", "version_id", "sha256"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["schema_version", "topic", "partition", "first_offset", "last_offset", "record_count", "format", "object"],
+  "additionalProperties": false
+}

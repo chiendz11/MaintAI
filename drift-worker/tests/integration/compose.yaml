@@ -1,0 +1,36 @@
+name: maintai-drift-test
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: maintai_test
+      POSTGRES_USER: maintai_test
+      POSTGRES_PASSWORD: maintai_test
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U maintai_test -d maintai_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  pushgateway:
+    image: prom/pushgateway:v1.11.4
+    ports:
+      - "127.0.0.1:9092:9091"
+  sensor:
+    profiles: [tools]
+    build:
+      context: ../../../sensor
+    volumes:
+      - ../../../sensor/tests/fixtures/ai4i_sample.csv:/data/ai4i.csv:ro
+  worker:
+    profiles: [tools]
+    build:
+      context: ../..
+    environment:
+      DRIFT_DATABASE_URL: postgresql://maintai_test:maintai_test@postgres:5432/maintai_test
+      DRIFT_PUSHGATEWAY_URL: http://pushgateway:9091
+      DRIFT_PUSHGATEWAY_REQUIRED: "true"
+      ENVIRONMENT: test
+    volumes:
+      - ${DRIFT_FIXTURE_DIR:?run via run_docker_demo.py}:/fixtures:ro

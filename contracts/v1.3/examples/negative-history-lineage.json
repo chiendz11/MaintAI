@@ -1,0 +1,68 @@
+{
+  "snapshot_id": "snap_fixture_1",
+  "as_of": "2026-10-18T00:00:00Z",
+  "expires_at": "2026-10-18T00:10:00Z",
+  "coverage": "COMPLETE",
+  "tiers_used": [
+    "HOT",
+    "ARCHIVE"
+  ],
+  "available_from": "2025-10-18T00:00:00Z",
+  "available_through": "2026-10-18T00:00:00Z",
+  "next_cursor": null,
+  "items": [
+    {
+      "schema_version": "1.0.0",
+      "result_id": "res_fixture_1",
+      "source_event_id": "evt_fixture_1",
+      "machine_id": "M-001",
+      "source_server_accepted_at": "2026-10-18T00:00:00Z",
+      "outcome": {
+        "schema_version": "2.0.0",
+        "result_id": "wrong-result",
+        "source_event_id": "evt_fixture_1",
+        "machine_id": "M-001",
+        "stream_epoch": "fixture-run",
+        "sequence_number": 1,
+        "source_server_accepted_at": "2026-10-18T00:00:00Z",
+        "occurred_at": "2026-10-18T00:00:00Z",
+        "correlation_id": "cor_fixture_1",
+        "result_kind": "PREDICTION_COMPLETED",
+        "processing_status": "COMPLETED",
+        "validation_status": "VALID",
+        "prediction": "NORMAL",
+        "prediction_id": "pred_fixture_1",
+        "failure_probability": 0.12,
+        "model_threshold": 0.5,
+        "model_version": "fixture-model-v1",
+        "preprocessor_version": "fixture-prep-v1",
+        "dataset_version": "fixture-dataset-v1",
+        "policy_version": "fixture-policy-v1",
+        "machine_state": "NORMAL",
+        "completed_at": "2026-10-18T00:00:00Z",
+        "failure_code": null,
+        "validation_errors": []
+      },
+      "features_raw": {
+        "product_type": "M",
+        "air_temperature_k": 298.1,
+        "process_temperature_k": 308.6,
+        "rotational_speed_rpm": 1551,
+        "torque_nm": 42.8,
+        "tool_wear_min": 108
+      },
+      "raw_ref": {
+        "bucket": "maintai-contract-fixture",
+        "key": "fixtures/part-000.parquet",
+        "version_id": "fixture-version",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "size_bytes": 128
+      },
+      "risk_snapshot": {
+        "risk_decision_id": "risk_fixture_1",
+        "machine_state": "NORMAL",
+        "policy_version": "fixture-policy-v1"
+      }
+    }
+  ]
+}
