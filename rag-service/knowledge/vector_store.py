@@ -1,7 +1,9 @@
 import os
 import psycopg
 import json
+from dotenv import load_dotenv
 
+load_dotenv()
 
 class PostgresVectorStore:
     def __init__(self):

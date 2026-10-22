@@ -1,7 +1,8 @@
 
+
 from langchain_core.documents import Document
 
-from ingestion.embedding.embedding import Embedder
+from ingestion.embedding import Embedder
 from knowledge.vector_store import PostgresVectorStore
 
 

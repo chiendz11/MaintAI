@@ -11,8 +11,8 @@ class Chunking:
             overlap: int = 200
     ):
         self.text_splitter = RecursiveCharacterTextSplitter(
-                size=chunk_size,
-                overlap=chunk_overlap,
+                chunk_size=size,
+                chunk_overlap=overlap,
                 separators=["\n\n", "\n", " ", ""]
             
             )
