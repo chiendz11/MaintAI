@@ -1,0 +1,25 @@
+{
+	"folders": [
+		{
+			"path": "../../.github"
+		},
+		{
+			"path": "../../backend"
+		},
+		{
+			"path": "../../drift-worker"
+		},
+		{
+			"path": "../../frontend"
+		},
+		{
+			"path": "../../ml-service"
+		},
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../sensor"
+		}
+	]
+}
