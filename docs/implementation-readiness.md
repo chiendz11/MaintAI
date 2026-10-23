@@ -10,7 +10,7 @@ broker/DB/S3 integration, benchmark, Docker image build hoặc deployment của 
 - Sáu Markdown mới: target1.4.0, đã nhập và hiệu chỉnh đường dẫn/phân công dự án.
 - `contracts/v1.3/`: sáu OpenAPI/schemas/examples baseline1.3.2, chưa migrate v1.4.
 - Runtime map và13 descriptors: planned baseline1.3.2; không bump metadata chỉ vì nhập docs.
-- Sensor/Drift executable source: implementation1.1; app runtimes khác vẫn skeleton.
+- Sensor/Drift executable source: implementation1.1; Ingestion có M1 local; các app runtimes khác vẫn skeleton.
 - Kafka library0.1.0 + canonical bundle1.0.0: wire target1.4, legacy result reader2.0.
 
 `IMPLEMENTATION_PLAN.md` mô tả các bước implementation tương lai. Những yêu cầu
@@ -42,7 +42,7 @@ validate; các invariant transaction/cursor/authorization cần runtime tests ri
 | --- | --- | --- |
 | Sensor | Legacy replay/fault/scenario và per-machine cadence | ACK202, durable sequence/spool/control API, token validation |
 | Drift | Legacy CLI/detector/persistence/metrics | API/S3 input, owner migration, committed report publication |
-| Ingestion | SDK gateway/envelope/publisher/ACK; app runtime skeleton | HTTP wrapper, auth, dependency lifecycle/probes và application tests |
+| Ingestion | M1 HTTP/auth/guards/lifecycle/probes/metrics; unit, HTTP contract, real Kafka và image smoke local | Shared OIDC/TLS/ACL, Sensor202 client và GitOps deployment acceptance |
 | Processing | SDK durable runner/inbox/outbox/relay/SQL; app callbacks skeleton | DQ/ML/risk/history, owner migrations/read API và archive/export/snapshot jobs |
 | Business | SDK3 role loops/inbox transaction adapter; app callbacks skeleton | Projections/alert SQL, REST/SSE/RBAC/lifecycle, jobs/catalog |
 | Storage | SDK raw S3 immutable object/manifest consumer | Owner entrypoint/probes/IRSA, real S3 integration và capacity/cost validation |
@@ -196,3 +196,17 @@ mỗi thư mục. `NOT_AVAILABLE`/provenance_incomplete chỉ dùng theo schema 
   SHA gates. Workloads vẫn disabled; không run platform render/test/build/deploy.
 
 Hướng dẫn chính: [KAFKA_DEVELOPMENT_GUIDE.md](KAFKA_DEVELOPMENT_GUIDE.md).
+
+
+## 12. Ingestion M1 local — 2026-10-23
+
+Ingestion có FastAPI runtime với SDK gateway/publisher, JWT/JWKS verifier, bounded
+raw-body/admission, ACK-first accepted/rejected, response adapter, health/metrics
+và graceful shutdown. HTTP Ingestion OpenAPI tăng MINOR1.4.0; các OpenAPI khác
+vẫn1.3.2, Kafka bundle/wire không đổi. Xem [runbook](../ingestion-api/README.md).
+
+Unit/HTTP contracts, real Kafka localhost29092 và installed image smoke dùng JWT
+chữ ký với JWKS fixture local được kiểm tra riêng. Không suy shared OIDC provider,
+TLS/ACL, S3 archive, Business/ML integration hoặc full-system v1.4 từ các tests này.
+GitHub CI/deployment chưa được chạy trong lượt local này. Kế hoạch M1 và kết quả
+kiểm tra cụ thể nằm trong docs/superpowers/plans/ và báo cáo phiên làm việc.

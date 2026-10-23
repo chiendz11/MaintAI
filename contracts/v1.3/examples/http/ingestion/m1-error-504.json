@@ -1,0 +1,10 @@
+{
+  "error": {
+    "code": "KAFKA_PUBLISH_UNCERTAIN",
+    "message": "Illustrative ingestion failure.",
+    "retryable": true,
+    "request_id": "req_fixture",
+    "correlation_id": "cor_fixture",
+    "details": {}
+  }
+}

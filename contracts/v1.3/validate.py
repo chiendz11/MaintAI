@@ -287,7 +287,7 @@ def main():
                 format_checker=FormatChecker(),
             ).validate(value)
     print(
-        f"Target 1.3.2: {len(specs)} OpenAPIs, {operations} operations, "
+        f"HTTP contracts: {len(specs)} OpenAPIs, {operations} operations, "
         f"{refs} local refs, {wire_checks} HTTP example/default checks, "
         f"{passed} positive/negative cases passed. "
         "No application runtime tested."

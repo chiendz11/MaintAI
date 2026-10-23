@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Liveness": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "const": "UP"
+        },
+        "service": {
+          "const": "ingestion-api"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "status",
+        "service",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "Readiness": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": [
+            "UP",
+            "DEGRADED"
+          ]
+        },
+        "checks": {
+          "type": "object",
+          "properties": {
+            "config_loaded": {
+              "type": "boolean"
+            },
+            "kafka": {
+              "type": "boolean"
+            },
+            "auth_keys": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "config_loaded",
+            "kafka",
+            "auth_keys"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "status",
+        "checks"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

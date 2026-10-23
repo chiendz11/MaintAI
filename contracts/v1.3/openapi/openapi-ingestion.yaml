@@ -1,8 +1,9 @@
 openapi: 3.1.1
 info:
   title: MaintAI Ingestion API
-  version: 1.3.2
-  description: Design contract, not a running service. Document amendment1.3.2; event schemas versioned independently.
+  version: 1.4.0
+  description: 'Ingestion M1 HTTP contract: broker-ACK acceptance and safe quarantine.
+    Other APIs remain baseline1.3.2; deployment evidence is separate.'
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 servers:
 - url: https://ingestion.example.invalid
@@ -15,11 +16,25 @@ paths:
     post:
       operationId: acceptSensorReading
       summary: Accept envelope only after Kafka broker ACK
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented.'
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01.
+        Specification only; runtime not implemented.'
       x-maintai-roles:
       - SENSOR_SERVICE
-      parameters: []
+      parameters:
+      - in: header
+        name: X-Request-ID
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 256
+      - in: header
+        name: X-Correlation-ID
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 256
       responses:
         '400':
           description: Invalid request/cursor.
@@ -27,50 +42,140 @@ paths:
             application/json:
               schema:
                 $ref: ../schemas/runtime.schema.json#/$defs/Error
+              examples:
+                m1_error:
+                  externalValue: ../examples/http/ingestion/m1-error-400.json
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
+            X-Correlation-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
         '401':
           description: Missing or invalid credential.
           content:
             application/json:
               schema:
                 $ref: ../schemas/runtime.schema.json#/$defs/Error
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
+            X-Correlation-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
+            WWW-Authenticate:
+              schema:
+                type: string
+                const: Bearer
         '403':
           description: Insufficient permission or machine scope.
           content:
             application/json:
               schema:
                 $ref: ../schemas/runtime.schema.json#/$defs/Error
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
+            X-Correlation-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
         '404':
           description: Resource not found/not materialized.
           content:
             application/json:
               schema:
                 $ref: ../schemas/runtime.schema.json#/$defs/Error
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
+            X-Correlation-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
         '422':
           description: Invalid query/payload or query budget exceeded.
           content:
             application/json:
               schema:
                 $ref: ../schemas/runtime.schema.json#/$defs/Error
+              examples:
+                m1_error:
+                  externalValue: ../examples/http/ingestion/m1-error-422.json
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
+            X-Correlation-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
         '429':
           description: Admission limit exceeded.
           content:
             application/json:
               schema:
                 $ref: ../schemas/runtime.schema.json#/$defs/Error
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
+            X-Correlation-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
+            Retry-After:
+              schema:
+                type: string
+                pattern: ^[0-9]+$
         '503':
           description: Required dependency/coverage unavailable.
           content:
             application/json:
               schema:
                 $ref: ../schemas/runtime.schema.json#/$defs/Error
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
+            X-Correlation-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
         '504':
           description: Dependency timed out.
           content:
             application/json:
               schema:
                 $ref: ../schemas/runtime.schema.json#/$defs/Error
+              examples:
+                m1_error:
+                  externalValue: ../examples/http/ingestion/m1-error-504.json
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
+            X-Correlation-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
         '202':
-          description: Persisted result.
+          description: Broker acknowledged accepted event; inference and archive may
+            still be pending.
           content:
             application/json:
               schema:
@@ -78,10 +183,97 @@ paths:
           headers:
             Location:
               required: true
-              description: Absolute configured Business status URL, not an Ingestion route.
+              description: Absolute configured Business status URL, not an Ingestion
+                route.
               schema:
                 type: string
                 format: uri
+            X-Request-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
+            X-Correlation-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
+        '408':
+          description: Request body timeout; no partial publish.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+              examples:
+                m1_error:
+                  externalValue: ../examples/http/ingestion/m1-error-408.json
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
+            X-Correlation-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
+        '413':
+          description: Raw or serialized payload exceeds configured bound.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+              examples:
+                m1_error:
+                  externalValue: ../examples/http/ingestion/m1-error-413.json
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
+            X-Correlation-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
+        '415':
+          description: Missing/unsupported JSON media type or content encoding.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+              examples:
+                m1_error:
+                  externalValue: ../examples/http/ingestion/m1-error-415.json
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
+            X-Correlation-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
+        '500':
+          description: Sanitized internal failure.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
+              examples:
+                m1_error:
+                  externalValue: ../examples/http/ingestion/m1-error-500.json
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
+            X-Correlation-ID:
+              schema:
+                type: string
+              description: Resolved safe trace identity.
+        '405':
+          description: Method not allowed; standardized transport error.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/runtime.schema.json#/$defs/Error
       requestBody:
         required: true
         content:
@@ -90,6 +282,45 @@ paths:
               $ref: ../schemas/runtime.schema.json#/$defs/SensorRequest
       security:
       - BearerAuth: []
+  /health/live:
+    get:
+      operationId: ingestionLiveness
+      security: []
+      responses:
+        '200':
+          description: Process alive.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/ingestion.schema.json#/$defs/Liveness
+  /health/ready:
+    get:
+      operationId: ingestionReadiness
+      security: []
+      responses:
+        '200':
+          description: Dependencies usable.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/ingestion.schema.json#/$defs/Readiness
+        '503':
+          description: Required dependency unavailable or check stale.
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/ingestion.schema.json#/$defs/Readiness
+  /metrics:
+    get:
+      operationId: ingestionMetrics
+      security: []
+      responses:
+        '200':
+          description: Platform-internal Prometheus metrics; restrict ingress.
+          content:
+            text/plain:
+              schema:
+                type: string
 components:
   securitySchemes:
     BearerAuth:
