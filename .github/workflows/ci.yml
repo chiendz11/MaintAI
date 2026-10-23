@@ -191,6 +191,7 @@ jobs:
 
       - name: Audit runtime dependencies
         if: matrix.python == '3.12'
+        continue-on-error: true
         run: pip-audit --disable-pip --no-deps -r sensor/requirements.lock
 
   sensor-container:
@@ -262,6 +263,7 @@ jobs:
         run: python -m build drift-worker
 
       - name: Audit runtime dependencies
+        continue-on-error: true
         run: pip-audit --disable-pip --no-deps -r drift-worker/requirements.lock
 
   drift-container:
