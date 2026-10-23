@@ -1,0 +1,12 @@
+{
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "Illustrative ingestion failure.",
+    "retryable": false,
+    "request_id": "req_fixture",
+    "correlation_id": "cor_fixture",
+    "details": {
+      "rejection_id": "rej_fixture"
+    }
+  }
+}

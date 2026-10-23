@@ -1,0 +1,6 @@
+{
+  "status": "UP",
+  "service": "ingestion-api",
+  "version": "0.1.0",
+  "credentials": "forbidden"
+}

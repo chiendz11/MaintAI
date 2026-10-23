@@ -84,3 +84,11 @@ riêng nên được giữ và cập nhật, không phải bản sao thừa.
 [source-manifest.json](source-manifest.json) giữ hash nguyên bản của sáu file
 Downloads, hash bytes hiện tại và metadata các bản đã retire. File nguồn Downloads
 không bị sửa. Không chạy kế hoạch triển khai trong tài liệu chỉ vì nhập docs.
+
+
+## Cập nhật Ingestion M1 — 2026-10-23
+
+Ingestion có HTTP runtime và local tests/image; HTTP Ingestion OpenAPI additive1.4.0,
+các API khác giữ baseline1.3.2. Xem [runbook](../ingestion-api/README.md) và
+[báo cáo local](superpowers/plans/2026-10-23-m1-verification.md). Không thay kết luận
+full-system readiness hoặc nghiệm thu shared OIDC/TLS/ACL/deployment.

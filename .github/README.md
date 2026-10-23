@@ -24,6 +24,9 @@ Workflow: [workflows/ci.yml](workflows/ci.yml), theo
   integration, bốn sensor scenarios, build wheel/sdist và runtime dependency audit.
 - Job `drift-container` build sensor/worker và chạy cùng PostgreSQL + Pushgateway,
   kiểm tra drift reports, retry, checkpoints và metrics của bốn scenarios.
+- Jobs `ingestion-ci`/`ingestion-integration` kiểm tra M1 unit/HTTP contracts,
+  real Kafka và container dùng JWKS fixture; đều thuộc `CI / required`. Không
+  chứng minh shared provider OIDC/TLS/ACL hoặc deploy.
 - Job `component-ci` dùng matrix cho `backend`, `frontend`,
   `ml-service`, `rag-service`; chỉ bật khi repository variable
   `ENABLE_COMPONENT_CI` có giá trị `true` (hiện chưa được đặt).
