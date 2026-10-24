@@ -1,0 +1,4 @@
+# Release tooling; not installed into the MLflow server image.
+-c ../../sensor/requirements.lock
+PyJWT[crypto]==2.15.1
+jsonschema==4.26.0

@@ -9,11 +9,12 @@
   "image_group": "processing",
   "image_digest": null,
   "entrypoint_status": "not_implemented_for_v1.3.2",
-  "purpose": "Consume sensor.readings -> DQ/ML/risk/history/outbox; bounded archive/export maintenance jobs.",
+  "purpose": "Consume sensor.readings using opt-in keyed Processing; DQ/ML/risk/history are supplied by owner callbacks. Offset coordinator and DB fence are in SDK0.2.0.",
   "source_paths": [
     "processing/worker/src",
     "processing/shared",
-    "processing/migrations"
+    "processing/migrations",
+    "processing/src"
   ],
   "logical_database": "processing_db",
   "kafka_subscriptions": [
@@ -28,8 +29,10 @@
     "Versioned processed S3 archive/manifests"
   ],
   "boundaries": [
-    "Persist outcome + outbox trước commit Kafka offset; không tạo business alert trực tiếp.",
-    "Outbox chứa inference.results terminal union và alert.signals; union schema2.0.0 đã chốt; consumer-first cutover."
+    "Target PROC-ORDER-01/1.0.0: same machine FIFO, different machines concurrent; commit safe completed prefix per partition.",
+    "SDK0.2.0/bundle1.1.0 implement keyed runner, durable assignment fence, source cursor and ordered outbox. Application DQ/ML/risk/history callbacks and health server remain unimplemented.",
+    "Baseline inventory1.3.2 is preserved; Kafka outcome writer1.4.0/reader legacy2.0.0 are independently versioned.",
+    "Use processing/src/maintai_processing/worker.py and explicit reviewed factory; never infer successful implementation from this metadata."
   ],
   "dockerfile": "processing/worker/Dockerfile",
   "dockerfile_status": "placeholder",
@@ -38,5 +41,13 @@
     "processing-archive",
     "history-export",
     "verified-retention-cleanup"
-  ]
+  ],
+  "transport_implementation": {
+    "package": "maintai-processing",
+    "version": "0.1.0",
+    "sdk_version": "0.2.0",
+    "kafka_bundle_version": "1.1.0",
+    "decision": "PROC-ORDER-01/1.0.0",
+    "document": "docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md"
+  }
 }

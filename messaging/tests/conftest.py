@@ -6,7 +6,6 @@ from collections import deque
 
 import pytest
 from confluent_kafka import TopicPartition
-
 from maintai_messaging.config import KafkaSettings
 from maintai_messaging.contracts import ContractRegistry
 

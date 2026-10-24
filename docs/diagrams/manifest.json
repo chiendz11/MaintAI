@@ -1,0 +1,118 @@
+{
+  "diagram_revision": "1.2.0",
+  "as_of": "2026-10-23",
+  "target_contract_revision": "1.4.0",
+  "semantics": "Target architecture and source snapshot; not deployment or E2E evidence.",
+  "renderer": "dot - graphviz version 16.0.0 (0)",
+  "font": "DejaVu Sans",
+  "diagrams": [
+    {
+      "id": "01-use-case",
+      "title": "1 · Use Case",
+      "source": "01-use-case.dot",
+      "svg": "01-use-case.svg",
+      "png": "01-use-case.png",
+      "png_size": [
+        1239,
+        2368
+      ],
+      "sha256": {
+        "01-use-case.dot": "aea8a8403c2903b9f35cc6b614b772a781355190b4a92b401e8581c5055b34dd",
+        "01-use-case.svg": "5e9884e6f3e6c9462e01e88bd69af6fda77717094018359ea86fc30ff0e98df1",
+        "01-use-case.png": "995eee8e9e2a607518359a972b83a7f4e7f56f7eeb22d1975e81f0486d995428"
+      }
+    },
+    {
+      "id": "03-logical-architecture",
+      "title": "3 · Kiến trúc logic",
+      "source": "03-logical-architecture.dot",
+      "svg": "03-logical-architecture.svg",
+      "png": "03-logical-architecture.png",
+      "png_size": [
+        3300,
+        2326
+      ],
+      "sha256": {
+        "03-logical-architecture.dot": "91c0f2d5c66f617f5b6d09c8898036183c9863ef96db3867aa3b394a29b28130",
+        "03-logical-architecture.svg": "cda36c3508604159fc5fb85717c532bf53258bee0648c153cf64332fd82ceee6",
+        "03-logical-architecture.png": "936624f1d3c9fb549aaaef3f3db4a6f7344f31834d87a165975dc19e77ec8c80"
+      }
+    },
+    {
+      "id": "04-deployment",
+      "title": "4 · Deployment",
+      "source": "04-deployment.dot",
+      "svg": "04-deployment.svg",
+      "png": "04-deployment.png",
+      "png_size": [
+        3300,
+        1708
+      ],
+      "sha256": {
+        "04-deployment.dot": "069cc91969d96a12990237fd46636c1b62f4cda8fb763676f4bf91a58e1d2ead",
+        "04-deployment.svg": "6d8e578e19a1f525c7f3c261d845fc59e37c2dd1ff14207595b3664e10db9040",
+        "04-deployment.png": "1a3006ebde37b4ed81a3d37489671a4dab7dc4b1634753d6ef4566577165649a"
+      }
+    },
+    {
+      "id": "05-data-flow",
+      "title": "5 · Luồng dữ liệu",
+      "source": "05-data-flow.dot",
+      "svg": "05-data-flow.svg",
+      "png": "05-data-flow.png",
+      "png_size": [
+        2605,
+        2640
+      ],
+      "sha256": {
+        "05-data-flow.dot": "21eb25438cd368b4a150240fcb24268bbe43900cb5ea99ff53978ddf46c12ba8",
+        "05-data-flow.svg": "16e46619b080b808d5056002c1ac2688a97339332a71928e398cf32ab63ae8be",
+        "05-data-flow.png": "2c01b395e6bd3736a4b3bfad78edb1855dd9ab8649e041a7fda93f3b5faf50cb"
+      }
+    }
+  ],
+  "local_files_sha256": {
+    "render.py": "2d853dafd499915fe99e597a6afcf75a2871d8b6c79def05692761b7a8116722",
+    "README.md": "79de532f0f8dcd612ec0ad063f9980a87138e88941fd7cbf3734127ad260df43",
+    "index.html": "d803cb7e72f9c9ec05c0789d981aa6b7132bc8121d33e12b03eab7877f169471"
+  },
+  "app_references_sha256": {
+    "docs/MaintAI_Functional_Overview.md": "c24f5211b1be97b0dc412c0a0ee20e6cea78d7df25c2c2a65b98e50baf48d46c",
+    "docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md": "85a853876b37e2625bccf9dccf5318a7507039135315773d4fc17d5f31a686c7",
+    "docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md": "a9bafcf410ce6fb07b4dbfe59e9dfec7a8237956e4a0095cb1b178f77419405e",
+    "docs/DEPLOYMENT_ARCHITECTURE.md": "96ba162d54e1dec4dd9414774111fe72acab86a6825a670a62dd2321ae988aa1",
+    "docs/RUNTIME_DATAFLOW.md": "1f7f02c071519caf8f0a7ad1ce05f697eda07c71c1317d1269f1e1e5ab403503",
+    "docs/VERSIONING_AND_PROVENANCE.md": "44ac53e5c76578c265a36801a3c539dd4daaeea9ba4c8bbdbe5f6e7843676c9f",
+    "docs/UI_ARCHITECTURE.md": "c2be185825c021fbba8f7ff09703a7eb56d07f9e13b32b9b41e4e7672e54b73e",
+    "docs/implementation-readiness.md": "1dd412193778d71dcd8b8a9cc26b32da75e0e2b77533e182998fcaa99e12283c",
+    "docs/KAFKA_DEVELOPMENT_GUIDE.md": "7cd3409da9faab159c762eb20dac7494897d414f4e3ac2ab05e69d44933eeaf1",
+    "docs/PROCESSING_CONCURRENCY_AND_ORDERING.md": "84961facd3aced1dce23f093017c9b89c19665cf231d993736cd068e3db508ca",
+    "docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md": "7d5985bbf9c9035c583f920de20905662577c436fec87d1b5ebd28fb6caceef5",
+    "architecture/runtime-map.json": "db64ac753bfecf7e99ec6fe4c5f09f5f1d72d973d66b812ec05f9974a16a5d8e",
+    "contracts/kafka/topology.json": "b807d068e171247cc13fc469128dd533553fe9f66f4451749b62c9e5fc87de1b",
+    "sensor/README.md": "6dd530598d489d7ee9c3480f77b75c6ec1cc2d844f749c9eb951dda3d555450f",
+    "storage-consumer/README.md": "1934c51520eeeb60338de2c2c1bd9a01f27b1a0507975f37440d159209da54c5",
+    "sensor/runtime.json": "f4770e8dbe1189bd4d30bd319d68c3aa8b6dce148cd0dcf64b4324cb500ef848",
+    "ingestion-api/runtime.json": "73b2de6c2a26727824a5bcc6f4ed8ea2b82a7d953f826ffdd27e0aa5577a458d",
+    "processing/worker/runtime.json": "447faf6ab8610ca25f0e733c9b9398c250b36ff6c95de9a1be23b3c6669d7cc9",
+    "processing/read-api/runtime.json": "3f633611b62d8aec57ae151b3e87edfad9b194cd359d2154bc649c60e048dd45",
+    "processing/outbox-relay/runtime.json": "151e169cefc339041c4376868203081a23b24a8f5fd45a79fd5fc51216378208",
+    "storage-consumer/runtime.json": "3e85a8fbda2741d54afbdc7854750abea06e20c37eec806cc787da1612520b2b",
+    "backend/business-api/runtime.json": "8a672f158c33fb58f753c607b1cf0bc8cf2525975e16b2a381234bf080a8585a",
+    "backend/business-consumer/runtime.json": "0b519715181ade185d119e5f98d434a1d522e0abc163fe8980c369f7536b6d11",
+    "ml-service/inference/runtime.json": "0ffd610e880852a28ede9a17c3bc90ab72b0fff98f1aa7fe9bd71790c7efefdc",
+    "ml-service/training/runtime.json": "a68bdbb06f9cfb6d902bfc39222e8b067117e866ee604565780827f4ee8dc7d0",
+    "rag-service/runtime.json": "d2789ef507f2eb969d1b6b4e455ab72fc099a12e790fd7d208f2441557fcb743",
+    "frontend/runtime.json": "4fad8b545a7bef88fecd84f931e3349179efe6e8d8e31d67a0c96c1fd702aef7",
+    "drift-worker/runtime.json": "42881490557d3fa050de07f6eaab54392b3e3205355659f7bc478961a2e51a7f",
+    "sensor-simulator-UI/runtime.json": "3926355c7d04a9df8dff6ab3e6ffe7b691e43c447bb63f47cc659d4c356d3edd",
+    "ml-service/mlflow/runtime.json": "c5e48776a9c0a80f59d64ed3e6d3613240a51b69ea9de8b18c7272a71ca58650"
+  },
+  "platform_references_sha256": {
+    "../MaintAI-gitops/platform/kafka/kafka.yaml": "25cea325c1c3108d5b267d9b3466d8304a657ceeb39156ccdcee0f89f3bf8b18",
+    "../MaintAI-gitops/platform/kafka/nodepool.yaml": "7ff0e8ba2a662fbeac2799953a9be5d7894ae050ae5fe282e6770ac493d6747f",
+    "../MaintAI-gitops/platform/kafka/topic-sensor-readings.yaml": "c8ef1895f5a2208e929963700c46ad15a73216d1fbcf80d27ed471b6f7a97713",
+    "../MaintAI-gitops/applications/addons/strimzi.yaml": "a92da078340dea6cf425be2863339a2a63ce6a54ed1ab49e0510933b7b188c02",
+    "../MaintAI-gitops/platform/mlops/mlflow.yaml": "7ebe67284ff37ee97f09b2eebdb9647109ab103b04d8884bc365500a9544b177"
+  }
+}

@@ -426,6 +426,23 @@ provider-consumer fixtures/version migration riêng, không sửa JSON cho khớ
 HTTP200/202, run FINISHED, registry READY và release deployment là các trạng thái
 khác nhau, không thay semantics bằng một monitoring status chung.
 
+## PROC-ORDER-API-01 — Concurrency không đổi ACK hoặc consistency boundary
+
+Quyết định23/10: [PROC-ORDER-01](PROCESSING_CONCURRENCY_AND_ORDERING.md), Contracts §42.
+Keyed Processing/ordered relay là internal behavior; chưa đổi OpenAPI/HTTP status,
+wire tagged union, SSE event names hoặc closed DTO trong lượt docs.
+
+HTTP202 vẫn chỉ broker ACK. Status/history có thể chưa thấy outcome; frontend
+không lấy committed Kafka offset làm trạng thái inference từng máy. Business
+trả các projections có source/age riêng và lifecycle Alert thực tế; result và
+signal giữa topics có thể đến khác thời điểm. Duplicate/stale update không được
+làm lùi latest, INVALID không xóa valid prediction lịch sử. Không so sánh opaque
+epoch hoặc dùng latest-telemetry guard để bỏ Alert Signal cũ.
+
+Machine source-order conflict xử lý nội bộ fail closed/reconcile theo decision;
+không tự invent HTTP error/SSE kind/ML status nếu chưa review schema. Queue/lag/
+blocked-key metrics ở management endpoint, không tự thêm vào public response.
+
 ## INGEST-M1-01 — HTTP adapter và operational profile (2026-10-23)
 
 Ingestion API description tăng MINOR lên1.4.0 theo System §25 vì thêm operational endpoints; các API khác/bundle HTTP directory vẫn baseline1.3.2. Không đổi accepted1.3.0/rejected1.4.0 hoặc canonical Kafka bundle1.0.0. Đây là interface implementation M1, không chứng minh đã deploy.

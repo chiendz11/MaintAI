@@ -1,0 +1,557 @@
+<svg role="img" aria-labelledby="03-logical-architecture-title 03-logical-architecture-desc" width="2770pt" height="1953pt"
+ viewBox="0.00 0.00 2770.00 1953.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<title id="03-logical-architecture-title">MaintAI — 3 · Kiến trúc logic</title>
+<desc id="03-logical-architecture-desc">Owner, năm logical DB và keyed modules nội bộ Worker; C4-inspired. Thiết kế mục tiêu v1.4; snapshot 2026-10-23; không xác nhận đã deploy.</desc>
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(28.8 1923.96)">
+<title>LogicalArchitecture</title>
+<polygon fill="#ffffff" stroke="none" points="-28.8,28.8 -28.8,-1923.96 2741.2,-1923.96 2741.2,28.8 -28.8,28.8"/>
+<text xml:space="preserve" text-anchor="middle" x="1356.2" y="-1868.36" font-family="DejaVu Sans" font-size="24.00" fill="#10243a">MaintAI | 03 · Kiến trúc logic</text>
+<text xml:space="preserve" text-anchor="middle" x="1356.2" y="-1839.86" font-family="DejaVu Sans" font-size="24.00" fill="#10243a">Ranh giới ứng dụng, giao tiếp và chủ sở hữu dữ liệu · mục tiêu v1.4</text>
+<g id="clust1" class="cluster">
+<title>cluster_ui</title>
+<path fill="#f8fbff" stroke="#b7cde1" d="M408,-1601.3C408,-1601.3 783,-1601.3 783,-1601.3 789,-1601.3 795,-1607.3 795,-1613.3 795,-1613.3 795,-1726.96 795,-1726.96 795,-1732.96 789,-1738.96 783,-1738.96 783,-1738.96 408,-1738.96 408,-1738.96 402,-1738.96 396,-1732.96 396,-1726.96 396,-1726.96 396,-1613.3 396,-1613.3 396,-1607.3 402,-1601.3 408,-1601.3"/>
+<text xml:space="preserve" text-anchor="middle" x="595.5" y="-1712.16" font-family="DejaVu Sans" font-size="24.00" fill="#10243a">HAI FRONTEND RIÊNG</text>
+</g>
+<g id="clust2" class="cluster">
+<title>cluster_processing</title>
+<path fill="#fffaf0" stroke="#d6b36a" d="M911,-689.57C911,-689.57 2156,-689.57 2156,-689.57 2162,-689.57 2168,-695.57 2168,-701.57 2168,-701.57 2168,-1159.17 2168,-1159.17 2168,-1165.17 2162,-1171.17 2156,-1171.17 2156,-1171.17 911,-1171.17 911,-1171.17 905,-1171.17 899,-1165.17 899,-1159.17 899,-1159.17 899,-701.57 899,-701.57 899,-695.57 905,-689.57 911,-689.57"/>
+<text xml:space="preserve" text-anchor="middle" x="1533.5" y="-1144.37" font-family="DejaVu Sans" font-size="24.00" fill="#10243a">PROCESSING OWNER · CÙNG CODEBASE / IMAGE GROUP</text>
+</g>
+<g id="clust3" class="cluster">
+<title>cluster_worker_runtime</title>
+<path fill="#ffffff" stroke="#d6b36a" stroke-dasharray="5,2" d="M1131,-837.3C1131,-837.3 1900,-837.3 1900,-837.3 1906,-837.3 1912,-843.3 1912,-849.3 1912,-849.3 1912,-1114.67 1912,-1114.67 1912,-1120.67 1906,-1126.67 1900,-1126.67 1900,-1126.67 1131,-1126.67 1131,-1126.67 1125,-1126.67 1119,-1120.67 1119,-1114.67 1119,-1114.67 1119,-849.3 1119,-849.3 1119,-843.3 1125,-837.3 1131,-837.3"/>
+<text xml:space="preserve" text-anchor="middle" x="1515.5" y="-1099.87" font-family="DejaVu Sans" font-size="24.00" fill="#10243a">MỘT Processing Worker runtime · SDK0.2 CÓ CODE · APP KHUNG</text>
+</g>
+<g id="clust4" class="cluster">
+<title>cluster_business</title>
+<path fill="#f3f8ff" stroke="#91b6d8" d="M20,-825.51C20,-825.51 656,-825.51 656,-825.51 662,-825.51 668,-831.51 668,-837.51 668,-837.51 668,-1114.67 668,-1114.67 668,-1120.67 662,-1126.67 656,-1126.67 656,-1126.67 20,-1126.67 20,-1126.67 14,-1126.67 8,-1120.67 8,-1114.67 8,-1114.67 8,-837.51 8,-837.51 8,-831.51 14,-825.51 20,-825.51"/>
+<text xml:space="preserve" text-anchor="middle" x="338" y="-1099.87" font-family="DejaVu Sans" font-size="24.00" fill="#10243a">BUSINESS OWNER · CÙNG CODEBASE / IMAGE GROUP</text>
+</g>
+<!-- business_ui -->
+<g id="node1" class="node">
+<title>business_ui</title>
+<path fill="#edf5ff" stroke="#9fb5c9" stroke-width="1.3" d="M530.15,-1657.96C530.15,-1657.96 415.85,-1657.96 415.85,-1657.96 409.85,-1657.96 403.85,-1651.96 403.85,-1645.96 403.85,-1645.96 403.85,-1621.3 403.85,-1621.3 403.85,-1615.3 409.85,-1609.3 415.85,-1609.3 415.85,-1609.3 530.15,-1609.3 530.15,-1609.3 536.15,-1609.3 542.15,-1615.3 542.15,-1621.3 542.15,-1621.3 542.15,-1645.96 542.15,-1645.96 542.15,-1651.96 536.15,-1657.96 530.15,-1657.96"/>
+<text xml:space="preserve" text-anchor="middle" x="473" y="-1636.48" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Business UI</text>
+<text xml:space="preserve" text-anchor="middle" x="473" y="-1622.23" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">frontend/ · KHUNG</text>
+</g>
+<!-- api -->
+<g id="node15" class="node">
+<title>api</title>
+<path fill="#edf5ff" stroke="#9fb5c9" stroke-width="1.3" d="M306.52,-1045.67C306.52,-1045.67 131.47,-1045.67 131.47,-1045.67 125.47,-1045.67 119.47,-1039.67 119.47,-1033.67 119.47,-1033.67 119.47,-994.76 119.47,-994.76 119.47,-988.76 125.47,-982.76 131.47,-982.76 131.47,-982.76 306.52,-982.76 306.52,-982.76 312.52,-982.76 318.52,-988.76 318.52,-994.76 318.52,-994.76 318.52,-1033.67 318.52,-1033.67 318.52,-1039.67 312.52,-1045.67 306.52,-1045.67"/>
+<text xml:space="preserve" text-anchor="middle" x="219" y="-1024.19" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Business API · KHUNG</text>
+<text xml:space="preserve" text-anchor="middle" x="219" y="-1009.94" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">REST / SSE / RBAC</text>
+<text xml:space="preserve" text-anchor="middle" x="219" y="-995.69" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">History + RAG + drift facade</text>
+</g>
+<!-- business_ui&#45;&gt;api -->
+<g id="edge10" class="edge">
+<title>business_ui&#45;&gt;api</title>
+<path fill="none" stroke="#68839e" d="M466.12,-1608.74C455.17,-1570.72 435,-1500.69 435,-1500.69 435,-1500.69 435,-1500.69 435,-1247.37 435,-1247.37 314.35,-1117.7 253.39,-1052.18"/>
+<polygon fill="#68839e" stroke="#68839e" points="255.28,-1050.61 248.71,-1047.15 251.69,-1053.94 255.28,-1050.61"/>
+<text xml:space="preserve" text-anchor="middle" x="478.12" y="-1370.91" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">HTTPS REST / SSE</text>
+</g>
+<!-- simulator_ui -->
+<g id="node2" class="node">
+<title>simulator_ui</title>
+<path fill="#e2f4eb" stroke="#70ac92" stroke-width="1.3" d="M775.15,-1657.96C775.15,-1657.96 582.85,-1657.96 582.85,-1657.96 576.85,-1657.96 570.85,-1651.96 570.85,-1645.96 570.85,-1645.96 570.85,-1621.3 570.85,-1621.3 570.85,-1615.3 576.85,-1609.3 582.85,-1609.3 582.85,-1609.3 775.15,-1609.3 775.15,-1609.3 781.15,-1609.3 787.15,-1615.3 787.15,-1621.3 787.15,-1621.3 787.15,-1645.96 787.15,-1645.96 787.15,-1651.96 781.15,-1657.96 775.15,-1657.96"/>
+<text xml:space="preserve" text-anchor="middle" x="679" y="-1636.48" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Simulator UI</text>
+<text xml:space="preserve" text-anchor="middle" x="679" y="-1622.23" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">sensor&#45;simulator&#45;UI/ · CÓ CODE</text>
+</g>
+<!-- sensor -->
+<g id="node4" class="node">
+<title>sensor</title>
+<path fill="#e2f4eb" stroke="#70ac92" stroke-width="1.3" d="M928.52,-1531.15C928.52,-1531.15 759.48,-1531.15 759.48,-1531.15 753.48,-1531.15 747.48,-1525.15 747.48,-1519.15 747.48,-1519.15 747.48,-1480.24 747.48,-1480.24 747.48,-1474.24 753.48,-1468.24 759.48,-1468.24 759.48,-1468.24 928.52,-1468.24 928.52,-1468.24 934.52,-1468.24 940.52,-1474.24 940.52,-1480.24 940.52,-1480.24 940.52,-1519.15 940.52,-1519.15 940.52,-1525.15 934.52,-1531.15 928.52,-1531.15"/>
+<text xml:space="preserve" text-anchor="middle" x="844" y="-1509.67" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Sensor backend · CÓ CODE</text>
+<text xml:space="preserve" text-anchor="middle" x="844" y="-1495.42" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Control API + scheduler</text>
+<text xml:space="preserve" text-anchor="middle" x="844" y="-1481.17" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">AI4I → state/spool → sender</text>
+</g>
+<!-- simulator_ui&#45;&gt;sensor -->
+<g id="edge9" class="edge">
+<title>simulator_ui&#45;&gt;sensor</title>
+<path fill="none" stroke="#68839e" d="M708.88,-1608.74C734,-1588.65 770.3,-1559.62 798.95,-1536.71"/>
+<polygon fill="#68839e" stroke="#68839e" points="800.19,-1538.86 804.13,-1532.57 797.13,-1535.03 800.19,-1538.86"/>
+<text xml:space="preserve" text-anchor="middle" x="815.63" y="-1559.4" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">HTTPS Control API</text>
+</g>
+<!-- oidc -->
+<g id="node3" class="node">
+<title>oidc</title>
+<path fill="#f1edf9" stroke="#9fb5c9" stroke-width="1.3" d="M1209,-1638.71C1209,-1638.71 1145.81,-1668.27 1145.81,-1668.27 1140.37,-1670.82 1128.94,-1673.36 1122.94,-1673.36 1122.94,-1673.36 977.06,-1673.36 977.06,-1673.36 971.06,-1673.36 959.63,-1670.82 954.19,-1668.27 954.19,-1668.27 891,-1638.71 891,-1638.71 885.56,-1636.17 885.56,-1631.09 891,-1628.54 891,-1628.54 954.19,-1598.98 954.19,-1598.98 959.63,-1596.44 971.06,-1593.9 977.06,-1593.9 977.06,-1593.9 1122.94,-1593.9 1122.94,-1593.9 1128.94,-1593.9 1140.37,-1596.44 1145.81,-1598.98 1145.81,-1598.98 1209,-1628.54 1209,-1628.54 1214.44,-1631.09 1214.44,-1636.17 1209,-1638.71"/>
+<text xml:space="preserve" text-anchor="middle" x="1050" y="-1636.48" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">OIDC / IdP bên ngoài</text>
+<text xml:space="preserve" text-anchor="middle" x="1050" y="-1622.23" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Identity, roles, machine scope</text>
+</g>
+<!-- oidc&#45;&gt;business_ui -->
+<g id="edge12" class="edge">
+<title>oidc&#45;&gt;business_ui</title>
+<path fill="none" stroke="#68839e" stroke-dasharray="5,2" d="M955.89,-1669.75C885.73,-1696.68 802,-1728.82 802,-1728.82 802,-1728.82 556,-1728.82 556,-1728.82 556,-1728.82 523.99,-1692.11 499.73,-1664.29"/>
+<polygon fill="#68839e" stroke="#68839e" points="501.82,-1662.95 495.37,-1659.28 498.12,-1666.17 501.82,-1662.95"/>
+<text xml:space="preserve" text-anchor="middle" x="711" y="-1750.21" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">Code + PKCE</text>
+</g>
+<!-- oidc&#45;&gt;simulator_ui -->
+<g id="edge11" class="edge">
+<title>oidc&#45;&gt;simulator_ui</title>
+<path fill="none" stroke="#68839e" stroke-dasharray="5,2" d="M878.73,-1633.63C850.66,-1633.63 822.14,-1633.63 795.78,-1633.63"/>
+<polygon fill="#68839e" stroke="#68839e" points="795.82,-1631.18 788.82,-1633.63 795.82,-1636.08 795.82,-1631.18"/>
+<text xml:space="preserve" text-anchor="middle" x="833.64" y="-1639.88" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">Code + PKCE</text>
+</g>
+<!-- ingestion -->
+<g id="node5" class="node">
+<title>ingestion</title>
+<path fill="#edf5ff" stroke="#9fb5c9" stroke-width="1.3" d="M1064.03,-1405.49C1064.03,-1405.49 855.98,-1405.49 855.98,-1405.49 849.98,-1405.49 843.98,-1399.49 843.98,-1393.49 843.98,-1393.49 843.98,-1354.58 843.98,-1354.58 843.98,-1348.58 849.98,-1342.58 855.98,-1342.58 855.98,-1342.58 1064.03,-1342.58 1064.03,-1342.58 1070.03,-1342.58 1076.03,-1348.58 1076.03,-1354.58 1076.03,-1354.58 1076.03,-1393.49 1076.03,-1393.49 1076.03,-1399.49 1070.03,-1405.49 1064.03,-1405.49"/>
+<text xml:space="preserve" text-anchor="middle" x="960" y="-1384.01" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Ingestion API · KHUNG</text>
+<text xml:space="preserve" text-anchor="middle" x="960" y="-1369.76" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Auth/envelope → Kafka ACK</text>
+<text xml:space="preserve" text-anchor="middle" x="960" y="-1355.51" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Gateway adapter đã có trong SDK</text>
+</g>
+<!-- sensor&#45;&gt;ingestion -->
+<g id="edge13" class="edge">
+<title>sensor&#45;&gt;ingestion</title>
+<path fill="none" stroke="#68839e" d="M872.97,-1467.81C888.89,-1450.84 908.74,-1429.68 925.45,-1411.86"/>
+<polygon fill="#68839e" stroke="#68839e" points="926.96,-1413.84 929.96,-1407.06 923.38,-1410.49 926.96,-1413.84"/>
+<text xml:space="preserve" text-anchor="middle" x="972.23" y="-1433.74" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">HTTP readings + credential</text>
+</g>
+<!-- kafka -->
+<g id="node6" class="node">
+<title>kafka</title>
+<polygon fill="#e7eef9" stroke="#9fb5c9" stroke-width="1.3" points="1254.9,-1279.83 1035.1,-1279.83 1031.1,-1275.83 1031.1,-1216.92 1250.9,-1216.92 1254.9,-1220.92 1254.9,-1279.83"/>
+<polyline fill="none" stroke="#9fb5c9" stroke-width="1.3" points="1250.9,-1275.83 1031.1,-1275.83"/>
+<polyline fill="none" stroke="#9fb5c9" stroke-width="1.3" points="1250.9,-1275.83 1250.9,-1216.92"/>
+<polyline fill="none" stroke="#9fb5c9" stroke-width="1.3" points="1250.9,-1275.83 1254.9,-1279.83"/>
+<text xml:space="preserve" text-anchor="middle" x="1143" y="-1258.35" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Kafka · platform</text>
+<text xml:space="preserve" text-anchor="middle" x="1143" y="-1244.1" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">sensor.readings / sensor.rejected</text>
+<text xml:space="preserve" text-anchor="middle" x="1143" y="-1229.85" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">inference.results / alert.signals</text>
+</g>
+<!-- ingestion&#45;&gt;kafka -->
+<g id="edge14" class="edge">
+<title>ingestion&#45;&gt;kafka</title>
+<path fill="none" stroke="#68839e" d="M1005.71,-1342.15C1031.36,-1324.81 1063.49,-1303.1 1090.22,-1285.04"/>
+<polygon fill="#68839e" stroke="#68839e" points="1091.56,-1287.09 1095.99,-1281.14 1088.82,-1283.03 1091.56,-1287.09"/>
+<text xml:space="preserve" text-anchor="middle" x="1118.11" y="-1308.08" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">accepted / rejected · ACK</text>
+</g>
+<!-- storage -->
+<g id="node7" class="node">
+<title>storage</title>
+<path fill="#e2f4eb" stroke="#70ac92" stroke-width="1.3" d="M2700.4,-762.48C2700.4,-762.48 2515.6,-762.48 2515.6,-762.48 2509.6,-762.48 2503.6,-756.48 2503.6,-750.48 2503.6,-750.48 2503.6,-711.57 2503.6,-711.57 2503.6,-705.57 2509.6,-699.57 2515.6,-699.57 2515.6,-699.57 2700.4,-699.57 2700.4,-699.57 2706.4,-699.57 2712.4,-705.57 2712.4,-711.57 2712.4,-711.57 2712.4,-750.48 2712.4,-750.48 2712.4,-756.48 2706.4,-762.48 2700.4,-762.48"/>
+<text xml:space="preserve" text-anchor="middle" x="2608" y="-741" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Storage Consumer · CÓ CODE</text>
+<text xml:space="preserve" text-anchor="middle" x="2608" y="-726.75" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">raw&#45;archive / rejected archive</text>
+<text xml:space="preserve" text-anchor="middle" x="2608" y="-712.5" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">optional outcome archive</text>
+</g>
+<!-- kafka&#45;&gt;storage -->
+<g id="edge17" class="edge">
+<title>kafka&#45;&gt;storage</title>
+<path fill="none" stroke="#68839e" d="M1255.42,-1236.33C1470.48,-1215.21 1919,-1171.17 1919,-1171.17 1919,-1171.17 2388.1,-872.18 2552.16,-767.61"/>
+<polygon fill="#68839e" stroke="#68839e" points="2553.41,-769.72 2558,-763.89 2550.78,-765.59 2553.41,-769.72"/>
+<text xml:space="preserve" text-anchor="middle" x="2307.45" y="-948.26" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">archive groups</text>
+</g>
+<!-- keyed -->
+<g id="node8" class="node">
+<title>keyed</title>
+<path fill="#edf5ff" stroke="#9fb5c9" stroke-width="1.3" d="M1439.53,-1045.67C1439.53,-1045.67 1210.47,-1045.67 1210.47,-1045.67 1204.47,-1045.67 1198.47,-1039.67 1198.47,-1033.67 1198.47,-1033.67 1198.47,-994.76 1198.47,-994.76 1198.47,-988.76 1204.47,-982.76 1210.47,-982.76 1210.47,-982.76 1439.53,-982.76 1439.53,-982.76 1445.53,-982.76 1451.53,-988.76 1451.53,-994.76 1451.53,-994.76 1451.53,-1033.67 1451.53,-1033.67 1451.53,-1039.67 1445.53,-1045.67 1439.53,-1045.67"/>
+<text xml:space="preserve" text-anchor="middle" x="1325" y="-1024.19" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Module keyed scheduler / executor</text>
+<text xml:space="preserve" text-anchor="middle" x="1325" y="-1009.94" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">FIFO cùng máy · khác máy song song</text>
+<text xml:space="preserve" text-anchor="middle" x="1325" y="-995.69" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Bounded queues / active keys</text>
+</g>
+<!-- kafka&#45;&gt;keyed -->
+<g id="edge15" class="edge">
+<title>kafka&#45;&gt;keyed</title>
+<path fill="none" stroke="#68839e" d="M1167.17,-1216.54C1200.35,-1174.22 1259.94,-1098.2 1295.64,-1052.66"/>
+<polygon fill="#68839e" stroke="#68839e" points="1297.41,-1054.38 1299.8,-1047.36 1293.55,-1051.36 1297.41,-1054.38"/>
+<text xml:space="preserve" text-anchor="middle" x="1272.06" y="-1182.42" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">processing&#45;v1 · poll / assignment</text>
+</g>
+<!-- consumer -->
+<g id="node14" class="node">
+<title>consumer</title>
+<path fill="#edf5ff" stroke="#9fb5c9" stroke-width="1.3" d="M648.27,-1045.67C648.27,-1045.67 459.73,-1045.67 459.73,-1045.67 453.73,-1045.67 447.73,-1039.67 447.73,-1033.67 447.73,-1033.67 447.73,-994.76 447.73,-994.76 447.73,-988.76 453.73,-982.76 459.73,-982.76 459.73,-982.76 648.27,-982.76 648.27,-982.76 654.27,-982.76 660.27,-988.76 660.27,-994.76 660.27,-994.76 660.27,-1033.67 660.27,-1033.67 660.27,-1039.67 654.27,-1045.67 648.27,-1045.67"/>
+<text xml:space="preserve" text-anchor="middle" x="554" y="-1024.19" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Business Consumer · KHUNG</text>
+<text xml:space="preserve" text-anchor="middle" x="554" y="-1009.94" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">3 handlers + brief/catalog jobs</text>
+<text xml:space="preserve" text-anchor="middle" x="554" y="-995.69" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Inbox + CAS + lifecycle</text>
+</g>
+<!-- kafka&#45;&gt;consumer -->
+<g id="edge18" class="edge">
+<title>kafka&#45;&gt;consumer</title>
+<path fill="none" stroke="#68839e" d="M1064.18,-1216.3C954.01,-1172.88 754.73,-1094.33 640.56,-1049.33"/>
+<polygon fill="#68839e" stroke="#68839e" points="641.65,-1047.13 634.24,-1046.84 639.85,-1051.68 641.65,-1047.13"/>
+<text xml:space="preserve" text-anchor="middle" x="1044.91" y="-1182.42" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">3 Business groups</text>
+</g>
+<!-- s3 -->
+<g id="node23" class="node">
+<title>s3</title>
+<polygon fill="#edf2f6" stroke="#9fb5c9" stroke-width="1.3" points="1319.78,-628.55 1316.78,-632.55 1295.78,-632.55 1292.78,-628.55 1092.22,-628.55 1092.22,-551.38 1319.78,-551.38 1319.78,-628.55"/>
+<text xml:space="preserve" text-anchor="middle" x="1206" y="-607.07" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">S3 / MinIO · logical object groups</text>
+<text xml:space="preserve" text-anchor="middle" x="1206" y="-592.82" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Raw accepted / rejected</text>
+<text xml:space="preserve" text-anchor="middle" x="1206" y="-578.57" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Processed archive / reports</text>
+<text xml:space="preserve" text-anchor="middle" x="1206" y="-564.32" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Approved data / model / manuals</text>
+</g>
+<!-- storage&#45;&gt;s3 -->
+<g id="edge20" class="edge">
+<title>storage&#45;&gt;s3</title>
+<path fill="none" stroke="#68839e" d="M2511.22,-698.95C2494.3,-693.52 2482,-689.57 2482,-689.57 2482,-689.57 2233,-653.55 2233,-653.55 2233,-653.55 1601.18,-615.05 1328.68,-598.44"/>
+<polygon fill="#68839e" stroke="#68839e" points="1328.97,-596 1321.84,-598.02 1328.67,-600.89 1328.97,-596"/>
+<text xml:space="preserve" text-anchor="middle" x="2386.65" y="-656.8" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">immutable raw + manifest</text>
+</g>
+<!-- worker -->
+<g id="node9" class="node">
+<title>worker</title>
+<path fill="#edf5ff" stroke="#9fb5c9" stroke-width="1.3" d="M1477.15,-908.21C1477.15,-908.21 1314.85,-908.21 1314.85,-908.21 1308.85,-908.21 1302.85,-902.21 1302.85,-896.21 1302.85,-896.21 1302.85,-857.3 1302.85,-857.3 1302.85,-851.3 1308.85,-845.3 1314.85,-845.3 1314.85,-845.3 1477.15,-845.3 1477.15,-845.3 1483.15,-845.3 1489.15,-851.3 1489.15,-857.3 1489.15,-857.3 1489.15,-896.21 1489.15,-896.21 1489.15,-902.21 1483.15,-908.21 1477.15,-908.21"/>
+<text xml:space="preserve" text-anchor="middle" x="1396" y="-886.73" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Module handler</text>
+<text xml:space="preserve" text-anchor="middle" x="1396" y="-872.48" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">DQ → ML client → risk</text>
+<text xml:space="preserve" text-anchor="middle" x="1396" y="-858.23" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Durable assignment fence</text>
+</g>
+<!-- keyed&#45;&gt;worker -->
+<g id="edge1" class="edge">
+<title>keyed&#45;&gt;worker</title>
+<path fill="none" stroke="#68839e" d="M1341.29,-982.14C1351.57,-962.52 1364.93,-937.03 1375.87,-916.15"/>
+<polygon fill="#68839e" stroke="#68839e" points="1378,-917.37 1379.08,-910.03 1373.66,-915.09 1378,-917.37"/>
+<text xml:space="preserve" text-anchor="middle" x="1407.38" y="-948.26" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">1 active task / máy</text>
+</g>
+<!-- pdb -->
+<g id="node13" class="node">
+<title>pdb</title>
+<path fill="#fff0ce" stroke="#9fb5c9" stroke-width="1.3" d="M1602.78,-758.4C1602.78,-761.75 1549.09,-764.48 1483,-764.48 1416.91,-764.48 1363.22,-761.75 1363.22,-758.4 1363.22,-758.4 1363.22,-703.65 1363.22,-703.65 1363.22,-700.3 1416.91,-697.57 1483,-697.57 1549.09,-697.57 1602.78,-700.3 1602.78,-703.65 1602.78,-703.65 1602.78,-758.4 1602.78,-758.4"/>
+<path fill="none" stroke="#9fb5c9" stroke-width="1.3" d="M1602.78,-758.4C1602.78,-755.04 1549.09,-752.31 1483,-752.31 1416.91,-752.31 1363.22,-755.04 1363.22,-758.4"/>
+<text xml:space="preserve" text-anchor="middle" x="1483" y="-733.88" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">processing_db</text>
+<text xml:space="preserve" text-anchor="middle" x="1483" y="-719.63" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Inbox + outcomes/history + outbox</text>
+</g>
+<!-- worker&#45;&gt;pdb -->
+<g id="edge2" class="edge">
+<title>worker&#45;&gt;pdb</title>
+<path fill="none" stroke="#68839e" d="M1398.78,-845.06C1400.83,-822.49 1403.25,-795.76 1403.25,-795.76 1403.25,-795.76 1418.33,-783.7 1435.38,-770.08"/>
+<polygon fill="#68839e" stroke="#68839e" points="1436.6,-772.24 1440.54,-765.96 1433.54,-768.41 1436.6,-772.24"/>
+<text xml:space="preserve" text-anchor="middle" x="1430.62" y="-799.01" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">transaction</text>
+</g>
+<!-- inference -->
+<g id="node17" class="node">
+<title>inference</title>
+<path fill="#edf5ff" stroke="#9fb5c9" stroke-width="1.3" d="M2404.15,-762.48C2404.15,-762.48 2187.85,-762.48 2187.85,-762.48 2181.85,-762.48 2175.85,-756.48 2175.85,-750.48 2175.85,-750.48 2175.85,-711.57 2175.85,-711.57 2175.85,-705.57 2181.85,-699.57 2187.85,-699.57 2187.85,-699.57 2404.15,-699.57 2404.15,-699.57 2410.15,-699.57 2416.15,-705.57 2416.15,-711.57 2416.15,-711.57 2416.15,-750.48 2416.15,-750.48 2416.15,-756.48 2410.15,-762.48 2404.15,-762.48"/>
+<text xml:space="preserve" text-anchor="middle" x="2296" y="-741" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">ML inference · KHUNG</text>
+<text xml:space="preserve" text-anchor="middle" x="2296" y="-726.75" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">HTTP predict + fitted preprocessing</text>
+<text xml:space="preserve" text-anchor="middle" x="2296" y="-712.5" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Image riêng, model bundle đã pin</text>
+</g>
+<!-- worker&#45;&gt;inference -->
+<g id="edge21" class="edge">
+<title>worker&#45;&gt;inference</title>
+<path fill="none" stroke="#68839e" d="M1463.11,-840.99C1479.78,-832.35 1493,-825.51 1493,-825.51 1493,-825.51 1823,-808.51 1823,-808.51 1823,-808.51 2172,-770.76 2172,-770.76 2172,-770.76 2178.53,-768.72 2188.59,-765.57"/>
+<polygon fill="#68839e" stroke="#68839e" points="1462.21,-838.7 1457.12,-844.09 1464.46,-843.05 1462.21,-838.7"/>
+<polygon fill="#68839e" stroke="#68839e" points="2189.1,-767.98 2195.05,-763.56 2187.64,-763.3 2189.1,-767.98"/>
+<text xml:space="preserve" text-anchor="middle" x="1983.51" y="-799.01" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">HTTP, chỉ DQ VALID</text>
+</g>
+<!-- worker&#45;&gt;s3 -->
+<g id="edge24" class="edge">
+<title>worker&#45;&gt;s3</title>
+<path fill="none" stroke="#68839e" stroke-dasharray="5,2" d="M1336.23,-844.79C1316.26,-834.45 1299,-825.51 1299,-825.51 1299,-825.51 979,-808.51 979,-808.51 979,-808.51 960,-770.76 960,-770.76 960,-770.76 960,-689.57 960,-689.57 960,-689.57 1035.72,-659.22 1103.14,-632.2"/>
+<polygon fill="#68839e" stroke="#68839e" points="1103.9,-634.53 1109.49,-629.65 1102.08,-629.98 1103.9,-634.53"/>
+<text xml:space="preserve" text-anchor="middle" x="1024.5" y="-727.9" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">processed archive / export</text>
+</g>
+<!-- coordinator -->
+<g id="node10" class="node">
+<title>coordinator</title>
+<path fill="#edf5ff" stroke="#9fb5c9" stroke-width="1.3" d="M1785.15,-1045.67C1785.15,-1045.67 1598.85,-1045.67 1598.85,-1045.67 1592.85,-1045.67 1586.85,-1039.67 1586.85,-1033.67 1586.85,-1033.67 1586.85,-994.76 1586.85,-994.76 1586.85,-988.76 1592.85,-982.76 1598.85,-982.76 1598.85,-982.76 1785.15,-982.76 1785.15,-982.76 1791.15,-982.76 1797.15,-988.76 1797.15,-994.76 1797.15,-994.76 1797.15,-1033.67 1797.15,-1033.67 1797.15,-1039.67 1791.15,-1045.67 1785.15,-1045.67"/>
+<text xml:space="preserve" text-anchor="middle" x="1692" y="-1024.19" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Module offset coordinator</text>
+<text xml:space="preserve" text-anchor="middle" x="1692" y="-1009.94" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Receipt ledger từng partition</text>
+<text xml:space="preserve" text-anchor="middle" x="1692" y="-995.69" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Commit safe completed prefix</text>
+</g>
+<!-- coordinator&#45;&gt;kafka -->
+<g id="edge16" class="edge">
+<title>coordinator&#45;&gt;kafka</title>
+<path fill="none" stroke="#68839e" stroke-dasharray="5,2" d="M1647.08,-1046.21C1581.17,-1091.69 1466,-1171.17 1466,-1171.17 1466,-1171.17 1355.5,-1197.24 1263.77,-1218.88"/>
+<polygon fill="#68839e" stroke="#68839e" points="1263.24,-1216.49 1256.99,-1220.48 1264.36,-1221.26 1263.24,-1216.49"/>
+<text xml:space="preserve" text-anchor="middle" x="1465.73" y="-1182.42" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">safe input offset</text>
+</g>
+<!-- relay -->
+<g id="node11" class="node">
+<title>relay</title>
+<path fill="#edf5ff" stroke="#9fb5c9" stroke-width="1.3" d="M2148.15,-915.34C2148.15,-915.34 1931.85,-915.34 1931.85,-915.34 1925.85,-915.34 1919.85,-909.34 1919.85,-903.34 1919.85,-903.34 1919.85,-850.18 1919.85,-850.18 1919.85,-844.18 1925.85,-838.18 1931.85,-838.18 1931.85,-838.18 2148.15,-838.18 2148.15,-838.18 2154.15,-838.18 2160.15,-844.18 2160.15,-850.18 2160.15,-850.18 2160.15,-903.34 2160.15,-903.34 2160.15,-909.34 2154.15,-915.34 2148.15,-915.34"/>
+<text xml:space="preserve" text-anchor="middle" x="2040" y="-893.86" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Outbox Relay · SDK CÓ CODE</text>
+<text xml:space="preserve" text-anchor="middle" x="2040" y="-879.61" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Head&#45;of&#45;key / dispatch cursor</text>
+<text xml:space="preserve" text-anchor="middle" x="2040" y="-865.36" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Topic + machine ordering</text>
+<text xml:space="preserve" text-anchor="middle" x="2040" y="-851.11" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Wrapper có · image/health pending</text>
+</g>
+<!-- relay&#45;&gt;kafka -->
+<g id="edge19" class="edge">
+<title>relay&#45;&gt;kafka</title>
+<path fill="none" stroke="#68839e" d="M2160.73,-892.31C2324.81,-912.08 2598,-945.01 2598,-945.01 2598,-945.01 2598,-957.76 2598,-957.76 2598,-957.76 1919,-1171.17 1919,-1171.17 1919,-1171.17 1481.8,-1214.1 1263.72,-1235.52"/>
+<polygon fill="#68839e" stroke="#68839e" points="1263.66,-1233.06 1256.93,-1236.18 1264.13,-1237.94 1263.66,-1233.06"/>
+<text xml:space="preserve" text-anchor="middle" x="2591.44" y="-1017.46" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">results / alert signals</text>
+<text xml:space="preserve" text-anchor="middle" x="2591.44" y="-1004.71" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">ordered dispatch từng topic/máy</text>
+</g>
+<!-- relay&#45;&gt;pdb -->
+<g id="edge4" class="edge">
+<title>relay&#45;&gt;pdb</title>
+<path fill="none" stroke="#68839e" d="M1938.03,-834.44C1924.95,-829.13 1916,-825.51 1916,-825.51 1916,-825.51 1721.75,-808.51 1721.75,-808.51 1721.75,-808.51 1652.72,-786.39 1588.89,-765.95"/>
+<polygon fill="#68839e" stroke="#68839e" points="1936.89,-836.62 1944.3,-836.97 1938.73,-832.07 1936.89,-836.62"/>
+<polygon fill="#68839e" stroke="#68839e" points="1590,-763.73 1582.58,-763.93 1588.5,-768.39 1590,-763.73"/>
+<text xml:space="preserve" text-anchor="middle" x="1770.88" y="-799.01" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">claim / mark outbox</text>
+</g>
+<!-- read_api -->
+<g id="node12" class="node">
+<title>read_api</title>
+<path fill="#edf5ff" stroke="#9fb5c9" stroke-width="1.3" d="M1098.78,-908.21C1098.78,-908.21 919.23,-908.21 919.23,-908.21 913.23,-908.21 907.23,-902.21 907.23,-896.21 907.23,-896.21 907.23,-857.3 907.23,-857.3 907.23,-851.3 913.23,-845.3 919.23,-845.3 919.23,-845.3 1098.78,-845.3 1098.78,-845.3 1104.78,-845.3 1110.78,-851.3 1110.78,-857.3 1110.78,-857.3 1110.78,-896.21 1110.78,-896.21 1110.78,-902.21 1104.78,-908.21 1098.78,-908.21"/>
+<text xml:space="preserve" text-anchor="middle" x="1009" y="-886.73" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Processing Read API · KHUNG</text>
+<text xml:space="preserve" text-anchor="middle" x="1009" y="-872.48" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Status / history / chart</text>
+<text xml:space="preserve" text-anchor="middle" x="1009" y="-858.23" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">VALID windows · quyền đọc</text>
+</g>
+<!-- read_api&#45;&gt;pdb -->
+<g id="edge5" class="edge">
+<title>read_api&#45;&gt;pdb</title>
+<path fill="none" stroke="#68839e" d="M1074.32,-844.79C1096.13,-834.45 1115,-825.51 1115,-825.51 1115,-825.51 1228,-808.51 1228,-808.51 1228,-808.51 1302.81,-786.07 1371.39,-765.5"/>
+<polygon fill="#68839e" stroke="#68839e" points="1371.83,-767.93 1377.83,-763.57 1370.42,-763.23 1371.83,-767.93"/>
+<text xml:space="preserve" text-anchor="middle" x="1283.01" y="-799.01" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">SELECT</text>
+</g>
+<!-- read_api&#45;&gt;s3 -->
+<g id="edge23" class="edge">
+<title>read_api&#45;&gt;s3</title>
+<path fill="none" stroke="#68839e" d="M1034.63,-844.82C1060.3,-813.85 1096,-770.76 1096,-770.76 1096,-770.76 1145.81,-689.34 1178.39,-636.09"/>
+<polygon fill="#68839e" stroke="#68839e" points="1180.32,-637.63 1181.88,-630.39 1176.14,-635.08 1180.32,-637.63"/>
+<text xml:space="preserve" text-anchor="middle" x="1209.63" y="-727.9" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">verified processed archive</text>
+</g>
+<!-- pdb&#45;&gt;coordinator -->
+<g id="edge3" class="edge">
+<title>pdb&#45;&gt;coordinator</title>
+<path fill="none" stroke="#68839e" d="M1408.28,-764.68C1360.71,-785.47 1308,-808.51 1308,-808.51 1308,-808.51 1193.5,-825.51 1193.5,-825.51 1193.5,-825.51 1193.5,-920.01 1193.5,-920.01 1193.5,-920.01 1461,-945.01 1461,-945.01 1461,-945.01 1520.49,-962.57 1579.09,-979.88"/>
+<polygon fill="#68839e" stroke="#68839e" points="1578.12,-982.14 1585.53,-981.78 1579.51,-977.44 1578.12,-982.14"/>
+<text xml:space="preserve" text-anchor="middle" x="1240.75" y="-873.63" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">durable completion</text>
+</g>
+<!-- consumer&#45;&gt;api -->
+<g id="edge8" class="edge">
+<title>consumer&#45;&gt;api</title>
+<path fill="none" stroke="#68839e" stroke-dasharray="5,2" d="M447.17,-1014.21C408.85,-1014.21 365.62,-1014.21 327.18,-1014.21"/>
+<polygon fill="#68839e" stroke="#68839e" points="327.57,-1011.76 320.57,-1014.21 327.57,-1016.66 327.57,-1011.76"/>
+<text xml:space="preserve" text-anchor="middle" x="383.12" y="-1020.46" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">post&#45;commit fan&#45;out</text>
+</g>
+<!-- bdb -->
+<g id="node16" class="node">
+<title>bdb</title>
+<path fill="#e2edfb" stroke="#9fb5c9" stroke-width="1.3" d="M408.65,-912.14C408.65,-916.48 360.85,-920.01 302,-920.01 243.15,-920.01 195.35,-916.48 195.35,-912.14 195.35,-912.14 195.35,-841.37 195.35,-841.37 195.35,-837.03 243.15,-833.51 302,-833.51 360.85,-833.51 408.65,-837.03 408.65,-841.37 408.65,-841.37 408.65,-912.14 408.65,-912.14"/>
+<path fill="none" stroke="#9fb5c9" stroke-width="1.3" d="M408.65,-912.14C408.65,-907.8 360.85,-904.28 302,-904.28 243.15,-904.28 195.35,-907.8 195.35,-912.14"/>
+<text xml:space="preserve" text-anchor="middle" x="302" y="-886.73" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">business_db</text>
+<text xml:space="preserve" text-anchor="middle" x="302" y="-872.48" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Latest projections + alert/audit</text>
+<text xml:space="preserve" text-anchor="middle" x="302" y="-858.23" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">feedback + durable jobs</text>
+</g>
+<!-- consumer&#45;&gt;bdb -->
+<g id="edge6" class="edge">
+<title>consumer&#45;&gt;bdb</title>
+<path fill="none" stroke="#68839e" d="M490.33,-982.24C464.22,-969.54 440,-957.76 440,-957.76 440,-957.76 412.02,-941.53 381.25,-923.7"/>
+<polygon fill="#68839e" stroke="#68839e" points="382.83,-921.78 375.54,-920.39 380.37,-926.02 382.83,-921.78"/>
+<text xml:space="preserve" text-anchor="middle" x="492.5" y="-948.26" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">transaction + NOTIFY</text>
+</g>
+<!-- rag -->
+<g id="node18" class="node">
+<title>rag</title>
+<path fill="#edf5ff" stroke="#9fb5c9" stroke-width="1.3" d="M842.4,-908.21C842.4,-908.21 687.6,-908.21 687.6,-908.21 681.6,-908.21 675.6,-902.21 675.6,-896.21 675.6,-896.21 675.6,-857.3 675.6,-857.3 675.6,-851.3 681.6,-845.3 687.6,-845.3 687.6,-845.3 842.4,-845.3 842.4,-845.3 848.4,-845.3 854.4,-851.3 854.4,-857.3 854.4,-857.3 854.4,-896.21 854.4,-896.21 854.4,-902.21 848.4,-908.21 842.4,-908.21"/>
+<text xml:space="preserve" text-anchor="middle" x="765" y="-886.73" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">RAG / LLM API · KHUNG</text>
+<text xml:space="preserve" text-anchor="middle" x="765" y="-872.48" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Retrieve → brief/checklist</text>
+<text xml:space="preserve" text-anchor="middle" x="765" y="-858.23" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">citations + grounding</text>
+</g>
+<!-- consumer&#45;&gt;rag -->
+<g id="edge25" class="edge">
+<title>consumer&#45;&gt;rag</title>
+<path fill="none" stroke="#68839e" d="M636.94,-979.14C664.83,-967.69 689,-957.76 689,-957.76 689,-957.76 710.04,-935.61 729.98,-914.62"/>
+<polygon fill="#68839e" stroke="#68839e" points="636.34,-976.74 630.79,-981.67 638.2,-981.27 636.34,-976.74"/>
+<polygon fill="#68839e" stroke="#68839e" points="731.75,-916.32 734.79,-909.56 728.19,-912.94 731.75,-916.32"/>
+<text xml:space="preserve" text-anchor="middle" x="761.16" y="-948.26" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">HTTP từ leased brief jobs</text>
+</g>
+<!-- consumer&#45;&gt;s3 -->
+<g id="edge32" class="edge">
+<title>consumer&#45;&gt;s3</title>
+<path fill="none" stroke="#68839e" stroke-dasharray="5,2" d="M660.6,-1000.18C822.56,-980.39 1112,-945.01 1112,-945.01 1112,-945.01 2175,-920.01 2175,-920.01 2175,-920.01 2431,-770.76 2431,-770.76 2431,-770.76 2431,-689.57 2431,-689.57 2431,-689.57 2048,-653.55 2048,-653.55 2048,-653.55 1561.62,-617.4 1328.19,-600.05"/>
+<polygon fill="#68839e" stroke="#68839e" points="1328.67,-597.63 1321.5,-599.55 1328.3,-602.51 1328.67,-597.63"/>
+<text xml:space="preserve" text-anchor="middle" x="2433" y="-799.01" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">drift report catalog</text>
+</g>
+<!-- api&#45;&gt;read_api -->
+<g id="edge22" class="edge">
+<title>api&#45;&gt;read_api</title>
+<path fill="none" stroke="#68839e" d="M327.36,-994.95C423.22,-978.79 548,-957.76 548,-957.76 548,-957.76 580.75,-945.01 580.75,-945.01 580.75,-945.01 869,-920.01 869,-920.01 869,-920.01 881.52,-916.23 899.08,-910.93"/>
+<polygon fill="#68839e" stroke="#68839e" points="327.04,-992.52 320.54,-996.1 327.85,-997.35 327.04,-992.52"/>
+<polygon fill="#68839e" stroke="#68839e" points="899.44,-913.38 905.44,-909.01 898.03,-908.69 899.44,-913.38"/>
+<text xml:space="preserve" text-anchor="middle" x="631.38" y="-948.26" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">HTTP status / history</text>
+</g>
+<!-- api&#45;&gt;bdb -->
+<g id="edge7" class="edge">
+<title>api&#45;&gt;bdb</title>
+<path fill="none" stroke="#68839e" d="M241.91,-975.1C251.3,-959.48 260,-945.01 260,-945.01 260,-945.01 264.75,-937.39 271.06,-927.29"/>
+<polygon fill="#68839e" stroke="#68839e" points="239.87,-973.74 238.36,-981.01 244.07,-976.27 239.87,-973.74"/>
+<polygon fill="#68839e" stroke="#68839e" points="272.97,-928.87 274.6,-921.63 268.81,-926.27 272.97,-928.87"/>
+<text xml:space="preserve" text-anchor="middle" x="323" y="-948.26" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">read / business mutations</text>
+</g>
+<!-- inference&#45;&gt;s3 -->
+<g id="edge37" class="edge">
+<title>inference&#45;&gt;s3</title>
+<path fill="none" stroke="#68839e" d="M2200.76,-698.95C2184.11,-693.52 2172,-689.57 2172,-689.57 2172,-689.57 1588.49,-630.01 1328.48,-603.47"/>
+<polygon fill="#68839e" stroke="#68839e" points="1328.85,-601.04 1321.64,-602.77 1328.35,-605.92 1328.85,-601.04"/>
+<text xml:space="preserve" text-anchor="middle" x="1989.93" y="-656.8" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">pinned model bundle</text>
+</g>
+<!-- kdb -->
+<g id="node19" class="node">
+<title>kdb</title>
+<path fill="#eae5f7" stroke="#9fb5c9" stroke-width="1.3" d="M560.4,-758.4C560.4,-761.75 512.26,-764.48 453,-764.48 393.74,-764.48 345.6,-761.75 345.6,-758.4 345.6,-758.4 345.6,-703.65 345.6,-703.65 345.6,-700.3 393.74,-697.57 453,-697.57 512.26,-697.57 560.4,-700.3 560.4,-703.65 560.4,-703.65 560.4,-758.4 560.4,-758.4"/>
+<path fill="none" stroke="#9fb5c9" stroke-width="1.3" d="M560.4,-758.4C560.4,-755.04 512.26,-752.31 453,-752.31 393.74,-752.31 345.6,-755.04 345.6,-758.4"/>
+<text xml:space="preserve" text-anchor="middle" x="453" y="-733.88" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">knowledge_db</text>
+<text xml:space="preserve" text-anchor="middle" x="453" y="-719.63" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Documents / chunks / pgvector</text>
+</g>
+<!-- rag&#45;&gt;kdb -->
+<g id="edge26" class="edge">
+<title>rag&#45;&gt;kdb</title>
+<path fill="none" stroke="#68839e" d="M707.69,-844.79C688.55,-834.45 672,-825.51 672,-825.51 672,-825.51 597.87,-793.86 535.86,-767.4"/>
+<polygon fill="#68839e" stroke="#68839e" points="537.16,-765.29 529.76,-764.79 535.24,-769.79 537.16,-765.29"/>
+<text xml:space="preserve" text-anchor="middle" x="655.98" y="-799.01" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">owner SQL</text>
+</g>
+<!-- llm -->
+<g id="node20" class="node">
+<title>llm</title>
+<path fill="#f1edf9" stroke="#9fb5c9" stroke-width="1.3" d="M880.27,-736.62C880.27,-736.62 826.06,-765.16 826.06,-765.16 820.75,-767.96 809.44,-770.76 803.44,-770.76 803.44,-770.76 676.56,-770.76 676.56,-770.76 670.56,-770.76 659.25,-767.96 653.94,-765.16 653.94,-765.16 599.73,-736.62 599.73,-736.62 594.42,-733.82 594.42,-728.23 599.73,-725.43 599.73,-725.43 653.94,-696.89 653.94,-696.89 659.25,-694.09 670.56,-691.3 676.56,-691.3 676.56,-691.3 803.44,-691.3 803.44,-691.3 809.44,-691.3 820.75,-694.09 826.06,-696.89 826.06,-696.89 880.27,-725.43 880.27,-725.43 885.58,-728.23 885.58,-733.82 880.27,-736.62"/>
+<text xml:space="preserve" text-anchor="middle" x="740" y="-733.88" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">LLM / embedding provider</text>
+<text xml:space="preserve" text-anchor="middle" x="740" y="-719.63" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Theo cấu hình RAG</text>
+</g>
+<!-- rag&#45;&gt;llm -->
+<g id="edge27" class="edge">
+<title>rag&#45;&gt;llm</title>
+<path fill="none" stroke="#68839e" d="M758.22,-836.8C755.16,-819.17 751.51,-798.18 748.28,-779.63"/>
+<polygon fill="#68839e" stroke="#68839e" points="755.76,-836.96 759.38,-843.43 760.59,-836.12 755.76,-836.96"/>
+<polygon fill="#68839e" stroke="#68839e" points="750.7,-779.27 747.09,-772.79 745.88,-780.11 750.7,-779.27"/>
+<text xml:space="preserve" text-anchor="middle" x="811.37" y="-799.01" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">generation / embedding</text>
+</g>
+<!-- rag&#45;&gt;s3 -->
+<g id="edge28" class="edge">
+<title>rag&#45;&gt;s3</title>
+<path fill="none" stroke="#68839e" d="M707.69,-844.79C688.55,-834.45 672,-825.51 672,-825.51 672,-825.51 240.25,-770.76 240.25,-770.76 240.25,-770.76 240.25,-689.57 240.25,-689.57 240.25,-689.57 823.61,-630.01 1083.55,-603.47"/>
+<polygon fill="#68839e" stroke="#68839e" points="1083.68,-605.92 1090.39,-602.77 1083.18,-601.04 1083.68,-605.92"/>
+<text xml:space="preserve" text-anchor="middle" x="285.62" y="-727.9" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">approved manuals</text>
+</g>
+<!-- drift -->
+<g id="node21" class="node">
+<title>drift</title>
+<path fill="#fff0d9" stroke="#c6a269" stroke-width="1.3" d="M1077.53,-481.51C1077.53,-481.51 848.48,-481.51 848.48,-481.51 842.48,-481.51 836.48,-475.51 836.48,-469.51 836.48,-469.51 836.48,-430.6 836.48,-430.6 836.48,-424.6 842.48,-418.6 848.48,-418.6 848.48,-418.6 1077.53,-418.6 1077.53,-418.6 1083.53,-418.6 1089.53,-424.6 1089.53,-430.6 1089.53,-430.6 1089.53,-469.51 1089.53,-469.51 1089.53,-475.51 1083.53,-481.51 1077.53,-481.51"/>
+<text xml:space="preserve" text-anchor="middle" x="963" y="-460.03" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Drift Worker · CODE MỘT PHẦN</text>
+<text xml:space="preserve" text-anchor="middle" x="963" y="-445.78" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Batch theo lịch + matching reference</text>
+<text xml:space="preserve" text-anchor="middle" x="963" y="-431.53" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Không tự retrain / đổi risk</text>
+</g>
+<!-- drift&#45;&gt;read_api -->
+<g id="edge29" class="edge">
+<title>drift&#45;&gt;read_api</title>
+<path fill="none" stroke="#68839e" d="M1087.43,-484.22C1097.56,-486.92 1104,-488.63 1104,-488.63 1104,-488.63 1408,-513.63 1408,-513.63 1408,-513.63 1408,-526.38 1408,-526.38 1408,-526.38 1334,-628.55 1334,-628.55 1334,-628.55 1152,-689.57 1152,-689.57 1152,-689.57 1096,-770.76 1096,-770.76 1096,-770.76 1064.88,-808.32 1039.86,-838.51"/>
+<polygon fill="#68839e" stroke="#68839e" points="1088.3,-481.91 1080.9,-482.48 1087.04,-486.65 1088.3,-481.91"/>
+<polygon fill="#68839e" stroke="#68839e" points="1038.18,-836.7 1035.6,-843.66 1041.95,-839.83 1038.18,-836.7"/>
+<text xml:space="preserve" text-anchor="middle" x="1292.14" y="-656.8" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">VALID window</text>
+</g>
+<!-- ddb -->
+<g id="node22" class="node">
+<title>ddb</title>
+<path fill="#fff0ce" stroke="#9fb5c9" stroke-width="1.3" d="M998.52,-342.64C998.52,-346 961.98,-348.73 917,-348.73 872.02,-348.73 835.48,-346 835.48,-342.64 835.48,-342.64 835.48,-287.9 835.48,-287.9 835.48,-284.54 872.02,-281.82 917,-281.82 961.98,-281.82 998.52,-284.54 998.52,-287.9 998.52,-287.9 998.52,-342.64 998.52,-342.64"/>
+<path fill="none" stroke="#9fb5c9" stroke-width="1.3" d="M998.52,-342.64C998.52,-339.29 961.98,-336.56 917,-336.56 872.02,-336.56 835.48,-339.29 835.48,-342.64"/>
+<text xml:space="preserve" text-anchor="middle" x="917" y="-318.12" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">drift_db</text>
+<text xml:space="preserve" text-anchor="middle" x="917" y="-303.87" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Reports + checkpoints</text>
+</g>
+<!-- drift&#45;&gt;ddb -->
+<g id="edge31" class="edge">
+<title>drift&#45;&gt;ddb</title>
+<path fill="none" stroke="#68839e" d="M952.33,-418.26C946.03,-400.08 937.98,-376.84 931.16,-357.14"/>
+<polygon fill="#68839e" stroke="#68839e" points="933.52,-356.46 928.91,-350.65 928.89,-358.07 933.52,-356.46"/>
+<text xml:space="preserve" text-anchor="middle" x="965.88" y="-376.98" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">owner SQL</text>
+</g>
+<!-- drift&#45;&gt;s3 -->
+<g id="edge30" class="edge">
+<title>drift&#45;&gt;s3</title>
+<path fill="none" stroke="#68839e" d="M1013.5,-487.03C1040.71,-506.41 1068.75,-526.38 1068.75,-526.38 1068.75,-526.38 1089.36,-535.78 1114.61,-547.3"/>
+<polygon fill="#68839e" stroke="#68839e" points="1014.98,-485.07 1007.86,-483.01 1012.14,-489.06 1014.98,-485.07"/>
+<polygon fill="#68839e" stroke="#68839e" points="1113.44,-549.46 1120.83,-550.13 1115.48,-545 1113.44,-549.46"/>
+<text xml:space="preserve" text-anchor="middle" x="1141.88" y="-516.88" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">reference / committed reports</text>
+</g>
+<!-- monitoring -->
+<g id="node27" class="node">
+<title>monitoring</title>
+<path fill="#f1edf9" stroke="#9fb5c9" stroke-width="1.3" d="M1198.28,-346.73C1198.28,-346.73 1039.72,-346.73 1039.72,-346.73 1033.72,-346.73 1027.72,-340.73 1027.72,-334.73 1027.72,-334.73 1027.72,-295.82 1027.72,-295.82 1027.72,-289.82 1033.72,-283.82 1039.72,-283.82 1039.72,-283.82 1198.28,-283.82 1198.28,-283.82 1204.28,-283.82 1210.28,-289.82 1210.28,-295.82 1210.28,-295.82 1210.28,-334.73 1210.28,-334.73 1210.28,-340.73 1204.28,-346.73 1198.28,-346.73"/>
+<text xml:space="preserve" text-anchor="middle" x="1119" y="-325.25" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Prometheus / exporters</text>
+<text xml:space="preserve" text-anchor="middle" x="1119" y="-311" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Drift qua Pushgateway</text>
+<text xml:space="preserve" text-anchor="middle" x="1119" y="-296.75" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Metrics từ app + platform</text>
+</g>
+<!-- drift&#45;&gt;monitoring -->
+<g id="edge39" class="edge">
+<title>drift&#45;&gt;monitoring</title>
+<path fill="none" stroke="#68839e" stroke-dasharray="5,2" d="M999.18,-418.26C1022.15,-398.71 1051.99,-373.31 1076.14,-352.75"/>
+<polygon fill="#68839e" stroke="#68839e" points="1077.58,-354.75 1081.32,-348.34 1074.4,-351.01 1077.58,-354.75"/>
+<text xml:space="preserve" text-anchor="middle" x="1123.09" y="-376.98" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">latest gauges → Pushgateway</text>
+</g>
+<!-- s3&#45;&gt;drift -->
+<!-- training -->
+<g id="node24" class="node">
+<title>training</title>
+<path fill="#edf5ff" stroke="#9fb5c9" stroke-width="1.3" d="M1375.03,-488.63C1375.03,-488.63 1130.97,-488.63 1130.97,-488.63 1124.97,-488.63 1118.97,-482.63 1118.97,-476.63 1118.97,-476.63 1118.97,-423.48 1118.97,-423.48 1118.97,-417.48 1124.97,-411.48 1130.97,-411.48 1130.97,-411.48 1375.03,-411.48 1375.03,-411.48 1381.03,-411.48 1387.03,-417.48 1387.03,-423.48 1387.03,-423.48 1387.03,-476.63 1387.03,-476.63 1387.03,-482.63 1381.03,-488.63 1375.03,-488.63"/>
+<text xml:space="preserve" text-anchor="middle" x="1253" y="-467.16" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Training pipeline · KHUNG</text>
+<text xml:space="preserve" text-anchor="middle" x="1253" y="-452.91" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Approved dataset → train/evaluate</text>
+<text xml:space="preserve" text-anchor="middle" x="1253" y="-438.66" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Model + preprocessing + drift reference</text>
+<text xml:space="preserve" text-anchor="middle" x="1253" y="-424.41" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Image riêng với inference</text>
+</g>
+<!-- s3&#45;&gt;training -->
+<!-- training&#45;&gt;s3 -->
+<g id="edge33" class="edge">
+<title>training&#45;&gt;s3</title>
+<path fill="none" stroke="#68839e" d="M1237.33,-497.02C1232.29,-511.83 1226.7,-528.23 1221.65,-543.03"/>
+<polygon fill="#68839e" stroke="#68839e" points="1239.65,-497.83 1239.59,-490.41 1235.01,-496.25 1239.65,-497.83"/>
+<polygon fill="#68839e" stroke="#68839e" points="1219.39,-542.07 1219.46,-549.48 1224.03,-543.65 1219.39,-542.07"/>
+<text xml:space="preserve" text-anchor="middle" x="1316.03" y="-516.88" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">approved input / versioned outputs</text>
+</g>
+<!-- mlflow -->
+<g id="node25" class="node">
+<title>mlflow</title>
+<path fill="#f1edf9" stroke="#9fb5c9" stroke-width="1.3" d="M1500.78,-346.73C1500.78,-346.73 1297.22,-346.73 1297.22,-346.73 1291.22,-346.73 1285.22,-340.73 1285.22,-334.73 1285.22,-334.73 1285.22,-295.82 1285.22,-295.82 1285.22,-289.82 1291.22,-283.82 1297.22,-283.82 1297.22,-283.82 1500.78,-283.82 1500.78,-283.82 1506.78,-283.82 1512.78,-289.82 1512.78,-295.82 1512.78,-295.82 1512.78,-334.73 1512.78,-334.73 1512.78,-340.73 1506.78,-346.73 1500.78,-346.73"/>
+<text xml:space="preserve" text-anchor="middle" x="1399" y="-325.25" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">MLflow Server + UI · platform</text>
+<text xml:space="preserve" text-anchor="middle" x="1399" y="-311" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Image source: ml&#45;service/mlflow/</text>
+<text xml:space="preserve" text-anchor="middle" x="1399" y="-296.75" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Code đóng gói có; pins chưa chốt</text>
+</g>
+<!-- training&#45;&gt;mlflow -->
+<g id="edge34" class="edge">
+<title>training&#45;&gt;mlflow</title>
+<path fill="none" stroke="#68839e" d="M1283.6,-410.95C1298.61,-392.26 1313.5,-373.73 1313.5,-373.73 1313.5,-373.73 1328.39,-363.72 1345.74,-352.06"/>
+<polygon fill="#68839e" stroke="#68839e" points="1347.05,-354.13 1351.49,-348.2 1344.31,-350.07 1347.05,-354.13"/>
+<text xml:space="preserve" text-anchor="middle" x="1368.25" y="-376.98" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">SDK tracking / registry</text>
+</g>
+<!-- mlflow&#45;&gt;s3 -->
+<g id="edge36" class="edge">
+<title>mlflow&#45;&gt;s3</title>
+<path fill="none" stroke="#68839e" d="M1413.61,-347.35C1419.97,-360.89 1426,-373.73 1426,-373.73 1426,-373.73 1426,-386.48 1426,-386.48 1426,-386.48 1408,-526.38 1408,-526.38 1408,-526.38 1370.77,-537.92 1328.27,-551.09"/>
+<polygon fill="#68839e" stroke="#68839e" points="1327.69,-548.7 1321.73,-553.11 1329.14,-553.38 1327.69,-548.7"/>
+<text xml:space="preserve" text-anchor="middle" x="1442.85" y="-446.93" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">artifacts</text>
+</g>
+<!-- mdb -->
+<g id="node26" class="node">
+<title>mdb</title>
+<path fill="#eae5f7" stroke="#9fb5c9" stroke-width="1.3" d="M1497.4,-212.98C1497.4,-216.34 1453.3,-219.07 1399,-219.07 1344.7,-219.07 1300.6,-216.34 1300.6,-212.98 1300.6,-212.98 1300.6,-158.24 1300.6,-158.24 1300.6,-154.89 1344.7,-152.16 1399,-152.16 1453.3,-152.16 1497.4,-154.89 1497.4,-158.24 1497.4,-158.24 1497.4,-212.98 1497.4,-212.98"/>
+<path fill="none" stroke="#9fb5c9" stroke-width="1.3" d="M1497.4,-212.98C1497.4,-209.63 1453.3,-206.9 1399,-206.9 1344.7,-206.9 1300.6,-209.63 1300.6,-212.98"/>
+<text xml:space="preserve" text-anchor="middle" x="1399" y="-188.46" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">mlflow_db</text>
+<text xml:space="preserve" text-anchor="middle" x="1399" y="-174.21" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Tracking / registry metadata</text>
+</g>
+<!-- mlflow&#45;&gt;mdb -->
+<g id="edge35" class="edge">
+<title>mlflow&#45;&gt;mdb</title>
+<path fill="none" stroke="#68839e" d="M1399,-283.37C1399,-266.6 1399,-245.66 1399,-227.56"/>
+<polygon fill="#68839e" stroke="#68839e" points="1401.45,-227.98 1399,-220.98 1396.55,-227.98 1401.45,-227.98"/>
+<text xml:space="preserve" text-anchor="middle" x="1424.88" y="-247.32" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">owner SQL</text>
+</g>
+<!-- grafana -->
+<g id="node28" class="node">
+<title>grafana</title>
+<path fill="#f1edf9" stroke="#9fb5c9" stroke-width="1.3" d="M1197.9,-209.94C1197.9,-209.94 1040.1,-209.94 1040.1,-209.94 1034.1,-209.94 1028.1,-203.94 1028.1,-197.94 1028.1,-197.94 1028.1,-173.28 1028.1,-173.28 1028.1,-167.28 1034.1,-161.28 1040.1,-161.28 1040.1,-161.28 1197.9,-161.28 1197.9,-161.28 1203.9,-161.28 1209.9,-167.28 1209.9,-173.28 1209.9,-173.28 1209.9,-197.94 1209.9,-197.94 1209.9,-203.94 1203.9,-209.94 1197.9,-209.94"/>
+<text xml:space="preserve" text-anchor="middle" x="1119" y="-188.46" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">Grafana UI · platform</text>
+<text xml:space="preserve" text-anchor="middle" x="1119" y="-174.21" font-family="DejaVu Sans" font-size="12.00" fill="#16324f">System / ML / Kafka / drift</text>
+</g>
+<!-- monitoring&#45;&gt;grafana -->
+<!-- grafana&#45;&gt;monitoring -->
+<g id="edge38" class="edge">
+<title>grafana&#45;&gt;monitoring</title>
+<path fill="none" stroke="#68839e" d="M1128.08,-210.31C1134.14,-226.14 1141,-244.07 1141,-244.07 1141,-244.07 1141,-256.82 1141,-256.82 1141,-256.82 1137.82,-265.13 1133.87,-275.43"/>
+<polygon fill="#68839e" stroke="#68839e" points="1131.66,-274.36 1131.44,-281.78 1136.23,-276.12 1131.66,-274.36"/>
+<text xml:space="preserve" text-anchor="middle" x="1168" y="-247.32" font-family="DejaVu Sans" font-size="10.00" fill="#47617a">datasource</text>
+</g>
+<!-- note -->
+<g id="node29" class="node">
+<title>note</title>
+<polygon fill="#fff5dd" stroke="#d8b566" stroke-width="1.3" points="1416.53,-101.16 815.48,-101.16 815.48,0 1422.53,0 1422.53,-95.16 1416.53,-101.16"/>
+<polyline fill="none" stroke="#d8b566" stroke-width="1.3" points="1416.53,-101.16 1416.53,-95.16"/>
+<polyline fill="none" stroke="#d8b566" stroke-width="1.3" points="1422.53,-95.16 1416.53,-95.16"/>
+<text xml:space="preserve" text-anchor="start" x="829.88" y="-80.63" font-family="DejaVu Sans" font-size="11.00" fill="#16324f">C4&#45;inspired: đường bao lớn là owner; Worker subcluster chứa MODULE NỘI BỘ, không thêm Deployment.</text>
+<text xml:space="preserve" text-anchor="start" x="829.88" y="-67.13" font-family="DejaVu Sans" font-size="11.00" fill="#16324f">Một PostgreSQL instance chứa 5 logical DB; các cylinder không phải 5 DB server.</text>
+<text xml:space="preserve" text-anchor="start" x="829.88" y="-53.63" font-family="DejaVu Sans" font-size="11.00" fill="#16324f">SDK0.2 có keyed/coordinator/fence/ordered relay; full app callbacks/probes/image còn pending.</text>
+<text xml:space="preserve" text-anchor="start" x="829.88" y="-40.13" font-family="DejaVu Sans" font-size="11.00" fill="#16324f">Business / Drift không SQL processing_db. Không SDK Deployment. 4 UI, không thêm UI.</text>
+<text xml:space="preserve" text-anchor="start" x="829.88" y="-26.63" font-family="DejaVu Sans" font-size="11.00" fill="#16324f">Sequence tăng bền vững theo máy; không sort epoch. Late duplicate/cross&#45;topic vẫn cần inbox/CAS.</text>
+<text xml:space="preserve" text-anchor="start" x="829.88" y="-13.13" font-family="DejaVu Sans" font-size="11.00" fill="#16324f">CÓ CODE ≠ đã deploy/E2E. Auth/metrics áp dụng ở các boundary.</text>
+</g>
+<!-- grafana&#45;&gt;note -->
+</g>
+</svg>

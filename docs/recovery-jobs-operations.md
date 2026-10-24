@@ -1,3 +1,9 @@
+> **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
+> durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
+> có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
+> [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
+> readiness §19 ghi bằng chứng, commands và giới hạn; các snapshot cũ đọc theo ngày.
+
 # RECOVERY-01 — Jobs bền vững, phục hồi và vận hành
 
 Chi tiết kế thừa1.3.2, rà soát khi nhập target1.4 ngày2026-10-19. Giữ các quyết định
@@ -128,9 +134,11 @@ Raw archive vẫn giữ mọi Kafka receipt với topic/partition/offset, không
   archive job và hai brief jobs đồng thời mỗi runner; phải tính tổng khi tăng replicas.
 - API scale bằng RPS/p95/connections; Worker bằng lag/age/ML throughput; Relay bằng
   pending age; Storage bằng lag/archive age; không chỉ CPU.
-- Consumer parallelism chịu partition assignment; 12 partitions là profile
-  GitOps hiện có, không phải evidence chịu được một số máy cố định. Một hot key
-  vẫn gây hot partition. Đổi partition count phải kiểm tra per-machine ordering.
+- Partition assignment giới hạn số consumer members; target PROC-ORDER-01 cho
+  nhiều keyed tasks trong một member, khác máy cùng partition chạy đồng thời.
+  SDK hiện vẫn một in-flight/runner.12 partitions không là benchmark số máy.
+  Hot key/offset hole vẫn gây partition backpressure; đổi partition count cần
+  drain/fence/cutover để giữ per-machine source order.
 - Autoscaling không làm tăng năng lực DB/ML vô hạn; admission limit phải xét toàn
   cluster. UI coalescing không thay thế broker retention hoặc processing capacity.
 
@@ -188,3 +196,32 @@ không thêm training SQL tables vào mlflow_db hoặc DB ứng dụng khác.
 Snapshot GitOps helper hiện có lease/model-result checkpoint nhưng chưa đủ
 step-level run/version recovery và fencing/heartbeat của chuẩn này. Đây là gap
 implementation, không tạo ledger adapter chỉ bằng ví dụ Python trong docs.
+
+## 10. PROC-ORDER-01 — recovery cho keyed tasks và ordered outbox
+
+Theo [đặc tả chuẩn](PROCESSING_CONCURRENCY_AND_ORDERING.md) §4–7; SDK0.2.0 đã có
+keyed/ordered/fenced implementations và tests; xem implementation report/readiness §19.
+
+- Mỗi partition có receipt ledger và safe completed prefix. Một lower-offset
+  task chưa durable giữ frontier dù các máy khác đã commit DB; crash replay
+  các receipts phía sau và dedupe theo logical identity/hash.
+- Revoke dừng admission partition, drain hữu hạn và commit prefix khi còn được
+  phép; lost assignment không commit. In-memory generation chỉ chặn offset,
+  durable owner generation fence mới chặn late SQL mutation. Không đợi HTTP
+  vô hạn trong rebalance callback hoặc giữ transaction lock suốt inference.
+- Timeout không chứng minh HTTP/producer đã hủy. Late completion không nhả key
+  lần hai, không tạo result mới; unknown DB commit đọc lại durable outcome.
+- Head relay đang backoff/ACK unknown chặn successor cùng topic/key. New lease
+  owner reconcile/retry cùng message bytes; không mark sent vì request đã enqueue.
+  DB fencing không hủy old network publish, downstream vẫn inbox/CAS.
+- Stop/drain row-only legacy relay và unfenced Worker trước enable capability
+  mới; không chạy mixed writers vượt key cursor. Rollback không reset cursor/
+  dispatch_seq/inbox/outbox, cần compatible binary hoặc reviewed maintenance.
+- Giới hạn queued/fetched/in-flight/done-behind-hole bằng records và bytes.
+  Nếu pause một partition vì hot key, các máy cùng partition có thể chờ; theo
+  dõi queue wait/frontier stall và downstream saturation, không drop để giảm lag.
+
+Future recovery drill phải có500 pending/501 completed, stale handler sau revoke,
+ML timeout còn chạy, hai relay tranh một key, head retry/ACK loss, graceful drain
+hết budget, source-order conflict và backlog catch-up. Chưa thực thi các drills
+production này đầy đủ; source tests/evidence cụ thể ở implementation report.

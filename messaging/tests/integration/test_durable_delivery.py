@@ -4,12 +4,10 @@ import os
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import contextmanager
 from dataclasses import replace
 from urllib.parse import urlparse
 
 import pytest
-
 from maintai_messaging.admin import create_local_topics
 from maintai_messaging.config import KafkaSettings
 from maintai_messaging.consumer import ConsumerRunner, Record
@@ -19,8 +17,6 @@ from maintai_messaging.postgres import (
     Outbox,
     OutboxRelay,
     TransactionalHandler,
-    apply_messaging_schema,
-    connect,
 )
 from maintai_messaging.producer import KafkaPublisher
 
@@ -45,32 +41,6 @@ def local_settings():
         bootstrap_servers=bootstrap,
         group_prefix="it-" + uuid.uuid4().hex + "-",
     )
-
-
-@pytest.fixture
-def owner_db(local_settings, contracts):
-    from psycopg import sql
-
-    dsn = os.environ["KAFKA_TEST_DATABASE_URL"]
-    name = "kafka_it_" + uuid.uuid4().hex
-    with connect(dsn) as connection:
-        connection.execute(sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(name)))
-
-    @contextmanager
-    def factory():
-        with connect(dsn) as connection:
-            connection.execute(sql.SQL("SET search_path TO {}").format(sql.Identifier(name)))
-            connection.commit()
-            yield connection
-
-    with factory() as connection:
-        apply_messaging_schema(connection, contracts)
-        connection.execute("CREATE TABLE effects (id TEXT PRIMARY KEY, total INTEGER NOT NULL)")
-    try:
-        yield factory
-    finally:
-        with connect(dsn) as connection:
-            connection.execute(sql.SQL("DROP SCHEMA {} CASCADE").format(sql.Identifier(name)))
 
 
 def source_and_record(contracts, example, offset=0, changed=False):

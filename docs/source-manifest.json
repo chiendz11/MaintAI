@@ -9,44 +9,44 @@
     {
       "path": "docs/MaintAI_Functional_Overview.md",
       "source_filename": "MaintAI_Functional_Overview.md",
-      "sha256": "26ec9b3d9ac481febf73584a2ef360b8ecbdf3159eedb4322f52cab4299bd336",
+      "sha256": "c24f5211b1be97b0dc412c0a0ee20e6cea78d7df25c2c2a65b98e50baf48d46c",
       "upstream_sha256": "c7e2a75c3db895eebcfd6973a906786f355ed67ec2eb041408e647d5bd38b4d9"
     },
     {
       "path": "docs/README.md",
       "source_filename": "README.md",
-      "sha256": "411d94c109ad549df214c4cffad5c581595f1054821087b173cf37ca81615ac5",
+      "sha256": "35d50798ef9a21ab8ee8dcbc0b5b7590311111f2ec0a77ba533b99f32e3589ed",
       "upstream_sha256": "b8f3731050d7cba47d5eecebd8ecfa7457dc4a7c427e9f408a1a22dd89c9b0d7"
     },
     {
       "path": "docs/api-contract-decisions.md",
       "source_filename": "api-contract-decisions.md",
-      "sha256": "d286046539d9cdff213bb452c336c468a2fcdfa49b3c8386293aac7e96dd9f02",
+      "sha256": "48977ca44e5fe875b57366fd45ec14db9a5d00de4aaf5df40ab78e48b4ac3146",
       "upstream_sha256": "153aea7b6f92e25fd11e9689092711f9806c59b0204099ae807e113fa830037b"
     },
     {
       "path": "docs/history-storage-contract.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "763be9ea2f42c0bb5203e46ac0c8729f28dac42b36a5f7739784a07e51c3ace2"
+      "sha256": "3667999d79778ed62be9d938cec675a668793126f7900f01fb532a249f182065"
     },
     {
       "path": "docs/recovery-jobs-operations.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "471dbd6f48746df852503154b2cb53e9c7f905b4941492b93f1080e28605c100"
+      "sha256": "8a54bcac037227795f67605f2bdf0638ad8e7b2801f4bb164e2c62c3b89d6bd3"
     },
     {
       "path": "docs/implementation-readiness.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "9f4698cc4fb4a5b1092d1672033cd8b5c7af288f94143615b09ea45ac4c6b014"
+      "sha256": "554c8b971e538533c28733e4e78382b8f55700d9a9775e2eed724001e8b2e067"
     },
     {
       "path": "docs/repository-layout.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "d35e076340b4f8040acf4569147255c6d85b113cd37770ab915e6d29944b7e85"
+      "sha256": "3c86207f7db2c80f4144f33a8a0d9dca79fe53f5f842d8fdbdec9e6587e4fcfe"
     },
     {
       "path": "docs/legacy-artifact-audit.md",
@@ -60,7 +60,7 @@
       "imported_on": "2026-10-19",
       "source_document_revision": "1.4.0",
       "upstream_sha256": "dcce56143a210b1aa733483c93c73e84cd498fc4521fe03d3e25425ebf5e8c5c",
-      "sha256": "8b133be0c3587560978e1145e7e569b6272a6cadc64977e9bed6fe1c905d68a1"
+      "sha256": "96ba162d54e1dec4dd9414774111fe72acab86a6825a670a62dd2321ae988aa1"
     },
     {
       "path": "docs/RUNTIME_DATAFLOW.md",
@@ -68,7 +68,7 @@
       "imported_on": "2026-10-19",
       "source_document_revision": "1.4.0",
       "upstream_sha256": "b117c5c7758832b6200488726733e51c07bd9c3e58a2b3a0b263e3e9c8cdfdae",
-      "sha256": "220fc26275403643f4ba9bc87337ae433bd713608acbd8dc4937c93d857371ee"
+      "sha256": "1f7f02c071519caf8f0a7ad1ce05f697eda07c71c1317d1269f1e1e5ab403503"
     },
     {
       "path": "docs/VERSIONING_AND_PROVENANCE.md",
@@ -76,7 +76,7 @@
       "imported_on": "2026-10-19",
       "source_document_revision": "1.4.0",
       "upstream_sha256": "38bbeeec5ef366877f9797508bdc8951f8df54ebe6002aed78820035d849a6ad",
-      "sha256": "92e591f63933761c4d1491aee563365e703e45254f79be6a24cf07c66f26ccd7"
+      "sha256": "44ac53e5c76578c265a36801a3c539dd4daaeea9ba4c8bbdbe5f6e7843676c9f"
     },
     {
       "path": "docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md",
@@ -84,7 +84,7 @@
       "imported_on": "2026-10-19",
       "source_document_revision": "1.4.0",
       "upstream_sha256": "c677d5a991814c37392d2bb9cfafd2ed86535fd01eb044c4f9a6e457069f9f55",
-      "sha256": "af1231b5bd32ede449baa2aa006a92bff0c6e83f303fb4a967df4428c47617b8"
+      "sha256": "85a853876b37e2625bccf9dccf5318a7507039135315773d4fc17d5f31a686c7"
     },
     {
       "path": "docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md",
@@ -92,7 +92,7 @@
       "imported_on": "2026-10-19",
       "source_document_revision": "1.4.0",
       "upstream_sha256": "89f141f1a8695a7ce056a99512633ba7e2edd9f2311b7bf935ae94f2ecd6ffcc",
-      "sha256": "9aba70c2f86d6bc10bf78a64f35efa66b3211bc5d13d69c1a7744cda6f11b562"
+      "sha256": "a9bafcf410ce6fb07b4dbfe59e9dfec7a8237956e4a0095cb1b178f77419405e"
     },
     {
       "path": "docs/IMPLEMENTATION_PLAN.md",
@@ -100,14 +100,14 @@
       "imported_on": "2026-10-19",
       "source_document_revision": "1.4.0",
       "upstream_sha256": "1b3f1654df22ded81be0808c88db746abeda6ddc6ce2c500f1115172d6bb3b58",
-      "sha256": "162af6a7f99820db3f1940a6cbe0f63a8f27537390578f707a1b3ec91af5a0f2"
+      "sha256": "ba7878f6c16ef2cac2be5804a76d5c9b27bec0e282557fb5ec6148861aaba5b3"
     },
     {
       "path": "docs/KAFKA_DEVELOPMENT_GUIDE.md",
       "source_filename": null,
       "upstream_sha256": null,
       "added_on": "2026-10-19",
-      "sha256": "101c8659ce795c9a4074fce9468c5f84c6d9f1269fb099d88d4aa9b828c525ba"
+      "sha256": "7cd3409da9faab159c762eb20dac7494897d414f4e3ac2ab05e69d44933eeaf1"
     },
     {
       "path": "docs/UI_ARCHITECTURE.md",
@@ -116,7 +116,7 @@
       "added_on": "2026-10-20",
       "decision_id": "UI-01",
       "decision_revision": "1.0.0",
-      "sha256": "c12cfb6d8f3f3b43e1363c607ae24d75c8fcef55d42415b3bf1fb2c22c1c8410"
+      "sha256": "c2be185825c021fbba8f7ff09703a7eb56d07f9e13b32b9b41e4e7672e54b73e"
     },
     {
       "path": "docs/OBSERVABILITY_IMPLEMENTATION.md",
@@ -125,7 +125,7 @@
       "added_on": "2026-10-20",
       "decision_id": "OBS-01",
       "decision_revision": "1.0.0",
-      "sha256": "24a340cf3b38232963a49ea605f841c3efe8c905b3906e737b6f0e8a70ca6ac3"
+      "sha256": "2d2fc8f9b9c81b147579258e6c3fbbe02916401da2d53655f12b29591af0d892"
     },
     {
       "path": "docs/MLFLOW_INTEGRATION_GUIDE.md",
@@ -134,7 +134,7 @@
       "added_on": "2026-10-20",
       "decision_id": "MLFLOW-01",
       "decision_revision": "1.0.0",
-      "sha256": "875578f00190790e06267c22a03ec2c0886320d46017940b9f177dd6a5d40e4c"
+      "sha256": "2aea8dc29ef9f0338d06bb42d1e540e9398e785351a6e8ba1b887677248db10b"
     },
     {
       "path": "docs/SENSOR_IMPLEMENTATION_REPORT.md",
@@ -142,6 +142,113 @@
       "upstream_sha256": null,
       "sha256": "f0acaa9dddc89871eb481b830853857b8124abe2a5bc6febec4d490693b10d39",
       "added_on": "2026-10-20"
+    },
+    {
+      "path": "docs/diagrams/README.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "added_on": "2026-10-22",
+      "sha256": "79de532f0f8dcd612ec0ad063f9980a87138e88941fd7cbf3734127ad260df43"
+    },
+    {
+      "path": "docs/PROCESSING_CONCURRENCY_AND_ORDERING.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "added_on": "2026-10-23",
+      "decision_id": "PROC-ORDER-01",
+      "decision_revision": "1.0.0",
+      "sha256": "84961facd3aced1dce23f093017c9b89c19665cf231d993736cd068e3db508ca"
+    },
+    {
+      "path": "docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "added_on": "2026-10-23",
+      "sha256": "7d5985bbf9c9035c583f920de20905662577c436fec87d1b5ebd28fb6caceef5"
+    },
+    {
+      "path": "docs/LOCAL_DEVELOPMENT_K3D.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "a19a7968c50f5bc5328ca88521d1d9fbb8ee1f4ac96fdef883f327549a59554f"
+    },
+    {
+      "path": "docs/design-basis/01_REQUIREMENTS.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "0119d63071c0f52567a6bf82a549245742e3971c6c268e495269fa71c14b1673"
+    },
+    {
+      "path": "docs/design-basis/02_ASSUMPTIONS_AND_CAPACITY.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "0ace97251f3595db81a7feb0433551276bce6181e64b700b0381423f656f49b7"
+    },
+    {
+      "path": "docs/design-basis/03_SYSTEM_ARCHITECTURE.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "3e406e58e10d49e1f9aafd35590669e91e92cb8fd539181a7d2fd920f2c1c245"
+    },
+    {
+      "path": "docs/design-basis/04_ARCHITECTURE_RATIONALE.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "0467b4a53372c033dc3d80049aaf9a8844289a6d04d36973f3344d54ae468507"
+    },
+    {
+      "path": "docs/design-basis/README.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "3bb82d3cbfbb3815d785a8ed39ed0b54c7faa5b10f8f71f285a42a5c167ad77c"
+    },
+    {
+      "path": "docs/design-basis/report/Nhóm-11_ MaintAI_Kien-truc.pdf",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "7ed3d7f83911b6376586f52e2da6ece17bf46a8c3c5680ad09cebfd08b217884"
+    },
+    {
+      "path": "docs/design-basis/report/report.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "757baae47fd9ee69a6565e8114c867e13d18d9c02338bdc47e1d6666931a0364"
+    },
+    {
+      "path": "docs/design-basis/report/assets/deployment-local-cloud.dot",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "7d621e30253c519fc614b2c7f86878324b3f72d88b19286d9e1c7b3d4880610b"
+    },
+    {
+      "path": "docs/design-basis/report/assets/deployment-local-cloud.png",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "7caad66537e55ff3381b10b79ee1ba8fe0539eb1afeefd3c461476fc9af1e6f6"
+    },
+    {
+      "path": "docs/design-basis/report/assets/deployment-local-cloud.svg",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "29fb9e0113afca1f3d40a74ff98d9ff6e4014b1d96a3c4290096c5b830e0ae79"
+    },
+    {
+      "path": "docs/design-basis/report/assets/kien-truc-tong-the.dot",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "6d4e83e106eb88fee0f5e90ebb526ba506df32abd73b0dd29d35e4f6b72a37de"
+    },
+    {
+      "path": "docs/design-basis/report/assets/kien-truc-tong-the.png",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "a2a4f4d65d3dcddc206a57884159e60f964488fea78d5948731305f9583a085d"
+    },
+    {
+      "path": "docs/design-basis/report/assets/kien-truc-tong-the.svg",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "6fd5e3e5faf23d16e5ed6df40a27037d11bc51f6056b04945cfebae029cb53f8"
     }
   ],
   "upstream_inherited_contract_revision": "1.3.1",
@@ -173,9 +280,9 @@
     }
   ],
   "latest_imported_on": "2026-10-19",
-  "kafka_contract_bundle_version": "1.0.0",
-  "kafka_contract_manifest_sha256": "911ddd0c216ff6fd1a0b3166b68ed8e84eb8b56e5adc2f8d294513931e033cc3",
-  "kafka_sdk_version": "0.1.0",
+  "kafka_contract_bundle_version": "1.1.0",
+  "kafka_contract_manifest_sha256": "27d0187dd2aa1ff785bc39bd1167243516a6c6bc8d3d966320fd0d21c1e749c7",
+  "kafka_sdk_version": "0.2.0",
   "project_ui_decision": {
     "id": "UI-01",
     "revision": "1.0.0",
@@ -208,6 +315,50 @@
       "adopted_on": "2026-10-20",
       "document": "docs/MLFLOW_INTEGRATION_GUIDE.md",
       "scope": "App tracking/registry identities, SDK reference, durable unknown/retry semantics and output mapping; no training/deployment executed"
+    },
+    {
+      "id": "MLFLOW-IMAGE-01",
+      "revision": "1.0.0",
+      "adopted_on": "2026-10-21",
+      "document": "docs/MLFLOW_INTEGRATION_GUIDE.md",
+      "scope": "MLflow image source/local dev/publisher in app ML codebase; GitOps deployment/config and app signer cutover. No publication/deployment or infrastructure IAM changes."
+    },
+    {
+      "id": "PROC-ORDER-01",
+      "revision": "1.0.0",
+      "adopted_on": "2026-10-23",
+      "document": "docs/PROCESSING_CONCURRENCY_AND_ORDERING.md",
+      "scope": "SDK0.2/bundle1.1 keyed/fenced/ordered implementation, migration002, transport wrappers, optional metrics, tests/CI and cross-repo handoff. Full app callbacks/images/health/prod activation remain pending.",
+      "implementation_report": "docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md"
+    },
+    {
+      "id": "LOCAL-K3D-01",
+      "revision": "1.0.0",
+      "adopted_on": "2026-10-23",
+      "document": "docs/LOCAL_DEVELOPMENT_K3D.md",
+      "scope": "Separate local k3d folder/core infrastructure and gated app integration; offline validation only, no cluster/build/E2E or AWS/GitOps activation."
+    },
+    {
+      "id": "DESIGN-BASIS-01",
+      "revision": "1.2.2",
+      "adopted_on": "2026-10-23",
+      "document": "docs/design-basis/README.md",
+      "scope": "Self-contained academic report with an eight-page PDF and editable manuscript. The original six A4 portrait pages retain their content; two A4 landscape pages add publication-view architecture and local/cloud deployment diagrams embedded as vectors. Diagram DOT/SVG/PNG assets are versioned alongside the report; the user-renamed PDF path is preserved. Preserves the initial 100 machines x 1 reading/s and scale-ready design. No requirement, runtime, wire, SQL, default or retention change; target diagrams are not evidence of deployment or measured capacity.",
+      "requirements_source": {
+        "filename": "CHỦ ĐỀ 3_Requirement.docx",
+        "sha256": "349d6f3c20fd338dedc63474e6fc24eec763154ac2f139b7a3627101093105c0",
+        "paragraph_reference": "Pxxx counts all w:p elements in document.xml including empty and table paragraphs"
+      }
+    },
+    {
+      "id": "CAPACITY-BASE100-01",
+      "revision": "1.0.0",
+      "adopted_on": "2026-10-23",
+      "document": "docs/design-basis/02_ASSUMPTIONS_AND_CAPACITY.md",
+      "initial_machines": 100,
+      "readings_per_second_per_machine": 1,
+      "architecture_property": "scale-ready",
+      "scope": "100 is the initial design workload, not a hard machine limit. RecalculateR=X*r and stage capacity/concurrency/replicas, optimize bottlenecks and measure end-to-end alert latency forX>100; no automatic deployment/config/schema changes."
     }
   ]
 }

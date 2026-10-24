@@ -5,30 +5,47 @@
   "runtime_id": "storage-consumer",
   "workload_kind": "Deployment",
   "code_owner": "raw-archive",
-  "implementation_status": "skeleton",
+  "implementation_status": "implemented_storage_runtime",
   "image_group": "storage-consumer",
   "image_digest": null,
-  "entrypoint_status": "not_implemented_for_v1.3.2",
-  "purpose": "Archive mọi raw event được Kafka chấp nhận thành JSONL.gz batches trên S3/MinIO.",
+  "entrypoint_status": "implemented_serve_and_offline_verify",
+  "purpose": "Archive accepted/rejected Kafka receipts into immutable JSONL.gz microbatches and versioned S3/MinIO manifests; optional outcome wire copy.",
   "source_paths": [
-    "storage-consumer/src"
+    "storage-consumer/src/maintai_storage"
   ],
   "logical_database": null,
   "kafka_subscriptions": [
     {
       "topic": "sensor.readings",
       "group": "raw-archive-v1"
+    },
+    {
+      "topic": "sensor.rejected",
+      "group": "raw-rejected-archive-v1"
+    },
+    {
+      "topic": "inference.results",
+      "group": "outcome-archive-v1",
+      "optional": true,
+      "enabled_by": "STORAGE_ARCHIVE_OUTCOMES=true"
     }
   ],
   "kafka_publications": [],
   "interfaces": [
-    "S3/MinIO raw archive"
+    "S3/MinIO raw archive",
+    "Internal management HTTP: /health/live, /health/ready, /metrics"
   ],
   "boundaries": [
-    "Lưu cả raw feature-invalid đã được Kafka nhận; không lưu malformed HTTP chưa vào topic.",
-    "Idempotent batch/checkpoint; không ghi business_db, không chạy ML."
+    "Archive all Kafka accepted receipts including feature-invalid and permitted rejected HASH_ONLY evidence; no HTTP intake or discarded-body reconstruction.",
+    "Shared SDK controls durable receipts, rebalance fencing and offset commits; one-record raw manifest1.0.0 from Kafka bundle1.1.0.",
+    "No business_db/processing_db access, ML, risk, training trigger or processed-history cleanup.",
+    "External Kafka/S3 credentials and versioned bucket required for serve; offline verify/tests need no AWS. No real S3/container/rollout evidence yet."
   ],
   "dockerfile": "storage-consumer/Dockerfile",
-  "dockerfile_status": "placeholder",
-  "implemented_contract_revision": null
+  "dockerfile_status": "implemented_not_built",
+  "implemented_contract_revision": "1.4.0",
+  "application_version": "0.1.0",
+  "kafka_contract_bundle_version": "1.1.0",
+  "archive_schema_version": "1.0.0",
+  "kafka_sdk_version": "0.2.0"
 }

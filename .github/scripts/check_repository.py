@@ -48,7 +48,7 @@ def check_links(path: Path) -> tuple[int, int]:
         candidate = (path.parent / unquote(name)).resolve() if name else path
         if not candidate.is_relative_to(ROOT) and any(
             candidate.is_relative_to(ROOT.parent / repo)
-            for repo in ("MaintAI-gitops", "Maint-infrastructure")
+            for repo in ("MaintAI-gitops", "Maint-infrastructure", "MaintAI-k3d")
         ):
             companions += 1  # Separate checkouts are not present on an app-only runner.
             continue
@@ -81,12 +81,23 @@ def main():
             ".github/README.md",
             "sensor/README.md",
             "sensor-simulator-UI/README.md",
+            "ml-service/README.md",
+            "ml-service/mlflow/README.md",
+            "processing/README.md",
+            "messaging/README.md",
+            "backend/README.md",
+            "contracts/kafka/README.md",
         )
     )
     checks = [check_links(path) for path in sorted(markdown)]
     links, companions = sum(c[0] for c in checks), sum(c[1] for c in checks)
     inventory = json.loads((ROOT / "architecture/runtime-map.json").read_text())
-    ids, descriptors = set(), inventory["runtime_descriptors"]
+    for decision in inventory.get("design_decisions", []):
+        local_path(decision["document"])
+        local_path(decision["implementation_report"])
+    app_descriptors = inventory["runtime_descriptors"]
+    platform_descriptors = inventory.get("platform_runtime_descriptors", [])
+    ids, descriptors = set(), app_descriptors + platform_descriptors
     if len(descriptors) != len(set(descriptors)):
         raise ValueError("Duplicate runtime descriptor")
     for descriptor in descriptors:
@@ -99,13 +110,20 @@ def main():
         local_path(runtime["dockerfile"])
         for name in runtime["source_paths"]:
             local_path(name)
+        if transport := runtime.get("transport_implementation"):
+            local_path(transport["document"])
+            if transport["sdk_version"] != manifest["kafka_sdk_version"]:
+                raise ValueError(f"Transport SDK pin differs from source manifest: {descriptor}")
+            if transport["kafka_bundle_version"] != manifest["kafka_contract_bundle_version"]:
+                raise ValueError(f"Transport bundle pin differs from source manifest: {descriptor}")
     images = json.loads((ROOT / "sensor-simulator-UI/ci-images.json").read_text())
     for key in ("node_image", "nginx_image"):
         if not re.fullmatch(r"[\w./:-]+@sha256:[0-9a-f]{64}", images[key]):
             raise ValueError(f"CI container base image must use an immutable digest: {key}")
     print(
         f"Verified {len(documents)} document hashes, {links} local links/anchors, "
-        f"{len(descriptors)} runtime descriptors and pinned UI CI images. "
+        f"{len(app_descriptors)} app + {len(platform_descriptors)} platform runtime descriptors "
+        f"and pinned UI CI images. "
         f"{companions} companion-repository links are outside this checkout."
     )
 

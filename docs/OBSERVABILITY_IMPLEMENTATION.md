@@ -1,3 +1,9 @@
+> **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
+> durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
+> có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
+> [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
+> readiness §19 ghi bằng chứng, commands và giới hạn; các snapshot cũ đọc theo ngày.
+
 # OBS-01 — Metrics và bàn giao Grafana cho MaintAI
 
 **Revision:** `1.0.0`, quyết định ngày2026-10-20; bổ sung System Contracts v1.4
@@ -9,12 +15,18 @@ metrics/exporters/dashboards đã chạy. Không đổi HTTP/Kafka/DB schema b�
 Catalog trong §3 là tên/type/labels chuẩn. Các tên ngắn trong Guide cũ là aliases
 tham khảo đã bị thay thế; không tự phát hành thêm một họ metrics khác.
 
+**Bổ sung23/10:** PROC-ORDER-01/1.0.0 ủy quyền catalog extension §11 cho keyed
+Processing/ordered relay; SDK collectors đã implement, production panels/scrape còn pending. Catalog gốc
+OBS-01/1.0.0 và extension có identity riêng, không tự tăng wire versions.
+
 ## 1. Repo, owner và đường đi dữ liệu
 
 | Phần việc | Source/repo | Người chịu trách nhiệm |
 | --- | --- | --- |
 | REST/ingest, DQ/ML client/risk, outbox, projections/alerts/history/SSE metrics | App: ingestion-api/, processing/, backend/ | Người1 |
 | Inference metrics, model info, training params/evaluation/lineage | App: ml-service/ | Người2 |
+| MLflow Server image/base/dependency pins, local dev, signed image publication | App: ml-service/mlflow/ | Người2 + Người4 |
+| MLflow production deployment/config/auth, DB/artifact-store access | MaintAI-gitops | Người4 |
 | Retrieval/generation/grounding/citation metrics | App: rag-service/ | Người3 |
 | Sensor, Drift publication, Storage metrics | App: sensor/, drift-worker/, storage-consumer/ | Người4 |
 | Prometheus/Pushgateway, ServiceMonitor, exporter, dashboard JSON, queries/rules, access | MaintAI-gitops | Người4; Người2 review ML/drift |
@@ -444,7 +456,7 @@ app tests, SDK network, Prometheus, container hoặc deployment.
 - Khi đổi process model cần tuân thủ [Python multiprocess limitations](https://prometheus.github.io/client_python/multiprocess/).
 
 
-## 9. Bằng chứng Sensor0.3.0
+## 10. Bằng chứng Sensor0.3.0
 
 Sensor có custom CollectorRegistry và `/metrics`, Counter generated sau SQLite
 spool commit, send attempts theo từng HTTP attempt, gauges đọc state/journal và
@@ -455,3 +467,57 @@ spool logs; không biến chúng thành fields của ControlState. Không thêm 
 family/labels ngoài catalog. Python/provider tests kiểm commit points; xem
 [Sensor README](../sensor/README.md) và [implementation report](SENSOR_IMPLEMENTATION_REPORT.md).
 Prometheus/ServiceMonitor/Grafana rollout ở GitOps vẫn chưa được xác minh.
+
+## 11. PROC-ORDER-01 — metrics cho keyed Processing và ordered Outbox
+
+**Catalog extension PROC-ORDER-01/1.0.0 ngày23/10**, được Contracts §42 ủy quyền,
+bổ sung OBS-01/1.0.0 §3.3. Names/types bên dưới đã có optional SDK collectors;
+owner HTTP registry/scrape/Grafana panels vẫn cần tích hợp. Không diễn giải missing series là0/healthy.
+Đọc [decision](PROCESSING_CONCURRENCY_AND_ORDERING.md) §3–7 để hiểu commit/frontier.
+
+| Base name | Type / unit | App labels | Điểm cập nhật / ý nghĩa |
+| --- | --- | --- | --- |
+| `maintai_processing_active_keys` | G machines | — | Snapshot số máy có active handler trong replica; không số source machines |
+| `maintai_processing_queue_records` | G receipts | state | FETCHED/QUEUED/IN_FLIGHT/COMPLETED_WAITING_COMMIT; trạng thái loại trừ nhau, gồm done-behind-hole và done-awaiting-offset-ACK |
+| `maintai_processing_pending_bytes` | G bytes | — | Payload/key/headers + accounting reserve còn giữ ở ledger/buffers, gồm done-behind-hole; không process RSS |
+| `maintai_processing_queue_wait_seconds` | H(PIPELINE) seconds | — | Monotonic time từ poll tới first handler dispatch của mỗi receipt attempt; không unique business count |
+| `maintai_processing_uncommitted_records` | G receipts | — | Tổng receipts chưa được offset ACK/current ownership reconcile; overlap với queue records, không cộng hai gauge thành tổng |
+| `maintai_processing_frontier_stall_seconds` | G seconds | — | Max tuổi blocking hole trong các assigned partitions có backlog; khởi đầu lúc hole chặn prefix,0 khi xác minh không còn hole |
+| `maintai_processing_paused_partitions` | G partitions | reason | QUEUE_BUDGET/FRONTIER_BUDGET/DRAIN; một primary reason/partition, không label partition/machine |
+| `maintai_processing_stale_completions_total` | C observations | stage | HANDLER/DB_FENCE/OFFSET_COMMIT; khi từ chối completion/write/commit dưới stale generation, không successful business outcome |
+| `maintai_outbox_blocked_keys` | G keys | topic,reason | BACKOFF/LEASED/UNKNOWN/ERROR; DB snapshot các keys có successor chờ head, một primary reason/key |
+| `maintai_outbox_head_blockage_age_seconds` | G seconds | topic | Max now-head.created_at của blocked keys có successor; verified empty=0, DB lỗi không xuất giá trị cũ như fresh |
+| `maintai_outbox_order_conflicts_total` | C observations | topic,reason | CURSOR/IDENTITY/FENCE; phát hiện order/identity/fence conflict, log metadata để reconcile, không auto skip |
+
+Queues/active keys/bytes là **per-process**, cộng giữa replicas cho tổng; count
+không tăng sau rollback để giả completed. Receipt metrics có thể đếm redelivery,
+khác committed logical outcomes trong §3.3. Histograms lấy clocks trong cùng
+process; accepted-to-prediction latency vẫn theo source timestamp/cross-service
+rules hiện hành. Remove/reset assignment-local snapshots sau revoke, không giữ
+series của owner cũ như pending hiện tại.
+
+Outbox snapshot có thể DB-wide ở nhiều relay replicas: dùng `max by(topic,reason)`
+cho blocked keys và `max by(topic)` cho blockage age, không sum lặp. Nếu sau này
+đổi ownership/sharding của gauge phải review aggregation cùng dashboard. Primary
+reason ưu tiên ERROR → UNKNOWN → BACKOFF → LEASED, chỉ key có successor mới tính.
+Query lỗi ⇒ skip fresh sample + dependency error; không set0. Traces/logs giữ
+machine/event/partition/offset/generation, app metric labels tiếp tục cấm IDs.
+
+Bàn giao Người4/GitOps: panels queue wait/active-vs-limit, pending bytes/records,
+frontier stall + broker lag, ML/DB saturation, blocked head age và stale completion
+rate. Ngưỡng theo measured handler/recovery/SLO budgets, không copy20 keys/2s thành
+production threshold. Kafka lag thấp không tự chứng minh Alert/SSE đúng hoặc nhanh.
+Giữ series budget §2.3; tests sau này phải cover backpressure/rebalance/unknown
+ACK/no-data và per-process-vs-DB aggregation trước enable dashboard.
+
+## 12. Quan sát baseline100 và tối ưu khiX>100
+
+Baseline100 máy×1 reading/s=100/s. Kiến trúc scale-ready; khiX tăng, dùng cùng
+catalog metrics để tìm bottleneck, không thêm machine/event IDs vào labels.
+Theo dõi offered/generated/accepted unique rate, Kafka lag/oldest age, keyed queues/
+frontier, inference/DB pool latency, outbox/archive age, Business/SSE và browser
+render. Chỉ backend DB-visible metric không chứng minh target alert UI p95≤2s.
+
+Tính n/c/pool theo [Capacity §11](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100),
+đo lại sau mỗi thay đổi để giữ latency/coverage. Planning utilization70% là giả định;
+không có threshold HPA hoặc SLO metric mới được tự áp dụng bởi mục này.

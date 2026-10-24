@@ -1,0 +1,103 @@
+// MaintAI diagram 03 from the requested list — logical architecture, C4-inspired.
+digraph LogicalArchitecture {
+  graph [rankdir=TB, bgcolor="#ffffff", pad=0.40, nodesep=0.40, ranksep=0.70,
+    fontname="DejaVu Sans", fontsize=24, fontcolor="#10243a", labelloc=t,
+    label="MaintAI | 03 · Kiến trúc logic\nRanh giới ứng dụng, giao tiếp và chủ sở hữu dữ liệu · mục tiêu v1.4",
+    compound=true, splines=polyline];
+  node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=12,
+    color="#9fb5c9", fillcolor="#edf5ff", fontcolor="#16324f", margin="0.20,0.14", penwidth=1.3];
+  edge [fontname="DejaVu Sans", fontsize=10, color="#68839e", fontcolor="#47617a", arrowsize=0.7];
+
+  subgraph cluster_ui {
+    label="HAI FRONTEND RIÊNG"; color="#b7cde1"; style="rounded,filled"; fillcolor="#f8fbff";
+    business_ui [label="Business UI\nfrontend/ · KHUNG"];
+    simulator_ui [label="Simulator UI\nsensor-simulator-UI/ · CÓ CODE", fillcolor="#e2f4eb", color="#70ac92"];
+  }
+  oidc [shape=hexagon, label="OIDC / IdP bên ngoài\nIdentity, roles, machine scope", fillcolor="#f1edf9"];
+  sensor [label="Sensor backend · CÓ CODE\nControl API + scheduler\nAI4I → state/spool → sender", fillcolor="#e2f4eb", color="#70ac92"];
+  ingestion [label="Ingestion API · KHUNG\nAuth/envelope → Kafka ACK\nGateway adapter đã có trong SDK"];
+  kafka [shape=box3d, fillcolor="#e7eef9", label="Kafka · platform\nsensor.readings / sensor.rejected\ninference.results / alert.signals"];
+  storage [label="Storage Consumer · CÓ CODE\nraw-archive / rejected archive\noptional outcome archive", fillcolor="#e2f4eb", color="#70ac92"];
+
+  subgraph cluster_processing {
+    label="PROCESSING OWNER · CÙNG CODEBASE / IMAGE GROUP";
+    color="#d6b36a"; style="rounded,filled"; fillcolor="#fffaf0";
+    subgraph cluster_worker_runtime {
+      label="MỘT Processing Worker runtime · SDK0.2 CÓ CODE · APP KHUNG";
+      color="#d6b36a"; style="rounded,dashed";
+      keyed [label="Module keyed scheduler / executor\nFIFO cùng máy · khác máy song song\nBounded queues / active keys"];
+      worker [label="Module handler\nDQ → ML client → risk\nDurable assignment fence"];
+      coordinator [label="Module offset coordinator\nReceipt ledger từng partition\nCommit safe completed prefix"];
+      keyed -> worker [label="1 active task / máy"];
+    }
+    relay [label="Outbox Relay · SDK CÓ CODE\nHead-of-key / dispatch cursor\nTopic + machine ordering\nWrapper có · image/health pending"];
+    read_api [label="Processing Read API · KHUNG\nStatus / history / chart\nVALID windows · quyền đọc"];
+    pdb [shape=cylinder, fillcolor="#fff0ce", label="processing_db\nInbox + outcomes/history + outbox"];
+    worker -> pdb [label="transaction"];
+    pdb -> coordinator [label="durable completion", constraint=false];
+    relay -> pdb [label="claim / mark outbox", dir=both];
+    read_api -> pdb [label="SELECT"];
+  }
+  subgraph cluster_business {
+    label="BUSINESS OWNER · CÙNG CODEBASE / IMAGE GROUP";
+    color="#91b6d8"; style="rounded,filled"; fillcolor="#f3f8ff";
+    consumer [label="Business Consumer · KHUNG\n3 handlers + brief/catalog jobs\nInbox + CAS + lifecycle"];
+    api [label="Business API · KHUNG\nREST / SSE / RBAC\nHistory + RAG + drift facade"];
+    bdb [shape=cylinder, fillcolor="#e2edfb", label="business_db\nLatest projections + alert/audit\nfeedback + durable jobs"];
+    consumer -> bdb [label="transaction + NOTIFY"];
+    api -> bdb [label="read / business mutations", dir=both];
+    consumer -> api [label="post-commit fan-out", style=dashed, constraint=false];
+  }
+  inference [label="ML inference · KHUNG\nHTTP predict + fitted preprocessing\nImage riêng, model bundle đã pin"];
+  rag [label="RAG / LLM API · KHUNG\nRetrieve → brief/checklist\ncitations + grounding"];
+  kdb [shape=cylinder, fillcolor="#eae5f7", label="knowledge_db\nDocuments / chunks / pgvector"];
+  llm [shape=hexagon, fillcolor="#f1edf9", label="LLM / embedding provider\nTheo cấu hình RAG"];
+  drift [label="Drift Worker · CODE MỘT PHẦN\nBatch theo lịch + matching reference\nKhông tự retrain / đổi risk", fillcolor="#fff0d9", color="#c6a269"];
+  ddb [shape=cylinder, fillcolor="#fff0ce", label="drift_db\nReports + checkpoints"];
+  s3 [shape=folder, fillcolor="#edf2f6", label="S3 / MinIO · logical object groups\nRaw accepted / rejected\nProcessed archive / reports\nApproved data / model / manuals"];
+  training [label="Training pipeline · KHUNG\nApproved dataset → train/evaluate\nModel + preprocessing + drift reference\nImage riêng với inference"];
+  mlflow [label="MLflow Server + UI · platform\nImage source: ml-service/mlflow/\nCode đóng gói có; pins chưa chốt", fillcolor="#f1edf9"];
+  mdb [shape=cylinder, fillcolor="#eae5f7", label="mlflow_db\nTracking / registry metadata"];
+  monitoring [label="Prometheus / exporters\nDrift qua Pushgateway\nMetrics từ app + platform", fillcolor="#f1edf9"];
+  grafana [label="Grafana UI · platform\nSystem / ML / Kafka / drift", fillcolor="#f1edf9"];
+
+  simulator_ui -> sensor [label="HTTPS Control API"];
+  business_ui -> api [label="HTTPS REST / SSE"];
+  oidc -> simulator_ui [label="Code + PKCE", style=dashed, constraint=false];
+  oidc -> business_ui [label="Code + PKCE", style=dashed, constraint=false];
+  sensor -> ingestion [label="HTTP readings + credential"];
+  ingestion -> kafka [label="accepted / rejected · ACK"];
+  kafka -> keyed [label="processing-v1 · poll / assignment"];
+  coordinator -> kafka [label="safe input offset", style=dashed, constraint=false];
+  kafka -> storage [label="archive groups"];
+  kafka -> consumer [label="3 Business groups"];
+  relay -> kafka [label="results / alert signals\nordered dispatch từng topic/máy", constraint=false];
+  storage -> s3 [label="immutable raw + manifest"];
+  worker -> inference [label="HTTP, chỉ DQ VALID", dir=both];
+  api -> read_api [label="HTTP status / history", dir=both];
+  read_api -> s3 [label="verified processed archive"];
+  worker -> s3 [label="processed archive / export", style=dashed];
+  consumer -> rag [label="HTTP từ leased brief jobs", dir=both];
+  rag -> kdb [label="owner SQL"];
+  rag -> llm [label="generation / embedding", dir=both];
+  rag -> s3 [label="approved manuals"];
+  drift -> read_api [label="VALID window", dir=both, constraint=false];
+  drift -> s3 [label="reference / committed reports", dir=both, constraint=false];
+  drift -> ddb [label="owner SQL"];
+  consumer -> s3 [label="drift report catalog", style=dashed, constraint=false];
+  training -> s3 [label="approved input / versioned outputs", dir=both, constraint=false];
+  training -> mlflow [label="SDK tracking / registry"];
+  mlflow -> mdb [label="owner SQL"];
+  mlflow -> s3 [label="artifacts"];
+  inference -> s3 [label="pinned model bundle"];
+  grafana -> monitoring [label="datasource", constraint=false];
+  drift -> monitoring [label="latest gauges → Pushgateway", style=dashed];
+  // Invisible ordering edges only influence layout; they are not dependencies.
+  s3 -> drift [style=invis];
+  s3 -> training [style=invis];
+  monitoring -> grafana [style=invis];
+
+  note [shape=note, fillcolor="#fff5dd", color="#d8b566", fontsize=11,
+    label="C4-inspired: đường bao lớn là owner; Worker subcluster chứa MODULE NỘI BỘ, không thêm Deployment.\lMột PostgreSQL instance chứa 5 logical DB; các cylinder không phải 5 DB server.\lSDK0.2 có keyed/coordinator/fence/ordered relay; full app callbacks/probes/image còn pending.\lBusiness / Drift không SQL processing_db. Không SDK Deployment. 4 UI, không thêm UI.\lSequence tăng bền vững theo máy; không sort epoch. Late duplicate/cross-topic vẫn cần inbox/CAS.\lCÓ CODE ≠ đã deploy/E2E. Auth/metrics áp dụng ở các boundary.\l"];
+  grafana -> note [style=invis];
+}

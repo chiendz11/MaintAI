@@ -1,4 +1,4 @@
-# ML codebase — training và inference là hai workload
+# ML codebase — ba image: training, inference và MLflow
 
 `ml-service/` là code owner, **không phải một deployment duy nhất**.
 
@@ -6,12 +6,14 @@
 | --- | --- | --- | --- |
 | [`inference/`](inference/Dockerfile) | Deployment `ml-service` | `ml-service` | Raw VALID features từ Processing → fitted preprocessing → predict. |
 | [`training/`](training/Dockerfile) | Argo WorkflowTask `training` | `training` | Approved curated data → train/evaluate/export model bundle. |
+| [`mlflow/`](mlflow/README.md) | Platform Deployment `mlflow` | `mlflow` | Đóng gói upstream Tracking/Registry/UI, local dev và app CI publisher; production manifests ở GitOps. |
 | [`shared/`](shared/README.md) | Không có runtime | Không có image riêng | Shared preprocessing và compatible artifact classes. |
 | `artifacts/` | Không có runtime | — | Local generated output, không commit vào Git. |
 
 Mỗi runtime có `Dockerfile` riêng để nhìn rõ ranh giới triển khai và `runtime.json`
-để bổ sung metadata. Hai Dockerfile hiện là placeholder. Chưa có entrypoint, dependency
-lock hoặc image được build. Khi implement, training/inference dùng dependency và
+để bổ sung metadata. Training/inference còn placeholder; MLflow có Dockerfile,
+dependency locks/local Compose/publisher nhưng chưa pin base hoặc build image.
+Khi implement, training/inference dùng dependency và
 entrypoint riêng; không import training vào serving. Image version/digest độc
 lập model/preprocessor/dataset version; model mới có thể dùng lại serving image
 nếu serialization/runtime tương thích.
@@ -22,10 +24,11 @@ Caller `/predict` là **Processing Worker**; Business API/Consumer không tính 
 Training bundle phát hành qua GitOps PR, không promote chỉ vì raw S3 upload,
 drift hoặc feedback. MLflow Server sở hữu mlflow_db, trainer chỉ gọi MLflow API.
 
-Đọc System Contracts v1.3 §7–8/31–33 và Guide §15–16. Machine-readable OpenAPI
-hiện vẫn là baseline v1.1, xem [migration status](../docs/repository-layout.md).
-Trainer tham chiếu trong repo MaintAI_gitops vẫn ở runtime/maintai_platform/train.py;
-skeleton này chưa di chuyển code đó hoặc đổi deployment manifests/CI publisher.
+Đọc System Contracts v1.4 §7–8/34–41 và Guide §15–16/43/49. Machine-readable HTTP
+bundle hiện baseline1.3.2, xem [migration status](../docs/repository-layout.md).
+MLflow image được publish bởi workflow MaintAI `maintai-publish.yml`; GitOps chỉ
+nhận signed digest qua PR. ML review client/server compatibility; Platform/MLOps
+vận hành service, credentials, DB/S3 và release. Không fork MLflow hoặc viết lại UI.
 
 
 > **Thiết kế v1.4:** Xem [docs index](../docs/README.md),

@@ -1,24 +1,38 @@
 # MaintAI docs — thiết kế mục tiêu v1.4
 
-Cập nhật: **2026-10-20**. Sáu tài liệu v1.4 đã được nhập vào repo và hiệu chỉnh
+Cập nhật: **2026-10-23**. Sáu tài liệu v1.4 đã được nhập vào repo và hiệu chỉnh
 đường dẫn cùng các quyết định dự án đã chốt. Bộ Kafka Python dùng chung đã được
 thêm riêng; DB/application/image/deployment chưa tự migrate theo tài liệu.
 
 ## Đọc theo thứ tự
 
+Để hiểu lý do hình thành kiến trúc, đọc trước bộ
+[Yêu cầu → Giả định tải → Kiến trúc → Biện luận](design-basis/README.md).
+Bộ này đối chiếu đề Chủ đề3: **giả định ban đầu100 máy×1 reading/s=100 readings/s**;
+5 máy là smoke test nhỏ. **Hệ thống scale-ready ở cấp kiến trúc**: khiX>100 sẽ tính
+lạiR=X×r, đo bottleneck và tối ưu latency theo budget; không giới hạn cứng100 máy
+hoặc tuyên bố throughput đã benchmark. Xem [quy trình scale](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).
+
 | Tài liệu | Vai trò |
 | --- | --- |
-| [System Contracts v1.4](MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md) §34–41 | Nguồn chuẩn cho v1.4, UI-01, OBS-01/MLFLOW-01; ưu tiên phần kế thừa |
+| [Cơ sở thiết kế](design-basis/README.md) |4 tài liệu dẫn từ FR/quality criteria của đề đến workload, capacity math, architecture decisions và crash/rolling tradeoffs |
+| [System Contracts v1.4](MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md) §34–43 | Nguồn chuẩn cho v1.4, UI-01, OBS-01/MLFLOW-01, PROC-ORDER-01 và baseline100/scale-ready; ưu tiên phần kế thừa |
 | [Deployment Architecture](DEPLOYMENT_ARCHITECTURE.md) | Deployments/Services, DB roles, Kafka topics, quarantine và giới hạn scale |
+| [Local development k3d](LOCAL_DEVELOPMENT_K3D.md) | Folder hạ tầng local riêng, core platform, app gates và điều kiện còn thiếu trước E2E; chưa tạo cluster |
+| [Bộ sơ đồ trực quan](diagrams/README.md) | Use Case, kiến trúc logic, deployment và data flow; SVG/PNG, nguồn DOT và gallery offline có zoom/pan |
 | [Runtime Dataflow](RUNTIME_DATAFLOW.md) | Accepted/rejected, DQ/inference/alerts, history và crash boundaries |
 | [Versioning & Provenance](VERSIONING_AND_PROVENANCE.md) | Dataset/split/model/image/policy/manual/release lineage, approvals và rollback |
-| [Implementation Guide v1.4](MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md) §42–49 | Triển khai Deployment/provenance, UI và instrumentation/tracking vào từng module |
+| [Implementation Guide v1.4](MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md) §42–55 | Deployment/provenance, UI, instrumentation, Sensor/Storage/MLflow, concurrency và capacity100→X |
+| [Kafka/Processing implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) | SDK0.2.0/bundle1.1.0, callbacks/modes/migration/defaults, real broker/DB evidence và app/platform gaps |
+| [PROC-ORDER-01 — Processing concurrency/ordering](PROCESSING_CONCURRENCY_AND_ORDERING.md) | Keyed FIFO/executor, safe offset frontier, durable ownership fence, ordered outbox, budgets và migration/acceptance; SDK source đã có, app/prod integration pending |
 | [Implementation Plan](IMPLEMENTATION_PLAN.md) | Thứ tự PR 00–10, migration và tiêu chí nghiệm thu cho công việc triển khai sau này |
 | [Functional Overview](MaintAI_Functional_Overview.md) | Chức năng và trải nghiệm của người dùng |
 | [UI-01 — Bốn giao diện](UI_ARCHITECTURE.md) | Quyết định20/10: Business, Simulator, Grafana, MLflow; API/auth, prototype gaps và release độc lập |
 | [OBS-01 — Metrics implementation](OBSERVABILITY_IMPLEMENTATION.md) | Catalog chuẩn names/types/labels/units/buckets, commit/retry, Drift one-hot/Pushgateway, queries và bàn giao GitOps |
 | [MLFLOW-01 — Training integration](MLFLOW_INTEGRATION_GUIDE.md) | SDK examples, run/model/artifact identity, durable intent/checkpoints, retry/unknown recovery và strict output mapping |
+| [MLflow image/local dev](../ml-service/mlflow/README.md) | App-owned server Dockerfile/locks/Compose/publisher; GitOps-owned deployment/config và signer migration |
 | [Sensor0.3.0 implementation](SENSOR_IMPLEMENTATION_REPORT.md) | Các file/lý do thay đổi, runtime/auth/durability, bằng chứng kiểm tra và giới hạn |
+| [Storage0.1.0 runtime](../storage-consumer/README.md) | Archive accepted/rejected/optional outcomes, offline config/tests, S3/MinIO settings, retry/probes/metrics và CI |
 | [Readiness / khoảng cách tích hợp](implementation-readiness.md) | Implementation thực tế, artifacts chưa được cung cấp và điểm phải freeze |
 | [Repository layout](repository-layout.md) | Folder/runtime đang có và phần vẫn skeleton |
 | [API decisions](api-contract-decisions.md) | Chi tiết HTTP của baseline máy đọc được1.3.2; chờ migration v1.4 |
@@ -31,9 +45,12 @@ thêm riêng; DB/application/image/deployment chưa tự migrate theo tài liệ
 ## Thứ tự ưu tiên
 
 1. Yêu cầu người dùng và các quyết định dự án tại mục dưới.
-2. System Contracts v1.4 §34–41, UI-01 và các điều khoản Deployment/Dataflow/Provenance tương ứng.
+2. System Contracts v1.4 §34–43, UI-01 và các điều khoản Deployment/Dataflow/Provenance tương ứng.
    §41 ủy quyền catalog OBS-01/1.0.0 và workflow MLFLOW-01/1.0.0 làm chi tiết
    chuẩn, thay các short names, mã drift0..4 hoặc get-or-create assumptions cũ.
+   §42 ủy quyền PROC-ORDER-01/1.0.0 và metrics extension OBS-01 §11; các điều
+   khoản này ưu tiên khuyến nghị Processing tuần tự/row-only relay cũ. Không
+   nâng trạng thái source/machine contracts chỉ vì target docs đã cập nhật.
 3. Các chương kế thừa và Guide; đặc tả chi tiết history/recovery/API bổ sung những phần chưa bị thay thế.
 4. Source, runtime metadata và machine contracts là bằng chứng trạng thái đang có,
    không tự chứng minh đã thực hiện yêu cầu v1.4.
@@ -43,6 +60,25 @@ freeze schema/migration trước khi đổi producer hoặc consumer. Không t�
 đang được CI kiểm tra chỉ để đổi nhãn thành v1.4.
 
 ## Quyết định dự án còn hiệu lực
+
+- **CAPACITY-BASE100-01,23/10:** baseline100 máy×1 reading/s; kiến trúc scale-ready,
+  khiX>100 tính/đo lại capacity và tối ưu latency từng stage theo Contracts §43,
+  Guide §55 và [Capacity §11](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).
+  100 máy không là trần, source default5 chưa tự thay đổi.
+
+- **PROC-ORDER-01,23/10:** Processing target dùng bounded keyed FIFO: cùng máy
+  tuần tự, khác máy song song, kể cả cùng Kafka partition. Commit safe completed
+  prefix theo partition, durable fence chặn stale DB writes. Outbox target thêm
+  dispatch order/cursor/head-only claim theo topic/máy; unknown ACK không cho
+  successor vượt head. Late duplicates và cross-topic ordering vẫn cần inbox/CAS.
+  Source sequence tăng xuyên epoch, không sort opaque epoch. Giữ Deployment/DB/
+  topic/bốn UI; SDK0.2.0 đã có code/tests. Guide §53, Plan §K và readiness §19 ghi app/prod gaps.
+
+- **MLFLOW-IMAGE-01,21/10:** Dockerfile/locks/local dev/publisher MLflow ở
+  `ml-service/mlflow/` trong app; training/inference/server có image riêng. GitOps
+  quản lý production workload/config và nhận exact app-signed digest qua PR.
+  Đây là chuyển source producer, không tự bật deployment, cấp IAM hoặc chọn
+  server/client version. MLFLOW-01 §2.1 và Guide §52 ghi cutover và prerequisites.
 
 - **Nhóm 4 người:** Người 1 làm Backend + Main Frontend + Ingestion + toàn bộ
   Processing; Người 2 làm ML; Người 3 làm RAG; Người 4 làm Platform/MLOps,
@@ -77,7 +113,9 @@ freeze schema/migration trước khi đổi producer hoặc consumer. Không t�
 - GitOps/hạ tầng nằm ở hai repo riêng; mỗi module owner tự làm tests, Dockerfile,
   probes và cấu hình workload, Người 4 giữ pipeline/môi trường chung.
 - **OBS-01 + MLFLOW-01:** App owners tạo metrics/tracking data theo hai hướng dẫn
-  mới; Người4 quản lý Prometheus/exporters/Grafana/MLflow Server ở GitOps. Tên,
+  mới; Người4 quản lý Prometheus/exporters/Grafana/MLflow deployment ở GitOps.
+  MLflow image source/pins/local dev/publisher ở `ml-service/mlflow/`, image riêng
+  với training/inference; GitOps chỉ nhận signed digest/config qua PR. Tên,
   labels/types/buckets theo catalog; drift state one-hot0/1. Create-run/version
   có durable intent; unknown result không blind retry hoặc tự chọn latest.
   Chưa migrate source/ledger/GitOps chỉ vì docs đã chuẩn hóa.
@@ -85,13 +123,20 @@ freeze schema/migration trước khi đổi producer hoặc consumer. Không t�
 ## Trạng thái tích hợp
 
 Tài liệu mục tiêu là **1.4.0**; `contracts/v1.3/` và14 runtime descriptors vẫn là
-**baseline1.3.2**; Sensor0.3.0 dùng wire1.3.0/control1.3.2, Drift còn implementation1.1. `contracts/kafka/`
-bundle1.0.0 bổ sung rejected1.4/result1.4 cùng compatibility reader2.0 và `messaging/`
+**baseline1.3.2**; có thêm platform descriptor MLflow ở app, không thêm deployment
+mới. Sensor0.3.0 dùng wire1.3.0/control1.3.2, Drift còn implementation1.1. `contracts/kafka/`
+bundle1.1.0 bổ sung migration002, giữ rejected1.4/result1.4 cùng compatibility reader2.0 và `messaging/`
 có transport/durable adapters; không phải toàn bộ implementation v1.4. Chưa có
 release manifest/provider DTO migrations hoặc full app/K8s scaffold của bộ bàn
 giao. Các lệnh `implementation/scripts/...`
 trong Plan là ví dụ cho artifacts chưa được cung cấp, không phải lệnh repo đang chạy.
 Chi tiết và khác biệt cần giải quyết ở [readiness](implementation-readiness.md).
+
+Storage Consumer0.1.0 đã có owner runtime, locked package, Dockerfile và CI; dùng
+microbatch1 của SDK, preflight versioning, retry/rebalance và OBS-01. Chưa có AWS
+bucket/IRSA hoặc xác nhận Kafka+S3/container/rollout thật. Có thể validate config
+và chạy fixture tests khi chưa có AWS; cấu hình endpoint/bucket/region/credential
+qua environment sau. Xem [runbook Storage](../storage-consumer/README.md).
 
 UI-01 chỉ chốt thiết kế, không tạo frontend/config/deployment hoặc sửa wire schema.
 Business UI vẫn skeleton; Simulator UI đã có [React client/demo](../sensor-simulator-UI/README.md),
@@ -112,6 +157,12 @@ riêng nên được giữ và cập nhật, không phải bản sao thừa.
 Downloads, hash bytes hiện tại và metadata các bản đã retire. File nguồn Downloads
 không bị sửa. Không chạy kế hoạch triển khai trong tài liệu chỉ vì nhập docs.
 
+
+Source update23/10: SDK0.2.0/bundle1.1.0 và Processing transport0.1.0 có
+keyed/ordered/fenced code, explicit migration/activation và local broker/DB tests.
+Các snapshot trước vẫn giữ theo ngày; [implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md)
+và readiness §19 là trạng thái hiện tại. App/probes/image/production integration
+và config3 release cutover còn pending, không tự enable workload.
 
 ## Cập nhật Ingestion M1 — 2026-10-23
 

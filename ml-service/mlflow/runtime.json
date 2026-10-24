@@ -1,0 +1,28 @@
+{
+  "descriptor_kind": "MaintAIRuntime",
+  "schema_version": "1.0.0",
+  "target_contract_revision": "1.3.2",
+  "runtime_id": "mlflow",
+  "runtime_scope": "platform",
+  "workload_kind": "Deployment",
+  "code_owner": "ml-platform",
+  "deployment_owner": "MaintAI-gitops",
+  "implementation_status": "image_packaging_and_publisher_implemented_unverified",
+  "image_group": "mlflow",
+  "image_digest": null,
+  "entrypoint_status": "upstream_mlflow_server",
+  "purpose": "MLflow Tracking, Registry and UI; app-owned packaging, GitOps-owned production workload.",
+  "source_paths": ["ml-service/mlflow"],
+  "logical_database": "mlflow_db",
+  "kafka_subscriptions": [],
+  "kafka_publications": [],
+  "interfaces": ["MLflow HTTP SDK/API/UI", "PostgreSQL", "S3 artifact store"],
+  "boundaries": [
+    "Separate image/runtime from training and inference. No new application deployment or database is introduced by moving source.",
+    "No MLflow fork or custom React UI. Production config, IAM, migrations and enablement stay in GitOps/infrastructure.",
+    "Unconfigured base/server-version/compatibility pins block publication. Local Compose uses PostgreSQL and filesystem artifacts, not production S3."
+  ],
+  "dockerfile": "ml-service/mlflow/Dockerfile",
+  "dockerfile_status": "implemented_base_unconfigured",
+  "implemented_contract_revision": null
+}

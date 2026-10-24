@@ -14,8 +14,9 @@ UI-01 ngày2026-10-20 chốt bốn UI chính, chi tiết
 [UI Architecture](UI_ARCHITECTURE.md). `frontend/` vẫn là Business UI;
 `sensor-simulator-UI/` là source root React/TypeScript cho Simulator frontend độc lập. Không
 đổi tên runtime frontend, không gộp frontend vào Sensor backend image. Grafana
-và MLflow dùng UI của platform tools, provisioning/ingress/images ở repo GitOps/
-hạ tầng; không thêm hai React roots hoặc portal service bắt buộc trong app.
+và MLflow dùng UI của platform tools. MLflow image source/locks/publisher ở app;
+production provisioning/ingress/config và Grafana images vẫn ở GitOps/hạ tầng.
+Không thêm hai React roots hoặc portal service bắt buộc trong app.
 
 Lượt implementation20/10 đã thêm sensor-simulator-UI/ app/tests/build/lockfile, demo driver,
 live Control client/OIDC/recovery, Dockerfile/runtime descriptor và architecture
@@ -23,8 +24,9 @@ index. Provider Sensor0.3.0 đã có HTTP/browser integration; chưa build image
 nhưng phải có image/config/Deployment và release riêng; shared library ảnh hưởng
 nhiều consumer thì CI/release có phối hợp.
 
-[`architecture/runtime-map.json`](../architecture/runtime-map.json) liệt kê14
-runtime folders. Mỗi folder có `runtime.json` và `Dockerfile`; đây là metadata
+[`architecture/runtime-map.json`](../architecture/runtime-map.json) liệt kê14 app
+runtime folders và1 platform descriptor MLflow riêng. Mỗi folder có `runtime.json`
+và `Dockerfile`; đây là metadata
 inventory, **không phải Kubernetes manifests hoặc bằng chứng mọi entrypoint đã implement**.
 
 - `ingestion-api/`, `storage-consumer/`, `frontend/`, `rag-service/`: mỗi root là
@@ -32,8 +34,9 @@ inventory, **không phải Kubernetes manifests hoặc bằng chứng mọi entr
 - `sensor-simulator-UI/`: static React frontend riêng, demo/live client; Sensor0.3.0 provider đã implement; chưa deploy.
 - `backend/`: Business owner, có hai runtime `business-api/`, `business-consumer/`.
 - `processing/`: Processing owner, có `worker/`, `read-api/`, `outbox-relay/`.
-- `ml-service/`: ML owner, có `inference/` Deployment và `training/` WorkflowTask;
-  shared preprocessing không phải service thứ ba.
+- `ml-service/`: ML owner, có `inference/` Deployment, `training/` WorkflowTask và
+  `mlflow/` platform image source/local dev/publisher. Ba image độc lập; production
+  MLflow Deployment/Service/config vẫn ở GitOps. Shared preprocessing không là runtime.
 - `sensor/`: target long-running simulator/control Deployment; `drift-worker/`:
   target periodic CronJob. Sensor0.3.0 đã migrate ACK202/control; Drift implementation còn theo v1.1.
 - `messaging/`: shared Python SDK, không deployment. `contracts/kafka/` là canonical
@@ -42,8 +45,11 @@ inventory, **không phải Kubernetes manifests hoặc bằng chứng mọi entr
 Business API và Consumer cùng image group/DB owner; Processing worker/read/relay
 cũng có thể dùng cùng image với entrypoint khác. Tách runtime không bắt buộc tạo
 image riêng. ML train và ML inference vẫn có image group riêng. Cả14 runtime
-folders có Dockerfile riêng:11 placeholders, Sensor/Drift và Simulator UI static
-server Dockerfile; Simulator UI image chưa build/run.
+folders có Dockerfile riêng:10 placeholders, Sensor/Drift, Simulator UI và Storage.
+Storage image chưa build/run; Dockerfile không chứng minh deployment đã chạy.
+MLflow platform Dockerfile bổ sung ở `ml-service/mlflow/`, không cộng vào14 app
+runtimes hoặc tạo thêm database/deployment. Upstream base/version pins còn null;
+production publication bị chặn cho tới khi owner chốt và kiểm cặp SDK/server.
 
 ## Modules được di chuyển
 
@@ -69,7 +75,10 @@ Kafka broker/topic, Docker runtime hoặc repositories GitOps/infrastructure.
   là modules cùng một runtime; không phải service mới. Volume/IdP/Kafka rollout chưa verify.
 - Drift hiện có direct PostgreSQL data loader; target chỉ đọc Processing API hoặc
   curated S3 và persist riêng `drift_db`. Hai adapters mới là placeholder.
-- `backend/`, `processing/`, `storage-consumer/`, ML/RAG/Frontend
+- Storage0.1.0 có runtime trong `storage-consumer/src/maintai_storage/`, dùng SDK
+  accepted/rejected/optional outcomes, probes/metrics và retry. Offline config/tests
+  không cần AWS; external integration và bucket/IRSA thực chưa xác nhận.
+- `backend/`, `processing/`, ML/RAG/Frontend
   vẫn thiếu application runtime. Kafka producer/consumer, inbox/outbox migration
   và raw S3 adapter nằm tại `messaging/`; owner tích hợp DQ/risk/history/projections,
   auth/probes/SSE và migrations nghiệp vụ. Xem [hướng dẫn nhóm](KAFKA_DEVELOPMENT_GUIDE.md).
@@ -104,6 +113,19 @@ tài liệu/contracts kiến trúc v1.1 đã gỡ sau khi chuyển các dependen
 Executable source Sensor/Drift được giữ theo yêu cầu người dùng. Xem
 [báo cáo rà soát](legacy-artifact-audit.md). Metadata14 runtimes dùng baseline
 1.3.2; việc thêm Simulator UI client/descriptor không chứng minh deployment thật.
+
+## PROC-ORDER-01 — module đề xuất bên trong Processing
+
+[Decision1.0.0,23/10](PROCESSING_CONCURRENCY_AND_ORDERING.md) đề xuất keyed runner,
+per-machine queues/executor, partition completion coordinator và assignment fence
+trong Worker; order cursor/key lease/head-only claim trong Relay. Các modules
+đã có trong SDK0.2.0; processing/src có wrappers/factory. Full app callbacks,
+health/image còn pending; đọc implementation report thay vì suy từ folder layout.
+
+Worker/Read API/Relay giữ runtime/image-group/DB owner hiện có. Legacy ConsumerRunner
+hiện một in-flight/toàn assignment; legacy row-only relay chưa ordered theo key. Thêm
+Processing opt-in thay vì tự đổi Storage/Business defaults; migrations mới và
+bundle pin review trước enable. Readiness §18 và Plan §K ghi source gaps.
 
 ## Ingestion M1 (2026-10-23)
 
