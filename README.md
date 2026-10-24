@@ -65,6 +65,10 @@ Business DB chỉ chứa latest projections và business data, không full raw h
 
 ## Đã có gì và còn thiếu gì
 
+- [Ingestion M1](ingestion-api/README.md) có HTTP/auth/ACK-first quarantine,
+  health/metrics, tests local real Kafka và image smoke; shared OIDC/TLS/ACL và
+  GitOps deployment chưa nghiệm thu. HTTP Ingestion1.4.0 độc lập các API1.3.2.
+
 - Sensor0.3.0 có ACK202, SQLite/WAL sequence/spool/receipts, scoped JWT Control API,
   scheduler/sender riêng và OBS-01 metrics. Image/deployment chưa verify.
 - Drift Worker có detector/CLI/persistence/metrics v1.1; target API/S3 adapters và
@@ -72,7 +76,7 @@ Business DB chỉ chứa latest projections và business data, không full raw h
   [drift worker](drift-worker/README.md) để dùng implementation hiện có.
 - [messaging/](messaging/README.md) có Kafka ACK/consumer, owner-local inbox/outbox,
   relay và raw S3 adapter; [Kafka guide](docs/KAFKA_DEVELOPMENT_GUIDE.md) hướng dẫn
-  4 người tích hợp. Nghiệp vụ/entrypoint của Ingestion/Processing/Business,
+  4 người tích hợp. Nghiệp vụ/entrypoint của Processing/Business,
   ML/RAG/Business Frontend và SSE/history vẫn cần implement; Sensor Control đã có.
 - [Simulator UI](sensor-simulator-UI/README.md) có React/TypeScript, demo5 máy, live
   Control API client, OIDC, command recovery và checks riêng. Sensor Control API

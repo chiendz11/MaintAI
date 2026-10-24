@@ -3,7 +3,7 @@
   "target_contract_revision": "1.4.0",
   "upstream_target_contract_revision": "1.4.0",
   "imported_on": "2026-10-17",
-  "amended_on": "2026-10-20",
+  "amended_on": "2026-10-24",
   "hash_semantics": "documents contains active paths with current sha256; upstream_sha256 preserves supplied/imported bytes; retired_documents preserves old checksums without active files",
   "documents": [
     {
@@ -15,13 +15,13 @@
     {
       "path": "docs/README.md",
       "source_filename": "README.md",
-      "sha256": "a1a02d36419850d38297f2bb37e03d1c1c41fc5ad4f8f760adc76bfe57fb4809",
+      "sha256": "411d94c109ad549df214c4cffad5c581595f1054821087b173cf37ca81615ac5",
       "upstream_sha256": "b8f3731050d7cba47d5eecebd8ecfa7457dc4a7c427e9f408a1a22dd89c9b0d7"
     },
     {
       "path": "docs/api-contract-decisions.md",
       "source_filename": "api-contract-decisions.md",
-      "sha256": "6cfb1738ac2258207faba540fd46e62d74569e8ea21eab425cf4c78e82d16187",
+      "sha256": "d286046539d9cdff213bb452c336c468a2fcdfa49b3c8386293aac7e96dd9f02",
       "upstream_sha256": "153aea7b6f92e25fd11e9689092711f9806c59b0204099ae807e113fa830037b"
     },
     {
@@ -40,13 +40,13 @@
       "path": "docs/implementation-readiness.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "534695f784b8de8103a9b09f77c5a115a32ddb6a3ff72d881a3515cbe70dd43e"
+      "sha256": "9f4698cc4fb4a5b1092d1672033cd8b5c7af288f94143615b09ea45ac4c6b014"
     },
     {
       "path": "docs/repository-layout.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "dea601a8858758e45101e17694898b6316c2e29849df1156586184d43245ed73"
+      "sha256": "d35e076340b4f8040acf4569147255c6d85b113cd37770ab915e6d29944b7e85"
     },
     {
       "path": "docs/legacy-artifact-audit.md",

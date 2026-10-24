@@ -35,8 +35,8 @@ SIM_CORS_ORIGINS='["http://127.0.0.1:5174"]' \
 .venv/bin/maintai-sensor serve --dataset sensor/data/ai4i2020.csv
 ```
 
-Control ở `http://127.0.0.1:8005`. Ingestion wrapper hiện vẫn là module khác/chưa
-có runtime hoàn chỉnh; không có Ingestion thì readings chờ trong spool, không
+Control ở `http://127.0.0.1:8005`. Ingestion M1 đã có runtime HTTP-to-Kafka riêng;
+pipeline đầy đủ chưa nghiệm thu. Không có Ingestion thì readings chờ trong spool, không
 biến thành accepted. Đổi frontend runtime-config sang live, API URL này và
 `auth.mode=none` theo [hướng dẫn UI](../sensor-simulator-UI/README.md).
 

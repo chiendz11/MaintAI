@@ -1,0 +1,8 @@
+{
+  "status": "UP",
+  "checks": {
+    "config_loaded": true,
+    "kafka": true,
+    "auth_keys": true
+  }
+}

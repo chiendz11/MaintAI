@@ -1,6 +1,6 @@
 # MaintAI API contracts
 
-Bộ contract máy đọc được nằm trong [v1.3/](v1.3/README.md), baseline **1.3.2**.
+Bộ contract máy đọc được nằm trong [v1.3/](v1.3/README.md), baseline **1.3.2**, riêng Ingestion M1 có HTTP revision **1.4.0**.
 [System Contracts v1.4 §34–39](../docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md)
 là target thiết kế mới. [Kafka bundle](kafka/README.md) bổ sung canonical wire
 schemas1.4, inbox/outbox SQL và fixtures dùng bởi Python SDK. HTTP/provider/release

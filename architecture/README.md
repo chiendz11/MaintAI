@@ -15,7 +15,7 @@ chung trong một owner. Metadata này không phải Kubernetes manifests.
 | Runtime | Thư mục | Workload | DB owner | Trạng thái |
 | --- | --- | --- | --- | --- |
 | `sensor` | [`sensor/`](../sensor/Dockerfile) | Deployment | — | implemented_sensor_provider |
-| `ingestion-api` | [`ingestion-api/`](../ingestion-api/Dockerfile) | Deployment | — | skeleton |
+| `ingestion-api` | [`ingestion-api/`](../ingestion-api/Dockerfile) | Deployment | — | implemented_local (M1) |
 | `processing-worker` | [`processing/worker/`](../processing/worker/Dockerfile) | Deployment | processing_db | skeleton |
 | `processing-read-api` | [`processing/read-api/`](../processing/read-api/Dockerfile) | Deployment | processing_db | skeleton |
 | `processing-outbox-relay` | [`processing/outbox-relay/`](../processing/outbox-relay/Dockerfile) | Deployment | processing_db | skeleton |

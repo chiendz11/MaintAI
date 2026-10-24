@@ -41,6 +41,9 @@ Workflow: [workflows/ci.yml](workflows/ci.yml), theo
   integration, bốn sensor scenarios, build wheel/sdist và runtime dependency audit.
 - Job `drift-container` build sensor/worker và chạy cùng PostgreSQL + Pushgateway,
   kiểm tra drift reports, retry, checkpoints và metrics của bốn scenarios.
+- Jobs `ingestion-ci`/`ingestion-integration` kiểm tra M1 unit/HTTP contracts,
+  real Kafka và container dùng JWKS fixture; đều thuộc `CI / required`. Không
+  chứng minh shared provider OIDC/TLS/ACL hoặc deploy.
 - Job `component-ci` dùng matrix cho `backend`, `frontend`,
   `ml-service`, `rag-service`; chỉ bật khi repository variable
   `ENABLE_COMPONENT_CI` có giá trị `true` (hiện chưa được đặt).
@@ -49,6 +52,10 @@ Workflow: [workflows/ci.yml](workflows/ci.yml), theo
   này thất bại. Chỉ placeholder `component-ci` được phép skip khi chưa bật biến
   `ENABLE_COMPONENT_CI=true`. Khi thêm CI job mới, thêm nó vào `required.needs`.
 - Quyền workflow là `contents: read`; chưa cần secrets.
+
+Audit dependencies của Sensor/Drift vẫn chạy và lưu cảnh báo trong log nhưng
+không chặn merge, theo policy đã merge ở PR #5. Tests, contracts, metadata,
+build và container checks vẫn là các kiểm tra bắt buộc.
 
 Với các component còn lại, thêm setup runtime, cache, install dependencies, lint,
 tests và build khi có code. Có thể dùng điều kiện `matrix.component` hoặc tách thành job

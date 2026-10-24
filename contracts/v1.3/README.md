@@ -7,6 +7,9 @@ hoặc deploy chỉ bằng các spec này.
 
 ## Versions và precedence
 
+Ingestion M1 có additive HTTP revision1.4.0 (health/metrics/errors); năm OpenAPI
+khác giữ1.3.2. Shared DTOs và Kafka bundle không tự bump theo revision này.
+
 Target docs mới là v1.4; xem [docs index](../../docs/README.md) và
 [readiness](../../docs/implementation-readiness.md). Bộ này giữ baseline1.3.2 cho
 compatibility; chưa có `sensor.rejected`/provenance schema v1.4. API description1.3.2

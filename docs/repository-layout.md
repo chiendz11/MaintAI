@@ -69,7 +69,7 @@ Kafka broker/topic, Docker runtime hoặc repositories GitOps/infrastructure.
   là modules cùng một runtime; không phải service mới. Volume/IdP/Kafka rollout chưa verify.
 - Drift hiện có direct PostgreSQL data loader; target chỉ đọc Processing API hoặc
   curated S3 và persist riêng `drift_db`. Hai adapters mới là placeholder.
-- `backend/`, `processing/`, `ingestion-api/`, `storage-consumer/`, ML/RAG/Frontend
+- `backend/`, `processing/`, `storage-consumer/`, ML/RAG/Frontend
   vẫn thiếu application runtime. Kafka producer/consumer, inbox/outbox migration
   và raw S3 adapter nằm tại `messaging/`; owner tích hợp DQ/risk/history/projections,
   auth/probes/SSE và migrations nghiệp vụ. Xem [hướng dẫn nhóm](KAFKA_DEVELOPMENT_GUIDE.md).
@@ -104,3 +104,11 @@ tài liệu/contracts kiến trúc v1.1 đã gỡ sau khi chuyển các dependen
 Executable source Sensor/Drift được giữ theo yêu cầu người dùng. Xem
 [báo cáo rà soát](legacy-artifact-audit.md). Metadata14 runtimes dùng baseline
 1.3.2; việc thêm Simulator UI client/descriptor không chứng minh deployment thật.
+
+## Ingestion M1 (2026-10-23)
+
+`ingestion-api/src/maintai_ingestion/` là package thực thi HTTP gateway, thay vì
+chỉ các thư mục `.gitkeep`. Entry point `maintai-ingestion`, runtime/dev locks,
+Dockerfile và tests đã thêm; metadata ghi local implementation, chưa deploy.
+HTTP Ingestion1.4.0 có health/metrics/error adaptation, các API khác giữ1.3.2.
+Không thay Kafka bundle hoặc Sensor legacy client trong M1.
