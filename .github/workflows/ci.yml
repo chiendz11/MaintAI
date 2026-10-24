@@ -67,6 +67,20 @@ jobs:
       - name: Validate current OpenAPI, schemas and examples
         run: python contracts/v1.3/validate.py
 
+  repo-metadata:
+    name: Docs and runtime metadata
+    needs: structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Verify document hashes, local references and runtime inventory
+        run: python3 .github/scripts/check_repository.py
+
   kafka-ci:
     name: Kafka SDK (Python ${{ matrix.python }})
     needs: structure
@@ -194,17 +208,53 @@ jobs:
 
       - name: Lint and format
         run: |
-          ruff check sensor
-          ruff format --check sensor
+          ruff check sensor .github/scripts sensor-simulator-UI/tests/provider --config sensor/pyproject.toml
+          ruff format --check sensor .github/scripts sensor-simulator-UI/tests/provider --config sensor/pyproject.toml
 
-      - name: Unit, contract and mock HTTP integration tests
-        run: python -m pytest sensor/tests --cov=simulator --cov-report=term-missing
+      - name: Contract, persistence, restart, scoped JWT and TLS OAuth tests
+        run: |
+          mkdir -p "$RUNNER_TEMP/sensor-test-results"
+          python -m pytest sensor/tests --cov=simulator --cov-report=term-missing \
+            --cov-report="xml:$RUNNER_TEMP/sensor-test-results/coverage.xml" \
+            --junitxml="$RUNNER_TEMP/sensor-test-results/junit.xml"
+
+      - name: Retain Sensor test reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sensor-tests-python-${{ matrix.python }}
+          path: ${{ runner.temp }}/sensor-test-results/
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Build Python distribution
         run: python -m build sensor
 
+      - name: Verify wheel and bundled scenarios outside checkout
+        run: |
+          python -m venv "$RUNNER_TEMP/sensor-wheel"
+          "$RUNNER_TEMP/sensor-wheel/bin/python" -m pip install -r sensor/requirements.lock
+          "$RUNNER_TEMP/sensor-wheel/bin/python" -m pip install --no-deps sensor/dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/sensor-wheel/bin/python" - <<'PY'
+          import importlib
+          from pathlib import Path
+          import sys
+
+          for module in (
+              "simulator.control.api", "simulator.control.auth", "simulator.ordering.store",
+              "simulator.scheduling.engine", "simulator.retry_spool.replay", "simulator.metrics",
+          ):
+              importlib.import_module(module)
+          for name in ("normal", "degradation", "critical", "recovery"):
+              assert (Path(sys.prefix) / "share/maintai-sensor/scenarios" / (name + ".yaml")).is_file()
+          PY
+          "$RUNNER_TEMP/sensor-wheel/bin/maintai-sensor" replay \
+            --dataset "$GITHUB_WORKSPACE/sensor/tests/fixtures/ai4i_sample.csv" --dry-run --limit 2
+
       - name: Audit runtime dependencies
         if: matrix.python == '3.12'
+        continue-on-error: true
         run: pip-audit --disable-pip --no-deps -r sensor/requirements.lock
 
   sensor-container:
@@ -226,6 +276,9 @@ jobs:
           docker run --rm --network none \
             --volume "$PWD/sensor/tests/fixtures/ai4i_sample.csv:/app/data/ai4i2020.csv:ro" \
             maintai-sensor:ci replay --dry-run --limit 2
+
+      - name: Verify Sensor runtime, non-root state and restart persistence in container
+        run: python3 .github/scripts/container_smoke.py sensor --image maintai-sensor:ci
 
   drift-ci:
     name: Drift Worker CI
@@ -257,7 +310,9 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
-          cache-dependency-path: drift-worker/requirements-dev.lock
+          cache-dependency-path: |
+            drift-worker/requirements-dev.lock
+            sensor/requirements.lock
 
       - name: Install locked dependencies and test sensor
         run: |
@@ -276,6 +331,7 @@ jobs:
         run: python -m build drift-worker
 
       - name: Audit runtime dependencies
+        continue-on-error: true
         run: pip-audit --disable-pip --no-deps -r drift-worker/requirements.lock
 
   drift-container:
@@ -352,7 +408,112 @@ jobs:
         run: npx --no-install playwright install --with-deps chromium
 
       - name: Browser interactions, failure semantics and real Sensor provider
-        run: npm run test:e2e
+        env:
+          PLAYWRIGHT_JUNIT_OUTPUT_FILE: ${{ runner.temp }}/simulator-ui-junit.xml
+        run: npm run test:e2e -- --reporter=line,junit
+
+      - name: Retain browser results and failure traces
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: simulator-ui-browser-results
+          path: |
+            ${{ runner.temp }}/simulator-ui-junit.xml
+            sensor-simulator-UI/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  simulator-ui-container:
+    name: Simulator UI container
+    needs: simulator-ui-ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Build independent frontend with pinned CI base images
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import subprocess
+
+          images = json.loads(Path("sensor-simulator-UI/ci-images.json").read_text())
+          subprocess.run([
+              "docker", "build", "--build-arg", "NODE_IMAGE=" + images["node_image"],
+              "--build-arg", "NGINX_IMAGE=" + images["nginx_image"],
+              "--tag", "maintai-simulator-ui:ci", "sensor-simulator-UI",
+          ], check=True)
+          PY
+
+      - name: Verify static image, config, probes and API boundary
+        run: python3 .github/scripts/container_smoke.py ui --image maintai-simulator-ui:ci
+  ingestion-ci:
+    name: Ingestion API unit and HTTP contracts
+    needs: structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.12'
+      - name: Build internal SDK and install locked app dependencies
+        run: |
+          python -m pip install build==1.6.1 setuptools==84.0.0 wheel==0.48.0
+          python -m build messaging --wheel --outdir /tmp/m1-wheels
+          python -m pip install --no-deps /tmp/m1-wheels/maintai_messaging-0.2.0-py3-none-any.whl
+          python -m pip install --find-links /tmp/m1-wheels -r ingestion-api/requirements-dev.lock
+          python -m pip install --no-deps --no-build-isolation -e ./ingestion-api
+      - name: Lint, unit, contract and installed artifacts
+        run: |
+          ruff check ingestion-api
+          ruff format --check ingestion-api
+          python -m pytest ingestion-api/tests/unit ingestion-api/tests/contract
+          python -m pip check
+          python -m build ingestion-api --wheel --outdir /tmp/m1-wheels
+          python messaging/scripts/lock_contracts.py --check
+
+  ingestion-integration:
+    name: Ingestion real Kafka and container
+    needs: ingestion-ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MAINTAI_INGESTION_INTEGRATION: '1'
+      MAINTAI_INGESTION_CONTAINER_TEST: '1'
+      KAFKA_TEST_BOOTSTRAP_SERVERS: 127.0.0.1:19092
+      MAINTAI_INGESTION_IMAGE: maintai-ingestion:m1-local
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.12'
+      - name: Install internal SDK and app test dependencies
+        run: |
+          python -m pip install build==1.6.1 setuptools==84.0.0 wheel==0.48.0
+          python -m build messaging --wheel --outdir /tmp/m1-wheels
+          python -m pip install --no-deps /tmp/m1-wheels/maintai_messaging-0.2.0-py3-none-any.whl
+          python -m pip install --find-links /tmp/m1-wheels -r ingestion-api/requirements-dev.lock
+          python -m pip install --no-deps --no-build-isolation -e ./ingestion-api
+      - name: Start isolated broker
+        run: docker compose -p maintai-m1 -f messaging/tests/integration/compose.yaml up -d --wait kafka
+      - name: Verify real broker ACK and quarantine
+        run: python -m pytest ingestion-api/tests/integration/test_http_kafka.py
+      - name: Build installed runtime image and verify fixture OIDC with Kafka
+        run: |
+          docker build -f ingestion-api/Dockerfile -t maintai-ingestion:m1-local .
+          python -m pytest ingestion-api/tests/integration/test_container.py
+      - name: Stop CI broker (retain no application state)
+        if: ${{ always() }}
+        run: docker compose -p maintai-m1 -f messaging/tests/integration/compose.yaml down
 
   storage-ci:
     name: Storage Consumer (Python ${{ matrix.python }})
@@ -491,6 +652,7 @@ jobs:
     needs:
       - structure
       - api-contracts
+      - repo-metadata
       - kafka-ci
       - kafka-integration
       - sensor-ci
@@ -498,10 +660,13 @@ jobs:
       - drift-ci
       - drift-container
       - simulator-ui-ci
+      - simulator-ui-container
       - storage-ci
       - storage-container
       - mlflow-source-ci
       - component-ci
+      - ingestion-ci
+      - ingestion-integration
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

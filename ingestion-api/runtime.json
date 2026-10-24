@@ -5,27 +5,33 @@
   "runtime_id": "ingestion-api",
   "workload_kind": "Deployment",
   "code_owner": "ingestion",
-  "implementation_status": "skeleton",
+  "implementation_status": "implemented_local",
   "image_group": "ingestion-api",
   "image_digest": null,
-  "entrypoint_status": "not_implemented_for_v1.3.2",
+  "entrypoint_status": "implemented_m1",
   "purpose": "HTTP edge độc lập: auth/envelope/size guard, Kafka publish, trả 202 chỉ sau broker ACK.",
   "source_paths": [
-    "ingestion-api/src"
+    "ingestion-api/src/maintai_ingestion"
   ],
   "logical_database": null,
   "kafka_subscriptions": [],
   "kafka_publications": [
-    "sensor.readings"
+    "sensor.readings",
+    "sensor.rejected"
   ],
   "interfaces": [
-    "HTTP POST /api/v1/sensor-readings"
+    "HTTP POST /api/v1/sensor-readings",
+    "GET /health/live",
+    "GET /health/ready",
+    "GET /metrics"
   ],
   "boundaries": [
-    "Không deep Data Quality, không gọi ML, không ghi business_db và không phát SSE.",
-    "Machine key/order/correlation theo System Contracts; invalid envelope không đi vào Kafka raw archive."
+    "Auth/envelope/Kafka ACK only; no DQ, ML, DB, SSE or Business HTTP calls.",
+    "Accepted reading wire1.3.0 and HASH_ONLY rejected quarantine wire1.4.0 use canonical bundle1.0.0.",
+    "Shared OIDC/TLS/ACL/deployment acceptance remains external; local evidence is not production validation."
   ],
   "dockerfile": "ingestion-api/Dockerfile",
-  "dockerfile_status": "placeholder",
-  "implemented_contract_revision": null
+  "dockerfile_status": "implemented",
+  "implemented_contract_revision": "1.4.0",
+  "implemented_scope": "Ingestion M1 local boundary only; shared deployment not validated"
 }

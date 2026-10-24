@@ -15,13 +15,13 @@
     {
       "path": "docs/README.md",
       "source_filename": "README.md",
-      "sha256": "ac20edaf84fac2867a153a3a391abc38a428c7a27fa316c2e5e7255894d41700",
+      "sha256": "35d50798ef9a21ab8ee8dcbc0b5b7590311111f2ec0a77ba533b99f32e3589ed",
       "upstream_sha256": "b8f3731050d7cba47d5eecebd8ecfa7457dc4a7c427e9f408a1a22dd89c9b0d7"
     },
     {
       "path": "docs/api-contract-decisions.md",
       "source_filename": "api-contract-decisions.md",
-      "sha256": "53d45961d6075b43a334f484176b7f417b691469a0e3b5d7994af4ee5149753f",
+      "sha256": "48977ca44e5fe875b57366fd45ec14db9a5d00de4aaf5df40ab78e48b4ac3146",
       "upstream_sha256": "153aea7b6f92e25fd11e9689092711f9806c59b0204099ae807e113fa830037b"
     },
     {
@@ -40,13 +40,13 @@
       "path": "docs/implementation-readiness.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "1dd412193778d71dcd8b8a9cc26b32da75e0e2b77533e182998fcaa99e12283c"
+      "sha256": "554c8b971e538533c28733e4e78382b8f55700d9a9775e2eed724001e8b2e067"
     },
     {
       "path": "docs/repository-layout.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "bb5c1f9aff008d4e95c95b3436736c3011de842d5d0c0a9ce32192abed8627f1"
+      "sha256": "3c86207f7db2c80f4144f33a8a0d9dca79fe53f5f842d8fdbdec9e6587e4fcfe"
     },
     {
       "path": "docs/legacy-artifact-audit.md",
@@ -200,7 +200,7 @@
       "path": "docs/design-basis/README.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "e1cbef7a717b50c01a0d67fde9960b58d9febd31abfc14db5de97670edd7e847"
+      "sha256": "3bb82d3cbfbb3815d785a8ed39ed0b54c7faa5b10f8f71f285a42a5c167ad77c"
     },
     {
       "path": "docs/design-basis/report/Nhóm-11_ MaintAI_Kien-truc.pdf",

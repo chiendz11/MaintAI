@@ -14,9 +14,7 @@ def local_path(name: str, parent: Path = ROOT) -> Path:
     if not target.is_relative_to(ROOT):
         raise ValueError(f"Repository reference escapes checkout: {name}")
     if not target.exists():
-        raise ValueError(
-            f"Repository reference does not exist: {target.relative_to(ROOT)}"
-        )
+        raise ValueError(f"Repository reference does not exist: {target.relative_to(ROOT)}")
     return target
 
 
@@ -55,11 +53,7 @@ def check_links(path: Path) -> tuple[int, int]:
             companions += 1  # Separate checkouts are not present on an app-only runner.
             continue
         destination = local_path(name, path.parent) if name else path
-        if (
-            anchor
-            and destination.suffix == ".md"
-            and unquote(anchor) not in anchors(destination)
-        ):
+        if anchor and destination.suffix == ".md" and unquote(anchor) not in anchors(destination):
             raise ValueError(f"Missing heading in {path.relative_to(ROOT)}: {target}")
         count += 1
     return count, companions
@@ -119,22 +113,13 @@ def main():
         if transport := runtime.get("transport_implementation"):
             local_path(transport["document"])
             if transport["sdk_version"] != manifest["kafka_sdk_version"]:
-                raise ValueError(
-                    f"Transport SDK pin differs from source manifest: {descriptor}"
-                )
-            if (
-                transport["kafka_bundle_version"]
-                != manifest["kafka_contract_bundle_version"]
-            ):
-                raise ValueError(
-                    f"Transport bundle pin differs from source manifest: {descriptor}"
-                )
+                raise ValueError(f"Transport SDK pin differs from source manifest: {descriptor}")
+            if transport["kafka_bundle_version"] != manifest["kafka_contract_bundle_version"]:
+                raise ValueError(f"Transport bundle pin differs from source manifest: {descriptor}")
     images = json.loads((ROOT / "sensor-simulator-UI/ci-images.json").read_text())
     for key in ("node_image", "nginx_image"):
         if not re.fullmatch(r"[\w./:-]+@sha256:[0-9a-f]{64}", images[key]):
-            raise ValueError(
-                f"CI container base image must use an immutable digest: {key}"
-            )
+            raise ValueError(f"CI container base image must use an immutable digest: {key}")
     print(
         f"Verified {len(documents)} document hashes, {links} local links/anchors, "
         f"{len(app_descriptors)} app + {len(platform_descriptors)} platform runtime descriptors "

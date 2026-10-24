@@ -1,7 +1,7 @@
 # Báo cáo cơ sở thiết kế hệ thống MaintAI
 
-**Chủ đề:** Predictive Maintenance & Technician Copilot.  
-**Nội dung:** Yêu cầu — Giả định vận hành — Kiến trúc — Biện luận.  
+**Chủ đề:** Predictive Maintenance & Technician Copilot.
+**Nội dung:** Yêu cầu — Giả định vận hành — Kiến trúc — Biện luận.
 **Phiên bản:** 1.2.2 — ngày 24/10/2026.
 
 ## Bản PDF để nộp

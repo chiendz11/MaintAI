@@ -163,3 +163,10 @@ keyed/ordered/fenced code, explicit migration/activation và local broker/DB tes
 Các snapshot trước vẫn giữ theo ngày; [implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md)
 và readiness §19 là trạng thái hiện tại. App/probes/image/production integration
 và config3 release cutover còn pending, không tự enable workload.
+
+## Cập nhật Ingestion M1 — 2026-10-23
+
+Ingestion có HTTP runtime và local tests/image; HTTP Ingestion OpenAPI additive1.4.0,
+các API khác giữ baseline1.3.2. Xem [runbook](../ingestion-api/README.md) và
+[hướng dẫn và kiểm tra Ingestion](../ingestion-api/README.md). Không thay kết luận
+full-system readiness hoặc nghiệm thu shared OIDC/TLS/ACL/deployment.

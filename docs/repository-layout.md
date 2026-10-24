@@ -78,7 +78,7 @@ Kafka broker/topic, Docker runtime hoặc repositories GitOps/infrastructure.
 - Storage0.1.0 có runtime trong `storage-consumer/src/maintai_storage/`, dùng SDK
   accepted/rejected/optional outcomes, probes/metrics và retry. Offline config/tests
   không cần AWS; external integration và bucket/IRSA thực chưa xác nhận.
-- `backend/`, `processing/`, `ingestion-api/`, ML/RAG/Frontend
+- `backend/`, `processing/`, ML/RAG/Frontend
   vẫn thiếu application runtime. Kafka producer/consumer, inbox/outbox migration
   và raw S3 adapter nằm tại `messaging/`; owner tích hợp DQ/risk/history/projections,
   auth/probes/SSE và migrations nghiệp vụ. Xem [hướng dẫn nhóm](KAFKA_DEVELOPMENT_GUIDE.md).
@@ -126,3 +126,11 @@ Worker/Read API/Relay giữ runtime/image-group/DB owner hiện có. Legacy Cons
 hiện một in-flight/toàn assignment; legacy row-only relay chưa ordered theo key. Thêm
 Processing opt-in thay vì tự đổi Storage/Business defaults; migrations mới và
 bundle pin review trước enable. Readiness §18 và Plan §K ghi source gaps.
+
+## Ingestion M1 (2026-10-23)
+
+`ingestion-api/src/maintai_ingestion/` là package thực thi HTTP gateway, thay vì
+chỉ các thư mục `.gitkeep`. Entry point `maintai-ingestion`, runtime/dev locks,
+Dockerfile và tests đã thêm; metadata ghi local implementation, chưa deploy.
+HTTP Ingestion1.4.0 có health/metrics/error adaptation, các API khác giữ1.3.2.
+Không thay Kafka bundle hoặc Sensor legacy client trong M1.

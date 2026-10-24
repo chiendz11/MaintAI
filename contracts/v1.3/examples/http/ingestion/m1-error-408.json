@@ -1,0 +1,10 @@
+{
+  "error": {
+    "code": "REQUEST_TIMEOUT",
+    "message": "Illustrative ingestion failure.",
+    "retryable": true,
+    "request_id": "req_fixture",
+    "correlation_id": "cor_fixture",
+    "details": {}
+  }
+}

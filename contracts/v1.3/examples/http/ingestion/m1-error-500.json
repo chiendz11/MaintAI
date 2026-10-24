@@ -1,0 +1,10 @@
+{
+  "error": {
+    "code": "INTERNAL_ERROR",
+    "message": "Illustrative ingestion failure.",
+    "retryable": false,
+    "request_id": "req_fixture",
+    "correlation_id": "cor_fixture",
+    "details": {}
+  }
+}

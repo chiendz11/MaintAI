@@ -9,11 +9,12 @@ benchmark, Docker image/deployment và môi trường k3d mới chưa được x
 ## 0. Phân biệt bốn lớp version
 
 - Sáu Markdown mới: target1.4.0, đã nhập và hiệu chỉnh đường dẫn/phân công dự án.
-- `contracts/v1.3/`: sáu OpenAPI/schemas/examples baseline1.3.2, chưa migrate v1.4.
+- `contracts/v1.3/`: sáu OpenAPI/schemas/examples baseline1.3.2; Ingestion M1 có
+  HTTP revision1.4.0. Chưa migrate đầy đủ mọi API sang target v1.4.
 - Runtime map:14 app +1 platform descriptor MLflow, baseline1.3.2; Simulator UI client/descriptor,
   không bump wire version hoặc khẳng định đã deploy.
 - Sensor0.3.0: wire1.3.0/Control1.3.2; Drift executable1.1; Simulator UI client0.1.0;
-  Storage runtime0.1.0 có source/tests/Dockerfile; các application runtimes khác vẫn skeleton.
+  Ingestion có M1 local; Storage runtime0.1.0 có source/tests/Dockerfile; các application runtimes khác vẫn skeleton.
 - Kafka library0.2.0 + canonical bundle1.1.0: wire target1.4/legacy reader2.0,
   keyed/ordered/fenced adapters và additive Processing migration002; xem §18–19.
 
@@ -46,8 +47,8 @@ validate; các invariant transaction/cursor/authorization cần runtime tests ri
 | --- | --- | --- |
 | Sensor | 0.3.0: ACK202, SQLite state/sequence/spool,5 Control APIs, JWT/scopes, metrics | Persistent volume/recovery vận hành, production IdP/Kafka và image/rollout evidence |
 | Drift | Legacy CLI/detector/persistence/metrics | API/S3 input, owner migration, committed report publication |
-| Ingestion | SDK gateway/envelope/publisher/ACK; app runtime skeleton | HTTP wrapper, auth, dependency lifecycle/probes và application tests |
-| Processing | SDK0.2 keyed/ordered/fenced adapters + transport wrappers; app callbacks skeleton | DQ/ML/risk/history, owner migrations/read API và archive/export/snapshot jobs |
+| Ingestion | M1 HTTP/auth/guards/lifecycle/probes/metrics; Sensor đã có client202; SDK pin0.2.0 | Shared OIDC/TLS/ACL, tích hợp liên service và GitOps deployment acceptance |
+| Processing | SDK durable runner/inbox/outbox/relay/SQL; app callbacks skeleton | DQ/ML/risk/history, owner migrations/read API và archive/export/snapshot jobs |
 | Business | SDK3 role loops/inbox transaction adapter; app callbacks skeleton | Projections/alert SQL, REST/SSE/RBAC/lifecycle, jobs/catalog |
 | Storage | Runtime0.1.0: SDK consumers, immutable microbatch/manifest, retry/supervision, probes/OBS-01, CLI/config, locked package/image/CI | AWS bucket/region/IRSA/ACL thật; Kafka+S3/container integration, rollout và capacity/cost validation |
 | ML | Skeleton hai images | Model loader/serving, trainer/evaluator, versioned bundles |
@@ -420,3 +421,16 @@ không suy throughput từ partition count, replica config hoặc SDK tests.
 [Công thức và quy trình](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).
 Đây là amendment giả định, không thay historical87 transport tests, wire versions,
 SQL001/002, model thresholds hoặc trạng thái app/image/deployment còn pending.
+
+## 22. Ingestion M1 local — 2026-10-23
+
+Ingestion có FastAPI runtime với SDK gateway/publisher, JWT/JWKS verifier, bounded
+raw-body/admission, ACK-first accepted/rejected, response adapter, health/metrics
+và graceful shutdown. HTTP Ingestion OpenAPI tăng MINOR1.4.0; các OpenAPI khác
+vẫn1.3.2, Kafka bundle/wire không đổi. Xem [runbook](../ingestion-api/README.md).
+
+Unit/HTTP contracts, real Kafka localhost29092 và installed image smoke dùng JWT
+chữ ký với JWKS fixture local được kiểm tra riêng. Không suy shared OIDC provider,
+TLS/ACL, S3 archive, Business/ML integration hoặc full-system v1.4 từ các tests này.
+GitHub CI/deployment chưa được chạy trong lượt local này. Kế hoạch M1 và kết quả
+kiểm tra cụ thể nằm trong docs/superpowers/plans/ và báo cáo phiên làm việc.
