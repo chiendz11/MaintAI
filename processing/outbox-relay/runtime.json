@@ -5,10 +5,10 @@
   "runtime_id": "processing-outbox-relay",
   "workload_kind": "Deployment",
   "code_owner": "processing",
-  "implementation_status": "skeleton",
+  "implementation_status": "implemented_local_fixture",
   "image_group": "processing",
   "image_digest": null,
-  "entrypoint_status": "not_implemented_for_v1.3.2",
+  "entrypoint_status": "implemented_m2_local_fixture",
   "purpose": "Publish durable Processing outbox sang Kafka rồi đánh dấu kết quả publish.",
   "source_paths": [
     "processing/outbox-relay/src",
@@ -20,12 +20,18 @@
     "inference.results",
     "alert.signals"
   ],
-  "interfaces": [],
+  "interfaces": [
+    "GET /health/live",
+    "GET /health/ready",
+    "GET /metrics"
+  ],
   "boundaries": [
-    "Skeleton chọn relay thành Deployment riêng để thấy rõ ranh giới scale/restart; không thêm DB ownership.",
-    "Delivery at least once; stable IDs và idempotent consumers, không hứa exactly-once end-to-end."
+    "Separate relay runtime, same Processing owner/database.",
+    "Delivery at least once with SDK leases/fencing; downstream dedupe remains required.",
+    "Local fixture evidence does not authorize shared cutover or GitOps deployment."
   ],
   "dockerfile": "processing/outbox-relay/Dockerfile",
-  "dockerfile_status": "placeholder",
-  "implemented_contract_revision": null
+  "dockerfile_status": "implemented",
+  "implemented_contract_revision": "1.4.0",
+  "implemented_scope": "M2 Processing owner code and explicit local fixture runtime; shared provider/release/registry acceptance and deployment not validated."
 }
