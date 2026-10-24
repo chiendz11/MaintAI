@@ -1,0 +1,178 @@
+alembic==1.20.1
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   -r backend/requirements.in
+annotated-doc==0.0.5
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   fastapi
+annotated-types==0.8.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   pydantic
+anyio==4.15.1
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   httpx
+    #   starlette
+build==1.6.1
+    # via
+    #   -c processing/requirements-dev.lock
+    #   -r backend/requirements-dev.in
+certifi==2026.10.19
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   httpcore
+    #   httpx
+cffi==2.1.1
+    # via
+    #   -c backend/requirements.lock
+    #   cryptography
+click==8.5.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   uvicorn
+cryptography==50.0.2
+    # via
+    #   -c backend/requirements.lock
+    #   pyjwt
+fastapi==0.161.1
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   -r backend/requirements.in
+h11==0.16.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   httpcore
+    #   uvicorn
+httpcore==1.0.9
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   httpx
+httpx==0.28.1
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   -r backend/requirements.in
+idna==3.20
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   anyio
+    #   httpx
+iniconfig==2.3.1
+    # via
+    #   -c processing/requirements-dev.lock
+    #   pytest
+mako==1.4.3
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   alembic
+markupsafe==3.0.4
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   mako
+opentelemetry-api==1.45.1
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   fastapi
+packaging==26.3
+    # via
+    #   -c processing/requirements-dev.lock
+    #   build
+    #   pytest
+pluggy==1.7.0
+    # via
+    #   -c processing/requirements-dev.lock
+    #   pytest
+psycopg==3.3.6
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   -r backend/requirements.in
+psycopg-binary==3.3.6
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   psycopg
+pycparser==3.12
+    # via
+    #   -c backend/requirements.lock
+    #   cffi
+pydantic==2.14.1
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   fastapi
+pydantic-core==2.50.1
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   pydantic
+pygments==2.21.0
+    # via
+    #   -c processing/requirements-dev.lock
+    #   pytest
+pyjwt==2.15.1
+    # via
+    #   -c backend/requirements.lock
+    #   -r backend/requirements.in
+pyproject-hooks==1.3.3
+    # via
+    #   -c processing/requirements-dev.lock
+    #   build
+pytest==9.1.1
+    # via
+    #   -c processing/requirements-dev.lock
+    #   -r backend/requirements-dev.in
+ruff==0.17.2
+    # via
+    #   -c processing/requirements-dev.lock
+    #   -r backend/requirements-dev.in
+sqlalchemy==2.1.6
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   alembic
+starlette==1.9.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   fastapi
+typing-extensions==4.16.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   alembic
+    #   anyio
+    #   fastapi
+    #   opentelemetry-api
+    #   psycopg
+    #   pydantic
+    #   pydantic-core
+    #   sqlalchemy
+    #   starlette
+    #   typing-inspection
+typing-inspection==0.4.4
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   fastapi
+    #   pydantic
+uvicorn==0.54.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements-dev.lock
+    #   -r backend/requirements.in

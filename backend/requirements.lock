@@ -1,0 +1,139 @@
+alembic==1.20.1
+    # via
+    #   -c processing/requirements.lock
+    #   -r backend/requirements.in
+annotated-doc==0.0.5
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   fastapi
+annotated-types==0.8.0
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   pydantic
+anyio==4.15.1
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   httpx
+    #   starlette
+certifi==2026.10.19
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   httpcore
+    #   httpx
+cffi==2.1.1
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   cryptography
+click==8.5.0
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   uvicorn
+cryptography==50.0.2
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   pyjwt
+fastapi==0.161.1
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   -r backend/requirements.in
+h11==0.16.0
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   httpcore
+    #   uvicorn
+httpcore==1.0.9
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   httpx
+httpx==0.28.1
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   -r backend/requirements.in
+idna==3.20
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   anyio
+    #   httpx
+mako==1.4.3
+    # via
+    #   -c processing/requirements.lock
+    #   alembic
+markupsafe==3.0.4
+    # via
+    #   -c processing/requirements.lock
+    #   mako
+opentelemetry-api==1.45.1
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   fastapi
+psycopg==3.3.6
+    # via
+    #   -c processing/requirements.lock
+    #   -r backend/requirements.in
+psycopg-binary==3.3.6
+    # via
+    #   -c processing/requirements.lock
+    #   psycopg
+pycparser==3.12
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   cffi
+pydantic==2.14.1
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   fastapi
+pydantic-core==2.50.1
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   pydantic
+pyjwt==2.15.1
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   -r backend/requirements.in
+sqlalchemy==2.1.6
+    # via
+    #   -c processing/requirements.lock
+    #   alembic
+starlette==1.9.0
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   fastapi
+typing-extensions==4.16.0
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   alembic
+    #   anyio
+    #   fastapi
+    #   opentelemetry-api
+    #   psycopg
+    #   pydantic
+    #   pydantic-core
+    #   sqlalchemy
+    #   starlette
+    #   typing-inspection
+typing-inspection==0.4.4
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   fastapi
+    #   pydantic
+uvicorn==0.54.0
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   -r backend/requirements.in

@@ -5,10 +5,10 @@
   "runtime_id": "business-api",
   "workload_kind": "Deployment",
   "code_owner": "business-backend",
-  "implementation_status": "skeleton",
+  "implementation_status": "implemented_registry_only",
   "image_group": "business-backend",
   "image_digest": null,
-  "entrypoint_status": "not_implemented_for_v1.3.2",
+  "entrypoint_status": "implemented_m2r_registry_only",
   "purpose": "Business REST/SSE, RBAC, machine/alert/feedback/brief actions, Processing history facade, enqueue/poll jobs; no Simulator Control facade.",
   "source_paths": [
     "backend/business-api/src",
@@ -31,6 +31,7 @@
     "Main UI only; Simulator UI calls Sensor Control API directly on management origin. RAG execution belongs to durable Consumer jobs."
   ],
   "dockerfile": "backend/business-api/Dockerfile",
-  "dockerfile_status": "placeholder",
-  "implemented_contract_revision": null
+  "dockerfile_status": "implemented",
+  "implemented_contract_revision": "1.3.2",
+  "implemented_scope": "M2.R registry migration/provision and scoped GET machine only; projections/list/alerts/SSE/history and shared environment acceptance remain unimplemented/unvalidated."
 }
