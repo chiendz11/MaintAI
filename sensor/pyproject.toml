@@ -4,11 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "maintai-sensor"
-version = "0.2.0"
+version = "0.3.0"
 description = "AI4I sensor replay, fault injection and drift scenarios for MaintAI"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["httpx>=0.28,<1", "pydantic>=2.10,<3", "PyYAML>=6.0,<7"]
+dependencies = [
+  "httpx>=0.28,<1", "pydantic>=2.10,<3", "PyYAML>=6.0,<7",
+  "fastapi>=0.115,<1", "uvicorn>=0.34,<1", "PyJWT[crypto]>=2.10,<3",
+  "prometheus-client>=0.26,<1",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -39,3 +43,6 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["simulator"]

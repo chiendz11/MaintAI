@@ -2,8 +2,9 @@
 
 [Deployment Architecture v1.4](../docs/DEPLOYMENT_ARCHITECTURE.md) mô tả target mới.
 Bảng và runtime JSON dưới đây là inventory đã có baseline1.3.2, chưa tự đồng bộ
-quarantine/provenance. Simulator UI riêng vẫn planned-without-source; MLflow là
-platform workload ở repo GitOps/hạ tầng, không cộng lẫn với13 app runtime folders.
+quarantine/provenance. Simulator UI đã có React client/demo, descriptor và Dockerfile
+riêng; Sensor Control provider0.3.0 đã implement; chưa có container/rollout evidence. MLflow là platform workload ở
+repo GitOps/hạ tầng, không cộng lẫn với14 app runtime folders.
 
 **Mỗi thư mục runtime có `Dockerfile` riêng tương ứng một workload**.
 `runtime.json` bổ sung loại workload, source owner và trạng thái implementation.
@@ -13,7 +14,7 @@ chung trong một owner. Metadata này không phải Kubernetes manifests.
 
 | Runtime | Thư mục | Workload | DB owner | Trạng thái |
 | --- | --- | --- | --- | --- |
-| `sensor` | [`sensor/`](../sensor/Dockerfile) | Deployment | — | legacy_partial |
+| `sensor` | [`sensor/`](../sensor/Dockerfile) | Deployment | — | implemented_sensor_provider |
 | `ingestion-api` | [`ingestion-api/`](../ingestion-api/Dockerfile) | Deployment | — | implemented_local (M1) |
 | `processing-worker` | [`processing/worker/`](../processing/worker/Dockerfile) | Deployment | processing_db | skeleton |
 | `processing-read-api` | [`processing/read-api/`](../processing/read-api/Dockerfile) | Deployment | processing_db | skeleton |
@@ -25,6 +26,7 @@ chung trong một owner. Metadata này không phải Kubernetes manifests.
 | `training` | [`ml-service/training/`](../ml-service/training/Dockerfile) | WorkflowTask | — | skeleton |
 | `rag-service` | [`rag-service/`](../rag-service/Dockerfile) | Deployment | knowledge_db | skeleton |
 | `frontend` | [`frontend/`](../frontend/Dockerfile) | Deployment | — | skeleton |
+| `simulator-ui` | [`sensor-simulator-UI/`](../sensor-simulator-UI/Dockerfile) | Deployment | — | frontend_and_sensor_provider_implemented |
 | `drift-worker` | [`drift-worker/`](../drift-worker/Dockerfile) | CronJob | drift_db | legacy_partial |
 
 `business-api` và `business-consumer` cùng owner/codebase/migrations và có thể
@@ -40,8 +42,11 @@ Kafka/PostgreSQL/S3 hoặc MinIO/MLflow Server/Argo/monitoring thuộc GitOps v�
 
 ## Chi tiết kế thừa1.3.2 và quyết định dự án
 
-Simulator UI là một planned frontend riêng nhưng chưa có source/descriptor;
-không tạo một Dockerfile giả để coi như đã implement. Business API bỏ control
+Simulator UI có [hướng dẫn chạy](../sensor-simulator-UI/README.md), demo driver và live
+client theo baseline5 operations, OIDC và command recovery. Browser checks dùng
+API fixtures và provider HTTP thật; provider có TLS JWKS/OAuth fixtures. Image chưa
+build/deploy, production IdP/Kafka integration chưa verify.
+Business API bỏ control
 facade; Sensor giữ control backend. Processing maintenance và Business job loops
 nằm trong owner runtimes hiện có, chưa thêm deployment mới. History/archive/auth/
 recovery giữ chi tiết tại [docs index](../docs/README.md) và các phụ lục được dẫn ở đó.

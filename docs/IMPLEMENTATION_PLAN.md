@@ -11,6 +11,9 @@
 3. Xác minh owner và auth/ports thực tế của Ingestion, Processing, Business, Storage, Training/MLflow, RAG, Drift, Frontend, GitOps.
 4. Mở feature branch; chạy bộ test v1.3.1 để có baseline. Không đổi producer breaking khi chưa có consumer migration plan.
 5. Review/freeze v1.4 JSON Schemas và release manifest trước khi chia PR theo module.
+6. Đọc [OBS-01](OBSERVABILITY_IMPLEMENTATION.md) và
+   [MLFLOW-01](MLFLOW_INTEGRATION_GUIDE.md): metric catalog, timestamp coverage,
+   run/registry identities, strict schema mapping và durable retry/unknown policy.
 
 ## B. Thứ tự PR và ranh giới commit đề xuất
 
@@ -29,6 +32,10 @@
 | 10 — E2E và tải | Cả nhóm | Failure scenarios, lag/latency benchmark, DB contention | E2E acceptance matrix | Có log, metrics, giới hạn đã biết |
 
 **Lưu ý:** Đây là thứ tự phụ thuộc, không bắt tất cả làm nối tiếp. Sau PR 01 chốt fixtures, các nhánh ML/RAG/FE/Processing có thể làm song song. Tránh refactor toàn hệ thống cùng một PR.
+
+UI-01 thêm workstream tại §I dưới đây, phối hợp các PR00–10 theo dependency;
+không yêu cầu hoàn tất toàn bộ data platform trước khi phát triển frontend bằng
+contract fixtures rõ ràng. Fixture/mock phải có nhãn, không được báo đã nối live API.
 
 ## C. Schema và migration cụ thể (phải điều chỉnh theo DB thật)
 
@@ -108,3 +115,59 @@ Các bài này kiểm tra JSON Schemas/invariants/mẫu K8s, **không chứng mi
 ## H. Definition of Done và giới hạn tích hợp
 
 **Chỉ được đánh dấu `DOCS + REFERENCE CODE VERIFIED`** khi Markdown/JSON/YAML parse, tests offline đạt và sơ đồ render được. **Không được đánh dấu `PROJECT IMPLEMENTED`** khi PR source chưa merge, image digests chưa build, migrations chưa thực thi, services chưa deploy và chưa có integration/E2E/load/recovery evidence.
+
+## I. UI-01 — Workstream bốn UI và phát hành độc lập
+
+Quyết định20/10/2026 tại [UI Architecture](UI_ARCHITECTURE.md), System Contracts §40
+và Guide §48. Bảng này là **kế hoạch các PR implementation sau**, không phải các
+việc đã thực thi trong lượt sửa docs.
+
+| PR/work item | Owner | Đầu ra | Điều kiện nghiệm thu |
+| --- | --- | --- | --- |
+| UI-P0 — Capability/contract freeze | Người1 + Người4, phối hợp ML | Map prototype → API/DTO/auth, public origin/config, dependency graph; xác định field còn thiếu | Không tự thêm rate/counters/preview vào ControlState; schema/version review cho capability mới |
+| UI-P1 — Business frontend | Người1 | React trong frontend/, REST/SSE, child pages cho máy/history/alerts/briefs/summary | Freshness/order/auth đúng, giữ lifecycle và drift/monitoring APIs |
+| UI-P2 — Sensor Control provider | Người4 | List/get/pause/resume/scenario, scoped auth, persistent version/idempotency, backend entrypoint | ACK sau persist; timeout/conflict reconcile; browser đóng không dừng generation |
+| UI-P3 — Simulator frontend | Người4 | Đã có React/demo/live client/OIDC/recovery, Dockerfile/config/build/runtime descriptor và local checks | Còn Sensor/IdP live integration, container build và rollout evidence; unsupported live capabilities vẫn ẩn/unavailable |
+| UI-P4 — Grafana | Người4 + Người2 review | Năm dashboard kỹ thuật, Prometheus/exporters và Drift report datasource contract | Không fake STABLE, không browser/Business SQL; least privilege/query budgets |
+| UI-P5 — MLflow UI integration | Người2 + Người4 | MLflow Server UI, platform access, run/model/artifact/release links | Không clone React UI, alias/run không tự promote model |
+| UI-P6 — Per-component release | Người4 + frontend owners | Affected-component CI, images/config digests riêng, GitOps scoped updates/rollback | Giữ CI / required; đổi một UI không làm rollout UI/backend khác nếu contract không đổi |
+
+Simulator UI có thể bắt đầu bằng baseline5 operations; rate/control SSE/batch
+commands/counters là follow-up contract riêng, không là field đã có trong OpenAPI.
+Grafana SQL report view/role hoặc adapter phải do Drift owner freeze trước
+provisioning; không lấy browser credentials hoặc grant writer cho tiện demo.
+
+Evidence cần lưu cho UI-P6: component/source/image/config/GitOps identities,
+Pod template before/after, API compatibility result, auth/control-state tests và
+rollback logs. Dockerfile và screenshot prototype không thay thế evidence này.
+Portal vẫn tùy chọn, không thêm PR bắt buộc tạo service thứ năm.
+
+## J. OBS-01 / MLFLOW-01 — PR implementation sau khi chuẩn hóa docs
+
+Hai hướng dẫn revision1.0.0 đã chốt thiết kế; các đầu việc dưới **chưa implement**
+bởi lượt docs. Không lẫn label metadata/artifact schemas với runtime evidence.
+
+| Work item | Owner | Đầu ra cần có | Gate |
+| --- | --- | --- | --- |
+| OBS-P0 — Inventory/fixture | Mỗi owner, Người4 review | Metric families/type/labels/units/buckets/reset/commit points và series budget; source aliases thật nếu có | Không tên trùng/label ID/cardinality vượt budget; histogram fixture đúng |
+| OBS-P1 — App flow | Người1 | Ingestion/Processing/Business collectors, duplicate/commit semantics, exact-event accepted-time source | No metrics on rollback; missing source không fake p95; alert path không bị monitoring chặn |
+| OBS-P2 — ML/RAG | Người2/3 | Inference/model info, grounding/citation/retrieval metrics, no-data/error paths | Không dùng FAILURE prediction hoặc insufficient evidence như server error |
+| OBS-P3 — Sensor/Storage/Drift | Người4 | Spool/archive metrics, one-hot states, durable report aggregate/required publication/heartbeat | Retry không double count; no-data khác STABLE; strict writer/retention evidence |
+| OBS-P4 — GitOps handoff | Người4 + module owners | Scrape target labels/ACL, honor_labels, exporter naming, full5 dashboards, absent/stale/coverage rules | Real scrape→query→panel; trước enable xem thiếu accepted time/metrics coverage |
+| MLFLOW-P0 — Compatibility | Người2+4 | Exact client/server patches + locks/image digests, namespace/ACL, protocol/evaluation key mapping | Pinned-pair SDK/artifact tests, không placeholder hoặc auto-create namespace khi lỗi |
+| MLFLOW-P1 — Durable coordination | Người2+4 | Per-run operation intent/checkpoint, owner-generation/heartbeat, frozen artifact refs, unknown triage | Crash sau create/lease expiry/concurrency không blind-create hoặc dispatch thiếu evidence |
+| MLFLOW-P2 — SDK/training | Người2 | Real selected run, params/metrics/artifacts, Registry receipt/verification, finalized serving metadata | Read-back bytes/VersionIds/hashes; gate/threshold từ frozen split, no fake metrics |
+| MLFLOW-P3 — Release/provenance | Người1+2+4 | Strict result/release/HTTP/Kafka field mapping, fixtures, immutable result reuse | No unversioned extra keys; dispatch ACK khác deploy; no auto-promote |
+
+Các work items gắn vào PR05–10 của kế hoạch hiện hành theo dependencies; không
+bắt buộc tạo thêm runtimes. Source/provider/ledger/GitOps implementation, SDK
+network tests và deployment phải có yêu cầu thực thi riêng; docs không chạy chúng.
+
+
+## Sensor0.3.0 — cập nhật tiến độ20/10
+
+UI-P2 đã có source/provider/auth/persistence/scheduler/spool và local tests.
+Các phần Sensor của OBS handoff đã có instrumentation. Production IdP/PVC/Kafka,
+image/GitOps rollout và affected-component release validation còn mở; không đánh
+hoàn tất platform/E2E chỉ vì provider tests qua. Xem [readiness §15](implementation-readiness.md#15-sensor030--providerdurable-runtime2010)
+và [báo cáo file thay đổi](SENSOR_IMPLEMENTATION_REPORT.md).

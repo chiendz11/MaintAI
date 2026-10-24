@@ -34,6 +34,8 @@ class EventFactory:
         return SensorEvent(
             event_id=f"evt_{uuid5(self.namespace, str(sequence))}",
             machine_id=self.machine_ids[sequence % self.machine_count],
+            stream_epoch=self.run_id,
+            sequence_number=sequence // self.machine_count + 1,
             received_at=self.start_time
             + timedelta(milliseconds=sequence * self.interval_ms / self.machine_count),
             source="AI4I_SIMULATOR",

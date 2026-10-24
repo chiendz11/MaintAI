@@ -4,6 +4,30 @@
 
 Đọc cùng [Kiến trúc Deployment](DEPLOYMENT_ARCHITECTURE.md) để hiểu ranh giới runtime, và [Quy chuẩn Versioning & Provenance](VERSIONING_AND_PROVENANCE.md) để hiểu các định danh bất biến.
 
+## 0. Điểm vào của bốn UI — UI-01, 2026-10-20
+
+| UI | Luồng request/data | Bất biến |
+| --- | --- | --- |
+| Business | Browser → Business REST/SSE → projections/history/RAG/drift facade | Không gọi Sensor Control, ML/RAG/Kafka/DB trực tiếp |
+| Simulator | Browser → Sensor Control → durable state/scheduler/spool → Ingestion | Browser không phát readings hoặc mutate Alert; không qua Business proxy |
+| Grafana | Browser → Grafana server → Prometheus/exporters + approved report datasource | Không tính lại detector hoặc sửa risk; metrics không thay report DB |
+| MLflow | Browser → MLflow Server → mlflow_db/artifact store | UI tracking/registry không tự promote inference release |
+
+Sensor backend chạy độc lập browser/UI rollout; đóng hoặc deploy lại Simulator UI
+không tự Pause máy. Business UI deploy riêng cũng không restart Sensor. Grafana
+hoặc MLflow UI lỗi không tự chặn Business query/Alert path; phụ thuộc lúc model
+startup/training phải đánh giá riêng. Xem [UI Architecture](UI_ARCHITECTURE.md).
+
+Control mutation dùng Idempotency-Key + expected_control_version; ACK200 sau
+persist,409/timeout cần GET reconcile. API hiện chỉ list/read/pause/resume/scenario;
+rate/counters/preview ở HTML cần contract bổ sung trước khi nối thật.
+
+Business summary/drift APIs vẫn tồn tại cho main user, trong khi Grafana chuyên
+điều tra kỹ thuật. Report detail datasource ở Grafana cần owner-approved interface
+hoặc read-only views/grants, không thêm Drift HTTP server chỉ để sao chép mock.
+Các server giữ credential riêng; frontend runtime config và Portal chỉ có public
+URLs/capabilities. Grafana/MLflow chưa Ready phải báo rõ, không dựng số liệu giả.
+
 ## 1. Nhận dữ liệu, archive, inference và cập nhật Frontend
 
 ```mermaid
@@ -149,3 +173,28 @@ code riêng trong [SDK/hướng dẫn Kafka](KAFKA_DEVELOPMENT_GUIDE.md). Chưa 
 real broker/S3 integration hoặc deployment. Còn cần hot/cold query, curated archive
 membership, migrations/app callbacks, endpoint prediction history nếu UI cần tab
 chi tiết và benchmark. SDK không hoàn tất toàn luồng trong sơ đồ này.
+
+## 8. Observability/tracking — OBS-01 và MLFLOW-01
+
+App metrics được đo tại boundary thật: broker ACK, owner DB/outbox commit,
+archive verification, ML/RAG completion; Prometheus/Grafana không tạo business
+success thay runtime. Retry/inbox duplicate không tăng committed business event
+lần nữa. Histograms cross-service dùng đúng accepted timestamp; Alert Signal1.0
+hiện thiếu field này, cần exact-event owner lookup hoặc reviewed schema migration,
+không lấy latest telemetry/received_at để đo p95 giả.
+
+Training có durable operation intents trước create-run/version, frozen artifacts,
+real selected run/registry identity và verified result trước release dispatch.
+MLflow create timeout/5xx có thể đã commit, nên không blind retry theo tag search.
+Dispatch ACK khác deploy success; metrics/logging outage không được làm rollback
+Alert hoặc đổi risk. Chi tiết source/gate/SDK/recovery ở
+[OBS-01](OBSERVABILITY_IMPLEMENTATION.md) và [MLFLOW-01](MLFLOW_INTEGRATION_GUIDE.md).
+
+
+## 9. Sensor provider đã implement
+
+Sensor0.3.0 lưu reading+sequence/cursor vào SQLite spool trước HTTP; sender chỉ
+xóa sau ACK202 đúng identity. Lỗi/mất response giữ same event/payload cho retry.
+Control state/version/receipt/audit commit trước200, Pause không xóa backlog.
+Scheduler và sender ở cùng Sensor Deployment, independent browser. Bằng chứng
+HTTP/browser/TLS fixtures và giới hạn deployment ở [readiness §15](implementation-readiness.md#15-sensor030--providerdurable-runtime2010).

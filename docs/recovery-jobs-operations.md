@@ -151,6 +151,9 @@ failover/multiple replicas cần lease/fencing, không chỉ số replicas=1.
 
 ## 8. Observability và acceptance
 
+Catalog và exact update/reset semantics theo [OBS-01](OBSERVABILITY_IMPLEMENTATION.md),
+ưu tiên shorthand metric names kế thừa; MLflow dùng workflow riêng ở §9 bên dưới.
+
 Trace correlation xuyên HTTP/Kafka/job/archive bằng event_id/result_id/job_id và
 correlation_id trong logs/traces; IDs không làm Prometheus labels. Metrics:
 ACK/prediction/visible-alert latency, lag/oldest age, pool saturation, retry,
@@ -162,3 +165,26 @@ rebalance lúc inference, out-of-order results, multi-API fan-out, S3 outage vư
 archive cadence, stale lease completion, projection rebuild đồng thời live input,
 RAG timeout, catalog downtime+full reconcile và rolling schema2 consumer-first.
 Đây là acceptance specification, chưa phải các tests đã viết hoặc đã pass.
+
+
+## 9. MLflow operation recovery — MLFLOW-01
+
+Chi tiết ở [MLFLOW_INTEGRATION_GUIDE.md](MLFLOW_INTEGRATION_GUIDE.md) §6–8.
+Training orchestration ledger do platform quản lý, khác Business Copilot/job DB;
+không thêm training SQL tables vào mlflow_db hoặc DB ứng dụng khác.
+
+- training_id/run_key, owner-generation, lease/heartbeat, write-ahead create
+  intent và remote IDs phải checkpoint bền vững theo phase trước side effect kế.
+- Create-run/model-version timeout,5xx hoặc crash có thể đã commit remote. Không
+  tự tạo lại theo search0; search-before-create không có unique guarantee.
+- Reconciliation duyệt pages, đối chiếu run/source/artifact hashes;0/multiple
+  matches giữ UNKNOWN/triage. Lease expiry không hủy in-flight request cũ;
+  không cho writer mới create khi intent trước unresolved.
+- Re-log known-run metrics/artifacts giữ timestamp/key/path/bytes; verify partial
+  writes, không tự serialize/train lại khi chỉ publication bị lỗi.
+- Model-result đã commit thì retry cùng immutable result/change identity;
+  RELEASE_DISPATCHED/GitHub204 không chứng minh PR/merge/deploy thành công.
+
+Snapshot GitOps helper hiện có lease/model-result checkpoint nhưng chưa đủ
+step-level run/version recovery và fencing/heartbeat của chuẩn này. Đây là gap
+implementation, không tạo ledger adapter chỉ bằng ví dụ Python trong docs.

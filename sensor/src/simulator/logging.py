@@ -20,8 +20,14 @@ class JsonFormatter(logging.Formatter):
         )
 
 
+class StderrHandler(logging.StreamHandler):
+    def emit(self, record):
+        self.stream = sys.stderr
+        super().emit(record)
+
+
 def configure_logging() -> None:
-    handler = logging.StreamHandler(sys.stderr)
+    handler = StderrHandler()
     handler.setFormatter(JsonFormatter())
     logger.handlers = [handler]
     logger.setLevel(logging.INFO)

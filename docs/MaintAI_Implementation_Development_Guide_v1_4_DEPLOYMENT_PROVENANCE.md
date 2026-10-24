@@ -5,6 +5,16 @@
 
 # MaintAI — Hướng dẫn triển khai và phát triển chi tiết từng module — v1.4
 
+> **OBS-01 / MLFLOW-01 — 2026-10-20:** System Contracts §41 và Guide §49
+> thông qua [metrics catalog](OBSERVABILITY_IMPLEMENTATION.md) và
+> [MLflow integration](MLFLOW_INTEGRATION_GUIDE.md) revision1.0.0. Các chi tiết
+> names/types/labels/buckets, SDK/identity/recovery ưu tiên ví dụ kế thừa mâu thuẫn;
+> docs không tự migrate app, schemas, ledger hoặc platform.
+
+> **UI-01 — 2026-10-20:** Đọc [UI Architecture](UI_ARCHITECTURE.md) và §48 cho bốn
+> UI chính cùng release độc lập. §40–41 dưới đây vẫn mô tả realtime Business và
+> Control API; UI-01 không tự thêm rate/counters DTO hoặc triển khai frontend.
+
 > **Mục đích:** Sổ tay triển khai cho nhóm 4 người theo phân công tại docs index xây dựng MaintAI — hệ thống dự đoán hỏng máy và hỗ trợ kỹ thuật viên.
 >
 > **Nguồn thiết kế:** `MaintAI_BRD_KienTruc_KeHoach_5_Nguoi.docx` và contract hệ thống `MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md`.
@@ -542,7 +552,7 @@ ValidationResult(
 
 ```text
 maintai_invalid_sensor_events_total{reason=...}
-maintai_sensor_events_total{status=...}
+maintai_sensor_events_total{validation_status=...}
 ```
 
 ## 8.5. Test
@@ -835,35 +845,36 @@ Không đặt notebook training bên trong runtime `/predict`.
 
 ## 15.1. Cấu trúc thư mục
 
+Source root hiện hành là ml-service/, hai runtime/images training và inference
+riêng. Tree dưới mô tả ranh giới; phần lớn folders vẫn skeleton, module tracking
+là đề xuất source cho PR sau, không phải implementation đã được tạo bởi docs.
+
 ```text
-ml-inference/
+ml-service/
 ├── training/
-│   ├── data.py
-│   ├── split.py
-│   ├── features.py
-│   ├── train_baseline.py
-│   ├── train_candidate.py
-│   ├── evaluate.py
-│   ├── threshold.py
-│   └── export_artifact.py
-├── service/
-│   ├── main.py
-│   ├── schemas.py
-│   ├── model_loader.py
-│   ├── predictor.py
-│   ├── health.py
-│   └── metrics.py
-├── artifacts/
-│   └── maintai-ml-1.0.0/
-│       ├── model.joblib
-│       ├── preprocessor.joblib
-│       └── metadata.json
-├── notebooks/
-│   └── exploration.ipynb
-├── tests/
-├── Dockerfile
-└── pyproject.toml
+│   ├── data_preparation/       # Approved dataset, feature allowlist, frozen splits
+│   ├── model/                  # Baseline/candidates, fit on train only
+│   ├── evaluation/             # Validation threshold, held-out test, quality gates
+│   ├── export/                 # Frozen payloads, verified serving metadata/artifacts
+│   ├── tracking/               # Đề xuất: MLFLOW-01 SDK/ledger integration, chưa có
+│   ├── tests/
+│   ├── Dockerfile
+│   └── runtime.json
+├── inference/
+│   ├── api/
+│   ├── model_loader/
+│   ├── prediction/
+│   ├── observability/          # OBS-01 inference collectors
+│   ├── tests/
+│   ├── Dockerfile
+│   └── runtime.json
+├── shared/preprocessing/      # Fitted artifact compatibility, không runtime riêng
+└── artifacts/                 # Generated output ngoài Git
 ```
+
+Training entrypoint/dependencies, SDK adapter và ledger callbacks phải implement
+trong source PR. Không đưa training vào image inference; MLflow Server/image/config
+thuộc GitOps. Đọc MLFLOW-01 trước khi tạo run/register hoặc thiết kế result metadata.
 
 ## 15.2. Dataset preparation
 
@@ -978,6 +989,11 @@ Precision_failure >= 0.50
 Nếu dataset/model không đạt, báo trung thực; không thay đổi test để làm đẹp số.
 
 ## 15.8. Artifact export
+
+**Mẫu JSON bên dưới là tối giản kế thừa**, không đủ cho release v1.4. Metadata
+thực phải theo MLFLOW-01 §3–4/§8: selected run/registry version thật, dataset/split/
+source/image identities, model/preprocessor/reference hashes, object VersionIds
+và strict output mapping. Không copy mẫu rồi fabricate missing fields cho pass.
 
 `metadata.json` nên chứa:
 
@@ -1114,14 +1130,21 @@ Response tối thiểu:
 
 ## 16.5. Metrics
 
+Dùng catalog [OBS-01 §3.5](OBSERVABILITY_IMPLEMENTATION.md#35-ml-inference-và-rag),
+không các short aliases từ ví dụ cũ:
+
 ```text
-ml_inference_requests_total{status=...}
-ml_inference_duration_seconds
-ml_prediction_total{label=...}
-ml_model_info{version=...}  # careful: static low-cardinality label
+maintai_ml_inference_requests_total{status}
+maintai_ml_inference_duration_seconds
+maintai_ml_predictions_total{prediction}
+maintai_ml_failure_probability
+maintai_ml_model_info{model_version}
 ```
 
-Không dùng `machine_id` làm Prometheus label vì cardinality có thể tăng mạnh.
+Duration/probability là histogram base, bucket profile ML/PROBABILITY; model_info
+là gauge1 của model effective đã verify. Không dùng machine_id/run_id làm label;
+failed inference không emit probability0. SDK tracking/registry cho training dùng
+[MLFLOW-01](MLFLOW_INTEGRATION_GUIDE.md), không nằm trong mỗi predict request.
 
 ## 16.6. Test
 
@@ -1354,12 +1377,16 @@ Không fallback bằng cách yêu cầu LLM trả lời từ trí nhớ chung.
 ## 18.8. Metrics
 
 ```text
-rag_requests_total{status=...}
-rag_request_duration_seconds
-rag_retrieval_duration_seconds
-rag_retrieved_chunks_count
-rag_insufficient_evidence_total
+maintai_rag_requests_total{status,grounded_status}
+maintai_rag_request_duration_seconds
+maintai_rag_retrieval_duration_seconds
+maintai_rag_retrieved_chunks
+maintai_rag_citation_validation_failures_total
 ```
+
+Types/labels/buckets theo [OBS-01 §3.5](OBSERVABILITY_IMPLEMENTATION.md#35-ml-inference-và-rag).
+Chunks là histogram base; generated _count là số request, _sum là tổng chunks.
+Insufficient evidence được đếm qua grounded_status, không tạo alias counter riêng.
 
 ## 18.9. Evaluation
 
@@ -1527,6 +1554,11 @@ accept/reject recommendation
 
 Không cần thay Grafana. Có thể hiển thị summary và link Grafana:
 
+Theo UI-01, đây là summary/context trong Business UI; Grafana thật phụ trách
+dashboard kỹ thuật đầy đủ. Giữ Business monitoring/drift APIs, không clone UI
+Grafana/MLflow thành React hoặc đặt simulator control trong Business. Danh sách
+metrics phía dưới là mục tiêu; DTO chưa có field thì cần contract riêng.
+
 ```text
 Backend healthy?
 ML healthy?
@@ -1585,7 +1617,8 @@ Không thay bằng spinner vô hạn.
 
 # 21. Module I — Observability
 
-**Owner chính:** Người4.
+**Owner platform:** Người4. Instrumentation code thuộc owner của từng runtime
+(Người1/2/3/4), handoff theo OBS-01; không giao mọi app metrics cho Platform.
 
 ## 21.1. Mục tiêu
 
@@ -1631,50 +1664,23 @@ Không đưa dependency bên ngoài vào liveness khiến container restart loop
 
 ## 21.3. Prometheus
 
-### Backend
+**Nguồn chuẩn:** [OBSERVABILITY_IMPLEMENTATION.md](OBSERVABILITY_IMPLEMENTATION.md)
+revision OBS-01/1.0.0, được System Contracts §41 thông qua. Bảng đó quy định
+base name, Counter/Gauge/Histogram, labels/enum, unit, buckets, điểm update/commit,
+retry/reset và missing-data semantics cho từng runtime. Không copy short aliases
+cũ thành API metrics thứ hai.
 
-```text
-http_requests_total
-http_request_duration_seconds
-sensor_events_total
-invalid_sensor_events_total
-alerts_total
-alert_lifecycle_actions_total
-ml_client_errors_total
-rag_client_errors_total
-```
+| Runtime owner | Metrics cần implement | Owner code |
+| --- | --- | --- |
+| Ingestion/Processing/Business | HTTP, broker ACK, DQ/outcome, outbox, projections/alerts/SSE/history | Người1 |
+| ML inference/training | Inference histograms/model info; experiments/evaluation/registry theo MLFLOW-01 | Người2 |
+| RAG | Retrieval/generation/grounding/citation metrics | Người3 |
+| Sensor/Storage/Drift | Generation/spool, durable archive, saved drift report/heartbeat | Người4 |
+| Prometheus/exporters/Grafana | Scrape labels/config, Kafka lag, dashboards/rules/ACL trong GitOps | Người4 |
 
-### ML
-
-```text
-ml_inference_requests_total
-ml_inference_duration_seconds
-ml_predictions_total
-```
-
-### RAG
-
-```text
-rag_requests_total
-rag_request_duration_seconds
-rag_retrieval_duration_seconds
-rag_insufficient_evidence_total
-```
-
-### Drift Worker
-
-```text
-maintai_drift_feature_score{feature,metric}
-maintai_drift_feature_status{feature,status}
-maintai_drift_features_drifted
-maintai_drift_overall_status{status}
-maintai_drift_window_samples
-maintai_drift_reports_total{status}
-maintai_drift_worker_last_success_timestamp_seconds
-maintai_prediction_failure_ratio
-```
-
-Không gắn `report_id`, `event_id`, `machine_id` vào label.
+Python baseline một process/runtime/Pod, collectors singleton từ startup;
+worker metrics ở cùng runtime, không tự tạo microservice. Mẫu instrumentation,
+multiprocess limitations và grouping key Pushgateway ở OBS-01 §2/§4/§5.
 
 ## 21.4. Label cardinality
 
@@ -1684,7 +1690,7 @@ Không dùng:
 event_id
 request_id
 correlation_id
-machine_id với số lượng rất lớn
+machine_id (kể cả demo5 máy)
 ```
 
 làm Prometheus label.
@@ -1692,6 +1698,10 @@ làm Prometheus label.
 Những ID này thuộc logs/traces/DB, không thuộc metrics labels.
 
 ## 21.5. Grafana dashboards
+
+Các panel kế thừa dưới đây là nội dung tham khảo. UI-01 §2.3 trong
+[UI_ARCHITECTURE.md](UI_ARCHITECTURE.md) nhóm chúng vào năm dashboard kỹ thuật và
+chốt datasource/permissions; số dashboard không là số UI/Deployments.
 
 ### Dashboard 1 — System Overview
 
@@ -1904,8 +1914,9 @@ START
  -> compute prediction drift
  -> aggregate DriftStatus
  -> persist drift_report
- -> push latest gauges to Pushgateway
- -> update checkpoint
+ -> PUT latest report gauges (heartbeat vẫn là checkpoint cũ)
+ -> commit success checkpoint
+ -> PUT heartbeat timestamp từ checkpoint đã commit
  -> EXIT
 ```
 
@@ -1921,7 +1932,10 @@ Drift Worker --push gauges--> Pushgateway <--scrape-- Prometheus -> Grafana/Aler
 
 Nếu không muốn dùng Pushgateway, thay bằng một metrics adapter long-lived đọc latest `drift_reports`; không để design ở trạng thái “one-shot process nhưng vẫn expose /metrics để Prometheus scrape”.
 
-Grouping key phải ổn định, ví dụ `job=maintai-drift-worker`; không dùng `report_id`, `event_id`, `machine_id` làm grouping key/label.
+Grouping key phải ổn định, ví dụ `job=maintai-drift-worker`, `environment=<configured>`;
+không dùng report/event/machine/Pod IDs. Status gauges là one-hot0/1 theo status
+label, không mã số0..4. Required publication lỗi không advance checkpoint; lỗi
+heartbeat sau commit retry publication, không tính report trùng. Xem OBS-01 §5.
 
 ## 21A.9. Persistence
 
@@ -2857,19 +2871,24 @@ Mỗi batch có `offset_start`, `offset_end`, `record_count`, checksum, schema v
 
 ## 39.5. Metrics và alerting tối thiểu cho event-driven scale-ready
 
-```text
-Ingestion: accepted_events_total, kafka_publish_failures_total, ack_latency_p95
-Processing: consumer_lag, event_to_prediction_latency, invalid_rate,
-            ml_client_timeout_total, DB pool saturation, outbox_pending_age
-Storage: consumer_lag/oldest_age, objects_written_total, S3 write failures,
-         raw_archive_latency, uncommitted batch age
-Business: alert_signal_consumer_lag, inbox_duplicate_total,
-          alert_dedupe_total, event_to_alert_visible_latency
-Drift: drift_overall_status, last_success_timestamp, model/reference version
-Kafka: broker health, disk usage, retention_remaining_relative_to_lag
-```
+Đây là measurement objectives; tên/labels/types và initial buckets ở
+[OBS-01](OBSERVABILITY_IMPLEMENTATION.md), không đặt metric `_p95` riêng.
 
-Prometheus metric implementation phải dùng histograms/counters phù hợp, `_p95` ở trên mô tả dashboard objective không mặc định là metric counter. Không gắn raw event/machine/request IDs vào metric labels. Dùng Prometheus dashboards và threshold theo baseline load-test, không bịa SLO production từ AI4I 10k records.
+| Objective | Base/exporter series chuẩn |
+| --- | --- |
+| Ingestion accepted/publish errors/ACK latency | maintai_ingestion_accepted_total, maintai_ingestion_publish_failures_total, maintai_ingestion_ack_duration_seconds |
+| Processing outcome/ML attempt latency | maintai_processing_events_total, maintai_processing_ml_client_duration_seconds, maintai_event_to_prediction_duration_seconds |
+| Outbox backlog | maintai_outbox_pending_count, maintai_outbox_oldest_pending_age_seconds |
+| Storage archive | maintai_storage_batches_total, maintai_storage_write_duration_seconds, maintai_storage_oldest_uncommitted_age_seconds |
+| Business duplicates/alert visibility | maintai_business_inbox_duplicates_total, maintai_alerts_deduplicated_total, maintai_event_to_alert_visible_duration_seconds |
+| Drift state/freshness | maintai_drift_overall_status{status}, maintai_drift_worker_last_success_timestamp_seconds |
+| Kafka lag | KafkaExporter kafka_consumergroup_lag, không app-defined kafka_consumer_lag |
+
+Histogram p95 lấy từ rate(bucket) aggregate giữ le; counter không thay audit DB.
+Cross-service latency dùng đúng server accepted timestamp của source event;
+Alert Signal1.0 thiếu timestamp nên cần owner lookup/migration trước khi đo,
+không lấy sensor received_at/latest snapshot của event khác. Missing data báo
+unavailable, không0/STABLE. Không bịa SLO production từ AI4I10k records.
 
 ## 39.6. Những gì **chưa được tạo** chỉ từ việc cập nhật Markdown
 
@@ -2882,6 +2901,10 @@ Prometheus metric implementation phải dùng histograms/counters phù hợp, `_
 ---
 
 # 40. Frontend / Realtime UI Development Guide v1.3 — thực thi phương án C
+
+Frontend ở chương này là **Business UI** (`frontend/`). Simulator là frontend
+khác, Grafana/MLflow dùng UI công cụ. Chốt image/config/release riêng tại §48;
+không đổi frontend runtime ID hoặc gộp Simulator vào Business image khi implement.
 
 ## 40.1. Chốt yêu cầu từ hai cuộc trò chuyện
 
@@ -3124,6 +3147,11 @@ Simulator UI riêng hiển thị RUNNING/PAUSED/scenario/control_version, last c
 ACK và retry/reject counters từ Sensor Control API. Không giả định Simulator UI
 có quyền đọc Business telemetry/prediction/alerts hoặc rằng Main UI có control API.
 
+Đây là UX mục tiêu: `ControlState` baseline hiện chưa có ACK detail/retry/reject
+counters/rate. Khi implement, list/get/pause/resume/scenario theo OpenAPI hiện có;
+field/control khác phải freeze DTO/permissions/idempotency trước, không bịa JSON
+hoặc dùng mock counters như số liệu live. Chi tiết UI-01 §4 và §48 bên dưới.
+
 E2E tương lai: pause M-001 nhưng M-002 vẫn phát; backlog cũ vẫn hoàn tất; malformed
 envelope bị reject riêng; feature-invalid được raw archive nhưng không inference;
 resume tiếp tục sequence; response control mất thì GET reconcile; source ordering
@@ -3173,6 +3201,12 @@ Download/Verify AI4I Source
 ```
 
 ## 43.2. ML Training → MLflow → Model release
+
+Triển khai chi tiết theo [MLFLOW_INTEGRATION_GUIDE.md](MLFLOW_INTEGRATION_GUIDE.md)
+MLFLOW-01/1.0.0: experiment/parent/selected run, tags/params/metrics, SDK reference,
+frozen artifacts, registry receipt, durable operation intents, retry/reconcile và
+mapping strict platform model-result. Target provenance schema nêu bên dưới chưa
+được cung cấp; không coi ví dụ là schema/runtime đã có.
 
 Training Job ghi MLflow run với `run_id` thực cùng `dataset_version`, manifest SHA, split SHA, training Git SHA, training OCI image digest, feature schema version, lockfile SHA, seed/params, validation/test metrics, threshold-selection evidence và drift reference SHA. Đăng ký model version có exact model/preprocessor artifact digest. Sinh approved release manifest từ giá trị **thật** của registry/MLflow/GitOps, theo `../contracts/provenance/release_manifest.schema.json`.
 
@@ -3262,3 +3296,130 @@ Bắt đầu bằng source inventory và freeze contract v1.4. Sau khi fixtures 
 - [ ] Crash tests Kafka ACK/offset/outbox, S3 restore, Business SSE fan-out và RAG failure đạt.
 - [ ] Rollback về model digest cũ được duyệt; Alert/RAG citation lịch sử vẫn tra cứu được.
 - [ ] Có source/GitOps PR, deploy logs, load metrics và danh sách lỗi tồn đọng; **không tuyên bố production/HA khi chưa có bằng chứng**.
+
+# 48. UI-01 — Hướng dẫn triển khai bốn giao diện
+
+Nguồn chuẩn của quyết định UI/release: [UI Architecture](UI_ARCHITECTURE.md),
+System Contracts §40. Đích là4 UI, trong đó nhóm viết2 frontend độc lập, dùng
+Grafana và MLflow UI thật. Portal không bắt buộc runtime riêng. Source mới chỉ
+được tạo khi có tác vụ implementation. Sau lượt docs, tác vụ20/10 đã thêm
+[Simulator UI0.1.0](../sensor-simulator-UI/README.md): demo/live client/OIDC/recovery,
+build/tests và Dockerfile/descriptor riêng. Sensor0.3.0 đã bổ sung provider/HTTP
+integration; production IdP/Kafka E2E và container/rollout evidence vẫn thiếu.
+
+## 48.1. Business và Simulator source boundaries
+
+- Giữ `frontend/` làm Business React và runtime/image group frontend đang có.
+  Người1 giữ REST bootstrap + SSE/reconnect, scoped history/alerts/briefs/feedback.
+  Menu3 mục trong demo là UX tham khảo, các capabilities hợp lệ vẫn ở trang con/tab.
+- Simulator frontend tại `sensor-simulator-UI/`, Người4, có package/build/lockfile,
+  Dockerfile/runtime descriptor và tests riêng. Không thêm app
+  source vào `sensor/` rồi bắt mọi thay đổi UI rollout Sensor backend.
+- Sensor backend tiếp tục sở hữu Control API, scheduler, durable state/sequence/
+  spool và gửi HTTP tới Ingestion. UI không phát readings trực tiếp tới Kafka.
+- Shared UI library nếu cần chỉ chia sẻ source/dependencies; mỗi frontend xuất
+  artifact/image riêng. Thay library cần CI cho những consumer thực sự bị ảnh hưởng.
+
+## 48.2. Simulator vertical slice cần làm trước
+
+1. Đối chiếu `contracts/v1.3/openapi/openapi-simulator.yaml`: GET collection,
+   GET control, POST pause/resume, PUT scenario; không tự thay wire baseline.
+2. Implement auth/SIMULATOR_OPERATOR + machine scope tại Sensor, persistence và
+   idempotency/version guards trước khi coi nút frontend là command đã thành công.
+3. UI tải list/state, gửi expected_control_version + Idempotency-Key, hiển thị
+   in-flight;200 dùng state persisted,409 GET reconcile, timeout giữ unknown outcome.
+4. Chứng minh Pause một máy không dừng máy khác, browser refresh giữ state,
+   old queue/backlog tiếp tục và Alert không tự resolve.
+5. Rate/counters/preview/control SSE/batch controls cần PR contract riêng. Trước
+   đó ẩn/disable capability chưa hỗ trợ và hiển thị unavailable, không random mock.
+
+Poll list/control có budget/backoff phù hợp là baseline; chưa yêu cầu tự tạo
+Simulator SSE API. Closing tab/rollout frontend không được đổi stream_state.
+
+## 48.3. Grafana và MLflow implementation handoff
+
+Các module owners viết instrumentation và training integration trong app theo
+[OBS-01](OBSERVABILITY_IMPLEMENTATION.md) và [MLFLOW-01](MLFLOW_INTEGRATION_GUIDE.md).
+Hai tài liệu có catalog/checkpoint/SDK examples và checklist bàn giao; app không
+chứa dashboard provisioning/manifests của platform. Source/fixtures và runtime
+evidence phải tách biệt theo readiness.
+
+Người4 cấu hình Grafana workload/datasources/dashboard JSON trong GitOps, Người2
+review ML/drift panels. Prometheus/exporters/Pushgateway là nguồn metrics; model/
+reference/window/freshness cần rõ. Report/histogram datasource do Drift owner
+freeze, read-only/query-bounded; SQL datasource là Grafana server credential,
+không browser hoặc Business DB credential. Không embed raw credentials/S3 URLs.
+
+Người2 cung cấp experiments/runs/registry/lineage evidence, Người4 vận hành MLflow
+server/UI và private access/config. Không viết lại MLflow HTML demo thành React.
+Model release vẫn qua approved GitOps PR, không thay alias để bỏ qua release gate.
+
+## 48.4. Affected-component CI và per-component GitOps
+
+Đặc tả selection: frontend-only → frontend checks/image; simulator-ui-only →
+simulator-ui checks/image; sensor backend-only → Sensor checks/image. Shared code,
+lockfile/toolchain hoặc provider API đổi → kiểm tra các consumers bị ảnh hưởng.
+Phân loại chưa rõ thì kiểm tra rộng hơn, không bỏ check bắt buộc. CI hiện có chưa
+cài selection này; không bật component placeholder chỉ vì có docs mới.
+
+Hai frontend có image digests/public runtime config riêng. GitOps sửa đúng
+component desired state, không thay global annotation/time stamp làm mọi template
+rollout. Giữ `CI / required`, PR/squash policy và per-image provenance. Grafana
+dashboard/datasource cùng MLflow server/config version theo vòng platform riêng.
+
+Không bump model/API/Kafka version chỉ vì thay CSS hoặc UI Suite1.6. Rollback UI
+cần API tương thích; không tự rollback DB hoặc xóa commands đã persist.
+
+## 48.5. Điều kiện nghiệm thu khi triển khai
+
+Thực hiện ma trận ở UI-01 §8: độc lập image/config/Pod templates khi release;
+control persistence/idempotency/conflict/unknown outcome; Business freshness/Alert
+semantics; scoped auth/secret isolation; platform UI outage và datasource rights;
+independent rollback. Ghi source/image/config/GitOps revisions và logs thật.
+Tài liệu và mock screenshot không phải evidence đã đạt các điều kiện này.
+
+
+# 49. OBS-01 và MLFLOW-01 — triển khai thống nhất cho bốn thành viên
+
+**Quyết định20/10/2026:** System Contracts §41 thông qua hai hướng dẫn revision1.0.0:
+
+- [OBSERVABILITY_IMPLEMENTATION.md](OBSERVABILITY_IMPLEMENTATION.md): metrics
+  names/types/units/labels/buckets theo runtime, code example, one-hot Drift,
+  cross-service timestamp semantics, queries, alias migration và GitOps handoff.
+- [MLFLOW_INTEGRATION_GUIDE.md](MLFLOW_INTEGRATION_GUIDE.md): run/candidate identity,
+  evaluation/artifact/registry provenance, SDK examples, durable intent/checkpoint,
+  safe retry/unknown outcome, existing schema mapping và tests cần thực hiện.
+
+Nguồn chuẩn là Contract §20/§41 cùng catalog được ủy quyền, không short names trong
+ví dụ kế thừa. Người1 instrumentation của app flow; Người2 ML/training; Người3 RAG;
+Người4 Sensor/Storage/Drift và platform. Metrics/MLflow data được app tạo; Grafana/
+MLflow Server config được GitOps triển khai, cloud resources do infrastructure.
+
+Lượt này chỉ thống nhất docs. Chưa import metrics/trainer source, migrate ledger,
+pin MLflow client/server images hoặc thay Grafana dashboards/GitOps configs.
+Nghiệm thu source PR theo OBS-01 §8 và MLFLOW-01 §9; không tick complete vì có
+catalog, sample code hay schema. Đọc readiness để xử lý timestamp, registry-wire,
+lease/fencing và datasource gaps trước enable.
+
+
+# 50. Sensor0.3.0 — implementation ACK202/control/durability
+
+Phần source đã nâng cấp theo §41/48 và OBS-01: SensorRequest1.3.0, ACK202,
+SQLite/WAL state + per-machine sequence/cursor + retry/rejected journal, durable
+command receipts/audit và single-controller lock. `maintai-sensor serve` chạy
+scheduler/generation và bounded HTTP sender độc lập trong cùng Deployment.
+Control provider giữ nguyên5 frozen APIs/closed DTO baseline1.3.2; state/version/
+receipt được commit trước200. Pause không hủy backlog, scenario không tự Resume,
+không mutate Alert. Shared auth dùng JWT/JWKS + role/scope/machine scope; sender
+có token-file hoặc OAuth client-credentials riêng.
+
+Bốn scenario UI đã có YAML thực thi; critical chỉ là input stress, không ép
+prediction/risk. Metrics server theo OBS-01; offline replay summary dùng prefix
+maintai_replay_ để không nhầm với reading đã commit. Dockerfile pin base digest,
+serve/probes; output image/container/rollout vẫn cần kiểm chứng riêng.
+
+Đọc [Sensor README](../sensor/README.md) để cài/chạy, claims mapping, volume,
+quota/TTL và maintenance. Không xóa journal rồi reuse máy cũ với sequence1.
+Readiness §15 ghi các kiểm tra thật và giới hạn; [báo cáo thay đổi](SENSOR_IMPLEMENTATION_REPORT.md)
+liệt kê từng file/lý do. Rate/counters/preview live vẫn cần PR contract riêng;
+UI giữ unavailable đúng §48.2, không thêm fields vào closed ControlState.

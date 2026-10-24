@@ -1,0 +1,8 @@
+name: recovery
+seed: 42
+phases:
+  - name: recovery
+    events: 300
+    transforms:
+      torque_nm: {type: linear_shift, start_delta: 16, end_delta: 0}
+      rotational_speed_rpm: {type: linear_scale, start_factor: 0.85, end_factor: 1}

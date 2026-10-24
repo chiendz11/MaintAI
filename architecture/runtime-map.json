@@ -15,7 +15,8 @@
     "ml-service/training/runtime.json",
     "rag-service/runtime.json",
     "frontend/runtime.json",
-    "drift-worker/runtime.json"
+    "drift-worker/runtime.json",
+    "sensor-simulator-UI/runtime.json"
   ],
   "logical_databases": {
     "processing_db": "processing",
@@ -32,16 +33,5 @@
     "Argo Events/Workflows",
     "Observability"
   ],
-  "planned_runtimes_without_source": [
-    {
-      "runtime_id": "simulator-ui",
-      "workload_kind": "Deployment",
-      "code_owner": "simulator-ui",
-      "implementation_status": "not_created",
-      "interfaces": [
-        "Sensor Control API"
-      ],
-      "design_document": "docs/README.md"
-    }
-  ]
+  "planned_runtimes_without_source": []
 }
