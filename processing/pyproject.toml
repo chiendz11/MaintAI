@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools==84.0.0", "wheel==0.48.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "maintai-processing"
+version = "0.1.0"
+description = "Processing transport entrypoints; application DQ/ML/risk callbacks are owner supplied"
+requires-python = ">=3.11"
+dependencies = ["maintai-messaging[postgres]==0.2.0"]
+
+[project.scripts]
+maintai-processing-worker = "maintai_processing.worker:main"
+maintai-processing-relay = "maintai_processing.outbox_relay:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

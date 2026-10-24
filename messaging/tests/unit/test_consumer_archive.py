@@ -4,7 +4,6 @@ import json
 import threading
 
 import pytest
-
 from maintai_messaging.archive import S3RecordArchive
 from maintai_messaging.consumer import ConsumerRunner, DurableReceipt, Record
 from maintai_messaging.contracts import canonical_json

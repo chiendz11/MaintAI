@@ -35,7 +35,7 @@ Workflow: [workflows/ci.yml](workflows/ci.yml), theo
   Các digests này là inputs CI, không tự thay release/config ở GitOps.
 - Job `repo-metadata` kiểm SHA256 active docs trong source-manifest, local links/
   heading anchors, runtime Dockerfile/source paths và pinned UI CI images. Liên
-  kết tới hai repo platform bên cạnh được phân loại ngoài checkout, không clone
+  kết tới MaintAI-gitops, Maint-infrastructure và folder MaintAI-k3d bên cạnh được phân loại ngoài checkout, không clone
   hoặc giả vờ kiểm tra các file của chúng trên app runner.
 - Job `drift-ci` chạy Python 3.12: lint/format, unit/contract tests, PostgreSQL 17
   integration, bốn sensor scenarios, build wheel/sdist và runtime dependency audit.
@@ -119,3 +119,45 @@ python3 .github/scripts/container_smoke.py ui --image maintai-simulator-ui:ci
 Container/volume tạo tên ngẫu nhiên, không publish port và cleanup ở finally.
 CI không publish registry, không dùng production secrets và không deploy lên môi
 trường. Xem run đúng commit trên GitHub để xác nhận container jobs đã chạy.
+
+## Storage Consumer0.1.0
+
+`storage-ci` kiểm Python3.11/3.12: lint/format, archive/retry/replay/rebalance và
+health tests bằng fixtures/botocore Stubber; build wheel/sdist cả SDK+runtime;
+cài wheel ngoài checkout và chạy offline verify-config. Không cần AWS credentials.
+Integration Kafka+MinIO thật là opt-in và mặc định skip, không được gọi là đã pass.
+`storage-container` build từ root bằng Dockerfile-specific context allowlist,
+kiểm UID10001 và offline smoke với network none/read-only. Cả hai jobs được thêm
+vào `required.needs`, Storage được gỡ khỏi placeholder component matrix. Không
+publish image hoặc deploy. Các chỉnh sửa local sẵn có của workflow được giữ;
+phần Storage chỉ thêm jobs/dependencies tương ứng. Xem
+[Storage runbook](../storage-consumer/README.md).
+
+## MLflow image source và publication
+
+Job `mlflow-source-ci` thuộc `CI / required`, kiểm source ownership/base config,
+immutable handoff schema và release failure paths offline. Không cài/chạy server
+MLflow hoặc dùng AWS/GitHub secrets. Source check cho phép base/version còn null
+nhưng in `publication_ready=false`; không coi đây là image/container validation.
+
+Workflow [maintai-publish.yml](workflows/maintai-publish.yml) mới là app-owned
+publisher cho riêng group `mlflow`, manual/main/prod và gate ENABLE_IMAGE_PUBLICATION.
+Base/version/compatibility cần được chốt trong `ml-service/mlflow/image-lock.json`
+trước cloud authentication. Sau build/smoke, image ECR được ký và dispatch digest
+cho GitOps mở PR, không merge/enable/deploy. Những component khác chưa được bật
+publish; `.github/workflows/ci.yml` vẫn chỉ build/test chúng. Xem
+[MLflow runbook](../ml-service/mlflow/README.md) và IAM prerequisites trước activation.
+
+## PROC-ORDER-01 — Kafka/Processing CI coverage
+
+kafka-ci hiện kiểm SDK0.2.0 + Processing transport package: keyed FIFO, safe
+frontier/holes, bounded drain, metrics failure, role/factory boundaries; build
+SDK/Processing wheels và installed entrypoint help. kafka-integration thêm real
+PostgreSQL generation/cursor/rollback và ordered-head retry/ACK-loss/race tests,
+real Kafka keyed processing + ordered publish. JUnit integration lưu7 ngày.
+Hai jobs vẫn ở CI / required, không thêm skip/continue-on-error để giả xanh.
+
+Local evidence và lệnh opt-in: [implementation report](../docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md).
+Có local Kafka4/PostgreSQL17 tests không đồng nghĩa remote Actions, Docker/EKS,
+app DQ/ML/risk hoặc load1.000 readings/s đã được xác nhận. Storage regression
+vẫn dùng default serial runner; raw Kafka+MinIO test là opt-in riêng.

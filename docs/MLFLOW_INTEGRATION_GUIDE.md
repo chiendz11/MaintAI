@@ -13,7 +13,8 @@ trainer, ledger adapter hoặc MLflow deployment. Không thay schema bằng ví 
 | --- | --- |
 | App/ml-service/training — Người2 | Data/split, fit/evaluate, log runs/params/metrics/artifacts, register selected candidate, xuất provenance thật |
 | App/ml-service/inference — Người2 | Load approved release, xác minh model/preprocessor/reference, xuất effective model info; không gọi MLflow trên mỗi predict |
-| GitOps/platform — Người4 | MLflow Server/UI image/config, experiment/model namespace provisioning, DB/S3 connectivity/auth, workflow/ledger/release PR |
+| App/ml-service/mlflow — ML + Platform | Upstream server image packaging, dependency/base pins, local dev và signed image publisher |
+| GitOps/platform — Người4 | MLflow production manifests/config, namespace provisioning, DB/S3 connectivity/auth, verified digest PR và vận hành |
 | Infrastructure — Người4 | PostgreSQL instance, S3 versioning/encryption/IAM, network và durable training ledger infrastructure |
 | Drift — Người4, ML review Người2 | Chỉ đọc đúng reference/model release, xuất report/metrics; không tự train/register/promote |
 
@@ -38,7 +39,9 @@ local model. Cold start còn cần artifact store nếu chưa tải bundle.
 
 ## 2. Compatibility và cấu hình
 
-Repo GitOps hiện chưa pin `mlflow_base_image`/server image digest, app training
+`ml-service/mlflow/image-lock.json` trong app giữ base/server-version pins; cả
+hai hiện chưa cấu hình, publisher bị chặn. GitOps giữ production image digest
+và config, không build server. App training
 còn skeleton. Ví dụ SDK dưới đây theo API OSS MLflow3.x đã đối chiếu20/10/2026;
 không coi `3.x` là dependency lock. Trước PR source, Người2+Người4 phải chọn và
 ghi **exact server/client patch versions**, Python/sklearn/serialization versions,
@@ -47,6 +50,36 @@ tests trên đúng cặp đó. Không dùng `latest` hoặc ngầm chuyển sang
 Server image phải hỗ trợ các flags GitOps đang dùng như --serve-artifacts và
 --allowed-hosts; SDK pair phải có synchronous log_batch và tags-at-create theo
 snippets. Không chọn một patch chỉ vì cùng major3 mà bỏ qua capability tests.
+
+### 2.1. Quyết định nguồn image và local dev — 21/10/2026
+
+Source Dockerfile/requirements lock/local Compose/README/publisher nằm ở
+[`ml-service/mlflow/`](../ml-service/mlflow/README.md), cùng ML domain nhưng
+image/runtime riêng với training và inference. Server/UI dùng upstream MLflow.
+Production Deployment/Service/DB/S3/IAM/auth/config vẫn do GitOps/hạ tầng quản lý.
+App runtime map giữ14 application descriptors +1 platform descriptor MLflow;
+không tạo thêm service/DB/UI chỉ vì chuyển source.
+
+Workflow `chiendz11/MaintAI/.github/workflows/maintai-publish.yml` build/smoke,
+push ECR và ký exact digest. GitOps chỉ tin certificate identity workflow này
+ở main cùng GitHub OIDC issuer, source SHA/image_group/source_repository annotations
+và app publisher actor. Nguồn GitOps cũ bị từ chối cho group mlflow; không tự ký
+lại image cũ để đổi danh tính. Intent dùng workload-release1.0.0 hiện hành,
+architecture handoff1.3.1+simulator-ui.1 và empty config-schema map cho platform
+group; không giả platform đã migrate toàn bộ1.4. Receiver chỉ mở PR đổi digest,
+không bật MLflow, đổi credentials hoặc auto merge.
+
+Local Compose dùng cùng Dockerfile với PostgreSQL17 và filesystem artifact volume,
+bind UI127.0.0.1. Nó không chứng minh production S3/IRSA/auth đã hoạt động. Muốn dev
+giống object store production cần integration S3-compatible riêng; không tự nối AWS.
+Chưa có base/server/client compatibility pins hoặc real container evidence; phải
+điền reviewed digests/version và kiểm cặp SDK/server trước khi publish.
+
+IAM trong repo infrastructure hiện còn cấp ECR mlflow cho GitOps publisher;
+phải chuyển grant sang app publisher trước khi bật workflow mới, đồng thời kiểm
+app GitHub App actor/installation. Lượt chuyển source ở app/GitOps không thay
+Terraform, không publish, apply hay deploy. Xem README module và GitOps
+`docs/MLFLOW_IMAGE_MIGRATION.md` cho thứ tự thực hiện.
 
 | Cấu hình mục tiêu | Nơi dùng / quy tắc |
 | --- | --- |

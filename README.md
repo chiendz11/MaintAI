@@ -18,7 +18,7 @@ với entrypoint khác. Chi tiết ở [deployment map](architecture/README.md) 
 
 ```text
 MaintAI/
-├── architecture/                    # Index 14 runtime descriptors; không phải manifests
+├── architecture/                    # 14 app +1 platform descriptor; không phải manifests
 ├── docs/                            # Target v1.4 + chức năng/readiness/chi tiết kế thừa
 ├── contracts/                       # v1.3/ là baseline máy đọc được1.3.2
 ├── messaging/                       # Thư viện Kafka Python dùng chung; không deployment
@@ -36,9 +36,10 @@ MaintAI/
 │   ├── business-consumer/           # [Deployment] telemetry/prediction/alert handlers
 │   ├── shared/                      # Business modules, latest projections/inbox/alerts
 │   └── migrations/                  # business_db
-├── ml-service/                      # OWNER ML; hai image group riêng
+├── ml-service/                      # OWNER ML; ba image group riêng
 │   ├── inference/                   # [Deployment] model serving /predict
 │   ├── training/                    # [WorkflowTask] batch training/evaluation/export
+│   ├── mlflow/                      # [Platform Deployment] upstream Server/UI image + local dev/publisher
 │   ├── shared/preprocessing/        # Code dùng chung, không phải deployment
 │   └── artifacts/                   # Generated bundles ngoài Git
 ├── rag-service/                     # [Deployment] knowledge/RAG/LLM/citations
@@ -49,7 +50,9 @@ MaintAI/
 ```
 
 Kafka, PostgreSQL (5 logical DBs), S3/MinIO, MLflow Server, Argo và monitoring thuộc
-các repo `MaintAI-gitops`/`Maint-infrastructure`. `runtime.json` là metadata kiến trúc,
+các repo `MaintAI-gitops`/`Maint-infrastructure` về production deployment/resources.
+Riêng MLflow image source/locks/local dev/publisher ở `ml-service/mlflow/`; GitOps
+chỉ nhận app-signed digest qua PR. `runtime.json` là metadata kiến trúc,
 không phải Kubernetes YAML, image đã build hoặc entrypoint hoạt động.
 
 ## Luồng mục tiêu
@@ -77,8 +80,9 @@ Business DB chỉ chứa latest projections và business data, không full raw h
 - [Simulator UI](sensor-simulator-UI/README.md) có React/TypeScript, demo5 máy, live
   Control API client, OIDC, command recovery và checks riêng. Sensor Control API
   đã implement; browser chạy với provider thật + fixture Ingestion; chưa deploy UI.
-- Cả14 runtime folders có Dockerfile:11 placeholders, Sensor/Drift Dockerfiles
-  hiện có và Simulator UI static-server Dockerfile mới (chưa build image).
+- Cả14 app runtime folders có Dockerfile:10 placeholders, Sensor/Drift/Simulator UI
+  và Storage có source; MLflow thêm platform image descriptor/Dockerfile riêng với
+  base/version pins còn unset, chưa build/publish.
 - [OpenAPI/schemas/examples](contracts/README.md) hiện tập trung tại
   [v1.3/](contracts/v1.3/README.md): sáu OpenAPI cùng schema/examples tự chứa,
   baseline union2.0.0. [Kafka bundle](contracts/kafka/README.md) bổ sung writer1.4,
@@ -97,9 +101,31 @@ mở http://127.0.0.1:5174. Mặc định là demo cục bộ, không gọi Sens
 
 ## Tài liệu thiết kế v1.4
 
-[System Contracts §34–39](docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md)
-và [Guide §42–47](docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md)
+[Cơ sở thiết kế: Yêu cầu → Giả định → Kiến trúc → Biện luận](docs/design-basis/README.md)
+giải thích kiến trúc từ đề Chủ đề3 với baseline100 máy×1 reading/s=100 readings/s.
+Hệ thống scale-ready: khiX>100, tính lại capacity và tối ưu latency từng stage;
+5 máy là smoke test nhỏ. Các phép tính chưa là kết quả benchmark.
+
+[System Contracts §34–43](docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md)
+và [Guide §42–55](docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md)
 bổ sung rejected archive, Read API read-only, MLflow/dataset/model/release lineage
 và rollout/rollback. [Docs index](docs/README.md) giữ quyết định nhóm 4 người,
 Simulator UI riêng và phân cấp tài liệu. [Readiness](docs/implementation-readiness.md)
 ghi các khác biệt cần freeze và artifacts chưa có; không coi docs là runtime evidence.
+
+[Local Kubernetes bằng k3d](docs/LOCAL_DEVELOPMENT_K3D.md) có folder hạ tầng riêng
+`../MaintAI-k3d/`: Kafka/DB/MinIO/monitoring và app integration có review gates.
+Chưa tạo cluster/build images/E2E; không thay AWS Terraform hoặc production GitOps.
+
+## PROC-ORDER-01 — Processing concurrency và ordered Outbox
+
+SDK0.2.0/bundle1.1.0 có keyed FIFO, bounded cross-machine execution, safe partition
+offset coordinator, durable DB fence và head-of-key ordered relay. Processing
+transport0.1.0 có wrappers/factory trong processing/src/maintai_processing/.
+Cùng máy tuần tự; máy khác có thể chạy đồng thời kể cả cùng partition. Offset501
+xong khi500 chưa durable vẫn không cho commit502. Head Outbox retry giữ successor.
+
+Đọc [đặc tả](docs/PROCESSING_CONCURRENCY_AND_ORDERING.md) và
+[báo cáo triển khai/cách dùng](docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md).
+Full DQ/ML/risk/history callbacks, health server, image/owner DB activation và
+rollout còn cần tích hợp. Storage/Business giữ serial default; không thêm runtime.

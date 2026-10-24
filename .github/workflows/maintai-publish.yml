@@ -1,0 +1,63 @@
+name: maintai-publish
+on:
+  workflow_dispatch:
+    inputs:
+      image_group:
+        description: Only migrated image groups are publishable here
+        type: choice
+        options:
+          - mlflow
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: maintai-app-image-${{ inputs.image_group }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'chiendz11/MaintAI' && github.ref == 'refs/heads/main' && vars.ENABLE_IMAGE_PUBLICATION == 'true'
+    runs-on: ubuntu-24.04
+    environment: prod
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      SOURCE_SHA: ${{ github.sha }}
+      IMAGE_GROUP: ${{ inputs.image_group }}
+      IMAGE_REPOSITORIES_JSON: ${{ vars.IMAGE_REPOSITORIES_JSON }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      GITHUB_APP_ID: ${{ vars.APP_RELEASE_PUBLISHER_APP_ID }}
+      GITHUB_APP_INSTALLATION_ID: ${{ vars.APP_RELEASE_PUBLISHER_INSTALLATION_ID }}
+      GITHUB_APP_PRIVATE_KEY: ${{ secrets.APP_RELEASE_PUBLISHER_PRIVATE_KEY }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Install release tooling only
+        run: python -m pip install -r ml-service/mlflow/requirements-release.lock
+      - name: Check reviewed base/version pins before cloud authentication
+        run: |
+          python - <<'PY'
+          import sys
+          sys.path.insert(0, 'ml-service/mlflow')
+          import release
+          release.read_lock(require_ready=True)
+          release.validate_contract()
+          PY
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a
+        with:
+          role-to-assume: ${{ vars.APP_IMAGE_PUBLISHER_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6
+      - name: Build, smoke, publish and sign the MLflow image
+        run: python ml-service/mlflow/release.py publish
+      - name: Dispatch the signed digest to the GitOps PR receiver
+        run: python ml-service/mlflow/release.py dispatch

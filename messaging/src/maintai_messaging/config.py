@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 import re
 from collections.abc import Mapping
@@ -9,6 +10,58 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .errors import ConfigurationError
+
+
+@dataclass(frozen=True)
+class KeyedSettings:
+    """Opt-in Processing budgets, separate from default Business/Storage config."""
+
+    max_active_keys: int = 8
+    max_pending_records: int = 512
+    max_pending_bytes: int = 16777216
+    max_pending_per_key: int = 64
+    max_uncommitted_per_partition: int = 128
+    resume_low_watermark: float = 0.5
+    handler_timeout_seconds: float = 15
+    drain_timeout_seconds: float = 30
+
+    def __post_init__(self):
+        for name in (
+            "max_active_keys",
+            "max_pending_records",
+            "max_pending_bytes",
+            "max_pending_per_key",
+            "max_uncommitted_per_partition",
+        ):
+            if not isinstance(getattr(self, name), int) or getattr(self, name) < 1:
+                raise ConfigurationError("Keyed capacity settings must be positive integers")
+        if self.max_active_keys > self.max_pending_records:
+            raise ConfigurationError("Active keys cannot exceed the receipt budget")
+        if not 0 < self.resume_low_watermark < 1:
+            raise ConfigurationError("Resume watermark must be between zero and one")
+        for value in (self.handler_timeout_seconds, self.drain_timeout_seconds):
+            if not math.isfinite(value) or not 0 < value <= 120:
+                raise ConfigurationError("Keyed deadlines must be finite and at most 120 seconds")
+
+    @classmethod
+    def from_env(cls, env=None):
+        env = os.environ if env is None else env
+        integers = {
+            "max_active_keys": "PROCESSING_MAX_ACTIVE_KEYS",
+            "max_pending_records": "PROCESSING_MAX_PENDING_RECORDS",
+            "max_pending_bytes": "PROCESSING_MAX_PENDING_BYTES",
+            "max_pending_per_key": "PROCESSING_MAX_PENDING_PER_KEY",
+            "max_uncommitted_per_partition": "PROCESSING_MAX_UNCOMMITTED_PER_PARTITION",
+        }
+        defaults = cls()
+        values = {key: int(env.get(name, getattr(defaults, key))) for key, name in integers.items()}
+        for key, name in {
+            "resume_low_watermark": "PROCESSING_RESUME_LOW_WATERMARK",
+            "handler_timeout_seconds": "PROCESSING_HANDLER_TIMEOUT_SECONDS",
+            "drain_timeout_seconds": "PROCESSING_DRAIN_TIMEOUT_SECONDS",
+        }.items():
+            values[key] = float(env.get(name, getattr(defaults, key)))
+        return cls(**values)
 
 
 def flag(value: str) -> bool:

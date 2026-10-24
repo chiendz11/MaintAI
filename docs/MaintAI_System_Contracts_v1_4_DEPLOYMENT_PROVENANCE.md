@@ -1,9 +1,22 @@
+> **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
+> durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
+> có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
+> [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
+> readiness §19 ghi bằng chứng, commands và giới hạn; các snapshot cũ đọc theo ngày.
+
 > **Tích hợp MaintAI — 2026-10-19:** Tài liệu thiết kế mục tiêu v1.4, chưa xác nhận code/DB/GitOps đã migrate. Đọc [docs index](README.md) để áp dụng quyết định nhóm 4 người, Simulator UI riêng và thứ tự ưu tiên; [readiness](implementation-readiness.md) ghi các schema/scaffold chưa được cung cấp.
 
 > **v1.4 — Chuẩn kiến trúc Deployment và Versioning/Provenance (19/10/2026).** Đây là bản đầy đủ kế thừa v1.3.1 và bổ sung điều khoản v1.4. Khi có mâu thuẫn, **ưu tiên chương v1.4**. Việc chỉnh sửa Markdown không đồng nghĩa đã sửa repository, GitOps, DB hay các service thực tế.
 > **Thứ tự đọc:** `DEPLOYMENT_ARCHITECTURE.md`, `RUNTIME_DATAFLOW.md`, `VERSIONING_AND_PROVENANCE.md`, `IMPLEMENTATION_PLAN.md`. Schemas máy đọc và mẫu Deployments tại `../contracts/`, `../implementation/`.
 
 # MaintAI — Hợp đồng hệ thống v1.4: Deployment và truy vết nguồn gốc (kế thừa đầy đủ v1.3.1)
+
+> **PROC-ORDER-01 — 2026-10-23:** §42 thông qua
+> [Processing concurrency/ordering](PROCESSING_CONCURRENCY_AND_ORDERING.md)
+> revision1.0.0. Các điều khoản keyed execution, safe offset frontier và ordered
+> outbox ở đây ưu tiên mô tả tuần tự/row-only relay kế thừa. Đây là target mới,
+> SDK0.2.0 đã có implementation/migration/tests; app/prod integration còn pending.
+> Wire versions và deployment boundaries giữ nguyên.
 
 > **OBS-01 / MLFLOW-01 — 2026-10-20:** System Contracts §41 và Guide §49
 > thông qua [metrics catalog](OBSERVABILITY_IMPLEMENTATION.md) và
@@ -2710,7 +2723,7 @@ Giữ nguyên: Ingestion Deployment riêng; DQ ở Processing Worker; Business k
 
 # 35. v1.4 — Kafka topics, HTTP status và quyền sở hữu
 
-**Wire freeze của repo:** [Kafka bundle1.0.0](../contracts/kafka/README.md) và
+**Wire freeze của repo:** [Kafka bundle1.1.0](../contracts/kafka/README.md) và
 [hướng dẫn tích hợp](KAFKA_DEVELOPMENT_GUIDE.md) là ánh xạ máy đọc được của mục
 này: accepted1.3.0, rejected1.4.0, outcome writer1.4.0 `kind`, legacy reader2.0.0
 `result_kind`, alert1.0.0. Các ví dụ inherited1.1.0/2.0.0 tại §33.5 không phải
@@ -2816,6 +2829,15 @@ UI-01 không tăng wire version, không tạo source/runtime/provisioning trong 
 
 # 41. OBS-01 và MLFLOW-01 — Hợp đồng instrumentation và tracking
 
+**MLFLOW-IMAGE-01,21/10/2026:** Image source/pins/local dev và publisher MLflow
+chuyển sang `ml-service/mlflow/` trong MaintAI; production manifests/config/IRSA
+vẫn ở GitOps/hạ tầng. Source domain không gộp training/inference/server images.
+GitOps chỉ nhận app-signed MLflow digest từ maintai-publish.yml/main, đúng source
+annotations và app actor; legacy GitOps producer không còn hợp lệ cho group này.
+Giữ existing workload-release envelope; không đổi wire/API schemas, tự bật service,
+publish/deploy hay coi local source checks là server integration evidence. Chi tiết
+ở MLFLOW-01 §2.1 và Guide §52, ưu tiên các mô tả owner image kế thừa mâu thuẫn.
+
 **Revision decision1.0.0, ngày2026-10-20.** Bổ sung chuẩn v1.4, không tăng HTTP/
 Kafka versions hoặc chứng minh code đã migrate. Các điều khoản ở đây và catalog
 được dẫn ưu tiên ví dụ metrics/MLflow kế thừa nếu mâu thuẫn.
@@ -2853,3 +2875,73 @@ Guide §49, [readiness](implementation-readiness.md) và hai tài liệu mới g
 bàn giao và gaps. Chỉ hoàn tất khi có source, locked dependencies, fixtures,
 network/recovery evidence và deployment checks tương ứng; lượt docs không chạy
 các actions đó hoặc tự phê duyệt release/model.
+
+# 42. PROC-ORDER-01 — Concurrency và ordering của Processing/Outbox
+
+**Decision1.0.0,2026-10-23.**
+[PROCESSING_CONCURRENCY_AND_ORDERING.md](PROCESSING_CONCURRENCY_AND_ORDERING.md)
+là đặc tả chi tiết được ủy quyền cho điều khoản này. Target system vẫn1.4.0;
+decision bổ sung behavior, không tự thay closed DTO, frozen SQL hoặc SDK version.
+
+1. Processing đọc `sensor.readings` bằng bounded keyed scheduler: cùng
+   `machine_id` tối đa một active task trong assignment hợp lệ; khác máy được
+   xử lý đồng thời kể cả cùng partition. Nhả key sau durable terminal outcome/
+   duplicate verification, không sau riêng ML response. Sensor scheduler là
+   module khác; không tạo scheduler service/deployment.
+2. Per-machine FIFO giữ Kafka arrival order; source sequence phải tăng bền vững
+   xuyên epoch/restart. Không sort `(epoch,sequence)` khi epoch là opaque label.
+   Identity duplicate dùng outcome cũ; conflict/first-seen sequence đi lùi phải
+   fail closed/reconcile; sequence gap hợp lệ không chờ vô hạn.
+3. Kafka offset chỉ tiến qua safe completed prefix của **từng partition** sau
+   transaction inbox/history/risk/outbox. Không commit offset cao chỉ vì future
+   đó xong; fetched/queued/completed-behind-hole đều thuộc ledger có giới hạn.
+   No auto commit/store; revoke/lost không cho stale generation commit.
+4. Stale handler không được mutate owner DB sau chuyển assignment. RAM generation
+   không đủ: cần durable transaction fence cho cursor/outcome/risk/outbox và
+   unique identity. Remote inference có thể bị gọi lại; không hứa exactly-once ML.
+5. Outbox dispatch theo durable `(topic,machine_id,dispatch_seq)`; chỉ dispatch
+   head sau predecessor đã broker-ACK và mark bền vững. Head đang retry/leased
+   chặn successor cùng key/topic; máy khác tiếp tục. Row-only leases/SKIP LOCKED
+   chưa đáp ứng. Permanent failure giữ blocked state, không silent skip.
+6. Ordered dispatch không hứa physical Kafka deliveries luôn tăng sequence:
+   late duplicate/stale publish vẫn cần inbox/CAS. Không có total order giữa
+   results/signals/telemetry; Alert không bị bỏ chỉ vì latest projection mới hơn.
+7. Business giữ ba handlers/groups, projections độc lập và alert lifecycle;
+   INVALID/UNAVAILABLE giữ historical valid prediction. SSE post-commit, REST
+   resync; UI coalescing không bỏ history/outcomes/alerts. Storage giữ runner
+   hiện hành; không bật keyed mode đồng loạt cho SDK consumers.
+8. Queue/bytes/active-key/uncommitted budgets, ML/DB concurrency, poll/deadline/
+   drain và fencing phải chốt trước enable. Kafka partitions giới hạn group
+   members, không trực tiếp giới hạn số keyed tasks trong một member.
+9. SQL order/cursor/fence cần **migration mới**, compatibility/cutover review;
+   frozen Kafka bundle đổi SQL phải có bundle/lock mới. Không chạy legacy relay
+   hoặc Worker bỏ qua fence cùng writable stream khi target được bật.
+10. Catalog metrics bổ sung tại OBS-01 §11; acceptance gồm offset hole, hot key,
+    queue saturation, late completion/rebalance, hai relay cùng key, ACK unknown
+    và load/recovery. Sơ đồ/render/checksum không thay runtime evidence.
+
+Guide §53, Plan §K, implementation report và readiness §19 ghi SDK0.2 source/tests
+cùng các việc application/prod còn pending.
+Worker/Relay/Read API vẫn ba Processing runtimes; không thêm topic/DB/UI cho
+quyết định này. Rollout/rollback phải giữ inbox/outbox/history và release lineage.
+
+# 43. Giả định ban đầu100 máy và scale-ready — CAPACITY-BASE100-01
+
+**Quyết định23/10/2026:** giả định vận hành ban đầu100 máy,1 reading/s/máy,
+tổng100 readings/s.100 là baseline phân tích/nghiệm thu, không phải giới hạn cứng.
+MaintAI có **kiến trúc scale-ready**: tăng capacity từng boundary khiX>100, giữ
+contracts, per-machine ordering, durability và quyền truy cập.
+
+VớiX máy cùng rate r, R=X×r; nếu khác rate thìR=Σr_i. Tính Worker replicas/concurrency
+bằng mean task time, utilization planning và downstream budgets, rồi đo end-to-end
+alert UI p95 theo mục tiêu≤2s của đề (không gồm LLM brief). Không dùng HTTP202,
+backend DB-visible metric hay phép cộng p95 stage để thay bằng chứng browser.
+
+Tăng replicas/concurrency phải cân ML/DB/Storage/Relay/Business/SSE và catch-up;
+không auto tách service hoặc tăng partition theo từng máy.12 partition giữ nguyên
+trước reviewed remapping/order cutover. Các profile scale là cấu hình phân tích,
+không thay schema,topic,SQL migrations,SDK defaults hoặc actual deployments.
+
+Chi tiết, phép tính và quy trìnhX>100: [Design basis revision1.1](design-basis/README.md),
+[Capacity §11](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).
+Smoke5 máy vẫn dùng phát triển nhỏ; source default5 không tự đổi trong lượt docs.

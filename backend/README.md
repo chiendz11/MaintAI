@@ -1,7 +1,8 @@
 # Business Backend — một codebase, hai Deployments
 
 `backend/` là **source ownership**, không phải một deployment ôm ingestion,
-validation, inference và risk như v1.1. Target là System Contracts 1.3.1 §1/33.
+validation, inference và risk như v1.1. Target là System Contracts v1.4 §34–42;
+runtime inventory/OpenAPI baseline1.3.2 có version riêng.
 
 | Runtime folder | Workload | Trách nhiệm |
 | --- | --- | --- |
@@ -27,3 +28,14 @@ Người1 tại [Kafka guide §6](../docs/KAFKA_DEVELOPMENT_GUIDE.md). Xem
 > [Guide v1.4](../docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md) và
 > [readiness](../docs/implementation-readiness.md). Runtime metadata hiện có vẫn
 > baseline1.3.2; source chưa tự migrate theo việc nhập tài liệu.
+
+## PROC-ORDER-01 — Business giữ projections/lifecycle độc lập
+
+[Decision §8](../docs/PROCESSING_CONCURRENCY_AND_ORDERING.md) áp keyed execution
+ở Processing; Business giữ serial role loops/inbox SDK0.2.0. Full Business SQL/
+API vẫn skeleton; ordered relay không hoàn tất ứng dụng thay owner.
+Telemetry, latest processing và valid prediction có CAS riêng bằng durable source
+sequence xuyên epoch; không sort UUID/offset giữa partition. INVALID giữ valid
+snapshot lịch sử. Signal đến muộn vẫn cần dedupe/lifecycle/audit, không bị bỏ vì
+latest projection mới hơn. Commit DB rồi fan-out SSE, reconnect REST snapshot;
+NORMAL mới không tự đóng Alert, giữa topics không có total order.

@@ -187,13 +187,16 @@ phù hợp rồi implement Sensor/provider + UI cùng fixtures. UI thiếu capab
 | Simulator UI | `sensor-simulator-UI/` React client/demo, live adapter/OIDC/recovery; Người4 | Dockerfile/image group riêng → Deployment/Service `simulator-ui`; chưa build image/deploy |
 | Sensor backend | `sensor/`0.3.0: durable scheduler/spool, scoped Control API, metrics | Image/Deployment Sensor riêng với state/scheduler/spool |
 | Grafana | Platform/GitOps; HTML chỉ là mẫu | Grafana workload riêng + versioned dashboard/datasource config |
-| MLflow | Platform/GitOps; Người2 phối hợp Người4 | MLflow Server workload/image/config riêng |
+| MLflow | Image source/publisher `ml-service/mlflow/`; Người2 phối hợp Người4 | Server/UI upstream, image riêng; production workload/config ở GitOps |
 | Portal | Chỉ HTML demo, tùy chọn | Static launcher; không thêm runtime bắt buộc |
 
 `frontend` vẫn là Business UI, không rename runtime/image group đang có. App hiện
-có14 runtime descriptors baseline1.3.2, gồm Simulator UI mới,
+có14 app runtime descriptors baseline1.3.2, gồm Simulator UI mới, cộng1 platform
+descriptor MLflow,
 trong [runtime map](../architecture/runtime-map.json). Descriptor mới được thêm
-cùng source implementation, không do đếm số UI. Không đưa Grafana/MLflow vào app source. Hạ tầng, ingress,
+cùng source implementation, không do đếm số UI. MLflow upstream image packaging
+và publisher ở `ml-service/mlflow/`, không có React UI riêng; Grafana provisioning
+vẫn ở GitOps. Hạ tầng, ingress,
 dashboard provisioning và release overlays tiếp tục ở các repo platform riêng.
 
 Hai frontend có thể ở cùng monorepo và chia sẻ component library. Chúng vẫn cần
@@ -287,3 +290,36 @@ chưa có contract được liệt kê ở §4; mẫu DB datasource cần review
 Tài liệu target tiếp tục1.4, UI-01 có revision riêng; không đổi tên cả bộ docs
 thành1.6 hoặc gắn nhãn implementation complete. Khoảng cách triển khai theo dõi
 tại [readiness](implementation-readiness.md) và [implementation plan](IMPLEMENTATION_PLAN.md).
+
+## 10. PROC-ORDER-01 — UI khi Processing chạy song song
+
+Quyết định23/10 tại [đặc tả concurrency/ordering](PROCESSING_CONCURRENCY_AND_ORDERING.md)
+§8 giữ bốn UI và các release boundaries hiện hành. Keyed queues/offset coordinator
+ở Worker; UI không gọi chúng, mở thêm Kafka connection hoặc tự sắp xếp toàn hệ thống.
+
+- Máy B có thể có prediction trước máy A dù reading A vào Kafka trước; độc lập
+  giữa máy là hợp lệ. Cùng máy dùng durable source sequence, không completed_at,
+  offset giữa partition hoặc `(opaque epoch,sequence)`.
+- Reducer/DB giữ guard riêng cho telemetry, processing và valid prediction.
+  INVALID/UNAVAILABLE cập nhật trạng thái nhưng giữ prediction lịch sử với source/
+  age. Latest processing và valid prediction có thể thuộc hai event khác nhau.
+- Prediction HIGH và Alert OPEN có thể đến ở hai thời điểm; đợi business alert
+  identity thực tế, không tự dựng Alert từ màu risk. NORMAL mới không tự resolve.
+- Late duplicate/stale SSE không làm các projection lùi; Alert/audit stream không
+  bị bỏ theo telemetry-CAS. SSE post-commit; mất kết nối dùng REST snapshot.
+- Telemetry render có thể coalesce theo nhịp/subscription đã được contract cho phép;
+  backend vẫn xử lý/lưu đầy đủ. Grafana thêm queue/frontier/blocked-key panels
+  theo OBS-01 §11; Grafana/MLflow không trở thành UI điều khiển processing order.
+
+Đây là acceptance cho Business frontend/provider tương lai; chưa sửa React,
+HTTP/SSE schema, Sensor UI hoặc provision Grafana trong lượt docs.
+
+## 11. Quy mô100 máy và latency khiX>100
+
+Baseline100 máy×1 reading/s; kiến trúc scale-ready choX>100 qua capacity/routing/
+fan-out và render budgets. Business UI xem fleet/detail theo quyền, dùng pagination
+và một SSE connection/browser; không mở một connection cho mỗi sensor. Coalesce
+latest telemetry khi cần, giữ đầy đủ alert lifecycle/history;100 không là hard limit.
+Target alert hiển thịp95≤2s phải đo tới browser, không chỉ DB commit. KhiX>100,
+tối ưu stage gây chậm và subscription/filter sau freeze contract thay vì broadcast
+mọi reading tới mọi client. [Capacity §11](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).

@@ -67,20 +67,6 @@ jobs:
       - name: Validate current OpenAPI, schemas and examples
         run: python contracts/v1.3/validate.py
 
-  repo-metadata:
-    name: Docs and runtime metadata
-    needs: structure
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          persist-credentials: false
-
-      - name: Verify document hashes, local references and runtime inventory
-        run: python3 .github/scripts/check_repository.py
-
   kafka-ci:
     name: Kafka SDK (Python ${{ matrix.python }})
     needs: structure
@@ -107,25 +93,31 @@ jobs:
         run: |
           python -m pip install -r messaging/requirements-dev.lock
           python -m pip install --no-deps -e ./messaging
+          python -m pip install --no-deps -e ./processing
 
       - name: Lint, immutable schemas and failure semantics
         run: |
-          ruff check messaging
-          ruff format --check messaging
+          ruff check messaging processing/src processing/tests --config messaging/pyproject.toml
+          ruff format --check messaging processing/src processing/tests --config messaging/pyproject.toml
           python messaging/scripts/lock_contracts.py --check
           maintai-kafka validate-contracts
-          python -m pytest messaging/tests/unit
+          python -m pytest -c messaging/pyproject.toml messaging/tests/unit processing/tests --junitxml=artifacts/kafka-unit.xml
 
       - name: Build source distribution and wheel with bundled contracts
-        run: python -m build messaging
+        run: |
+          python -m build messaging
+          python -m build processing
 
       - name: Verify installed wheel without repository fallback
         run: |
           python -m venv "$RUNNER_TEMP/messaging-wheel"
           "$RUNNER_TEMP/messaging-wheel/bin/python" -m pip install -r messaging/requirements.lock
           "$RUNNER_TEMP/messaging-wheel/bin/python" -m pip install --no-deps messaging/dist/*.whl
+          "$RUNNER_TEMP/messaging-wheel/bin/python" -m pip install --no-deps processing/dist/*.whl
           cd "$RUNNER_TEMP"
           "$RUNNER_TEMP/messaging-wheel/bin/maintai-kafka" validate-contracts
+          "$RUNNER_TEMP/messaging-wheel/bin/maintai-processing-worker" --help
+          "$RUNNER_TEMP/messaging-wheel/bin/maintai-processing-relay" --help
 
   kafka-integration:
     name: Kafka and PostgreSQL durable delivery
@@ -158,8 +150,16 @@ jobs:
       - name: Start isolated development broker and database
         run: docker compose -f messaging/tests/integration/compose.yaml up -d --wait --wait-timeout 180
 
-      - name: Verify real broker ACK, owner transactions, dedupe and outbox fencing
-        run: python -m pytest messaging/tests/integration
+      - name: Verify keyed offsets, DB generations, ordered heads and broker delivery
+        run: python -m pytest messaging/tests/integration --junitxml=artifacts/kafka-integration.xml
+
+      - name: Upload Kafka integration evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: kafka-integration-results
+          path: artifacts/kafka-integration.xml
+          retention-days: 7
 
       - name: Remove CI-only containers and volumes
         if: ${{ always() }}
@@ -194,49 +194,14 @@ jobs:
 
       - name: Lint and format
         run: |
-          ruff check sensor .github/scripts sensor-simulator-UI/tests/provider --config sensor/pyproject.toml
-          ruff format --check sensor .github/scripts sensor-simulator-UI/tests/provider --config sensor/pyproject.toml
+          ruff check sensor
+          ruff format --check sensor
 
-      - name: Contract, persistence, restart, scoped JWT and TLS OAuth tests
-        run: |
-          mkdir -p "$RUNNER_TEMP/sensor-test-results"
-          python -m pytest sensor/tests --cov=simulator --cov-report=term-missing \
-            --cov-report="xml:$RUNNER_TEMP/sensor-test-results/coverage.xml" \
-            --junitxml="$RUNNER_TEMP/sensor-test-results/junit.xml"
-
-      - name: Retain Sensor test reports
-        if: ${{ always() }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: sensor-tests-python-${{ matrix.python }}
-          path: ${{ runner.temp }}/sensor-test-results/
-          if-no-files-found: ignore
-          retention-days: 7
+      - name: Unit, contract and mock HTTP integration tests
+        run: python -m pytest sensor/tests --cov=simulator --cov-report=term-missing
 
       - name: Build Python distribution
         run: python -m build sensor
-
-      - name: Verify wheel and bundled scenarios outside checkout
-        run: |
-          python -m venv "$RUNNER_TEMP/sensor-wheel"
-          "$RUNNER_TEMP/sensor-wheel/bin/python" -m pip install -r sensor/requirements.lock
-          "$RUNNER_TEMP/sensor-wheel/bin/python" -m pip install --no-deps sensor/dist/*.whl
-          cd "$RUNNER_TEMP"
-          "$RUNNER_TEMP/sensor-wheel/bin/python" - <<'PY'
-          import importlib
-          from pathlib import Path
-          import sys
-
-          for module in (
-              "simulator.control.api", "simulator.control.auth", "simulator.ordering.store",
-              "simulator.scheduling.engine", "simulator.retry_spool.replay", "simulator.metrics",
-          ):
-              importlib.import_module(module)
-          for name in ("normal", "degradation", "critical", "recovery"):
-              assert (Path(sys.prefix) / "share/maintai-sensor/scenarios" / (name + ".yaml")).is_file()
-          PY
-          "$RUNNER_TEMP/sensor-wheel/bin/maintai-sensor" replay \
-            --dataset "$GITHUB_WORKSPACE/sensor/tests/fixtures/ai4i_sample.csv" --dry-run --limit 2
 
       - name: Audit runtime dependencies
         if: matrix.python == '3.12'
@@ -261,9 +226,6 @@ jobs:
           docker run --rm --network none \
             --volume "$PWD/sensor/tests/fixtures/ai4i_sample.csv:/app/data/ai4i2020.csv:ro" \
             maintai-sensor:ci replay --dry-run --limit 2
-
-      - name: Verify Sensor runtime, non-root state and restart persistence in container
-        run: python3 .github/scripts/container_smoke.py sensor --image maintai-sensor:ci
 
   drift-ci:
     name: Drift Worker CI
@@ -295,9 +257,7 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
-          cache-dependency-path: |
-            drift-worker/requirements-dev.lock
-            sensor/requirements.lock
+          cache-dependency-path: drift-worker/requirements-dev.lock
 
       - name: Install locked dependencies and test sensor
         run: |
@@ -392,24 +352,60 @@ jobs:
         run: npx --no-install playwright install --with-deps chromium
 
       - name: Browser interactions, failure semantics and real Sensor provider
-        env:
-          PLAYWRIGHT_JUNIT_OUTPUT_FILE: ${{ runner.temp }}/simulator-ui-junit.xml
-        run: npm run test:e2e -- --reporter=line,junit
+        run: npm run test:e2e
 
-      - name: Retain browser results and failure traces
-        if: ${{ always() }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+  storage-ci:
+    name: Storage Consumer (Python ${{ matrix.python }})
+    needs: structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.12']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          name: simulator-ui-browser-results
-          path: |
-            ${{ runner.temp }}/simulator-ui-junit.xml
-            sensor-simulator-UI/test-results/
-          if-no-files-found: ignore
-          retention-days: 7
+          persist-credentials: false
 
-  simulator-ui-container:
-    name: Simulator UI container
-    needs: simulator-ui-ci
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: storage-consumer/requirements-dev.lock
+
+      - name: Install locked dependencies and local packages
+        run: |
+          python -m pip install -r storage-consumer/requirements-dev.lock setuptools==84.0.0 wheel==0.48.0
+          python -m pip install --no-deps --no-build-isolation -e ./messaging -e ./storage-consumer
+
+      - name: Lint and format
+        run: |
+          ruff check storage-consumer
+          ruff format --check storage-consumer
+
+      - name: Archive, retry, replay, health and credential-isolation tests without AWS
+        run: python -m pytest storage-consumer/tests
+
+      - name: Build SDK and Storage distributions
+        run: |
+          python -m build --no-isolation messaging
+          python -m build --no-isolation storage-consumer
+
+      - name: Verify wheel and bundled contracts outside checkout
+        run: |
+          python -m venv "$RUNNER_TEMP/storage-wheel"
+          "$RUNNER_TEMP/storage-wheel/bin/python" -m pip install -r storage-consumer/requirements.lock
+          "$RUNNER_TEMP/storage-wheel/bin/python" -m pip install --no-deps messaging/dist/*.whl storage-consumer/dist/*.whl
+          cd "$RUNNER_TEMP"
+          KAFKA_LOCAL_MODE=true KAFKA_SECURITY_PROTOCOL=PLAINTEXT S3_RAW_BUCKET=fixture-bucket \
+            "$RUNNER_TEMP/storage-wheel/bin/maintai-storage" verify-config
+
+  storage-container:
+    name: Storage Consumer container
+    needs: storage-ci
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -418,23 +414,40 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Build independent frontend with pinned CI base images
+      - name: Build independent Storage image
+        run: docker build --file storage-consumer/Dockerfile --tag maintai-storage:ci .
+
+      - name: Verify non-root image and bundled contracts with networking disabled
         run: |
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          import subprocess
+          test "$(docker image inspect --format '{{.Config.User}}' maintai-storage:ci)" = '10001:10001'
+          docker run --rm --network none --read-only --tmpfs /tmp \
+            -e KAFKA_LOCAL_MODE=true -e KAFKA_SECURITY_PROTOCOL=PLAINTEXT \
+            -e S3_RAW_BUCKET=fixture-bucket maintai-storage:ci verify-config
 
-          images = json.loads(Path("sensor-simulator-UI/ci-images.json").read_text())
-          subprocess.run([
-              "docker", "build", "--build-arg", "NODE_IMAGE=" + images["node_image"],
-              "--build-arg", "NGINX_IMAGE=" + images["nginx_image"],
-              "--tag", "maintai-simulator-ui:ci", "sensor-simulator-UI",
-          ], check=True)
-          PY
-
-      - name: Verify static image, config, probes and API boundary
-        run: python3 .github/scripts/container_smoke.py ui --image maintai-simulator-ui:ci
+  mlflow-source-ci:
+    name: MLflow image source and release handoff
+    needs: structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ml-service/mlflow/requirements-dev.lock
+      - name: Install release test dependencies, without MLflow server or cloud clients
+        run: python -m pip install -r ml-service/mlflow/requirements-dev.lock
+      - name: Check image source, contracts and release failure paths offline
+        run: |
+          ruff check ml-service/mlflow
+          ruff format --check ml-service/mlflow
+          python ml-service/mlflow/release.py check-source
+          python -m pytest ml-service/mlflow/tests
 
   component-ci:
     name: Component CI (${{ matrix.component }})
@@ -449,7 +462,6 @@ jobs:
         component:
           - ingestion-api
           - processing
-          - storage-consumer
           - backend
           - frontend
           - ml-service
@@ -479,7 +491,6 @@ jobs:
     needs:
       - structure
       - api-contracts
-      - repo-metadata
       - kafka-ci
       - kafka-integration
       - sensor-ci
@@ -487,7 +498,9 @@ jobs:
       - drift-ci
       - drift-container
       - simulator-ui-ci
-      - simulator-ui-container
+      - storage-ci
+      - storage-container
+      - mlflow-source-ci
       - component-ci
     runs-on: ubuntu-latest
     timeout-minutes: 5

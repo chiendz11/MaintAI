@@ -1,9 +1,21 @@
+> **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
+> durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
+> có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
+> [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
+> readiness §19 ghi bằng chứng, commands và giới hạn; các snapshot cũ đọc theo ngày.
+
 > **Tích hợp MaintAI — 2026-10-19:** Tài liệu thiết kế mục tiêu v1.4, chưa xác nhận code/DB/GitOps đã migrate. Đọc [docs index](README.md) để áp dụng quyết định nhóm 4 người, Simulator UI riêng và thứ tự ưu tiên; [readiness](implementation-readiness.md) ghi các schema/scaffold chưa được cung cấp.
 
 > **v1.4 — Chuẩn Deployment và Versioning/Provenance (19/10/2026).** Đây là bản đầy đủ kế thừa v1.3.1, bổ sung yêu cầu v1.4 có thứ tự ưu tiên cao hơn khi mâu thuẫn. Chỉnh sửa Markdown **không** đồng nghĩa đã thay source, GitOps, DB hoặc runtime.
 > **Đọc trước khi triển khai:** `DEPLOYMENT_ARCHITECTURE.md`, `RUNTIME_DATAFLOW.md`, `VERSIONING_AND_PROVENANCE.md`, `IMPLEMENTATION_PLAN.md`; JSON Schemas và K8s scaffold đặt trong `../contracts/` và `../implementation/`.
 
 # MaintAI — Hướng dẫn triển khai và phát triển chi tiết từng module — v1.4
+
+> **PROC-ORDER-01 — 2026-10-23:** §53 triển khai thiết kế được System Contracts
+> §42 thông qua tại [đặc tả concurrency/ordering](PROCESSING_CONCURRENCY_AND_ORDERING.md).
+> Processing keyed runner/offset coordinator/durable fence và ordered outbox
+> đã có SDK0.2.0 implementation; app callbacks/probes/image chưa hoàn tất.
+> Storage/Business giữ runner baseline, topology giữ nguyên.
 
 > **OBS-01 / MLFLOW-01 — 2026-10-20:** System Contracts §41 và Guide §49
 > thông qua [metrics catalog](OBSERVABILITY_IMPLEMENTATION.md) và
@@ -462,7 +474,7 @@ Raw errors violating **minimum envelope** get 400/422 and go to **Simulator loca
 
 ## 6.3. Business DB is NOT telemetry archive
 
-Business Consumer handles 3 topics, and only holds per-machine latest telemetry, latest valid prediction and latest processing status (plus machine/alert/brief data). Use `INSERT ... ON CONFLICT ... WHERE (epoch, sequence) newer` or transaction-level CAS, idempotency inbox/offsets. Business API sends SSE after projector commit via PG LISTEN/NOTIFY or broadcast bus; it does not consume Kafka itself. Multi-replica API must all receive notifications; REST resync after SSE disconnect.
+Business Consumer handles 3 topics, and only holds per-machine latest telemetry, latest valid prediction and latest processing status (plus machine/alert/brief data). Use `INSERT ... ON CONFLICT ... WHERE incoming.sequence_number > current.sequence_number` or transaction-level CAS, with idempotency inbox/offsets. Sequence is durable across epochs; `stream_epoch` is opaque lineage, never a sortable UUID/text tie-breaker. Same sequence with different source identity is a conflict. Business API sends SSE after projector commit via PG LISTEN/NOTIFY or broadcast bus; it does not consume Kafka itself. Multi-replica API must all receive notifications; REST resync after SSE disconnect. Processing concurrency/outbox target follows §53 and System Contracts §42.
 
 ## 6.4. Processing read API
 
@@ -3423,3 +3435,187 @@ quota/TTL và maintenance. Không xóa journal rồi reuse máy cũ với sequen
 Readiness §15 ghi các kiểm tra thật và giới hạn; [báo cáo thay đổi](SENSOR_IMPLEMENTATION_REPORT.md)
 liệt kê từng file/lý do. Rate/counters/preview live vẫn cần PR contract riêng;
 UI giữ unavailable đúng §48.2, không thêm fields vào closed ControlState.
+
+# 51. Storage Consumer0.1.0 — owner runtime và cấu hình S3 sau
+
+`storage-consumer/src/maintai_storage/` hiện triển khai một process/Deployment với
+accepted/rejected Kafka groups mặc định và optional outcome archive. Dùng SDK
+`ConsumerRunner`/`S3RecordArchive`, frozen raw manifest1.0.0 (microbatch1); không
+copy offset algorithm, đổi wire schema hoặc tạo Processing/Business database mới.
+State RAM chỉ cho health/observations; Kafka offsets và S3 manifests là durable
+checkpoint. Raw copy không thay processed-history/curated pipeline hoặc tự train.
+
+Preflight kiểm bucket versioning + Kafka topic metadata, management có
+`/health/live`, `/health/ready`, `/metrics`. Retry network/timeout/429/5xx và
+conditional409 hữu hạn với jitter; auth/config/conflict terminal, không skip hoặc
+commit record lỗi. Upload dở/Kafka commit lỗi được SDK reconcile qua immutable
+coordinate; rebalance không cho owner cũ commit offset. SIGTERM ngắt retry wait,
+dừng nhận mới và chờ in-flight operation trước close. Đo termination/catch-up
+thực tế trước khi chốt rollout/retention budgets.
+
+Khi chưa có AWS, cài local SDK/runtime và dùng `maintai-storage verify-config`
+cùng fixture tests; command không tạo client, lấy credentials hay mở network.
+Khi có S3, cấu hình bucket **name**, region và standard credential chain/IRSA;
+endpoint để trống với AWS, chỉ đặt URL cho custom S3/MinIO. Runtime không tạo bucket,
+bật versioning hoặc sửa IAM/Kafka topics. Secrets/NetworkPolicy/IAM thuộc platform.
+
+Metrics giữ signature/buckets OBS-01, aggregate các groups chung process;
+COMMITTED nghĩa archive durable trước Kafka offset ACK, không unique event count.
+Tuổi oldest_uncommitted tính từ local poll, không thay broker lag. Không thêm
+archive_kind/machine/event labels hoặc dùng metric như audit ledger.
+
+Chi tiết lệnh, env defaults, failure matrix, IAM và opt-in loopback Kafka/MinIO
+integration ở [Storage README](../storage-consumer/README.md). Dockerfile pin base
+digest, non-root10001, đóng gói SDK/contracts từ repo-root build context. CI mới
+kiểm package và container offline; thêm workflow không chứng minh đã chạy remote
+hoặc publish image. Readiness §16 giữ bằng chứng thực tế và giới hạn AWS/rollout.
+
+# 52. MLFLOW-IMAGE-01 — source MLflow ở app, deployment ở GitOps
+
+Quyết định21/10: source image ở `ml-service/mlflow/`, cùng domain ML nhưng image/
+runtime riêng với training và inference. Dockerfile kế thừa upstream MLflow,
+cài PostgreSQL/S3 adapters đã lock, non-root10001. Không fork server/UI hoặc tạo
+Deployment/DB mới. Runtime map thêm platform descriptor, giữ14 app runtimes.
+
+App giữ Dockerfile/base+server pins/requirements/local Compose và publisher;
+GitOps giữ Deployment/Service/config/IRSA/secret references/enablement. Publisher
+thật là MaintAI `maintai-publish.yml`, manual/main/prod và mặc định chưa bật.
+Base/server patch/compatibility còn null/false nên publication bị chặn trước cloud
+authentication. Không tự lựa patch hoặc fabricated digest để làm workflow chạy.
+
+Publisher build/smoke trước push, lấy digest từ ECR rồi ký keyless với source SHA,
+group và source repository. GitOps group mlflow tin exact app workflow identity,
+GitHub OIDC issuer, app actor và annotations; source/signature GitOps cũ bị từ chối.
+Giữ existing workload-release1.0.0/handoff1.3.1+simulator-ui.1; không gửi enable
+hoặc platform runtime config. Receiver chỉ mở PR đổi image/source identity,
+không auto merge hoặc triển khai. Không migrate toàn bộ platform1.4 trong lượt này.
+
+Compose local dùng cùng Dockerfile với PostgreSQL17 + filesystem artifacts,
+bind loopback, không tự nối AWS. Chạy source tests không cần MLflow/AWS/Docker.
+Base/client pair, real PostgreSQL/S3/auth và published image vẫn cần validation;
+IAM ECR mlflow ở infrastructure còn cần chuyển từ GitOps sang app publisher trước
+activation. Xem [MLflow runbook](../ml-service/mlflow/README.md), MLFLOW-01 §2.1
+và readiness §17. Production config và database migrations vẫn do platform quản lý.
+
+# 53. PROC-ORDER-01 — Triển khai keyed Processing và ordered Outbox
+
+**Decision1.0.0; SDK0.2.0/bundle1.1.0 đã có source/migration/tests23/10.** Đọc
+[đặc tả chi tiết](PROCESSING_CONCURRENCY_AND_ORDERING.md) và System Contracts §42.
+Phần này thay khuyến nghị chỉ scale replicas trước khi xét concurrency cho
+Processing; SDK serial vẫn là default/baseline cho Storage/Business. Keyed/ordered
+mode là opt-in, Processing wrappers/factory đã có. Full app callbacks/probes/image
+còn cần tích hợp. Xem implementation report; không thêm Deployment cho executor.
+
+## 53.1. Thiết kế module và điểm tích hợp
+
+- Người1 xây keyed runner riêng/opt-in trong Processing hoặc SDK; không sửa
+  default `ConsumerRunner` để mọi owner nhận behavior mới ngoài ý muốn.
+- Poll owner giữ Kafka client lifecycle/assignment/pause/commit. Keyed scheduler
+  có FIFO per machine, fair ready keys, bounded executor và completion queue.
+- Handler DQ/ML/risk sử dụng owner repository; identity/hash lookup trước ML.
+  DB transaction ngắn ghi inbox, history, per-machine cursor, risk và outbox;
+  durable assignment-generation fence kiểm atomically, không giữ SQL lock qua ML.
+- Completion coordinator quản lý receipts kể cả buffered/queued và done phía
+  sau hole. Chỉ durable result của current generation cho phép tiến frontier.
+- Read API không giữ keyed queues hoặc commit Kafka; vẫn đọc indexed owner DB/
+  verified archive. Runtime/probes/executor ở Worker hiện có.
+
+Pseudo-flow để thiết kế, **không là API SDK đã có**:
+
+```text
+poll owner:
+  register every fetched receipt with partition + assignment generation
+  admit to bounded machine FIFO; pause partition when admission budget is full
+  dispatch at most one task per machine, across at most C active machines
+  receive handler completion only after durable owner transaction/reconciliation
+  release machine head; advance each partition's safe completed prefix
+  commit next offsets only while assignment ownership is valid
+
+relay:
+  claim oldest unpublished entry for a topic/machine key under key lease
+  publish immutable message; wait for broker ACK
+  fenced durable mark ACK + advance key cursor; then allow successor
+  on unknown/error: retain head, retry same ID/bytes, block successors of this key
+```
+
+## 53.2. SQL, versioning và cutover
+
+Khảo sát schema thật trước khi chọn tên bảng. Cần durable partition fence,
+per-machine source cursor và per-topic dispatch order/key lease. Logical event
+uniqueness khác Kafka receipt coordinates; duplicate receipt không sinh risk mới.
+`dispatch_seq` chỉ cấp cho event thực sự xuất hiện trên topic đó; không chờ các
+source sequence không tạo alert signal. Backfill cần sequence evidence, không
+sort timestamps để bịa source order.
+
+Thêm migrations mới; không sửa `contracts/kafka/migrations/001_messaging.sql`
+đã freeze. Nếu SDK bundle SQL đổi, bump bundle/hash lock và consumer package pin
+trong PR source. Read compatibility trước, drain legacy writers/relays rồi
+enable cursor/fence-aware writers. Startup capability gate chặn old relay bỏ
+qua head-of-key. Rollback cần compatible reader/writer hoặc drain explicit;
+không xóa inbox/outbox/cursors để quay về phiên bản trước.
+
+## 53.3. Budgets, lỗi và nghiệm thu
+
+Chốt max active keys, queued records/bytes/per-key, completed-behind-hole cap,
+fetch reserve, high/low watermarks, ML concurrency, DB pool, deadlines và drain.
+Tính budget **toàn cluster** khi tăng replicas; không suy ra20 active keys đủ
+cho baseline100/s hoặc mọiR=X×r khiX>100. Poll/heartbeat tiếp tục khi handler chạy; late result sau
+timeout/revoke bị fence. Unknown DB commit phải read-back trước retry.
+
+Tests cần có: A chậm/B nhanh cùng partition; A12 chờ A11 durable; offset501
+xong khi500 chưa xong không commit502; duplicate/conflict/gap; queue/hot-key
+memory bound; revoke/lost/SIGTERM và stale DB writer; nhiều relay cùng key khi
+head backoff/ACK unknown; late duplicates; cross-topic UI/Alert ordering.
+Sau đó đo baseline100 máy×1 reading/s với12 partitions; replica/concurrency theo
+capacity thực (local default1, không mặc định phải3). KhiX>100, tínhR=X×r và n/c/pool,
+đo lại p95 tới browser, lag/age, frontier stall, memory/catch-up và source/model/image
+revisions. Đây là kiến trúc scale-ready;100 máy không là giới hạn tối đa.
+
+Metrics chuẩn ở OBS-01 §11, đã có optional SDK collectors. Plan §K/readiness §19
+phân biệt SDK implementation/tests với app/prod gaps. Commands và evidence thật
+ở [implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md); không
+tick full app/load/rollout chỉ vì transport tests pass.
+
+# 54. Chạy tích hợp local bằng k3d — LOCAL-K3D-01
+
+Ngày23/10/2026. Đọc [Local development](LOCAL_DEVELOPMENT_K3D.md) và
+[README MaintAI-k3d](../../MaintAI-k3d/README.md). Đây là môi trường dev bổ sung,
+không là thay đổi event/API schema hay miễn trừ auth/provenance production.
+
+Code local bootstrap gồm private cluster config, Kafka4 KRaft12 partition/topic,
+PG17/pgvector5 owner DB/readonly reader, MinIO versioning/policies, native Grafana/
+Prometheus/Pushgateway, app catalog và renderer có review gates. Image upstream
+khóa digest; local MinIO/MC source build khóa checksum và toolchain. MLflow vẫn
+phải hoàn tất app image lock/version/compatibility trước khi bật; không dùng một
+image upstream bất kỳ để vượt gate.
+
+SDK concurrency §53 đã có code/tests, nhưng app vẫn thiếu actual DQ/ML/risk/history
+callbacks, Ingestion/Business/Read API và health/image/domain migrations. ML/RAG/UI
+hoàn tất riêng chưa làm cả pipeline sẵn sàng. App owner hoàn thiện từng module,
+explicit owner messaging001/002 + ordered activation sau drain, rồi mới apply đúng
+image/config và test source event→outcome→outbox→Business/SSE/alert. Tests của SDK
+không thay E2E hoặc benchmark. Local app settings1.0 không là production runtime
+config3 receiver/publisher cutover; bước đó ở GitOps vẫn phải làm riêng.
+
+Sensor trong Pod dùng JWT/HTTPS/trust/DNS thực,1 replica/Recreate/PVC, khởi đầu
+PAUSED; dataset và credentials private ngoài Git. Không mở anonymous0.0.0.0.
+Local CLI apply không cung cấp HA/Strimzi/IRSA/SQS/Argo training controller; batch
+Training/Drift chưa có renderer ở profile0.1. Drift không retrain/promote, training
+chỉ từ approved versioned dataset. Chi tiết runbook và readiness nằm ở các tài liệu
+local, không biến code skeleton thành provider success giả.
+
+# 55. Baseline100 máy và tối ưu latency khiX>100
+
+Theo Contracts §43/CAPACITY-BASE100-01, giả định khởi đầu100 máy×1 reading/s=100/s.
+Chọn SIM_MACHINE_COUNT=100, SIM_INTERVAL_MS=1000, SIM_SPEED=1 cho run baseline;
+source default5 và local app enablement giữ nguyên đến khi operator chọn cấu hình.
+
+Hệ thống scale-ready qua boundary Ingestion/Worker/ML/Relay/Storage/Business/Read API.
+KhiX>100: mô tảR=X×r và burst/skew; đo stage latency/oldest age/pools; tính
+n≈ceil(R×T/(u×c)) cho Worker và budget riêng cho serial runners; tối ưu đúng bottleneck,
+rồi đo lại alert UI p95≤2s, throughput/coverage và backlog recovery. Giữ ordering,
+inbox/outbox và full history, không bỏ reading/alert để làm latency đẹp.
+
+[Capacity §11](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100)
+có ví dụX=100/200/500/1.000 với assumptions rõ;1.000 chỉ là ví dụ mở rộng, không là
+yêu cầu ban đầu. Các phép tính không thay load test hoặc tự bật HPA/Deployment.

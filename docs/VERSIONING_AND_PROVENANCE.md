@@ -1,3 +1,9 @@
+> **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
+> durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
+> có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
+> [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
+> readiness §19 ghi bằng chứng, commands và giới hạn; các snapshot cũ đọc theo ngày.
+
 > **Tích hợp MaintAI — 2026-10-19:** Tài liệu thiết kế mục tiêu v1.4, chưa xác nhận code/DB/GitOps đã migrate. Đọc [docs index](README.md) để áp dụng quyết định nhóm 4 người, Simulator UI riêng và thứ tự ưu tiên; [readiness](implementation-readiness.md) ghi các schema/scaffold chưa được cung cấp.
 
 # MaintAI v1.4 — Quy chuẩn quản lý phiên bản và truy vết nguồn gốc (Versioning & Provenance)
@@ -197,9 +203,13 @@ release riêng, Grafana/MLflow là platform UI. Các danh tính cần ghi khi tr
 | Simulator frontend | App Git SHA, OCI digest simulator-ui, build/lockfile identity, public config digest, Control API baseline/capabilities, GitOps revision |
 | Sensor backend | Image/config digest riêng, Control API version và durable state migration identity nếu có |
 | Grafana | Server/chart/image version theo platform pin, dashboard UID/revision + JSON/config digests, datasource/plugin/config identities được duyệt |
-| MLflow | Server image/chart/config/plugin versions, tracking/artifact configuration identity; model/run/release có versions riêng |
+| MLflow | App source SHA/Dockerfile/adapter lock, upstream server patch/base digest, app-signed image digest; GitOps config/plugin/tracking/artifact identity; model/run/release có versions riêng |
 
 Đây là yêu cầu metadata của release, chưa thêm field vào JSON Schema immutable.
+Quyết định MLFLOW-IMAGE-01 chuyển producer image sang app nhưng giữ production
+workload/config ở GitOps. Receiver pin exact app signer workflow/issuer/source
+annotations và actor, không nhận signer GitOps cũ cho group mlflow. Existing
+workload-release1.0.0 envelope không đổi; không tự bật service sau image PR.
 Nếu runtime config/release schema hiện cấm field mới, cần publish schema version
 mới và compatibility PR trước khi ghi chúng. Digest của secret value không nằm
 trong public frontend config hoặc logs; ghi tham chiếu secret/config theo policy.
@@ -284,3 +294,30 @@ Thay đổi breaking event/API schema: cập nhật JSON Schema, migration notes
 **Giữ từ v1.3.1:** 5 logical DB, Processing Read API, DQ tại Worker, Business giữ latest snapshots + Alerts, Business API/Consumer tách Deployment, Kafka outbox/inbox, raw archive S3, Drift CronJob độc lập, manual RAG có version, MLflow + reference profile, không auto-retrain.
 
 **Bổ sung/chốt tại v1.4:** `processing-read-api` thành Deployment riêng có quyền read-only; Kafka quarantine `sensor.rejected` theo chính sách auth/kích thước; giữ `inference.results` và có thể archive outcome; release manifest bất biến; exact model/preprocessor/dataset/split digests gắn MLflow run; provenance tests; quy tắc History Query nóng/lạnh và restore/retention. **Các mục mới chỉ được xem là đã triển khai khi source, migration, contract và E2E tests thực tế được cập nhật.**
+
+## 14. PROC-ORDER-01 — source order, dispatch order và migration identity
+
+[Decision1.0.0 ngày23/10](PROCESSING_CONCURRENCY_AND_ORDERING.md) bổ sung behavior
+cho target1.4.0. Không đổi wire schema chỉ để đồng bộ revision của Markdown.
+
+- `sequence_number` là order nguồn bền vững per machine xuyên restart/epoch;
+  `stream_epoch` chỉ lineage. Không sort chuỗi epoch hoặc completed_at để chọn latest.
+- Kafka `(topic,partition,offset)` nhận diện receipt; cùng logical event có nhiều
+  receipt khi retry. Inbox/hash giữ canonical identity, history không đổi model/
+  policy/result ID vì một delivery khác. Processing keyed completion có thể
+  khác arrival order giữa máy; lưu cả source locator và completed_at.
+- `dispatch_seq` là DB order riêng `(topic,machine_id)`, không phải source
+  sequence, model version, Kafka offset hoặc field wire mới. Signal chỉ sinh ở
+  một số readings nên không đòi signal source sequences liên tiếp.
+- Durable partition ownership generation và key-lease generation phục vụ fencing;
+  không dùng chúng thay `stream_epoch` hoặc công bố như new business result version.
+- Frozen `001_messaging.sql` và bundle1.0.0 giữ nguyên. SQL cần thêm thì tạo
+  migration mới; đổi bundle SQL phải publish bundle/hash lock mới và SDK pin.
+  Backfill order cần source evidence, không bịa dispatch order từ created_at.
+- Release record cho source PR sau này phải ghi app/SDK/bundle/migration revision,
+  decision revision, mode/config hash và ML/DB concurrency budgets trong release
+  metadata được review; không thêm field vào closed release envelope tại chỗ.
+  Drain/gate old writers/relays trước enable; rollback không undo side effects.
+
+Docs manifest lưu local amendment và decision; upstream imported hashes tiếp tục
+bảo toàn nguồn gốc. Diagrams revision1.2.0 mô tả target, không image/deploy proof.

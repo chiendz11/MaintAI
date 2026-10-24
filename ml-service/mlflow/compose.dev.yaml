@@ -1,0 +1,50 @@
+name: maintai-mlflow-dev
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:?Set a reviewed PostgreSQL image digest in .env}
+    environment:
+      POSTGRES_DB: mlflow
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: ${MLFLOW_DB_PASSWORD:?Set a local-only database password}
+    volumes:
+      - mlflow-db:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U mlflow -d mlflow]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  mlflow:
+    image: ${MLFLOW_LOCAL_IMAGE:-maintai-mlflow:dev}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MLFLOW_BASE_IMAGE: ${MLFLOW_BASE_IMAGE:?Set the reviewed upstream MLflow image digest}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    user: '10001:10001'
+    read_only: true
+    tmpfs:
+      - /tmp
+    ports:
+      - 127.0.0.1:${MLFLOW_LOCAL_PORT:-5000}:5000
+    environment:
+      # Use a URL-safe local-only password. No AWS/profile credentials are passed here.
+      MLFLOW_BACKEND_STORE_URI: postgresql+psycopg2://mlflow:${MLFLOW_DB_PASSWORD:?Set a local-only password}@postgres:5432/mlflow
+    command:
+      - server
+      - --host
+      - 0.0.0.0
+      - --port
+      - '5000'
+      - --serve-artifacts
+      - --artifacts-destination
+      - /var/lib/mlflow/artifacts
+      - --allowed-hosts
+      - localhost:${MLFLOW_LOCAL_PORT:-5000},127.0.0.1:${MLFLOW_LOCAL_PORT:-5000},mlflow:5000
+    volumes:
+      - mlflow-artifacts:/var/lib/mlflow/artifacts
+volumes:
+  mlflow-db:
+  mlflow-artifacts:

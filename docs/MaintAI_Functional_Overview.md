@@ -672,7 +672,7 @@ Processing maintenance ghi original outcome batches vào processed archive theo 
 
 ### 18.3. Giới hạn đánh giá
 
-AI4I 2020 không cung cấp telemetry time-series thực của mỗi máy; simulator gán machine/time để kiểm thử kiến trúc. Không khẳng định scale-ready là đã scalable cho tải sản xuất nếu chưa chạy benchmarks (ingestion p95, event-to-prediction p95, event-to-alert visibility, consumer lag, DB/S3 load).
+AI4I 2020 không cung cấp telemetry time-series thực của mỗi máy; simulator gán machine/time để kiểm thử kiến trúc. MaintAI có kiến trúc scale-ready với baseline100 máy×1 reading/s. KhiX>100, tính lại capacity và tối ưu latency từng stage; benchmark đo năng lực của cấu hình triển khai, không đặt trần100 máy cho kiến trúc.
 
 ### 18.4. Đồng bộ triển khai
 
@@ -816,3 +816,34 @@ và [readiness](implementation-readiness.md).
 
 Đây là chức năng mục tiêu. Artifact/schema/code còn thiếu được ghi trong readiness;
 không tự thêm endpoint UI hoặc coi diagnostics/provenance đã có implementation.
+
+## 23. Nhiều máy hoạt động đồng thời — PROC-ORDER-01
+
+Thiết kế23/10 tại [Processing concurrency/ordering](PROCESSING_CONCURRENCY_AND_ORDERING.md)
+cho các máy xử lý độc lập hơn: inference máy A chậm không buộc mọi máy khác
+chờ cùng handler. Readings của **một máy** vẫn lần lượt DQ/ML/risk và lưu outcome;
+khác máy được chạy đồng thời trong budget. Không cần một partition/service mỗi máy.
+
+Với người dùng, máy B có thể cập nhật prediction trước A; đó là hành vi đúng.
+Màn hình vẫn tách số đo mới nhất, trạng thái xử lý mới nhất và prediction hợp lệ
+mới nhất theo từng máy. INVALID giữ prediction lịch sử có nhãn/tuổi; Alert mở
+vẫn cần lifecycle xử lý, không tự biến mất vì input mới NORMAL. Prediction risk
+và Alert có thể tới khác thời điểm vì khác topic/handler.
+
+Với vận hành, queue đầy hoặc ML/DB chậm gây backlog/stale có thể quan sát; hệ
+thống không bỏ record hoặc xác nhận thành công giả để UI trông realtime. Offset
+coordinator/ordered relay nằm trong các runtimes Processing hiện có, không thêm
+UI hoặc chức năng điều khiển mới. Đây là target cần code/test theo Plan §K;
+SDK transport đã có code/tests; capacity baseline100/s và mở rộngR=X×r vẫn cần đo app thực.
+
+## 24. Quy mô ban đầu100 máy và khả năng mở rộng
+
+Giả định vận hành100 máy, mỗi máy1 reading/s; khi mọi máy RUNNING có100 readings/s.
+Main UI quan sát fleet và chi tiết theo quyền; Simulator UI điều khiển luồng demo.
+5 máy là smoke test/default source hiện có, không thay baseline100 máy đã chốt.
+
+Hệ thống scale-ready: khiX>100, vẫn giữ flow/ownership nhưng tínhR=X×r và tối ưu
+source, ML, DB, Relay/Storage, Business/SSE theo stage latency/lag và tài nguyên.
+100 không là maximum machine count. Mục tiêu alert hiển thị p95≤2s (không gồm LLM)
+cần đo tới browser theo workload thực; nhiều máy hơn không bắt UI vẽ mọi reading
+trung gian hoặc tạo thêm một kết nối SSE cho mỗi máy. [Cơ sở và công thức](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).

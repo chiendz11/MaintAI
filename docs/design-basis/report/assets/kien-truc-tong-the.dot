@@ -1,0 +1,55 @@
+// Publication view of the logical design. Boxes may group runtimes by owner.
+digraph MaintAI_Architecture_Report {
+  graph [rankdir=TB, bgcolor="white", pad=0.12, nodesep=0.32, ranksep=0.75,
+    fontname="DejaVu Sans", fontsize=18, compound=true, splines=polyline,
+    outputorder=edgesfirst];
+  node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=18,
+    color="#9db5c4", fillcolor="#edf4f8", fontcolor="#183045",
+    margin="0.16,0.13", penwidth=1.2];
+  edge [fontname="DejaVu Sans", fontsize=18, color="#536f81",
+    fontcolor="#36576b", arrowsize=0.8, penwidth=1.2];
+
+  sensor [label="Sensor Simulator\nSimulator UI + Control API\nLịch từng máy / spool", group="left"];
+  ingest [label="Ingestion API\nAuth + envelope\n202 sau Kafka ACK", group="center"];
+  kafka [label="Kafka\nsensor.readings / rejected\nresults / alert.signals", group="right", fillcolor="#e2edf3"];
+
+  processing [label="Processing owner\nWorker: DQ / ML / risk\nRead API: status / history\nRelay + processing_db / Outbox", group="left",
+    fillcolor="#fbf2df", color="#bfa567"];
+  storage [label="Storage Consumer\nArchive raw / quarantine\nManifest + hash trước ACK", group="center", fillcolor="#eef5ed"];
+  business [label="Business owner\nConsumer + API chạy riêng\nbusiness_db: latest / alert\naudit / feedback / brief", group="right"];
+
+  inference [label="ML inference\nModel + preprocessing đã pin\nImage riêng với training", group="left", fillcolor="#fbf2df"];
+  objects [label="Object storage\nRaw / processed history\nModel / manual / reference", group="center", fillcolor="#eef5ed"];
+  rag [label="RAG / LLM\nknowledge_db + manual\nBrief có citation", group="right", fillcolor="#f0edf8"];
+
+  training [label="Training / MLflow\nJob và Server chạy riêng\nDataset duyệt / đánh giá\nModel bundle qua PR", group="left", fillcolor="#fbf2df"];
+  drift [label="Drift Worker\nCửa sổ VALID / reference\ndrift_db + report\nKhông tự retrain/promote", group="center", fillcolor="#fbf2df"];
+  ui [label="Business UI\nREST / SSE qua Business\nAlert / history / Copilot", group="right"];
+  ops [label="Grafana / monitoring\nSystem / Kafka / ML / Drift\nMLflow UI xem run / registry", fillcolor="#f0edf8"];
+
+  { rank=same; sensor; ingest; kafka; }
+  { rank=same; processing; storage; business; }
+  { rank=same; inference; objects; rag; }
+  { rank=same; training; drift; ui; }
+  sensor -> ingest [label="readings", constraint=false];
+  ingest -> kafka [label="publish", constraint=false];
+  kafka -> processing [label="group Processing"];
+  kafka -> storage [label="group archive"];
+  kafka -> business [label="group telemetry"];
+  processing -> inference [label="HTTP predict", dir=both];
+  storage -> objects [label="raw / rejected"];
+  business -> rag [label="brief job", dir=both];
+  business -> ui [label="REST / SSE", dir=both];
+  processing:w -> kafka:n [style=dashed, constraint=false];
+  processing -> objects [label="processed archive", style=dashed, constraint=false];
+  inference -> objects [label="bundle đã pin", style=dashed, constraint=false];
+  training -> objects [label="bundle + reference", style=dashed, constraint=false];
+  drift -> processing [label="VALID windows", style=dashed, constraint=false];
+  drift -> objects [label="report / reference", style=dashed, dir=both, constraint=false];
+  drift -> ops [label="metrics", style=dashed];
+  training -> ops [style=invis];
+  ui -> ops [style=invis];
+  inference -> training [style=invis];
+  objects -> drift [style=invis];
+  rag -> ui [style=invis];
+}

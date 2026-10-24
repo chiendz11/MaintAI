@@ -26,3 +26,25 @@ Writer result1.4.0, reader hỗ trợ legacy2.0.0. Xem
 > [Guide v1.4](../docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md) và
 > [readiness](../docs/implementation-readiness.md). Runtime metadata hiện có vẫn
 > baseline1.3.2; source chưa tự migrate theo việc nhập tài liệu.
+
+## PROC-ORDER-01 — transport source đã có, app còn cần tích hợp
+
+Package transport0.1.0 ở processing/src/maintai_processing/ dùng SDK0.2.0 và
+bundle1.1.0. Dockerfile Worker/Relay vẫn placeholder; full app chưa implement.
+
+| Phần | Source đã có | Owner còn làm |
+| --- | --- | --- |
+| worker.py / handlers.py | Wrapper + factory đọc prepare/persist callbacks, đúng owner DB/group | Real DQ/ML/risk/history callbacks, health server và image |
+| SDK keyed.py | Bounded FIFO từng máy, fair scheduling, safe offset ledger, drain/cancel | Chốt pool/budgets, load/rolling evidence |
+| SDK ordering.py | Durable assignment/source cursor và atomic inbox/history callback/outbox | Migration/activation owner DB thật |
+| outbox_relay.py | Wrapper cho ordered head-of-key relay | Metrics/probes/image/GitOps activation review |
+
+Prepare chạy ngoài SQL với deadline/cancellation context. Persist nhận cùng
+connection ghi history/risk/outbox; phải enqueue đúng một terminal result.
+INVALID/UNAVAILABLE không phát signal. Duplicate dùng outcome cũ; source order
+conflict fail closed. Offset coordinator không commit vượt lower-offset hole.
+
+[Runbook/commands/tests](../docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md)
+ghi rõ explicit001/002 + activation sau drain. Initial legacy inbox cần reviewed
+cursor bootstrap; không xóa inbox để bật mode. Read API vẫn read-only/skeleton;
+scheduler/coordinator không là deployment thứ tư.

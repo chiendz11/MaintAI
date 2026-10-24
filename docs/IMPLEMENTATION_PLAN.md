@@ -1,3 +1,9 @@
+> **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
+> durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
+> có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
+> [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
+> readiness §19 ghi bằng chứng, commands và giới hạn; các snapshot cũ đọc theo ngày.
+
 > **Tích hợp MaintAI — 2026-10-19:** Tài liệu thiết kế mục tiêu v1.4, chưa xác nhận code/DB/GitOps đã migrate. Đọc [docs index](README.md) để áp dụng quyết định nhóm 4 người, Simulator UI riêng và thứ tự ưu tiên; [readiness](implementation-readiness.md) ghi các schema/scaffold chưa được cung cấp.
 
 # MaintAI v1.4 — Kế hoạch tích hợp và nghiệm thu cho con người và AI coding tool
@@ -171,3 +177,50 @@ Các phần Sensor của OBS handoff đã có instrumentation. Production IdP/PV
 image/GitOps rollout và affected-component release validation còn mở; không đánh
 hoàn tất platform/E2E chỉ vì provider tests qua. Xem [readiness §15](implementation-readiness.md#15-sensor030--providerdurable-runtime2010)
 và [báo cáo file thay đổi](SENSOR_IMPLEMENTATION_REPORT.md).
+
+## K. PROC-ORDER-01 — workstream keyed Processing và ordered relay
+
+Quyết định23/10/2026, revision1.0.0 tại
+[đặc tả chi tiết](PROCESSING_CONCURRENCY_AND_ORDERING.md). Workstream tương lai
+bổ sung PR02/03/05/10, không là bằng chứng các PR đó đã được triển khai.
+
+| Thứ tự | Owner | Deliverable | Gate trước bước kế |
+| --- | --- | --- | --- |
+| ORDER-P0 — Freeze | Người1 + Người4, Người2 review | Source-order/duplicate/conflict rules, receipt ledger, bounded queues, dispatch/cursor/fence design | Fixtures500–504, source sequence xuyên epoch, timeout/revoke matrix được review |
+| ORDER-P1 — Persistence | Người1 | Migration mới: per-machine cursor, durable partition ownership fence, per-topic dispatch_seq/key lease | Upgrade/backfill có evidence, unique constraints; frozen001 không bị sửa; bundle pin mới nếu SQL bundle đổi |
+| ORDER-P2 — Keyed runner | Người1 | Opt-in poll owner/FIFO/fair scheduler/executor/completion coordinator | Cùng máy tuần tự, khác máy song song; safe prefix, memory bounds, unknown DB reconcile |
+| ORDER-P3 — Ordered relay | Người1 | Head-of-key claim/retry/renew/fenced finish, immutable payload reuse | Hai relay/head backoff/ACK unknown/late duplicate; successor không vượt head |
+| ORDER-P4 — Business/OBS | Người1 + Người4 | Independent CAS, alert inbox/lifecycle, metrics OBS-01 §11 và GitOps dashboard handoff | INVALID giữ valid snapshot; historical signal vẫn qua lifecycle; post-commit SSE/resync |
+| ORDER-P5 — Cutover/tải | Người1+2+4 | Compatibility gate, drain old writers/relays, bounded canary, load/recovery report | Rebalance/kill/rollback, ML/DB/pool/retention budgets, p95/lag/catch-up/skew được đo |
+
+Storage/Business runner không tự migrate sang keyed mode. Giữ12 partitions và
+3 consumer replicas là **profile đo thử**, không default production đủ tải.
+Không bật old/new writers không tương thích fence/cursor trên cùng stream.
+Runtime tests phải chứng minh generation fence chặn SQL cũ, không chỉ offset.
+Late duplicate vật lý không được làm UI lùi hoặc tạo Alert trùng; giữa topics
+không có total order. Source sequence/reset sai phải reconcile, không bịa epoch.
+
+Lượt docs chỉ cập nhật spec, sơ đồ, links và hashes. SDK/owner callbacks/migrations/
+Kafka bundle/GitOps/runtime tests chưa được sửa hoặc chạy bởi workstream docs.
+
+
+### K.1. Source progress23/10
+
+ORDER-P1/P2/P3 đã có SDK0.2.0 + migration002/source tests; P0 decision và local
+fixtures đã có. Processing transport wrappers/factory có code, **chưa phải full
+app**. P4 có optional metrics collectors nhưng Business app/probes/Grafana còn
+pending; P5 config3 profile mới NOT_ACTIVATED, chưa rollout/load/legacy-data
+bootstrap. Source report/readiness §19 ghi exact evidence. Không mark toàn bộ
+workstream DONE hoặc bật workload từ unit/integration PASS.
+
+# L. Baseline100 và capacity/latency choX>100
+
+Giả định ban đầu100 máy×1 reading/s. Kiến trúc scale-ready: sau vertical slice/
+failure correctness, xác nhận smoke5→50→baseline100/s; sau đó chọnX>100 theo
+capacity measured, không đặt mốc1.000 máy làm yêu cầu ban đầu.
+
+Mỗi mứcX cần offered/accepted/processed unique rate, stage latency/oldest age,
+ML/DB/Relay/Storage/Business/SSE resource budgets, alert browser p95≤2s và recovery
+headroom. Tính n/c/pool rồi tối ưu bottleneck trước khi tăng tài nguyên; giữ inbox,
+FIFO/fences/offset prefix và ordered outbox. Đầu ra là capacity report của đúng
+source/model/image/config, không chỉ một sơ đồ/replica count. [Plan chi tiết](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).
