@@ -12,7 +12,7 @@ from uuid import uuid4
 
 import httpx
 import pytest
-from confluent_kafka import Consumer, TopicPartition
+from confluent_kafka import Consumer, KafkaError, KafkaException, TopicPartition
 from consumer.config import WorkerSettings
 from consumer.main import run_worker
 from maintai_messaging.admin import create_local_topics
@@ -29,6 +29,40 @@ def free_port():
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         return sock.getsockname()[1]
+
+
+def source_boundary(counter, *, timeout=15):
+    """Capture fixture offsets before publishing, allowing bounded leader startup."""
+    deadline = time.monotonic() + timeout
+    transient = {
+        KafkaError.NOT_LEADER_FOR_PARTITION,
+        KafkaError.LEADER_NOT_AVAILABLE,
+        KafkaError.UNKNOWN_TOPIC_OR_PART,
+        KafkaError._TIMED_OUT,
+        KafkaError.REQUEST_TIMED_OUT,
+    }
+
+    def remaining():
+        return min(5, max(0, deadline - time.monotonic()))
+
+    while True:
+        try:
+            # Refresh metadata after leader changes; discard any partial boundary.
+            metadata = counter.list_topics("sensor.readings", timeout=remaining())
+            return [
+                TopicPartition(
+                    "sensor.readings",
+                    partition,
+                    counter.get_watermark_offsets(
+                        TopicPartition("sensor.readings", partition), timeout=remaining()
+                    )[1],
+                )
+                for partition in metadata.topics["sensor.readings"].partitions
+            ]
+        except KafkaException as error:
+            if error.args[0].code() not in transient or time.monotonic() >= deadline:
+                raise
+            time.sleep(min(0.1, remaining()))
 
 
 @pytest.mark.parametrize("stop_during_inference", [False, True])
@@ -157,17 +191,7 @@ def test_http_to_terminal_outcomes_and_alert_signal_with_real_broker(
             kafka.consumer_config(contracts.topology["profiles"]["processing"]["group_id"])
         )
         try:
-            metadata = counter.list_topics("sensor.readings", timeout=5)
-            boundary = [
-                TopicPartition(
-                    "sensor.readings",
-                    partition,
-                    counter.get_watermark_offsets(
-                        TopicPartition("sensor.readings", partition), timeout=5
-                    )[1],
-                )
-                for partition in metadata.topics["sensor.readings"].partitions
-            ]
+            boundary = source_boundary(counter)
             counter.assign(boundary)
             counter.commit(offsets=boundary, asynchronous=False)
         finally:
@@ -262,3 +286,51 @@ def test_http_to_terminal_outcomes_and_alert_signal_with_real_broker(
         server.shutdown()
         server.server_close()
         thread.join(timeout=5)
+
+
+@pytest.mark.parametrize(
+    "code", [KafkaError.NOT_LEADER_FOR_PARTITION, KafkaError.LEADER_NOT_AVAILABLE]
+)
+def test_source_boundary_recovers_from_initial_leader_error(code):
+    from types import SimpleNamespace
+
+    class StartingBroker:
+        failed = False
+
+        def list_topics(self, topic, timeout):
+            return SimpleNamespace(topics={topic: SimpleNamespace(partitions={0: None})})
+
+        def get_watermark_offsets(self, partition, timeout):
+            if not self.failed:
+                self.failed = True
+                raise KafkaException(KafkaError(code))
+            return (0, 42)
+
+    boundary = source_boundary(StartingBroker())
+    assert [(p.topic, p.partition, p.offset) for p in boundary] == [("sensor.readings", 0, 42)]
+
+
+@pytest.mark.parametrize(
+    "code", [KafkaError.NOT_LEADER_FOR_PARTITION, KafkaError.TOPIC_AUTHORIZATION_FAILED]
+)
+def test_source_boundary_preserves_terminal_error_and_bounds_retries(code):
+    from types import SimpleNamespace
+
+    failure = KafkaException(KafkaError(code))
+    attempts = []
+
+    class FailedBroker:
+        def list_topics(self, topic, timeout):
+            return SimpleNamespace(topics={topic: SimpleNamespace(partitions={0: None})})
+
+        def get_watermark_offsets(self, partition, timeout):
+            attempts.append(partition.partition)
+            raise failure
+
+    started = time.monotonic()
+    with pytest.raises(KafkaException) as caught:
+        source_boundary(FailedBroker(), timeout=0.02)
+    assert caught.value is failure
+    assert time.monotonic() - started < 1
+    if code == KafkaError.TOPIC_AUTHORIZATION_FAILED:
+        assert attempts == [0]
