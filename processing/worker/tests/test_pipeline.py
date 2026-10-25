@@ -13,11 +13,13 @@ from uuid import uuid4
 import httpx
 import pytest
 from confluent_kafka import Consumer, KafkaError, KafkaException, TopicPartition
+from confluent_kafka.admin import AdminClient
 from consumer.config import WorkerSettings
 from consumer.main import run_worker
 from maintai_messaging.admin import create_local_topics
 from maintai_messaging.config import KafkaSettings
 from maintai_messaging.contracts import canonical_json, default_contracts
+from maintai_messaging.errors import ConfigurationError
 from maintai_messaging.producer import KafkaPublisher
 from relay.main import create_relay
 
@@ -31,38 +33,123 @@ def free_port():
         return sock.getsockname()[1]
 
 
-def source_boundary(counter, *, timeout=15):
-    """Capture fixture offsets before publishing, allowing bounded leader startup."""
-    deadline = time.monotonic() + timeout
-    transient = {
+TRANSIENT_METADATA_ERRORS = frozenset(
+    {
         KafkaError.NOT_LEADER_FOR_PARTITION,
         KafkaError.LEADER_NOT_AVAILABLE,
         KafkaError.UNKNOWN_TOPIC_OR_PART,
         KafkaError._TIMED_OUT,
         KafkaError.REQUEST_TIMED_OUT,
     }
+)
 
-    def remaining():
-        return min(5, max(0, deadline - time.monotonic()))
 
+def metadata_pending(metadata, expected, *, stage):
+    """Distinguish startup propagation from a genuinely incompatible test broker."""
+    pending = []
+    for name, spec in expected.items():
+        topic = metadata.topics.get(name)
+        prefix = f"{stage}: topic={name} expected={spec['partitions']}"
+        if topic is None:
+            pending.append(f"{prefix} observed=missing")
+            continue
+        if topic.error:
+            detail = f"{prefix} error={topic.error.name()}"
+            if topic.error.code() not in TRANSIENT_METADATA_ERRORS:
+                raise ConfigurationError(detail)
+            pending.append(detail)
+            continue
+        count = len(topic.partitions)
+        if count == 0:
+            pending.append(f"{prefix} observed=0")
+            continue
+        if count != spec["partitions"]:
+            raise ConfigurationError(f"{prefix} observed={count}")
+        for partition, state in topic.partitions.items():
+            detail = f"{prefix} observed={count} partition={partition} leader={state.leader}"
+            if state.error:
+                detail += f" error={state.error.name()}"
+                if state.error.code() not in TRANSIENT_METADATA_ERRORS:
+                    raise ConfigurationError(detail)
+                pending.append(detail)
+            elif state.leader < 0:
+                pending.append(detail)
+    return "; ".join(pending)
+
+
+class ReadyTopicAdmin:
+    """Test-only adapter: preserve SDK creation; await complete metadata on read."""
+
+    def __init__(self, client, expected, *, timeout=30):
+        self.client, self.expected, self.timeout = client, expected, timeout
+
+    def create_topics(self, *args, **kwargs):
+        return self.client.create_topics(*args, **kwargs)
+
+    def list_topics(self, *, timeout):
+        deadline = time.monotonic() + self.timeout
+        detail = "bootstrap: metadata unavailable"
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError(f"bootstrap metadata deadline: {detail}")
+            try:
+                metadata = self.client.list_topics(timeout=min(timeout, 5, remaining))
+                detail = metadata_pending(metadata, self.expected, stage="bootstrap")
+                if not detail:
+                    return metadata
+            except KafkaException as error:
+                code = error.args[0]
+                if code.code() not in TRANSIENT_METADATA_ERRORS:
+                    error.add_note("bootstrap: metadata call failed")
+                    raise
+                detail = f"bootstrap: metadata error={code.name()}"
+            time.sleep(min(0.1, max(0, deadline - time.monotonic())))
+
+
+def source_boundary(counter, *, timeout=15):
+    """Capture all fixture offsets before publish; never commit an empty/partial view."""
+    expected = {"sensor.readings": default_contracts().topology["topics"]["sensor.readings"]}
+    deadline = time.monotonic() + timeout
+    detail = "offsets: metadata unavailable"
+    last_error = None
     while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            if last_error is not None:
+                last_error.add_note(detail)
+                raise last_error
+            raise TimeoutError(f"offsets metadata deadline: {detail}")
         try:
-            # Refresh metadata after leader changes; discard any partial boundary.
-            metadata = counter.list_topics("sensor.readings", timeout=remaining())
-            return [
-                TopicPartition(
-                    "sensor.readings",
-                    partition,
-                    counter.get_watermark_offsets(
-                        TopicPartition("sensor.readings", partition), timeout=remaining()
-                    )[1],
-                )
-                for partition in metadata.topics["sensor.readings"].partitions
-            ]
+            metadata = counter.list_topics("sensor.readings", timeout=min(5, remaining))
+            detail = metadata_pending(metadata, expected, stage="offsets")
+            last_error = None
+            if not detail:
+                boundary = []
+                for partition, state in metadata.topics["sensor.readings"].partitions.items():
+                    detail = (
+                        "offsets: topic=sensor.readings "
+                        f"expected={expected['sensor.readings']['partitions']} "
+                        f"observed={len(metadata.topics['sensor.readings'].partitions)} "
+                        f"partition={partition} leader={state.leader}"
+                    )
+                    budget = deadline - time.monotonic()
+                    if budget <= 0:
+                        raise TimeoutError(f"offsets deadline: {detail}")
+                    _, high = counter.get_watermark_offsets(
+                        TopicPartition("sensor.readings", partition),
+                        timeout=min(5, budget),
+                    )
+                    boundary.append(TopicPartition("sensor.readings", partition, high))
+                return boundary
         except KafkaException as error:
-            if error.args[0].code() not in transient or time.monotonic() >= deadline:
+            last_error = error
+            code = error.args[0]
+            if code.code() not in TRANSIENT_METADATA_ERRORS or time.monotonic() >= deadline:
+                error.add_note(detail)
                 raise
-            time.sleep(min(0.1, remaining()))
+            detail += f" error={code.name()}"
+        time.sleep(min(0.1, max(0, deadline - time.monotonic())))
 
 
 @pytest.mark.parametrize("stop_during_inference", [False, True])
@@ -82,7 +169,11 @@ def test_http_to_terminal_outcomes_and_alert_signal_with_real_broker(
         delivery_timeout_ms=3000,
         producer_git_sha="1" * 40,
     )
-    create_local_topics(kafka)
+    create_local_topics(
+        kafka,
+        contracts=contracts,
+        client=ReadyTopicAdmin(AdminClient(kafka.client_config()), contracts.topology["topics"]),
+    )
     detail = json.loads(
         (ROOT / "contracts/v1.3/examples/http/backend/machine-detail.json").read_text()
     )
@@ -292,13 +383,11 @@ def test_http_to_terminal_outcomes_and_alert_signal_with_real_broker(
     "code", [KafkaError.NOT_LEADER_FOR_PARTITION, KafkaError.LEADER_NOT_AVAILABLE]
 )
 def test_source_boundary_recovers_from_initial_leader_error(code):
-    from types import SimpleNamespace
-
     class StartingBroker:
         failed = False
 
         def list_topics(self, topic, timeout):
-            return SimpleNamespace(topics={topic: SimpleNamespace(partitions={0: None})})
+            return topology_snapshot()
 
         def get_watermark_offsets(self, partition, timeout):
             if not self.failed:
@@ -307,21 +396,21 @@ def test_source_boundary_recovers_from_initial_leader_error(code):
             return (0, 42)
 
     boundary = source_boundary(StartingBroker())
-    assert [(p.topic, p.partition, p.offset) for p in boundary] == [("sensor.readings", 0, 42)]
+    assert [(p.topic, p.partition, p.offset) for p in boundary] == [
+        ("sensor.readings", i, 42) for i in range(12)
+    ]
 
 
 @pytest.mark.parametrize(
     "code", [KafkaError.NOT_LEADER_FOR_PARTITION, KafkaError.TOPIC_AUTHORIZATION_FAILED]
 )
 def test_source_boundary_preserves_terminal_error_and_bounds_retries(code):
-    from types import SimpleNamespace
-
     failure = KafkaException(KafkaError(code))
     attempts = []
 
     class FailedBroker:
         def list_topics(self, topic, timeout):
-            return SimpleNamespace(topics={topic: SimpleNamespace(partitions={0: None})})
+            return topology_snapshot()
 
         def get_watermark_offsets(self, partition, timeout):
             attempts.append(partition.partition)
@@ -334,3 +423,193 @@ def test_source_boundary_preserves_terminal_error_and_bounds_retries(code):
     assert time.monotonic() - started < 1
     if code == KafkaError.TOPIC_AUTHORIZATION_FAILED:
         assert attempts == [0]
+
+
+class MetadataSnapshots:
+    """Controlled Admin/Consumer network boundary; actual SDK bootstrap stays real."""
+
+    def __init__(self, snapshots):
+        self.snapshots = iter(snapshots)
+        self.last = None
+
+    def create_topics(self, topics, **kwargs):
+        from concurrent.futures import Future
+
+        futures = {}
+        for topic in topics:
+            future = Future()
+            future.set_result(None)
+            futures[topic.topic] = future
+        return futures
+
+    def list_topics(self, *args, **kwargs):
+        self.last = next(self.snapshots, self.last)
+        if isinstance(self.last, Exception):
+            raise self.last
+        return self.last
+
+    def get_watermark_offsets(self, partition, timeout):
+        return (0, 42)
+
+
+def topology_snapshot(*, missing=False, count=12, error=None, leader=1):
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        topics={}
+        if missing
+        else {
+            "sensor.readings": SimpleNamespace(
+                error=error,
+                partitions={i: SimpleNamespace(error=None, leader=leader) for i in range(count)},
+            )
+        }
+    )
+
+
+@pytest.mark.parametrize(
+    "initial",
+    [
+        topology_snapshot(missing=True),
+        topology_snapshot(count=0),
+        topology_snapshot(error=KafkaError(KafkaError.UNKNOWN_TOPIC_OR_PART)),
+        topology_snapshot(leader=-1),
+    ],
+)
+def test_bootstrap_waits_for_expected_topic_metadata(initial):
+    from types import SimpleNamespace
+
+    expected = {
+        "sensor.readings": {"partitions": 12, "retention_ms": 60000, "max_message_bytes": 262144}
+    }
+    contracts = SimpleNamespace(topology={"topics": expected})
+    settings = KafkaSettings(local_mode=True, security_protocol="PLAINTEXT")
+    raw = MetadataSnapshots([initial, topology_snapshot()])
+    assert create_local_topics(
+        settings, contracts=contracts, client=ReadyTopicAdmin(raw, expected, timeout=1)
+    ) == ["sensor.readings"]
+
+
+@pytest.mark.parametrize(
+    "snapshot,fragment",
+    [
+        (topology_snapshot(count=1), "expected=12 observed=1"),
+        (
+            topology_snapshot(error=KafkaError(KafkaError.TOPIC_AUTHORIZATION_FAILED)),
+            "TOPIC_AUTHORIZATION_FAILED",
+        ),
+    ],
+)
+def test_bootstrap_rejects_permanent_metadata_failure(snapshot, fragment):
+    from maintai_messaging.errors import ConfigurationError
+
+    admin = ReadyTopicAdmin(
+        MetadataSnapshots([snapshot, topology_snapshot()]),
+        {"sensor.readings": {"partitions": 12}},
+        timeout=1,
+    )
+    with pytest.raises(ConfigurationError, match=fragment):
+        admin.list_topics(timeout=10)
+
+
+def test_bootstrap_metadata_deadline_has_topic_diagnostics():
+    admin = ReadyTopicAdmin(
+        MetadataSnapshots([topology_snapshot(missing=True)]),
+        {"sensor.readings": {"partitions": 12}},
+        timeout=0.02,
+    )
+    started = time.monotonic()
+    with pytest.raises(TimeoutError, match="bootstrap.*sensor.readings.*missing"):
+        admin.list_topics(timeout=10)
+    assert time.monotonic() - started < 1
+
+
+@pytest.mark.parametrize(
+    "initial",
+    [
+        topology_snapshot(missing=True),
+        topology_snapshot(count=0),
+        topology_snapshot(leader=-1),
+    ],
+)
+def test_boundary_requires_complete_metadata(initial):
+    boundary = source_boundary(MetadataSnapshots([initial, topology_snapshot()]), timeout=1)
+    assert [(p.partition, p.offset) for p in boundary] == [(i, 42) for i in range(12)]
+
+
+@pytest.mark.parametrize(
+    "snapshot,fragment",
+    [
+        (topology_snapshot(count=1), "expected=12 observed=1"),
+        (
+            topology_snapshot(error=KafkaError(KafkaError.TOPIC_AUTHORIZATION_FAILED)),
+            "TOPIC_AUTHORIZATION_FAILED",
+        ),
+    ],
+)
+def test_boundary_rejects_permanent_metadata_failure(snapshot, fragment):
+    from maintai_messaging.errors import ConfigurationError
+
+    with pytest.raises(ConfigurationError, match=fragment):
+        source_boundary(MetadataSnapshots([snapshot, topology_snapshot()]), timeout=1)
+
+
+def test_boundary_drops_partial_capture_before_retry():
+    class ChangingOffsets(MetadataSnapshots):
+        failed = False
+
+        def get_watermark_offsets(self, partition, timeout):
+            if partition.partition == 1 and not self.failed:
+                self.failed = True
+                raise KafkaException(KafkaError(KafkaError.NOT_LEADER_FOR_PARTITION))
+            return (0, 84 if self.failed else 42)
+
+    boundary = source_boundary(ChangingOffsets([topology_snapshot()]), timeout=1)
+    assert [(p.partition, p.offset) for p in boundary] == [(i, 84) for i in range(12)]
+
+
+def test_boundary_missing_metadata_expires_with_diagnostics():
+    with pytest.raises(TimeoutError, match="offsets.*sensor.readings.*missing"):
+        source_boundary(MetadataSnapshots([topology_snapshot(missing=True)]), timeout=0.02)
+
+
+@pytest.mark.parametrize(
+    "code", [KafkaError.LEADER_NOT_AVAILABLE, KafkaError.TOPIC_AUTHORIZATION_FAILED]
+)
+def test_bootstrap_classifies_metadata_call_errors(code):
+    error = KafkaException(KafkaError(code))
+    admin = ReadyTopicAdmin(
+        MetadataSnapshots([error, topology_snapshot()]),
+        {"sensor.readings": {"partitions": 12}},
+        timeout=1,
+    )
+    if code == KafkaError.LEADER_NOT_AVAILABLE:
+        assert len(admin.list_topics(timeout=10).topics["sensor.readings"].partitions) == 12
+    else:
+        with pytest.raises(KafkaException) as caught:
+            admin.list_topics(timeout=10)
+        assert caught.value is error
+
+
+def test_pending_topic_does_not_hide_another_topic_partition_mismatch():
+    metadata = topology_snapshot(count=1)
+    admin = ReadyTopicAdmin(
+        MetadataSnapshots([metadata]),
+        {"not-visible": {"partitions": 12}, "sensor.readings": {"partitions": 12}},
+        timeout=1,
+    )
+    with pytest.raises(
+        ConfigurationError, match="bootstrap.*sensor.readings.*expected=12 observed=1"
+    ):
+        admin.list_topics(timeout=10)
+
+
+def test_boundary_partition_error_is_not_a_successful_snapshot():
+    metadata = topology_snapshot()
+    metadata.topics["sensor.readings"].partitions[3].error = KafkaError(
+        KafkaError.TOPIC_AUTHORIZATION_FAILED
+    )
+    with pytest.raises(
+        ConfigurationError, match="offsets.*partition=3.*TOPIC_AUTHORIZATION_FAILED"
+    ):
+        source_boundary(MetadataSnapshots([metadata]), timeout=1)
