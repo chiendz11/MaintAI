@@ -1,66 +1,39 @@
+
 from typing import List
 
-import faiss
 from langchain_core.documents import Document
-from sentence_transformers import SentenceTransformer
+
+from ingestion.embedding import Embedder
+from knowledge.vector_store import PostgresVectorStore
 
 
 class VectorRetriever:
+    def __init__(self):
+        self.embedder = Embedder()
+        self.vector_store = PostgresVectorStore()
 
-    def __init__(
+    def search(
         self,
-        model_name: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-    ):
-        self.model = SentenceTransformer(model_name)
-        self.documents = []
-        self.index = None
+        query: str,
+        top_k: int = 3
+    ) -> List[Document]:
 
-    def add_document(self, documents: List[Document]):
-        if not documents:
-            return
-
-        texts = [doc.page_content for doc in documents]
-
-        embedding = self.model.encode(
-            texts,
-            convert_to_numpy=True
-        )
-
-        embedding = embedding.astype("float32")
-
-        faiss.normalize_L2(embedding)
-
-        if self.index is None:
-            dimension = embedding.shape[1]
-            self.index = faiss.IndexFlatIP(dimension)
-
-        self.index.add(embedding)
-        self.documents.extend(documents)
-
-    def search(self, query: str, top_k: int = 3) -> List[Document]:
-        if self.index is None or not self.documents:
+        if not query or not query.strip():
             return []
 
-        if not query.strip() or top_k <= 0:
+        if top_k <= 0:
             return []
 
-        embedding = self.model.encode(
-            [query],
-            convert_to_numpy=True
+        # 1. Chuyển câu hỏi thành embedding
+        embeddings = self.embedder.encode([query])
+
+        # 2. Lấy vector đầu tiên
+        query_embedding = embeddings[0]
+
+        # 3. Tìm các chunks liên quan trong PostgreSQL
+        documents = self.vector_store.search(
+            query_embedding=query_embedding,
+            top_k=top_k
         )
 
-        embedding = embedding.astype("float32")
-
-        faiss.normalize_L2(embedding)
-
-        k = min(top_k, len(self.documents))
-
-        scores, indices = self.index.search(embedding, k)
-
-        results = []
-
-        for idx in indices[0]:
-            if idx != -1:
-                results.append(self.documents[int(idx)])
-
-        return results
+        return documents

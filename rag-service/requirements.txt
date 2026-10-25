@@ -1,19 +1,29 @@
+
+# API
 fastapi>=0.110.0
 uvicorn[standard]>=0.28.0
 pydantic>=2.6.0
 pydantic-settings>=2.2.0
 
-langchain>=0.1.15
-langchain-community>=0.0.32
-langchain-openai>=0.1.3
-
-qdrant-client>=1.8.0
-tiktoken>=0.6.0
+# PDF Parsing
+PyMuPDF
 pypdf>=4.1.0
-python-multipart>=0.0.9
 
+# Document Processing
+langchain-core
+langchain-text-splitters
+
+# Embedding
+sentence-transformers
+numpy
+
+# PostgreSQL + pgvector
+psycopg[binary]
+python-dotenv
+
+# Testing
 pytest>=8.1.0
 httpx>=0.27.0
 
-sentence-transformers
-faiss-cpu
+# Optional API file upload
+python-multipart>=0.0.9
