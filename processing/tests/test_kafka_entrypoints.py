@@ -1,10 +1,10 @@
 from maintai_processing import outbox_relay, worker
+from maintai_processing.handlers import make_handler
 
 
 def test_factory_rejects_missing_owner_callbacks_without_connecting(monkeypatch):
     import pytest
     from maintai_messaging.errors import ConfigurationError
-    from maintai_processing.handlers import make_handler
 
     monkeypatch.setenv("PROCESSING_DATABASE_URL", "fixture-only")
     monkeypatch.delenv("PROCESSING_PREPARE_CALLBACK", raising=False)
