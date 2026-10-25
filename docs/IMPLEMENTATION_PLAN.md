@@ -1,3 +1,9 @@
+> **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
+> durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
+> có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
+> [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
+> readiness §19 ghi bằng chứng, commands và giới hạn; các snapshot cũ đọc theo ngày.
+
 > **Tích hợp MaintAI — 2026-10-19:** Tài liệu thiết kế mục tiêu v1.4, chưa xác nhận code/DB/GitOps đã migrate. Đọc [docs index](README.md) để áp dụng quyết định nhóm 4 người, Simulator UI riêng và thứ tự ưu tiên; [readiness](implementation-readiness.md) ghi các schema/scaffold chưa được cung cấp.
 
 # MaintAI v1.4 — Kế hoạch tích hợp và nghiệm thu cho con người và AI coding tool
@@ -11,6 +17,9 @@
 3. Xác minh owner và auth/ports thực tế của Ingestion, Processing, Business, Storage, Training/MLflow, RAG, Drift, Frontend, GitOps.
 4. Mở feature branch; chạy bộ test v1.3.1 để có baseline. Không đổi producer breaking khi chưa có consumer migration plan.
 5. Review/freeze v1.4 JSON Schemas và release manifest trước khi chia PR theo module.
+6. Đọc [OBS-01](OBSERVABILITY_IMPLEMENTATION.md) và
+   [MLFLOW-01](MLFLOW_INTEGRATION_GUIDE.md): metric catalog, timestamp coverage,
+   run/registry identities, strict schema mapping và durable retry/unknown policy.
 
 ## B. Thứ tự PR và ranh giới commit đề xuất
 
@@ -29,6 +38,10 @@
 | 10 — E2E và tải | Cả nhóm | Failure scenarios, lag/latency benchmark, DB contention | E2E acceptance matrix | Có log, metrics, giới hạn đã biết |
 
 **Lưu ý:** Đây là thứ tự phụ thuộc, không bắt tất cả làm nối tiếp. Sau PR 01 chốt fixtures, các nhánh ML/RAG/FE/Processing có thể làm song song. Tránh refactor toàn hệ thống cùng một PR.
+
+UI-01 thêm workstream tại §I dưới đây, phối hợp các PR00–10 theo dependency;
+không yêu cầu hoàn tất toàn bộ data platform trước khi phát triển frontend bằng
+contract fixtures rõ ràng. Fixture/mock phải có nhãn, không được báo đã nối live API.
 
 ## C. Schema và migration cụ thể (phải điều chỉnh theo DB thật)
 
@@ -108,3 +121,106 @@ Các bài này kiểm tra JSON Schemas/invariants/mẫu K8s, **không chứng mi
 ## H. Definition of Done và giới hạn tích hợp
 
 **Chỉ được đánh dấu `DOCS + REFERENCE CODE VERIFIED`** khi Markdown/JSON/YAML parse, tests offline đạt và sơ đồ render được. **Không được đánh dấu `PROJECT IMPLEMENTED`** khi PR source chưa merge, image digests chưa build, migrations chưa thực thi, services chưa deploy và chưa có integration/E2E/load/recovery evidence.
+
+## I. UI-01 — Workstream bốn UI và phát hành độc lập
+
+Quyết định20/10/2026 tại [UI Architecture](UI_ARCHITECTURE.md), System Contracts §40
+và Guide §48. Bảng này là **kế hoạch các PR implementation sau**, không phải các
+việc đã thực thi trong lượt sửa docs.
+
+| PR/work item | Owner | Đầu ra | Điều kiện nghiệm thu |
+| --- | --- | --- | --- |
+| UI-P0 — Capability/contract freeze | Người1 + Người4, phối hợp ML | Map prototype → API/DTO/auth, public origin/config, dependency graph; xác định field còn thiếu | Không tự thêm rate/counters/preview vào ControlState; schema/version review cho capability mới |
+| UI-P1 — Business frontend | Người1 | React trong frontend/, REST/SSE, child pages cho máy/history/alerts/briefs/summary | Freshness/order/auth đúng, giữ lifecycle và drift/monitoring APIs |
+| UI-P2 — Sensor Control provider | Người4 | List/get/pause/resume/scenario, scoped auth, persistent version/idempotency, backend entrypoint | ACK sau persist; timeout/conflict reconcile; browser đóng không dừng generation |
+| UI-P3 — Simulator frontend | Người4 | Đã có React/demo/live client/OIDC/recovery, Dockerfile/config/build/runtime descriptor và local checks | Còn Sensor/IdP live integration, container build và rollout evidence; unsupported live capabilities vẫn ẩn/unavailable |
+| UI-P4 — Grafana | Người4 + Người2 review | Năm dashboard kỹ thuật, Prometheus/exporters và Drift report datasource contract | Không fake STABLE, không browser/Business SQL; least privilege/query budgets |
+| UI-P5 — MLflow UI integration | Người2 + Người4 | MLflow Server UI, platform access, run/model/artifact/release links | Không clone React UI, alias/run không tự promote model |
+| UI-P6 — Per-component release | Người4 + frontend owners | Affected-component CI, images/config digests riêng, GitOps scoped updates/rollback | Giữ CI / required; đổi một UI không làm rollout UI/backend khác nếu contract không đổi |
+
+Simulator UI có thể bắt đầu bằng baseline5 operations; rate/control SSE/batch
+commands/counters là follow-up contract riêng, không là field đã có trong OpenAPI.
+Grafana SQL report view/role hoặc adapter phải do Drift owner freeze trước
+provisioning; không lấy browser credentials hoặc grant writer cho tiện demo.
+
+Evidence cần lưu cho UI-P6: component/source/image/config/GitOps identities,
+Pod template before/after, API compatibility result, auth/control-state tests và
+rollback logs. Dockerfile và screenshot prototype không thay thế evidence này.
+Portal vẫn tùy chọn, không thêm PR bắt buộc tạo service thứ năm.
+
+## J. OBS-01 / MLFLOW-01 — PR implementation sau khi chuẩn hóa docs
+
+Hai hướng dẫn revision1.0.0 đã chốt thiết kế; các đầu việc dưới **chưa implement**
+bởi lượt docs. Không lẫn label metadata/artifact schemas với runtime evidence.
+
+| Work item | Owner | Đầu ra cần có | Gate |
+| --- | --- | --- | --- |
+| OBS-P0 — Inventory/fixture | Mỗi owner, Người4 review | Metric families/type/labels/units/buckets/reset/commit points và series budget; source aliases thật nếu có | Không tên trùng/label ID/cardinality vượt budget; histogram fixture đúng |
+| OBS-P1 — App flow | Người1 | Ingestion/Processing/Business collectors, duplicate/commit semantics, exact-event accepted-time source | No metrics on rollback; missing source không fake p95; alert path không bị monitoring chặn |
+| OBS-P2 — ML/RAG | Người2/3 | Inference/model info, grounding/citation/retrieval metrics, no-data/error paths | Không dùng FAILURE prediction hoặc insufficient evidence như server error |
+| OBS-P3 — Sensor/Storage/Drift | Người4 | Spool/archive metrics, one-hot states, durable report aggregate/required publication/heartbeat | Retry không double count; no-data khác STABLE; strict writer/retention evidence |
+| OBS-P4 — GitOps handoff | Người4 + module owners | Scrape target labels/ACL, honor_labels, exporter naming, full5 dashboards, absent/stale/coverage rules | Real scrape→query→panel; trước enable xem thiếu accepted time/metrics coverage |
+| MLFLOW-P0 — Compatibility | Người2+4 | Exact client/server patches + locks/image digests, namespace/ACL, protocol/evaluation key mapping | Pinned-pair SDK/artifact tests, không placeholder hoặc auto-create namespace khi lỗi |
+| MLFLOW-P1 — Durable coordination | Người2+4 | Per-run operation intent/checkpoint, owner-generation/heartbeat, frozen artifact refs, unknown triage | Crash sau create/lease expiry/concurrency không blind-create hoặc dispatch thiếu evidence |
+| MLFLOW-P2 — SDK/training | Người2 | Real selected run, params/metrics/artifacts, Registry receipt/verification, finalized serving metadata | Read-back bytes/VersionIds/hashes; gate/threshold từ frozen split, no fake metrics |
+| MLFLOW-P3 — Release/provenance | Người1+2+4 | Strict result/release/HTTP/Kafka field mapping, fixtures, immutable result reuse | No unversioned extra keys; dispatch ACK khác deploy; no auto-promote |
+
+Các work items gắn vào PR05–10 của kế hoạch hiện hành theo dependencies; không
+bắt buộc tạo thêm runtimes. Source/provider/ledger/GitOps implementation, SDK
+network tests và deployment phải có yêu cầu thực thi riêng; docs không chạy chúng.
+
+
+## Sensor0.3.0 — cập nhật tiến độ20/10
+
+UI-P2 đã có source/provider/auth/persistence/scheduler/spool và local tests.
+Các phần Sensor của OBS handoff đã có instrumentation. Production IdP/PVC/Kafka,
+image/GitOps rollout và affected-component release validation còn mở; không đánh
+hoàn tất platform/E2E chỉ vì provider tests qua. Xem [readiness §15](implementation-readiness.md#15-sensor030--providerdurable-runtime2010)
+và [báo cáo file thay đổi](SENSOR_IMPLEMENTATION_REPORT.md).
+
+## K. PROC-ORDER-01 — workstream keyed Processing và ordered relay
+
+Quyết định23/10/2026, revision1.0.0 tại
+[đặc tả chi tiết](PROCESSING_CONCURRENCY_AND_ORDERING.md). Workstream tương lai
+bổ sung PR02/03/05/10, không là bằng chứng các PR đó đã được triển khai.
+
+| Thứ tự | Owner | Deliverable | Gate trước bước kế |
+| --- | --- | --- | --- |
+| ORDER-P0 — Freeze | Người1 + Người4, Người2 review | Source-order/duplicate/conflict rules, receipt ledger, bounded queues, dispatch/cursor/fence design | Fixtures500–504, source sequence xuyên epoch, timeout/revoke matrix được review |
+| ORDER-P1 — Persistence | Người1 | Migration mới: per-machine cursor, durable partition ownership fence, per-topic dispatch_seq/key lease | Upgrade/backfill có evidence, unique constraints; frozen001 không bị sửa; bundle pin mới nếu SQL bundle đổi |
+| ORDER-P2 — Keyed runner | Người1 | Opt-in poll owner/FIFO/fair scheduler/executor/completion coordinator | Cùng máy tuần tự, khác máy song song; safe prefix, memory bounds, unknown DB reconcile |
+| ORDER-P3 — Ordered relay | Người1 | Head-of-key claim/retry/renew/fenced finish, immutable payload reuse | Hai relay/head backoff/ACK unknown/late duplicate; successor không vượt head |
+| ORDER-P4 — Business/OBS | Người1 + Người4 | Independent CAS, alert inbox/lifecycle, metrics OBS-01 §11 và GitOps dashboard handoff | INVALID giữ valid snapshot; historical signal vẫn qua lifecycle; post-commit SSE/resync |
+| ORDER-P5 — Cutover/tải | Người1+2+4 | Compatibility gate, drain old writers/relays, bounded canary, load/recovery report | Rebalance/kill/rollback, ML/DB/pool/retention budgets, p95/lag/catch-up/skew được đo |
+
+Storage/Business runner không tự migrate sang keyed mode. Giữ12 partitions và
+3 consumer replicas là **profile đo thử**, không default production đủ tải.
+Không bật old/new writers không tương thích fence/cursor trên cùng stream.
+Runtime tests phải chứng minh generation fence chặn SQL cũ, không chỉ offset.
+Late duplicate vật lý không được làm UI lùi hoặc tạo Alert trùng; giữa topics
+không có total order. Source sequence/reset sai phải reconcile, không bịa epoch.
+
+Lượt docs chỉ cập nhật spec, sơ đồ, links và hashes. SDK/owner callbacks/migrations/
+Kafka bundle/GitOps/runtime tests chưa được sửa hoặc chạy bởi workstream docs.
+
+
+### K.1. Source progress23/10
+
+ORDER-P1/P2/P3 đã có SDK0.2.0 + migration002/source tests; P0 decision và local
+fixtures đã có. Processing transport wrappers/factory có code, **chưa phải full
+app**. P4 có optional metrics collectors nhưng Business app/probes/Grafana còn
+pending; P5 config3 profile mới NOT_ACTIVATED, chưa rollout/load/legacy-data
+bootstrap. Source report/readiness §19 ghi exact evidence. Không mark toàn bộ
+workstream DONE hoặc bật workload từ unit/integration PASS.
+
+# L. Baseline100 và capacity/latency choX>100
+
+Giả định ban đầu100 máy×1 reading/s. Kiến trúc scale-ready: sau vertical slice/
+failure correctness, xác nhận smoke5→50→baseline100/s; sau đó chọnX>100 theo
+capacity measured, không đặt mốc1.000 máy làm yêu cầu ban đầu.
+
+Mỗi mứcX cần offered/accepted/processed unique rate, stage latency/oldest age,
+ML/DB/Relay/Storage/Business/SSE resource budgets, alert browser p95≤2s và recovery
+headroom. Tính n/c/pool rồi tối ưu bottleneck trước khi tăng tài nguyên; giữ inbox,
+FIFO/fences/offset prefix và ordered outbox. Đầu ra là capacity report của đúng
+source/model/image/config, không chỉ một sơ đồ/replica count. [Plan chi tiết](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).

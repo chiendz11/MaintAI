@@ -1,0 +1,53 @@
+attrs==26.1.0
+    # via
+    #   jsonschema
+    #   referencing
+cffi==2.1.1
+    # via
+    #   -c sensor/requirements.lock
+    #   cryptography
+cryptography==50.0.2
+    # via
+    #   -c sensor/requirements.lock
+    #   pyjwt
+iniconfig==2.3.1
+    # via pytest
+jsonschema==4.26.0
+    # via -r ml-service/mlflow/requirements-release.in
+jsonschema-specifications==2025.9.1
+    # via jsonschema
+packaging==26.3
+    # via pytest
+pluggy==1.7.0
+    # via pytest
+pycparser==3.11
+    # via
+    #   -c sensor/requirements.lock
+    #   cffi
+pygments==2.21.0
+    # via pytest
+pyjwt==2.15.1
+    # via
+    #   -c sensor/requirements.lock
+    #   -r ml-service/mlflow/requirements-release.in
+    #   pyjwt
+pytest==9.1.1
+    # via -r ml-service/mlflow/requirements-dev.in
+pyyaml==6.0.3
+    # via
+    #   -c sensor/requirements.lock
+    #   -r ml-service/mlflow/requirements-dev.in
+referencing==0.37.0
+    # via
+    #   jsonschema
+    #   jsonschema-specifications
+rpds-py==2026.9.1
+    # via
+    #   jsonschema
+    #   referencing
+ruff==0.17.1
+    # via -r ml-service/mlflow/requirements-dev.in
+typing-extensions==4.16.0
+    # via
+    #   -c sensor/requirements.lock
+    #   referencing

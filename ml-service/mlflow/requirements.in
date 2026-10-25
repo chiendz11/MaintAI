@@ -1,0 +1,4 @@
+# Preserve the previous GitOps Dockerfile's direct dependencies during migration.
+boto3==1.40.61
+botocore==1.40.61
+psycopg2-binary==2.9.11

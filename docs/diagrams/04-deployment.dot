@@ -1,0 +1,118 @@
+// MaintAI diagram 04 — target deployment, not a live-cluster inventory.
+digraph Deployment {
+  graph [rankdir=TB, bgcolor="#ffffff", pad=0.45, nodesep=0.45, ranksep=0.70,
+    fontname="DejaVu Sans", fontsize=24, fontcolor="#10243a", labelloc=t,
+    label="MaintAI | 04 · Deployment\nTopology mục tiêu từ app / GitOps / infrastructure · CHƯA xác nhận đã deploy",
+    compound=true, splines=polyline];
+  node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=12,
+    color="#9fb5c9", fillcolor="#edf5ff", fontcolor="#16324f", margin="0.20,0.14", penwidth=1.3];
+  edge [fontname="DejaVu Sans", fontsize=10, color="#69839b", fontcolor="#47617a", arrowsize=0.7];
+
+  browser [shape=tab, label="Trình duyệt\nBusiness / Simulator / Grafana / MLflow"];
+  idp [shape=hexagon, label="OIDC / IdP bên ngoài\nIdentity / roles / scopes", fillcolor="#f1edf9"];
+  app_repo [shape=folder, label="MaintAI app repo\nSource + SDK + image build\nImmutable OCI digest"];
+  gitops [shape=folder, label="MaintAI-gitops\nWorkload / config / topic / ACL\nDuyệt thay đổi qua PR"];
+  infra [shape=folder, label="Maint-infrastructure\nEKS / RDS / S3 / IAM / networking"];
+  ecr [shape=box3d, label="Container registry / ECR\nImages theo digest", fillcolor="#edf2f6"];
+
+  subgraph cluster_aws {
+    label="AWS / MÔI TRƯỜNG TRIỂN KHAI MỤC TIÊU"; fontsize=18;
+    color="#9fb5c9"; style="rounded,filled"; fillcolor="#f8fbff"; margin=22;
+    subgraph cluster_eks {
+      label="EKS CLUSTER · app workload namespace maintai";
+      color="#8bb3d7"; fillcolor="#f2f8ff"; margin=20;
+      ingress [label="Ingress / HTTPS / DNS\nRoute riêng cho từng UI/API"];
+      subgraph cluster_delivery {
+        label="DELIVERY / PLATFORM CONTROLLERS · namespace riêng";
+        color="#d4c1e1"; style="rounded,filled"; fillcolor="#f7f2fc";
+        argocd [label="Argo CD\nĐồng bộ desired state", fillcolor="#eee5f7"];
+        strimzi [label="Strimzi Operator\nQuản lý Kafka resources", fillcolor="#eee5f7"];
+      }
+      subgraph cluster_frontends {
+        label="FRONTEND IMAGES RIÊNG"; color="#b7cde1"; style="rounded,filled"; fillcolor="#ffffff";
+        business_ui [label="Deployment + Service\nfrontend\nBusiness UI image"];
+        simulator_ui [label="Deployment + Service\nsimulator-ui\nSimulator UI image"];
+      }
+      sensor [label="Deployment + Service · sensor\n1 replica / Recreate\nAI4I read-only + SQLite/spool PVC", fillcolor="#e2f4eb"];
+      ingestion [label="Deployment + Service\ningestion-api\nIngestion image"];
+      subgraph cluster_processing {
+        label="3 DEPLOYMENTS · CÙNG IMAGE GROUP processing";
+        color="#d6b36a"; style="rounded,filled"; fillcolor="#fffaf0";
+        worker [label="processing-worker · TARGET\nKeyed FIFO + offset coordinator nội bộ\nScale theo lag / queue / ML-DB budget"];
+        read_api [label="processing-read-api + Service\nScale theo query RPS / p95\nDB role read-only"];
+        relay [label="processing-outbox-relay · TARGET\nHead-of-key / topic-machine order\nScale theo pending / blocked-key age"];
+      }
+      subgraph cluster_business {
+        label="2 DEPLOYMENTS · CÙNG IMAGE GROUP business-backend";
+        color="#91b6d8"; style="rounded,filled"; fillcolor="#ffffff";
+        api [label="business-api + Service\nREST / SSE connections"];
+        consumer [label="business-consumer\nTelemetry / prediction / alert loops"];
+      }
+      storage [label="Deployment · storage-consumer\nArchive groups / S3 writer"];
+      inference [label="Deployment + Service · ml-service\nInference image + model release pin"];
+      rag [label="Deployment + Service · rag-service\nRAG image / knowledge owner"];
+      drift [label="CronJob · drift-worker\nBatch theo lịch; không nằm trên alert path", fillcolor="#fff0d9"];
+      training [label="Argo Workflow / Job · training\nApproved dataset trigger\nTraining image riêng", fillcolor="#fff0d9"];
+      mlflow [label="Deployment + Service · MLflow\nServer/API + UI gốc\nImage source ở app; config ở GitOps", fillcolor="#eee5f7"];
+      monitor [label="Monitoring workloads\nPrometheus / Grafana / exporters\nPushgateway cho Drift", fillcolor="#eee5f7"];
+      subgraph cluster_kafka {
+        label="KAFKA NODE POOL · KRaft"; color="#9caed2"; style="rounded,filled"; fillcolor="#edf1fb";
+        kafka [shape=box3d, label="3 Pods × (broker + controller)\nTLS / SCRAM / ACL\nMỗi Pod: PVC 50 GiB\n4 topics × 12 partitions, RF=3, minISR=2"];
+      }
+    }
+    subgraph cluster_rds {
+      label="MỘT POSTGRESQL INSTANCE / RDS · cùng tài nguyên CPU/IO";
+      color="#aebfca"; style="rounded,filled"; fillcolor="#f1f5f7";
+      pdb [shape=cylinder, label="processing_db"];
+      bdb [shape=cylinder, label="business_db"];
+      ddb [shape=cylinder, label="drift_db"];
+      mdb [shape=cylinder, label="mlflow_db"];
+      kdb [shape=cylinder, label="knowledge_db\npgvector"];
+    }
+    s3 [shape=folder, label="S3 · logical object groups\nRaw / quarantine / processed archive\nApproved datasets / model bundles\nManuals / reports / MLflow artifacts", fillcolor="#edf2f6"];
+    iam [shape=hexagon, label="IAM / IRSA / secrets / TLS\nQuyền riêng theo workload", fillcolor="#edf2f6"];
+  }
+
+  app_repo -> ecr [label="build / sign / publish"];
+  ecr -> gitops [label="đề xuất digest qua PR", style=dashed];
+  gitops -> argocd [label="desired state"];
+  infra -> iam [label="provision", style=dashed];
+  infra -> s3 [style=dashed];
+  infra -> pdb [label="provision RDS", style=dashed];
+  browser -> ingress [label="HTTPS"];
+  browser -> idp [label="đăng nhập", style=dashed];
+  ingress -> business_ui; ingress -> simulator_ui; ingress -> api;
+  ingress -> sensor [label="Control API"];
+  ingress -> mlflow; ingress -> monitor [label="Grafana"];
+  simulator_ui -> sensor [label="URL API từ browser", style=dashed, constraint=false];
+  business_ui -> api [label="REST / SSE từ browser", style=dashed, constraint=false];
+  sensor -> ingestion [label="readings"];
+  ingestion -> kafka [label="producer"];
+  kafka -> worker [label="processing-v1", constraint=false];
+  kafka -> consumer [label="3 Business groups", constraint=false];
+  kafka -> storage [label="archive groups", constraint=false];
+  relay -> kafka [label="producer", constraint=false];
+  worker -> inference [label="HTTP predict"];
+  api -> read_api [label="internal HTTP"];
+  consumer -> rag [label="leased brief jobs"];
+  worker -> pdb [label="RW + outbox"];
+  read_api -> pdb [label="SELECT"];
+  relay -> pdb [label="outbox role"];
+  api -> bdb [label="business role"];
+  consumer -> bdb [label="projection / lifecycle"];
+  drift -> read_api [label="VALID window", constraint=false];
+  drift -> ddb;
+  rag -> kdb;
+  mlflow -> mdb;
+  storage -> s3 [label="raw + manifest"];
+  inference -> s3 [label="pinned bundle"];
+  training -> s3 [label="approved input / outputs"];
+  training -> mlflow [label="tracking / registry", constraint=false];
+  drift -> s3 [label="reference / report"];
+  strimzi -> kafka [label="reconcile", style=dashed];
+  argocd -> ingress [label="sync workloads/config", style=dashed];
+
+  note [shape=note, fontsize=11, fillcolor="#fff5dd", color="#d8b566",
+    label="Hình là desired topology, không xác nhận có cluster / endpoint / image digest production.\lMột image group có thể chạy nhiều Deployments bằng command khác nhau.\lSDK messaging được cài vào image app, không có SDK Pod. MLflow / training / inference là 3 images.\lTên S3 groups là logical; số bucket/prefix vật lý theo repo infrastructure.\lCác đường dependency chính được rút gọn; arrows frontend là request do browser gửi.\l"];
+  s3 -> note [style=invis];
+}

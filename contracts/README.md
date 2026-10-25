@@ -1,6 +1,6 @@
 # MaintAI API contracts
 
-Bộ contract máy đọc được nằm trong [v1.3/](v1.3/README.md), baseline **1.3.2**.
+Bộ contract máy đọc được nằm trong [v1.3/](v1.3/README.md), baseline **1.3.2**, riêng Ingestion M1 có HTTP revision **1.4.0**.
 [System Contracts v1.4 §34–39](../docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md)
 là target thiết kế mới. [Kafka bundle](kafka/README.md) bổ sung canonical wire
 schemas1.4, inbox/outbox SQL và fixtures dùng bởi Python SDK. HTTP/provider/release
@@ -33,9 +33,9 @@ Version baseline1.3.2 độc lập với wire protocol: ML/RAG giữ1.1.0, Drift
 giữ1.0.0, sensor envelope1.3.0 và processing result union2.0.0. Việc dọn tài liệu
 không tự thay payload hoặc migrate code.
 
-- Sensor hiện có vẫn dùng synchronous wire v1.1. Frozen schema dùng cho tests nằm
-  ở [sensor/tests/fixtures/sensor-wire.schema.json](../sensor/tests/fixtures/sensor-wire.schema.json).
-  Đây là fixture compatibility của module, không phải contract Ingestion mục tiêu.
+- Sensor0.3.0 dùng SensorRequest1.3.0, ACK202 và Control baseline1.3.2. Tests đối chiếu
+  runtime.schema.json hiện hành; frozen fixture synchronous v1.1 đã gỡ khi migrate.
+  Generated readings vẫn giữ strict sáu-feature allowlist trước fault injection.
 - Drift tests đối chiếu schema runtime với [reference](v1.3/schemas/drift-reference.schema.json)
   và [report](v1.3/schemas/drift-report.schema.json) trong bundle hiện hành.
 - Kafka transport/inbox/outbox/raw S3 adapters nằm tại `messaging/`; SSE/application

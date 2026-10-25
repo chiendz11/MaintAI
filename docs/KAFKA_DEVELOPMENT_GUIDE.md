@@ -1,8 +1,12 @@
 # Hướng dẫn Kafka cho nhóm MaintAI
 
-Cập nhật: 2026-10-19. Python dùng chung, package `maintai-messaging==0.1.0`,
-Kafka contract bundle1.0.0. Đây là code transport và durable delivery để các
+Cập nhật: 2026-10-23. Python dùng chung, package `maintai-messaging==0.2.0`,
+Kafka contract bundle1.1.0. Đây là code transport và durable delivery để các
 thành viên phát triển nghiệp vụ; không phải xác nhận toàn hệ thống đã chạy.
+
+**PROC-ORDER-01:** §12 + [implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md)
+mô tả keyed Processing/ordered relay đã có source SDK0.2.0, explicit modes và
+migration002. Serial/legacy defaults giữ nguyên; full app callbacks vẫn cần owner.
 
 ## 1. Đã có gì, mỗi người còn làm gì?
 
@@ -236,8 +240,11 @@ giữa3 loops. Inbox group phải đúng group của role, gồm prefix local n�
 
 Không ghi đè latest valid prediction bằng INVALID/ML_UNAVAILABLE. Dùng CAS/source
 ordering bền vững của app, không sort opaque eventID/epoch và không giả định topic
-đến cùng thứ tự. Nhiều relay/leases cũng không cam kết publish theo source sequence;
-Kafka key giữ partition affinity, không thay ordering guard của app.
+đến cùng thứ tự. **Legacy SDK relay** có nhiều leases nhưng chưa cam kết publish
+theo source sequence; Kafka key giữ partition affinity, không thay ordering guard
+của app. **Target PROC-ORDER-01** bổ sung head-of-key ordered dispatch theo từng
+topic/máy (§12), đã có OrderedOutboxRelay0.2.0 ở mode opt-in. Late duplicate và thứ tự xuyên topic vẫn
+cần inbox/CAS; không bỏ Alert Signal chỉ vì UI đã có reading mới hơn.
 SDK chỉ giải quyết durable delivery/idempotent identity; unique
 alert constraints, sequence ordering và lifecycle thuộc callback của app.
 
@@ -263,6 +270,15 @@ Kafka của Ingestion/Processing/Business không chia cho ML/RAG/frontend.
 ## 8. Người4: Storage, Sensor/Drift và platform
 
 ### Raw Storage consumer đã có implementation
+
+Owner runtime0.1.0 hiện ở [storage-consumer/](../storage-consumer/README.md), CLI
+`maintai-storage serve`: thêm versioning preflight, independent group loops,
+bounded retry, graceful shutdown, management probes và OBS-01. Khi chạy runtime
+này **không chạy đồng thời** SDK CLI bên dưới với cùng groups. `maintai-storage
+verify-config` chạy offline khi chưa có AWS. Bucket/region/endpoint và credential
+chain cấu hình sau qua environment; không tạo bucket hoặc topic ở startup.
+Đọc README module cho lockfiles, Docker build context và tests; external
+Kafka+S3 integration/capacity chưa được xác nhận bởi việc thêm source.
 
 ```bash
 export S3_RAW_BUCKET='YOUR_VERSIONED_RAW_BUCKET'
@@ -322,10 +338,13 @@ curated S3 ngoài online path, không consume Kafka để tự retrain/promote.
 | S3 object có nhưng manifest chưa xong | Chưa receipt/commit; verify rồi retry | Giữ object versions và quyền đọc/ghi cần thiết |
 | Một Business group lỗi | Service dừng các sibling loops | Supervisor restart, phân biệt lag theo group |
 
-Consumer loop xử lý1 in-flight record/runner và tiếp tục poll trong khi callback
-chạy; pause các partitions của runner đó. Tăng replicas đến partition count rồi
-mới tối ưu concurrency khi có số đo. Handler không được chờ vô hạn; SIGTERM chờ
-in-flight hoàn tất, deployment termination grace phải đủ network/DB timeout.
+**Implementation hiện tại:** consumer loop xử lý1 in-flight record/runner trên
+toàn assignment và tiếp tục poll trong khi callback chạy; pause các partitions
+của runner đó. Đây vẫn là baseline cho Business/Storage. **Target Processing
+23/10:** keyed concurrency + offset coordinator theo §12, không chỉ tăng
+`max_workers`. Partition count giới hạn group members, không bằng số keyed tasks.
+Handler không được chờ vô hạn; shutdown/rebalance cần bounded drain và safe
+completed-prefix commit, deployment grace phải đủ network/DB timeout.
 
 Không có tự động skip, auto DLQ hoặc retry poison vô hạn trong process. Process
 dừng để giữ bằng chứng/offset; restart có backoff và cảnh báo lag do platform cấu
@@ -374,3 +393,50 @@ vì sửa transport. Deploy reader hỗ trợ cả2 lineage trước khi bật w
 - [Kafka4.0 Docker](https://kafka.apache.org/40/getting-started/docker/): môi trường KRaft development.
 - [Strimzi0.47 deployment](https://strimzi.io/docs/operators/0.47.0/deploying.html): broker versions, topics và KafkaUser ACL.
 - [S3 PutObject](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/put_object.html): conditional write, checksum và object VersionId.
+
+## 12. PROC-ORDER-01 — target keyed Processing và ordered relay
+
+**Decision1.0.0, source SDK0.2.0 ngày23/10.** Nguồn chuẩn:
+[đặc tả concurrency/ordering](PROCESSING_CONCURRENCY_AND_ORDERING.md),
+System Contracts §42, Guide §53 và implementation report. CLI hỗ trợ
+`consume --role processing --processing-mode keyed`, `relay --mode ordered`;
+mode/env opt-in, default serial/legacy. KeyedSettings đọc PROCESSING_MAX_ACTIVE_KEYS
+và các budgets trong report, yêu cầu fenced two-phase handler. App DQ/ML/risk/
+history callbacks và production deployment chưa được làm thay owner.
+
+| Phần | Người triển khai | Yêu cầu tích hợp |
+| --- | --- | --- |
+| Processing poll/scheduler | Người1 | Bounded keyed FIFO, một task/máy; khác máy song song trong cùng partition; fair scheduling |
+| Offset coordinator | Người1 | Receipt ledger/current assignment; commit safe completed prefix theo partition, không max completed offset |
+| DB ownership fence | Người1 | Generation bền vững kiểm atomically với inbox/cursor/history/risk/outbox; RAM callback fence chưa đủ |
+| Ordered relay | Người1 | Head-of-key `(topic,machine_id)` + durable dispatch order/key lease; head backoff chặn successor |
+| ML budget | Người2 + Người1 | Pinned model, bounded calls/timeouts; late HTTP response không tạo outcome lần hai |
+| Kafka/platform | Người4 | Partitions/ACL, retention, poll/grace/pool budgets, dashboard/alerts và load/rebalance evidence |
+| Business/UI | Người1 | Inbox, durable-sequence CAS riêng từng projection, signal lifecycle không bị latest-CAS bỏ qua |
+
+Processing handler trả durable receipt sau terminal transaction hoặc verified
+exact duplicate, không sau riêng HTTP ML. Coordinator tính cả fetched buffer,
+queued work và completed-behind-hole; offset501 xong khi500 chưa durable không
+cho commit502. Revoke/lost invalidate generation; stale completion không commit
+offset hoặc DB mutation. Per-key FIFO chỉ giữ broker arrival, producer source
+order vẫn cần được bảo đảm. Sequence tăng xuyên epoch, không sort opaque epoch.
+
+Legacy relay `ORDER BY created_at ... SKIP LOCKED` chưa có key-order guarantee.
+OrderedOutboxRelay đã thêm head-only claim/key lease/cursor bằng migration002;
+không sửa SQL bundle1.0.0 tại chỗ. Claim không được bỏ qua predecessor chỉ vì
+chưa due/đang leased. Unknown ACK retry cùng ID/key/bytes, không release successor
+sớm. Late physical duplicates vẫn có thể xảy ra, không có cross-topic total order.
+
+Giữ `ConsumerRunner` baseline cho Storage/Business; thêm keyed path opt-in cho
+Processing. Cutover phải drain/block old workers/relays bỏ qua fences mới. Tests
+và work items tại Plan §K. SDK/bundle đã được bump; source/test evidence,
+initial legacy-DB bootstrap limit và GitOps config3 pending ở implementation report.
+
+## Capacity baseline100 và mở rộng theoX
+
+Giả định ban đầu100 máy×1 reading/s=100/s. Kiến trúc scale-ready giữ12 partition
+và các group độc lập; không có1 consumer/partition cho mỗi máy. TăngX>100 cần
+đo/tính riêng source, Processing, Relay, Business và Storage, không chỉ tăng Worker.
+[Công thức và latency plan](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100)
+ghi rõ serial runner/cycle, keyed active slots và downstream pools. Không đổi
+wire bundle, Kafka topology hoặc migration SQL chỉ vì giả định100 máy.

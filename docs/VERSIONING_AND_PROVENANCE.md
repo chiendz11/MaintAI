@@ -1,3 +1,9 @@
+> **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
+> durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
+> có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
+> [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
+> readiness §19 ghi bằng chứng, commands và giới hạn; các snapshot cũ đọc theo ngày.
+
 > **Tích hợp MaintAI — 2026-10-19:** Tài liệu thiết kế mục tiêu v1.4, chưa xác nhận code/DB/GitOps đã migrate. Đọc [docs index](README.md) để áp dụng quyết định nhóm 4 người, Simulator UI riêng và thứ tự ưu tiên; [readiness](implementation-readiness.md) ghi các schema/scaffold chưa được cung cấp.
 
 # MaintAI v1.4 — Quy chuẩn quản lý phiên bản và truy vết nguồn gốc (Versioning & Provenance)
@@ -104,13 +110,20 @@ Nhãn AI4I chỉ là ground truth của dataset tĩnh cho thí nghiệm, không 
 
 ## 4. Tái lập Training với MLflow
 
+Quy trình SDK/ledger/unknown recovery theo
+[MLFLOW_INTEGRATION_GUIDE.md](MLFLOW_INTEGRATION_GUIDE.md) MLFLOW-01/1.0.0,
+System Contracts §41. Numeric registry version, logical MaintAI model_version,
+MLflow run_id và serving artifact digests là các danh tính riêng cần liên kết.
+
 Training Job **phải** ghi `dataset_version`, manifest SHA, `split_version`/split hash, `training_code_git_sha`, training image digest, lockfile SHA, feature schema version/hash, seed, hyperparameters, thuật toán, tên experiment, `mlflow_run_id`, metrics validation/test, phương pháp và dataset chọn threshold, threshold cuối và calibration (nếu dùng). Model package phải chứa model, preprocessor, metadata, feature schema, threshold và `drift_reference.json` tương thích.
 
 ### 4.1. Cổng kiểm soát đăng ký và phát hành model
 
 1. **Train candidate:** Train và log MLflow run/artifacts; kiểm tra metric đầy đủ, split có thể tái lập.
 2. **Đánh giá:** Kiểm tra leakage, schema, load artifact, test held-out, ranh giới threshold, reference compatibility, mục tiêu metric và giới hạn quan sát. Tài liệu này không tự thay đổi ngưỡng nghiệm thu định lượng của dự án.
-3. **Register:** Tạo model version bất biến trong MLflow; lưu `run_id`, artifact URI và SHA256 của artifact thực tế.
+3. **Register:** Tạo numeric model version trong MLflow; lưu run_id, source URI,
+   registry payload SHA và read-back verification. Tính bất biến của nội dung
+   dựa vào frozen bytes/VersionId/SHA/ACL, không chỉ version number hoặc tags.
 4. **Approve:** Reviewer duyệt release manifest trong PR/ADR/release record; lưu danh tính người duyệt và thời gian UTC.
 5. **Deploy:** GitOps chỉ định version/digest cụ thể. Alias `candidate`/`champion` có thể phục vụ workflow lựa chọn nhưng **phải resolve thành model version bất biến khi phê duyệt**.
 6. **Verify:** Startup kiểm tra checksum model/preprocessor/reference, schema và release; mismatch thì readiness thất bại, không âm thầm dùng model mới nhất.
@@ -118,6 +131,22 @@ Training Job **phải** ghi `dataset_version`, manifest SHA, `split_version`/spl
 ### 4.2. Danh tính model tại runtime
 
 Một response inference phải mang model version **thực sự đã tải**, threshold thực dùng và tương quan với `release_id`. Không suy diễn model từ tên image hoặc alias đang trỏ tới đâu vào thời điểm truy vấn sau này. Khi rollback, các prediction cũ vẫn trỏ đúng model ban đầu.
+
+### 4.3. Retry, artifact checkpoints và schema mapping
+
+Training_id/run_key và owner-generation intent được lưu bền vững trước create;
+remote create timeout giữ UNKNOWN, không get-or-create bằng tags hoặc tự tạo
+run/version mới. Cùng metrics/artifact publication retry giữ ID, timestamp,
+keys/paths/bytes và verify partial writes. Lease hết hạn không fence in-flight
+MLflow calls; cần triage/serialized create và ledger migration theo MLFLOW-01 §6–7.
+
+Registry payload đóng băng trước registration; serving metadata finalize sau khi
+có version thật để tránh vòng hash. Internal receipt không tự thêm fields vào
+platform model-result/HTTP/Kafka closed schemas. Target release-manifest schema
+và registry field mappings còn cần source/contract PR; xem MLFLOW-01 §8.
+
+Metrics contract OBS-01 có revision riêng: change type/label/buckets phải phối
+hợp producer/queries và migration window, không bump model/API chỉ vì sửa panel.
 
 ## 5. Provenance của Sensor → Data Quality → Prediction → Risk → Alert
 
@@ -162,6 +191,53 @@ Không tự động promote model chỉ vì MLflow có candidate hoặc metric d
 ### 8.2. Database migrations và backward compatibility
 
 Mỗi DB owner có Alembic migration riêng. Với thay đổi không tương thích, ưu tiên `expand → deploy code chấp nhận cả hai schema → backfill → contract`. Release manifest lưu Alembic revision mỗi DB. Rollback image **không** tự rollback migration phá hủy dữ liệu. Kafka consumers mới phải xử lý message schema cũ tồn tại trong retention hoặc có chiến lược migrate version rõ ràng.
+
+### 8.3. UI-01 — Version độc lập cho bốn UI
+
+[UI Architecture](UI_ARCHITECTURE.md) chốt Business và Simulator frontend có
+release riêng, Grafana/MLflow là platform UI. Các danh tính cần ghi khi triển khai:
+
+| Component | Provenance cần có |
+| --- | --- |
+| Business frontend | App Git SHA, OCI digest frontend, build/lockfile identity, public config digest, Business API baseline tương thích, GitOps revision |
+| Simulator frontend | App Git SHA, OCI digest simulator-ui, build/lockfile identity, public config digest, Control API baseline/capabilities, GitOps revision |
+| Sensor backend | Image/config digest riêng, Control API version và durable state migration identity nếu có |
+| Grafana | Server/chart/image version theo platform pin, dashboard UID/revision + JSON/config digests, datasource/plugin/config identities được duyệt |
+| MLflow | App source SHA/Dockerfile/adapter lock, upstream server patch/base digest, app-signed image digest; GitOps config/plugin/tracking/artifact identity; model/run/release có versions riêng |
+
+Đây là yêu cầu metadata của release, chưa thêm field vào JSON Schema immutable.
+Quyết định MLFLOW-IMAGE-01 chuyển producer image sang app nhưng giữ production
+workload/config ở GitOps. Receiver pin exact app signer workflow/issuer/source
+annotations và actor, không nhận signer GitOps cũ cho group mlflow. Existing
+workload-release1.0.0 envelope không đổi; không tự bật service sau image PR.
+Nếu runtime config/release schema hiện cấm field mới, cần publish schema version
+mới và compatibility PR trước khi ghi chúng. Digest của secret value không nằm
+trong public frontend config hoặc logs; ghi tham chiếu secret/config theo policy.
+
+Hai frontend cùng monorepo có thể có cùng source SHA nhưng image digests khác.
+Không bịa repository/SHA riêng cho mỗi folder. UI Suite HTML1.6 chỉ là prototype
+revision; không nâng toàn hệ thống, API1.3.2, Kafka bundle hoặc model thành1.6.
+UI-01 revision1.0.0 độc lập target docs1.4 và bất kỳ release executable nào.
+
+### 8.4. Scoped release, compatibility và rollback UI
+
+1. CI xác định components bị ảnh hưởng theo source/dependency/API, chạy các checks
+   tương ứng và giữ check tổng hợp bắt buộc. Shared library/toolchain có thể ảnh
+   hưởng cả hai frontend; chưa có implementation selection trong lượt docs này.
+2. Build/pin image và public config của đúng component. GitOps PR chỉ cập nhật
+   component cần release; không thay timestamp/global config hash của Pod templates
+   khác khiến chúng rollout cùng nhau.
+3. Ghi before/after digests/config/template hashes của Business và Simulator; sửa
+   một UI phải chứng minh UI kia và Sensor backend không bị rollout ngoài kế hoạch.
+4. Khi đổi API, xét cả browser bundle cũ đang mở. Giữ compatible provider hoặc dùng
+   expand/consumer-first rollout; tách deployment không làm breaking API an toàn.
+5. Rollback từng UI/config theo immutable identities đã duyệt. Không tự rollback
+   database, model/policy, Alert history hoặc các control commands đã persist.
+
+Grafana dashboard provisioning có revision riêng; chọn reload/rollout phù hợp
+plugin/platform, không bắt redeploy hai frontend ứng dụng. MLflow registry changes
+vẫn không tự đổi inference release. Thay frontend không làm thay historical
+prediction provenance; Operator/Sensor audit vẫn phải xác định actor/API state.
 
 ## 9. Retention, bảo mật, phân quyền và audit
 
@@ -218,3 +294,30 @@ Thay đổi breaking event/API schema: cập nhật JSON Schema, migration notes
 **Giữ từ v1.3.1:** 5 logical DB, Processing Read API, DQ tại Worker, Business giữ latest snapshots + Alerts, Business API/Consumer tách Deployment, Kafka outbox/inbox, raw archive S3, Drift CronJob độc lập, manual RAG có version, MLflow + reference profile, không auto-retrain.
 
 **Bổ sung/chốt tại v1.4:** `processing-read-api` thành Deployment riêng có quyền read-only; Kafka quarantine `sensor.rejected` theo chính sách auth/kích thước; giữ `inference.results` và có thể archive outcome; release manifest bất biến; exact model/preprocessor/dataset/split digests gắn MLflow run; provenance tests; quy tắc History Query nóng/lạnh và restore/retention. **Các mục mới chỉ được xem là đã triển khai khi source, migration, contract và E2E tests thực tế được cập nhật.**
+
+## 14. PROC-ORDER-01 — source order, dispatch order và migration identity
+
+[Decision1.0.0 ngày23/10](PROCESSING_CONCURRENCY_AND_ORDERING.md) bổ sung behavior
+cho target1.4.0. Không đổi wire schema chỉ để đồng bộ revision của Markdown.
+
+- `sequence_number` là order nguồn bền vững per machine xuyên restart/epoch;
+  `stream_epoch` chỉ lineage. Không sort chuỗi epoch hoặc completed_at để chọn latest.
+- Kafka `(topic,partition,offset)` nhận diện receipt; cùng logical event có nhiều
+  receipt khi retry. Inbox/hash giữ canonical identity, history không đổi model/
+  policy/result ID vì một delivery khác. Processing keyed completion có thể
+  khác arrival order giữa máy; lưu cả source locator và completed_at.
+- `dispatch_seq` là DB order riêng `(topic,machine_id)`, không phải source
+  sequence, model version, Kafka offset hoặc field wire mới. Signal chỉ sinh ở
+  một số readings nên không đòi signal source sequences liên tiếp.
+- Durable partition ownership generation và key-lease generation phục vụ fencing;
+  không dùng chúng thay `stream_epoch` hoặc công bố như new business result version.
+- Frozen `001_messaging.sql` và bundle1.0.0 giữ nguyên. SQL cần thêm thì tạo
+  migration mới; đổi bundle SQL phải publish bundle/hash lock mới và SDK pin.
+  Backfill order cần source evidence, không bịa dispatch order từ created_at.
+- Release record cho source PR sau này phải ghi app/SDK/bundle/migration revision,
+  decision revision, mode/config hash và ML/DB concurrency budgets trong release
+  metadata được review; không thêm field vào closed release envelope tại chỗ.
+  Drain/gate old writers/relays trước enable; rollback không undo side effects.
+
+Docs manifest lưu local amendment và decision; upstream imported hashes tiếp tục
+bảo toàn nguồn gốc. Diagrams revision1.2.0 mô tả target, không image/deploy proof.

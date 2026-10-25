@@ -1,0 +1,9 @@
+{
+  "mode": "demo",
+  "apiBaseUrl": "",
+  "pollIntervalMs": 5000,
+  "requestTimeoutMs": 8000,
+  "staleAfterMs": 20000,
+  "auth": { "mode": "none" },
+  "links": {}
+}

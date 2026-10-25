@@ -1,6 +1,6 @@
 # HTTP API baseline1.3.2 — migration đến target v1.4
 
-Ngày cập nhật: 2026-10-19. **Machine API description version: `1.3.2`**; OpenAPI
+Ngày cập nhật: 2026-10-20. **Machine API description version: `1.3.2`**; OpenAPI
 format `3.1.1`. `contracts/v1.3/` là baseline tự chứa còn được CI kiểm tra.
 Target docs mới là1.4.0; quarantine/provenance và compatibility migration chưa có
 trong bundle này. Các rows phía dưới mô tả baseline1.3.2, không tự override v1.4.
@@ -372,3 +372,85 @@ theo Guide v1.4 §42–47 cùng chi tiết history/recovery kế thừa. Provide
 
 Ingestion status_url/Location phải là absolute Business API URL được cấu hình;
 Sensor gọi Ingestion internal origin không được resolve relative URL về Ingestion.
+
+## UI-01 — Ranh giới HTTP của bốn UI (2026-10-20)
+
+[UI Architecture](UI_ARCHITECTURE.md) và System Contracts §40 chốt ownership;
+lượt docs này không sửa OpenAPI/schema hoặc tăng protocol version.
+
+- Business UI chỉ gọi Business REST/SSE; history/RAG/drift do Business facade
+  theo scope. Giữ monitoring summary và report list/detail đã có; Grafana không
+  làm mất các endpoint hoặc chuyển browser qua DB/Processing API trực tiếp.
+- Simulator UI chỉ gọi Sensor Control trên management origin. Baseline Simulator
+  có5 operations: GET `/api/v1/simulator/machines`, GET `/{machine_id}/control`,
+  POST `/{machine_id}/pause`, POST `/{machine_id}/resume`, PUT `/{machine_id}/scenario`
+  dưới cùng collection path. Mutation có Idempotency-Key/expected_control_version;
+  ScenarioCommand thêm scenario. Roles SIMULATOR_OPERATOR/ADMIN và machine scope.
+- ControlState hiện không có rate/counters/queue/preview/ACK-detail. Chưa có rate
+  mutation, batch control, control SSE hoặc toggle RAG. Không tự thêm properties
+  vào DTO đóng; cần PR freeze request/response/error/auth/idempotency/persistence
+  và schema version trước khi bật chức năng tương ứng trong UI thật.
+- Unknown command outcome dùng GET reconcile, không suy ra PAUSED từ timeout;
+ 409 đọc state mới trước ý định mới, cùng command retry giữ key/body theo semantics
+  đã chốt. Business severity/Alert lifecycle không bị simulator command thay đổi.
+- Grafana browser gọi Grafana server; report datasource phải owner-approved,
+  read-only/bounded nếu dùng SQL, server giữ credentials. Không phát minh Drift
+  HTTP deployment; Business report catalog APIs giữ owner/dataflow hiện có.
+- MLflow browser gọi MLflow Server theo quyền platform; server giữ DB/artifact
+  access. UI registry không là API bỏ qua approved model release PR.
+- Public origins/links/capabilities là runtime config riêng của mỗi frontend;
+  schema config immutable hiện có cần revision mới nếu thêm keys. Không dùng
+  wildcard CORS, token query string hoặc frontend service credentials làm shortcut.
+
+Tách release không thay API compatibility: UI cũ còn mở phải tiếp tục được provider
+hỗ trợ hoặc có kế hoạch migration/refresh rõ. CI selection chưa implement; frontend
+image/build độc lập không miễn provider/consumer tests khi shared contract thay đổi.
+
+
+## OBS-01 / MLFLOW-01 — Metrics và tracking không thay HTTP DTO (2026-10-20)
+
+System Contracts §41 chốt [metrics catalog](OBSERVABILITY_IMPLEMENTATION.md) và
+[MLflow workflow](MLFLOW_INTEGRATION_GUIDE.md) revision1.0.0. Internal metrics
+exposition, bounded labels/buckets và run/artifact metadata không tự thêm fields
+vào Business/Simulator/OpenAPI DTO, Kafka events hoặc strict model-result-v1.
+
+Alert Signal1.0 chưa có accepted timestamp. Histogram event-to-alert cần exact
+source-event lookup qua owner interface hoặc event/DTO migration được review;
+không dùng sensor received_at/latest telemetry hoặc direct processing_db SQL.
+Thiếu source thì metrics coverage unavailable, alert vẫn được xử lý bình thường.
+
+Internal Registry receipt có name/numeric version/run/source/payload hash; các
+fields đó vào verified serving metadata/release. Canonical Kafka outcome1.4 có
+mlflow_run_id nhưng chưa explicit registry name/version; thêm wire fields cần
+provider-consumer fixtures/version migration riêng, không sửa JSON cho khớp ví dụ.
+HTTP200/202, run FINISHED, registry READY và release deployment là các trạng thái
+khác nhau, không thay semantics bằng một monitoring status chung.
+
+## PROC-ORDER-API-01 — Concurrency không đổi ACK hoặc consistency boundary
+
+Quyết định23/10: [PROC-ORDER-01](PROCESSING_CONCURRENCY_AND_ORDERING.md), Contracts §42.
+Keyed Processing/ordered relay là internal behavior; chưa đổi OpenAPI/HTTP status,
+wire tagged union, SSE event names hoặc closed DTO trong lượt docs.
+
+HTTP202 vẫn chỉ broker ACK. Status/history có thể chưa thấy outcome; frontend
+không lấy committed Kafka offset làm trạng thái inference từng máy. Business
+trả các projections có source/age riêng và lifecycle Alert thực tế; result và
+signal giữa topics có thể đến khác thời điểm. Duplicate/stale update không được
+làm lùi latest, INVALID không xóa valid prediction lịch sử. Không so sánh opaque
+epoch hoặc dùng latest-telemetry guard để bỏ Alert Signal cũ.
+
+Machine source-order conflict xử lý nội bộ fail closed/reconcile theo decision;
+không tự invent HTTP error/SSE kind/ML status nếu chưa review schema. Queue/lag/
+blocked-key metrics ở management endpoint, không tự thêm vào public response.
+
+## INGEST-M1-01 — HTTP adapter và operational profile (2026-10-23)
+
+Ingestion API description tăng MINOR lên1.4.0 theo System §25 vì thêm operational endpoints; các API khác/bundle HTTP directory vẫn baseline1.3.2. Không đổi accepted1.3.0/rejected1.4.0 hoặc canonical Kafka bundle1.0.0. Đây là interface implementation M1, không chứng minh đã deploy.
+
+- SDK ACK có schema_version; HTTP adapter chỉ chọn các field IngestAck hiện có, giữ absolute status_url/Location. Kafka wire không đổi.
+- SDK error được ánh xạ về runtime Error: message cố định, retryable, request_id/correlation_id trong error; rejection_id ở error.details. Không echo body/token/exception.
+- Auth trước body/gateway: role SENSOR_SERVICE, audience ingestion; source subject và machine scope chỉ từ verified claims. Shared claim names/issuer/JWKS/algorithms là cấu hình bắt buộc, không đoán provider. Profile local-fixture explicit chỉ trên loopback; không phải OIDC production.
+- Missing/unsupported Content-Type hoặc compressed body415; hỗ trợ application/json với optional charset. Streaming byte limit mặc định262144, body timeout10s→408; không publish partial body. Admission trước auth (nhưng auth vẫn trước đọc/publish body),8 concurrent requests/process→429/Retry-After1, không phải global RPS quota.
+- /health/live không phụ thuộc Kafka; /health/ready kiểm tra config, cached Kafka metadata và auth key state; metadata không chứng minh producer ACL/ACK quorum. /metrics chỉ expose platform metrics, hạn chế network ingress.
+- 202 sau accepted ACK; authenticated malformed/envelope-invalid400/422 sau rejected ACK. Feature invalid vẫn202;503/504 retry giữ event ID/payload. Request headers invalid là transport400 trước gateway, không quarantine sensor body.
+- Shared OIDC/TLS/ACL và Sensor migration202 cần bằng chứng tích hợp riêng; local tests không đủ nghiệm thu deployment.

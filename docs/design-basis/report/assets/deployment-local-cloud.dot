@@ -1,0 +1,40 @@
+// Publication view of deployment targets; not a live-cluster inventory.
+digraph MaintAI_Deployment_Report {
+  graph [rankdir=TB, bgcolor="white", pad=0.12, nodesep=0.55, ranksep=0.45, newrank=true,
+    fontname="DejaVu Sans", fontsize=18, compound=true, splines=polyline,
+    outputorder=edgesfirst];
+  node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=17,
+    color="#9db5c4", fillcolor="white", fontcolor="#183045",
+    margin="0.18,0.12", penwidth=1.2];
+  edge [fontname="DejaVu Sans", fontsize=13, color="#536f81",
+    fontcolor="#36576b", arrowsize=0.8, penwidth=1.2];
+
+  release [label="Bản phát hành có định danh\nImage / model / policy / config được pin",
+    fillcolor="#f0edf8"];
+
+  subgraph cluster_local {
+    label="LOCAL · k3d trên laptop"; fontcolor="#183045"; fontsize=20;
+    color="#9db5c4"; style="rounded,filled"; fillcolor="#f2f7fa"; margin=18;
+    local_entry [label="1 k3s node / Ingress\nBusiness UI + Simulator UI\nBusiness API + Sensor Control", group="local"];
+    local_app [label="Các workload ứng dụng\nProcessing: Worker / Read API / Relay\nBusiness: API / Consumer\nSensor / Ingestion / Storage / ML / RAG\nMLflow / Grafana; training và Drift mục tiêu", group="local"];
+    local_data [label="Hạ tầng cùng laptop\nKafka: 1 broker, RF1 / minISR1\nPostgreSQL: 5 logical DB\nMinIO / metrics / PVC sensor-spool", group="local", fillcolor="#eaf2e8"];
+    local_entry -> local_app [label="Service / mạng cluster"];
+    local_app -> local_data [label="Dữ liệu / PVC / metrics"];
+  }
+
+  subgraph cluster_cloud {
+    label="CLOUD · thiết kế mục tiêu AWS"; fontcolor="#183045"; fontsize=20;
+    color="#bfa567"; style="rounded,filled"; fillcolor="#fff8eb"; margin=18;
+    cloud_entry [label="EKS / Ingress HTTPS / IdP\nRoute và quyền riêng theo UI/API\nBusiness / Simulator / Grafana / MLflow", group="cloud"];
+    cloud_app [label="Workload có thể scale riêng\nProcessing: 3 Deployment, chung image group\nBusiness: 2 Deployment, chung image group\nML inference / RAG / Storage / Sensor / Ingest\nTraining Job và Drift CronJob riêng", group="cloud"];
+    cloud_data [label="Dữ liệu và quyền truy cập\nKafka trong EKS: RF3 / minISR2\nRDS: 5 logical DB; S3 lưu object\nIAM / IRSA / secrets / TLS / monitoring", group="cloud", fillcolor="#f3eddc"];
+    cloud_entry -> cloud_app [label="Service / namespace"];
+    cloud_app -> cloud_data [label="DB roles / IAM / TLS"];
+  }
+
+  { rank=same; local_entry; cloud_entry; }
+  { rank=same; local_app; cloud_app; }
+  { rank=same; local_data; cloud_data; }
+  release -> local_entry [label="CLI apply tường minh"];
+  release -> cloud_entry [label="Registry → PR GitOps → Argo CD"];
+}

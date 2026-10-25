@@ -16,6 +16,7 @@ class FaultMode(StrEnum):
     DUPLICATE_EVENT = "duplicate_event"
     NETWORK_TIMEOUT = "network_timeout"
     NETWORK_DISCONNECT = "network_disconnect"
+    INVALID_ENVELOPE = "invalid_envelope"
 
 
 @dataclass(frozen=True)
@@ -26,11 +27,8 @@ class InjectedEvent:
 
     @property
     def expect_rejection(self) -> bool:
-        return self.fault in {
-            FaultMode.MISSING_FIELD,
-            FaultMode.INVALID_TYPE,
-            FaultMode.OUT_OF_RANGE,
-        }
+        # Invalid feature values still have a valid ingress envelope (HTTP202).
+        return self.fault == FaultMode.INVALID_ENVELOPE
 
 
 class FaultInjector:
@@ -62,4 +60,6 @@ class FaultInjector:
             result["features"][self.field] = 123 if self.field == "product_type" else "invalid"
         elif self.mode == FaultMode.OUT_OF_RANGE:
             result["features"][self.field] = -1
+        elif self.mode == FaultMode.INVALID_ENVELOPE:
+            del result["machine_id"]
         return InjectedEvent(result, self.mode, self.mode == FaultMode.DUPLICATE_EVENT)

@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools==84.0.0", "wheel==0.48.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "maintai-ingestion"
+version = "0.1.0"
+description = "MaintAI authenticated HTTP to Kafka ingestion boundary"
+requires-python = ">=3.12"
+dependencies = ["fastapi>=0.115,<1", "pydantic>=2.10,<3", "uvicorn>=0.30,<1", "httpx>=0.28,<1", "PyJWT[crypto]>=2.10,<3", "prometheus-client>=0.21,<1", "maintai-messaging==0.2.0"]
+
+[project.scripts]
+maintai-ingestion = "maintai_ingestion.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib -q"
+testpaths = ["tests"]
+markers = ["integration: opt-in real Kafka or Docker"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

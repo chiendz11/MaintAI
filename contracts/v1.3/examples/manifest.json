@@ -293,6 +293,61 @@
       "schema": "../schemas/common.schema.json#/$defs/Readiness",
       "valid": false,
       "reason": "UP readiness cannot contain a failed required check."
+    },
+    {
+      "file": "http/ingestion/m1-live.json",
+      "schema": "../schemas/ingestion.schema.json#/$defs/Liveness",
+      "valid": true
+    },
+    {
+      "file": "http/ingestion/m1-ready.json",
+      "schema": "../schemas/ingestion.schema.json#/$defs/Readiness",
+      "valid": true
+    },
+    {
+      "file": "http/ingestion/m1-not-ready.json",
+      "schema": "../schemas/ingestion.schema.json#/$defs/Readiness",
+      "valid": true
+    },
+    {
+      "file": "http/ingestion/m1-live-extra.json",
+      "schema": "../schemas/ingestion.schema.json#/$defs/Liveness",
+      "valid": false
+    },
+    {
+      "file": "http/ingestion/m1-error-400.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/Error",
+      "valid": true
+    },
+    {
+      "file": "http/ingestion/m1-error-422.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/Error",
+      "valid": true
+    },
+    {
+      "file": "http/ingestion/m1-error-408.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/Error",
+      "valid": true
+    },
+    {
+      "file": "http/ingestion/m1-error-413.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/Error",
+      "valid": true
+    },
+    {
+      "file": "http/ingestion/m1-error-415.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/Error",
+      "valid": true
+    },
+    {
+      "file": "http/ingestion/m1-error-500.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/Error",
+      "valid": true
+    },
+    {
+      "file": "http/ingestion/m1-error-504.json",
+      "schema": "../schemas/runtime.schema.json#/$defs/Error",
+      "valid": true
     }
   ]
 }

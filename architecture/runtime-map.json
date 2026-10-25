@@ -15,7 +15,8 @@
     "ml-service/training/runtime.json",
     "rag-service/runtime.json",
     "frontend/runtime.json",
-    "drift-worker/runtime.json"
+    "drift-worker/runtime.json",
+    "sensor-simulator-UI/runtime.json"
   ],
   "logical_databases": {
     "processing_db": "processing",
@@ -24,6 +25,9 @@
     "mlflow_db": "MLflow Server (platform managed)",
     "knowledge_db": "knowledge"
   },
+  "platform_runtime_descriptors": [
+    "ml-service/mlflow/runtime.json"
+  ],
   "platform_owned": [
     "Kafka",
     "PostgreSQL instance with five logical DBs",
@@ -32,16 +36,17 @@
     "Argo Events/Workflows",
     "Observability"
   ],
-  "planned_runtimes_without_source": [
+  "planned_runtimes_without_source": [],
+  "design_decisions": [
     {
-      "runtime_id": "simulator-ui",
-      "workload_kind": "Deployment",
-      "code_owner": "simulator-ui",
-      "implementation_status": "not_created",
-      "interfaces": [
-        "Sensor Control API"
-      ],
-      "design_document": "docs/README.md"
+      "id": "PROC-ORDER-01",
+      "revision": "1.0.0",
+      "target_system_contract_revision": "1.4.0",
+      "document": "docs/PROCESSING_CONCURRENCY_AND_ORDERING.md",
+      "implementation_report": "docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md",
+      "sdk_version": "0.2.0",
+      "status": "SDK_and_transport_wrappers_implemented_application_callbacks_and_deployment_pending",
+      "adds_runtime": false
     }
   ]
 }

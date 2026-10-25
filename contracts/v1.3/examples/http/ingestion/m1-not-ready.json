@@ -1,0 +1,8 @@
+{
+  "status": "DEGRADED",
+  "checks": {
+    "config_loaded": true,
+    "kafka": false,
+    "auth_keys": true
+  }
+}

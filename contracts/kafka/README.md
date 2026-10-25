@@ -1,4 +1,4 @@
-# Kafka contracts — bundle 1.0.0
+# Kafka contracts — bundle 1.1.0
 
 Nguồn wire contract cho SDK [messaging/](../../messaging/README.md), target thiết
 kế MaintAI1.4.0. [Hướng dẫn nhóm](../../docs/KAFKA_DEVELOPMENT_GUIDE.md) giải thích
@@ -40,3 +40,17 @@ Khi sửa JSON/SQL hoặc dependency schema: review producer/consumer, thêm fix
 đổi bundle version rồi chạy `lock_contracts.py --bundle-version <version-mới>`.
 Không chỉ sửa manifest để che một thay đổi wire không tương thích. Không sửa
 baseline HTTP/SSE/ML/RAG/Drift chỉ để đồng bộ nhãn version Kafka.
+
+## PROC-ORDER-01 — migration002, wire giữ nguyên
+
+Bundle1.1.0/SDK0.2.0 thêm [002](migrations/002_processing_ordering.sql), giữ
+byte-identical001, event schemas và topology. [Manifest1.0.0](releases/1.0.0.json)
+được lưu nguyên; wheel/sdist đóng gói cả hai migrations.
+
+002 chỉ cho Processing owner: capability mặc định tắt, assignment generation,
+source cursor và outbox dispatch sequence/key cursor/lease. Migration khác
+activation, không tự chạy ở startup. Phải drain legacy binaries; pending rows
+hoặc legacy source inbox chưa bootstrap sẽ bị chặn. Không sort created_at để
+backfill hoặc xóa inbox để bật mode. Business DB không activate Processing mode.
+Fields mới là DB metadata, không thêm vào closed Kafka/HTTP payload. Đọc
+[runbook](../../docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) trước cutover.

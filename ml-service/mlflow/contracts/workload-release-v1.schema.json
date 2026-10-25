@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://maintai.invalid/contracts/workload-release-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "change_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{7,63}$"
+    },
+    "source_repository": {
+      "enum": [
+        "chiendz11/MaintAI",
+        "chiendz11/MaintAI-gitops"
+      ]
+    },
+    "source_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "architecture_revision": {
+      "const": "maintai-1.3.1+simulator-ui.1"
+    },
+    "image_group": {
+      "type": "string",
+      "minLength": 1
+    },
+    "image": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9./_-]+@sha256:[0-9a-f]{64}$"
+    },
+    "runtime_config_version": {
+      "const": "2.0.0"
+    },
+    "runtime_configs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        }
+      }
+    },
+    "enable": {
+      "type": "boolean"
+    },
+    "config_schema_sha256": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "change_id",
+    "source_repository",
+    "source_sha",
+    "architecture_revision",
+    "image_group",
+    "image",
+    "runtime_config_version",
+    "config_schema_sha256"
+  ]
+}

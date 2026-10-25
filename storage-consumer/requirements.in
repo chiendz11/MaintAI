@@ -1,0 +1,6 @@
+# Third-party runtime lock inputs. Install the local messaging wheel separately.
+-c ../messaging/requirements.lock
+confluent-kafka==2.16.0
+jsonschema[format-nongpl]==4.26.0
+boto3==1.43.114
+prometheus-client==0.26.0

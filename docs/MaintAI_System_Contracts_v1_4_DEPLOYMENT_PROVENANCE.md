@@ -1,9 +1,33 @@
+> **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
+> durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
+> có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
+> [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
+> readiness §19 ghi bằng chứng, commands và giới hạn; các snapshot cũ đọc theo ngày.
+
 > **Tích hợp MaintAI — 2026-10-19:** Tài liệu thiết kế mục tiêu v1.4, chưa xác nhận code/DB/GitOps đã migrate. Đọc [docs index](README.md) để áp dụng quyết định nhóm 4 người, Simulator UI riêng và thứ tự ưu tiên; [readiness](implementation-readiness.md) ghi các schema/scaffold chưa được cung cấp.
 
 > **v1.4 — Chuẩn kiến trúc Deployment và Versioning/Provenance (19/10/2026).** Đây là bản đầy đủ kế thừa v1.3.1 và bổ sung điều khoản v1.4. Khi có mâu thuẫn, **ưu tiên chương v1.4**. Việc chỉnh sửa Markdown không đồng nghĩa đã sửa repository, GitOps, DB hay các service thực tế.
 > **Thứ tự đọc:** `DEPLOYMENT_ARCHITECTURE.md`, `RUNTIME_DATAFLOW.md`, `VERSIONING_AND_PROVENANCE.md`, `IMPLEMENTATION_PLAN.md`. Schemas máy đọc và mẫu Deployments tại `../contracts/`, `../implementation/`.
 
 # MaintAI — Hợp đồng hệ thống v1.4: Deployment và truy vết nguồn gốc (kế thừa đầy đủ v1.3.1)
+
+> **PROC-ORDER-01 — 2026-10-23:** §42 thông qua
+> [Processing concurrency/ordering](PROCESSING_CONCURRENCY_AND_ORDERING.md)
+> revision1.0.0. Các điều khoản keyed execution, safe offset frontier và ordered
+> outbox ở đây ưu tiên mô tả tuần tự/row-only relay kế thừa. Đây là target mới,
+> SDK0.2.0 đã có implementation/migration/tests; app/prod integration còn pending.
+> Wire versions và deployment boundaries giữ nguyên.
+
+> **OBS-01 / MLFLOW-01 — 2026-10-20:** System Contracts §41 và Guide §49
+> thông qua [metrics catalog](OBSERVABILITY_IMPLEMENTATION.md) và
+> [MLflow integration](MLFLOW_INTEGRATION_GUIDE.md) revision1.0.0. Các chi tiết
+> names/types/labels/buckets, SDK/identity/recovery ưu tiên ví dụ kế thừa mâu thuẫn;
+> docs không tự migrate app, schemas, ledger hoặc platform.
+
+> **UI-01 — 2026-10-20:** §40 và [UI Architecture](UI_ARCHITECTURE.md) chốt bốn UI
+> chính, hai frontend ứng dụng phát hành độc lập và hai UI công cụ platform.
+> Quyết định này bổ sung ranh giới UI/release, không đổi wire/API/DB schemas hoặc
+> chứng minh frontend/Control API đã implement. Các mô tả UI kế thừa đọc theo §40.
 
 > **Vai trò:** Tài liệu quy chuẩn (Source of Truth) cho Ingestion API độc lập, Processing Service, Business Backend (API + Consumer), Simulator, Kafka, Storage, ML, RAG, Drift, React, PostgreSQL/pgvector và Observability.
 >
@@ -1613,7 +1637,15 @@ Ví dụ RAG:
 
 # 20. Metrics Contract
 
-Mỗi service expose:
+**OBS-01/1.0.0 — 2026-10-20:** §41 và
+[OBSERVABILITY_IMPLEMENTATION.md](OBSERVABILITY_IMPLEMENTATION.md) chốt types,
+units, labels/enums, buckets, runtime owners và commit/retry semantics. Catalog
+đó bổ sung danh sách tối thiểu ở dưới và thay short aliases/ví dụ mâu thuẫn.
+HTTP/Kafka payload versions không đổi; source/GitOps còn cần implement/migrate.
+
+Mỗi long-running application service expose metrics ở internal endpoint;
+Drift batch dùng Pushgateway theo §20.4, không tạo endpoint mất theo process.
+Static frontends không tự xuất app business metrics. HTTP endpoint:
 
 ```http
 GET /metrics
@@ -1638,7 +1670,7 @@ maintai_dependency_errors_total{dependency,error_type}
 maintai_ml_inference_requests_total{status}
 maintai_ml_inference_duration_seconds
 maintai_ml_predictions_total{prediction}
-maintai_ml_failure_probability_bucket
+maintai_ml_failure_probability
 maintai_ml_model_info{model_version}
 ```
 
@@ -1648,7 +1680,7 @@ maintai_ml_model_info{model_version}
 maintai_rag_requests_total{status,grounded_status}
 maintai_rag_request_duration_seconds
 maintai_rag_retrieval_duration_seconds
-maintai_rag_retrieved_chunks_count
+maintai_rag_retrieved_chunks
 maintai_rag_citation_validation_failures_total
 ```
 
@@ -1669,15 +1701,12 @@ maintai_drift_worker_last_success_timestamp_seconds
 maintai_prediction_failure_ratio
 ```
 
-Quy ước gauge `maintai_drift_feature_status` nếu cần số hóa:
-
-```text
-STABLE=0
-WARNING=1
-CRITICAL=2
-INSUFFICIENT_DATA=3
-ERROR=4
-```
+`maintai_drift_feature_status{feature,status}` và
+`maintai_drift_overall_status{status}` là **one-hot gauges0/1**: đúng một trong
+STABLE/WARNING/CRITICAL/INSUFFICIENT_DATA/ERROR có value1. Không dùng mã số0..4
+cho cùng metric name; thay quy ước số hóa mâu thuẫn trước đây, giữ renderer thật.
+Score không tính được thì absent, không set0. Heartbeat lấy từ checkpoint đã commit;
+report status phải được ghép freshness/missing-data guard khi hiển thị.
 
 Không dùng `report_id`, `event_id`, `machine_id`, timestamp riêng lẻ làm Prometheus labels.
 
@@ -1688,7 +1717,7 @@ Không dùng các giá trị có cardinality cao làm Prometheus label:
 ```text
 event_id
 alert_id
-machine free-text
+machine_id / machine free-text
 request_id
 user note
 ```
@@ -2213,7 +2242,9 @@ Business API phục vụ `POST /alerts/{id}/brief` (async generation) sau khi al
 App monorepo hiện có `backend/`, `frontend/`, `ingestion-api/`, `processing/`,
 `storage-consumer/`, `sensor/`, `ml-service/`, `rag-service/`, `drift-worker/`,
 `architecture/` và `docs/`. GitOps/hạ tầng ở hai repo riêng, không tạo `platform/`
-trong app chỉ vì ví dụ kế thừa có tên đó. Simulator UI riêng chưa có source folder.
+trong app chỉ vì ví dụ kế thừa có tên đó. Simulator UI riêng có source/client/demo
+tại `sensor-simulator-UI/`; Sensor0.3.0 đã implement Control provider và local
+browser/HTTP integration. Production IdP/Kafka E2E và rollout chưa verify.
 
 ```text
 contracts/
@@ -2381,7 +2412,7 @@ Drift CronJob ghi `drift_db` và S3 report, công bố Pushgateway, checkpoint r
 
 - Scaling: Ingestion `HTTP RPS/p95`, Processing `consumer_lag + event_to_prediction_latency + ML p95`, Storage `lag + S3 batch latency`, Business `alert_signal_lag + SSE connections`. HPA/KEDA chưa bắt buộc ở MVP.
 - Phân biệt `ingestion_ack_latency` (HTTP → broker ACK), `event_to_prediction_latency` và `event_to_alert_visible_latency`; không dùng 202 để tuyên bố inference SLA.
-- Prometheus: `kafka_consumer_lag`, `maintai_ingestion_accepted_total`, `maintai_ingestion_publish_failures_total`, `maintai_processing_events_total{status}`, `maintai_storage_batches_total{status}`, `maintai_alert_signals_total{outcome}`, S3 errors, DB pool saturation, DLQ/quarantine count. Không gắn high-cardinality `event_id`/`machine_id` lên metrics.
+- Prometheus: `kafka_consumergroup_lag` (KafkaExporter), `maintai_ingestion_accepted_total`, `maintai_ingestion_publish_failures_total`, `maintai_processing_events_total{status}`, `maintai_storage_batches_total{status}`, `maintai_alert_signals_total{outcome}`, S3 errors, DB pool saturation, DLQ/quarantine count. Không gắn high-cardinality `event_id`/`machine_id` lên metrics.
 - Health: Ingestion readiness cần Kafka producer connectivity/config; Processing readiness cần Kafka+processing_db và ML connectivity theo deployment policy; Storage needs Kafka+S3; Business Consumer needs Kafka+business_db. Dependency outage không được đưa vào liveness.
 - Cần verify Kafka retention lớn hơn `max expected outage + catch-up time + safety margin`; alert nếu group lag/oldest age tiến gần retention.
 
@@ -2692,7 +2723,7 @@ Giữ nguyên: Ingestion Deployment riêng; DQ ở Processing Worker; Business k
 
 # 35. v1.4 — Kafka topics, HTTP status và quyền sở hữu
 
-**Wire freeze của repo:** [Kafka bundle1.0.0](../contracts/kafka/README.md) và
+**Wire freeze của repo:** [Kafka bundle1.1.0](../contracts/kafka/README.md) và
 [hướng dẫn tích hợp](KAFKA_DEVELOPMENT_GUIDE.md) là ánh xạ máy đọc được của mục
 này: accepted1.3.0, rejected1.4.0, outcome writer1.4.0 `kind`, legacy reader2.0.0
 `result_kind`, alert1.0.0. Các ví dụ inherited1.1.0/2.0.0 tại §33.5 không phải
@@ -2737,10 +2768,180 @@ Tham chiếu JSON Schemas: `../contracts/provenance/release_manifest.schema.json
 
 # 38. v1.4 — Ranh giới Deployment và nghĩa vụ chịu lỗi
 
-Danh mục Kubernetes Deployments: `frontend`, `simulator-ui` (planned, chưa có source), `sensor-simulator`, `ingestion-api`, `processing-worker`, **`processing-read-api`**, `processing-outbox-relay`, `storage-consumer`, `business-consumer`, `business-api`, `ml-service`, `rag-service`, `mlflow`. `drift-worker` là CronJob; training là Job theo yêu cầu. Một codebase/image có thể chạy nhiều Deployments với commands khác nhau. Manifests thật bắt buộc xác minh entrypoints, secrets theo quyền tối thiểu và image OCI digest thực. Templates ở `../implementation/k8s/` còn placeholders và Drift CronJob đang suspend nên **chưa chạy trực tiếp được**.
+Danh mục Kubernetes Deployments: `frontend`, `simulator-ui` (client/demo đã có, chưa deploy), `sensor-simulator`, `ingestion-api`, `processing-worker`, **`processing-read-api`**, `processing-outbox-relay`, `storage-consumer`, `business-consumer`, `business-api`, `ml-service`, `rag-service`, `mlflow`. `drift-worker` là CronJob; training là Job theo yêu cầu. Một codebase/image có thể chạy nhiều Deployments với commands khác nhau. Manifests thật bắt buộc xác minh entrypoints, secrets theo quyền tối thiểu và image OCI digest thực. Templates ở `../implementation/k8s/` còn placeholders và Drift CronJob đang suspend nên **chưa chạy trực tiếp được**.
 
 Bài kiểm thử sự cố bắt buộc: Kafka producer lỗi; schema rejection khi Kafka không ACK; envelope đúng nhưng DQ INVALID; Worker DB commit rồi Relay down; Storage down; Business replay trùng; SSE fan-out tới hai Business API Pods; prediction stale/out-of-order; RAG down; drift-reference mismatch; tải History tăng khi Worker ổn định; rollback model nhưng Alert cũ giữ provenance. Mọi truy vấn History/release phải kiểm tra quyền.
 
 # 39. v1.4 — Trình tự migration và tiêu chí nghiệm thu
 
 Thực hiện theo thứ tự phụ thuộc: **khảo sát source/migrations → freeze schemas/fixtures tương thích → thêm DB columns/indexes → accepted/rejected producer+consumers → DQ outcome/outbox → S3 archive manifests → Read API Deployment riêng → MLflow lineage → RAG/Drift versions → release manifest/GitOps → E2E/recovery/load tests**. Consumers phải còn đọc được Kafka event schema cũ cho tới khi dữ liệu cũ hết retention hoặc có migration strategy thay thế. **Markdown/JSON Schemas/YAML scaffold không đồng nghĩa đã triển khai hoặc benchmark scale.** Xem `IMPLEMENTATION_PLAN.md` để giao việc từng owner và test assertions.
+
+# 40. UI-01 — Bốn giao diện và ranh giới phát hành
+
+**Quyết định dự án ngày2026-10-20, UI-01 revision1.0.0**, chi tiết ở
+[UI_ARCHITECTURE.md](UI_ARCHITECTURE.md). Mục này ưu tiên mô tả gộp UI trong các
+chương kế thừa khi có mâu thuẫn về navigation/ownership/release; payload/HTTP/event
+vẫn theo các schema đã freeze và migration tương ứng.
+
+| UI chính | Interface | Owner và runtime |
+| --- | --- | --- |
+| Business | Business REST/SSE | Người1; `frontend/` → image/Deployment frontend riêng |
+| Sensor Simulator | Sensor Control API | Người4; simulator-ui planned → image/Deployment riêng; Sensor backend riêng |
+| Grafana | Grafana server → Prometheus/exporters, report datasource được duyệt | Platform Người4; dashboards/config version riêng |
+| MLflow | MLflow Server tracking/registry UI | ML Người2 + Platform Người4; server/config version riêng |
+
+Portal chỉ là static launcher tùy chọn. `grafana_drift.html` là cùng Grafana UI
+với tab mặc định Drift; số file HTML/dashboard không tạo thêm service hoặc DB.
+Grafana/MLflow dùng giao diện công cụ, không thêm hai frontend React production.
+
+**Business boundary:** giữ monitoring/drift summary/catalog/list/detail đã có
+contract, Alert/History/Copilot/feedback theo scope. Main frontend chỉ gọi Business;
+không điều khiển Sensor hoặc truy cập DB/Kafka/ML/RAG trực tiếp. Grafana là nơi
+điều tra kỹ thuật sâu, không thay Business lifecycle hoặc chạy lại Drift detector.
+
+**Simulator boundary:** browser gọi Sensor qua management origin/auth. Baseline
+có list machines/read control/pause/resume/scenario, role SIMULATOR_OPERATOR/ADMIN,
+Idempotency-Key và expected_control_version cho mutation. ACK sau persist;
+timeout/unknown outcome phải GET reconcile; Pause không xóa spool/backlog/Alert.
+Rate mutation, counters/queue/preview, batch commands và control SSE trong ý tưởng
+demo chưa được coi là API có sẵn; cần freeze/implement DTO riêng trước khi enable.
+
+**Platform boundary:** UI browser không chứa DB/S3/Kafka/service credentials.
+Grafana drift report datasource cần Drift owner định nghĩa read-only views/grants
+hoặc adapter có auth và query budgets. Không cho Grafana dùng Drift writer,
+Business SQL drift_db hoặc browser SQL. MLflow Server giữ mlflow_db/artifact
+access; thay run/alias không tự promote inference hoặc đổi historical provenance.
+
+**Independent release:** Business và Simulator có build output/image digest,
+Deployment/Service/public config và rollout/rollback riêng. Thay một frontend
+không cập nhật Pod template của frontend/backend khác nếu API/dependency không
+đổi. Chia folder hoặc cùng monorepo không thay điều kiện này. Shared dependencies
+và breaking APIs phải kiểm tra các consumers bị ảnh hưởng, dùng compatibility
+rollout thay vì giả định luôn deploy riêng được. CI/GitOps giữ check bắt buộc,
+chọn affected components, pin đúng component image/config, không tự rollout tất cả.
+
+**Acceptance:** chứng minh release một UI giữ image/config/Pod template của UI còn
+lại; Sensor vẫn phát khi browser/Simulator UI đóng hoặc rollout; auth/scopes riêng;
+unknown control command reconcile đúng; Grafana/MLflow outage không tự chặn
+Business online path. Shared cluster/Ingress/IdP/DB vẫn là shared fault domains.
+UI-01 không tăng wire version, không tạo source/runtime/provisioning trong lượt docs.
+
+
+# 41. OBS-01 và MLFLOW-01 — Hợp đồng instrumentation và tracking
+
+**MLFLOW-IMAGE-01,21/10/2026:** Image source/pins/local dev và publisher MLflow
+chuyển sang `ml-service/mlflow/` trong MaintAI; production manifests/config/IRSA
+vẫn ở GitOps/hạ tầng. Source domain không gộp training/inference/server images.
+GitOps chỉ nhận app-signed MLflow digest từ maintai-publish.yml/main, đúng source
+annotations và app actor; legacy GitOps producer không còn hợp lệ cho group này.
+Giữ existing workload-release envelope; không đổi wire/API schemas, tự bật service,
+publish/deploy hay coi local source checks là server integration evidence. Chi tiết
+ở MLFLOW-01 §2.1 và Guide §52, ưu tiên các mô tả owner image kế thừa mâu thuẫn.
+
+**Revision decision1.0.0, ngày2026-10-20.** Bổ sung chuẩn v1.4, không tăng HTTP/
+Kafka versions hoặc chứng minh code đã migrate. Các điều khoản ở đây và catalog
+được dẫn ưu tiên ví dụ metrics/MLflow kế thừa nếu mâu thuẫn.
+
+1. [OBSERVABILITY_IMPLEMENTATION.md](OBSERVABILITY_IMPLEMENTATION.md) là catalog
+   chuẩn: base names, Counter/Gauge/Histogram, labels/enum, units, bucket profiles,
+   owners và commit/reset/retry semantics. Không tự thêm aliases/ID labels.
+2. Duration histograms dùng base names, library sinh _bucket/_sum/_count;
+   probability base maintai_ml_failure_probability, chunk histogram base
+   maintai_rag_retrieved_chunks. Không nhầm generated sample count với số chunks.
+3. Drift state là one-hot0/1/status. Worker report persistence, required report
+   publication và checkpoint/heartbeat commit có retry semantics tại OBS-01 §5.
+   Missing/stale/error không trở thành0/STABLE. Drift không đổi risk/retrain.
+4. ACK, prediction commit và alert API-readable visibility là phép đo khác nhau.
+   Timestamp từ đúng accepted source event; Alert Signal1.0 thiếu accepted time
+   thì phải resolve qua owner interface hoặc migrate DTO được review. Chưa có
+   source thì skip observation+coverage signal, không bịa latency.
+5. [MLFLOW_INTEGRATION_GUIDE.md](MLFLOW_INTEGRATION_GUIDE.md) chốt logical training/
+   candidate identities, real run/registry IDs, required params/metrics/evidence,
+   immutable artifact refs, SDK usage và release mapping. MLflow tags/aliases
+   không phải unique key hoặc immutable content guarantee.
+6. Trước create run/model version phải durable intent dưới một coordinated owner.
+   Unknown create result không blanket retry/get-or-create; read reconciliation,
+   0/multiple matches => unresolved/triage. Lease expiry không fence in-flight
+   MLflow request. Chưa đủ evidence/identity/hash thì không dispatch release.
+7. Model-result-v1 platform schema và app target provenance schemas là artifacts
+   riêng; không thêm registry/training keys vào closed HTTP/Kafka/result payload
+   nếu chưa freeze/version provider-consumer migration. Numeric registry version
+   khác logical model_version; nối qua verified metadata/release.
+8. App owners tạo metrics/training data; GitOps sở hữu scrape/exporters/rules/
+   dashboard/MLflow Server deployment; infrastructure sở hữu cloud resources.
+   Không tạo thêm React UI Grafana/MLflow, training DB thứ6 hoặc query xuyên owner.
+
+Guide §49, [readiness](implementation-readiness.md) và hai tài liệu mới ghi tests,
+bàn giao và gaps. Chỉ hoàn tất khi có source, locked dependencies, fixtures,
+network/recovery evidence và deployment checks tương ứng; lượt docs không chạy
+các actions đó hoặc tự phê duyệt release/model.
+
+# 42. PROC-ORDER-01 — Concurrency và ordering của Processing/Outbox
+
+**Decision1.0.0,2026-10-23.**
+[PROCESSING_CONCURRENCY_AND_ORDERING.md](PROCESSING_CONCURRENCY_AND_ORDERING.md)
+là đặc tả chi tiết được ủy quyền cho điều khoản này. Target system vẫn1.4.0;
+decision bổ sung behavior, không tự thay closed DTO, frozen SQL hoặc SDK version.
+
+1. Processing đọc `sensor.readings` bằng bounded keyed scheduler: cùng
+   `machine_id` tối đa một active task trong assignment hợp lệ; khác máy được
+   xử lý đồng thời kể cả cùng partition. Nhả key sau durable terminal outcome/
+   duplicate verification, không sau riêng ML response. Sensor scheduler là
+   module khác; không tạo scheduler service/deployment.
+2. Per-machine FIFO giữ Kafka arrival order; source sequence phải tăng bền vững
+   xuyên epoch/restart. Không sort `(epoch,sequence)` khi epoch là opaque label.
+   Identity duplicate dùng outcome cũ; conflict/first-seen sequence đi lùi phải
+   fail closed/reconcile; sequence gap hợp lệ không chờ vô hạn.
+3. Kafka offset chỉ tiến qua safe completed prefix của **từng partition** sau
+   transaction inbox/history/risk/outbox. Không commit offset cao chỉ vì future
+   đó xong; fetched/queued/completed-behind-hole đều thuộc ledger có giới hạn.
+   No auto commit/store; revoke/lost không cho stale generation commit.
+4. Stale handler không được mutate owner DB sau chuyển assignment. RAM generation
+   không đủ: cần durable transaction fence cho cursor/outcome/risk/outbox và
+   unique identity. Remote inference có thể bị gọi lại; không hứa exactly-once ML.
+5. Outbox dispatch theo durable `(topic,machine_id,dispatch_seq)`; chỉ dispatch
+   head sau predecessor đã broker-ACK và mark bền vững. Head đang retry/leased
+   chặn successor cùng key/topic; máy khác tiếp tục. Row-only leases/SKIP LOCKED
+   chưa đáp ứng. Permanent failure giữ blocked state, không silent skip.
+6. Ordered dispatch không hứa physical Kafka deliveries luôn tăng sequence:
+   late duplicate/stale publish vẫn cần inbox/CAS. Không có total order giữa
+   results/signals/telemetry; Alert không bị bỏ chỉ vì latest projection mới hơn.
+7. Business giữ ba handlers/groups, projections độc lập và alert lifecycle;
+   INVALID/UNAVAILABLE giữ historical valid prediction. SSE post-commit, REST
+   resync; UI coalescing không bỏ history/outcomes/alerts. Storage giữ runner
+   hiện hành; không bật keyed mode đồng loạt cho SDK consumers.
+8. Queue/bytes/active-key/uncommitted budgets, ML/DB concurrency, poll/deadline/
+   drain và fencing phải chốt trước enable. Kafka partitions giới hạn group
+   members, không trực tiếp giới hạn số keyed tasks trong một member.
+9. SQL order/cursor/fence cần **migration mới**, compatibility/cutover review;
+   frozen Kafka bundle đổi SQL phải có bundle/lock mới. Không chạy legacy relay
+   hoặc Worker bỏ qua fence cùng writable stream khi target được bật.
+10. Catalog metrics bổ sung tại OBS-01 §11; acceptance gồm offset hole, hot key,
+    queue saturation, late completion/rebalance, hai relay cùng key, ACK unknown
+    và load/recovery. Sơ đồ/render/checksum không thay runtime evidence.
+
+Guide §53, Plan §K, implementation report và readiness §19 ghi SDK0.2 source/tests
+cùng các việc application/prod còn pending.
+Worker/Relay/Read API vẫn ba Processing runtimes; không thêm topic/DB/UI cho
+quyết định này. Rollout/rollback phải giữ inbox/outbox/history và release lineage.
+
+# 43. Giả định ban đầu100 máy và scale-ready — CAPACITY-BASE100-01
+
+**Quyết định23/10/2026:** giả định vận hành ban đầu100 máy,1 reading/s/máy,
+tổng100 readings/s.100 là baseline phân tích/nghiệm thu, không phải giới hạn cứng.
+MaintAI có **kiến trúc scale-ready**: tăng capacity từng boundary khiX>100, giữ
+contracts, per-machine ordering, durability và quyền truy cập.
+
+VớiX máy cùng rate r, R=X×r; nếu khác rate thìR=Σr_i. Tính Worker replicas/concurrency
+bằng mean task time, utilization planning và downstream budgets, rồi đo end-to-end
+alert UI p95 theo mục tiêu≤2s của đề (không gồm LLM brief). Không dùng HTTP202,
+backend DB-visible metric hay phép cộng p95 stage để thay bằng chứng browser.
+
+Tăng replicas/concurrency phải cân ML/DB/Storage/Relay/Business/SSE và catch-up;
+không auto tách service hoặc tăng partition theo từng máy.12 partition giữ nguyên
+trước reviewed remapping/order cutover. Các profile scale là cấu hình phân tích,
+không thay schema,topic,SQL migrations,SDK defaults hoặc actual deployments.
+
+Chi tiết, phép tính và quy trìnhX>100: [Design basis revision1.1](design-basis/README.md),
+[Capacity §11](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).
+Smoke5 máy vẫn dùng phát triển nhỏ; source default5 không tự đổi trong lượt docs.
