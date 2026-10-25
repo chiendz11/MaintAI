@@ -59,6 +59,36 @@ def test_probe_host_can_be_explicit_and_invalid_bind_is_rejected():
         probe_host({"PROCESSING_HEALTH_HOST": "not-an-ip"})
 
 
+def test_slow_outbox_metric_collection_does_not_block_liveness():
+    async def run():
+        entered, resume = threading.Event(), threading.Event()
+        observer = RuntimeObservability("relay", profile="local-fixture")
+
+        class SlowCollector:
+            def describe(self):
+                return []
+
+            def collect(self):
+                entered.set()
+                resume.wait(3)
+                return []
+
+        observer.registry.register(SlowCollector())
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=observer.app), base_url="http://test"
+        ) as client:
+            scrape = asyncio.create_task(client.get("/metrics"))
+            try:
+                assert await asyncio.to_thread(entered.wait, 2)
+                assert not scrape.done(), "Synchronous DB collector blocked the probe loop"
+                assert (await asyncio.wait_for(client.get("/health/live"), 1)).status_code == 200
+            finally:
+                resume.set()
+                await scrape
+
+    asyncio.run(run())
+
+
 def test_readiness_requires_fresh_dependencies_and_not_draining():
     async def run():
         observer = RuntimeObservability("worker", profile="local-fixture")

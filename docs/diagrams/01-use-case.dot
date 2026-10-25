@@ -1,0 +1,49 @@
+// MaintAI diagram 01 — Use Case. Source of truth: Functional Overview + UI-01.
+digraph UseCase {
+  graph [rankdir=LR, bgcolor="#ffffff", pad=0.45, nodesep=0.40, ranksep=0.85,
+    fontname="DejaVu Sans", fontsize=24, fontcolor="#10243a", labelloc=t,
+    label="MaintAI | 01 · Use Case\nAi sử dụng hệ thống và thực hiện chức năng gì?",
+    compound=true, splines=polyline];
+  node [fontname="DejaVu Sans", fontsize=13, color="#8297ad", penwidth=1.3,
+    style=filled, fillcolor="#f0f6fc", fontcolor="#16324f", margin="0.20,0.14"];
+  edge [color="#7d8fa3", penwidth=1.1, dir=none];
+
+  viewer [shape=box, style="rounded,filled", label="«actor»\nNgười theo dõi\nVIEWER / ADMIN theo scope"];
+  technician [shape=box, style="rounded,filled", label="«actor»\nKỹ thuật viên\nTECHNICIAN / ADMIN theo scope"];
+  operator [shape=box, style="rounded,filled", label="«actor»\nNgười điều khiển demo\nSIMULATOR_OPERATOR"];
+  platform [shape=box, style="rounded,filled", label="«actor»\nDevOps / MLOps\nQuyền platform riêng"];
+  ml [shape=box, style="rounded,filled", label="«actor»\nML Engineer\nQuyền MLflow / release riêng"];
+
+  subgraph cluster_system {
+    label="RANH GIỚI CHỨC NĂNG MAINTAI · THIẾT KẾ MỤC TIÊU v1.4";
+    fontsize=15; fontcolor="#16324f"; color="#9fb5c9"; penwidth=1.6;
+    style="rounded,filled"; fillcolor="#f8fbff"; margin=24;
+    subgraph cluster_business {
+      label="BUSINESS UI → BUSINESS API"; color="#c5d8eb"; fillcolor="#edf5ff";
+      fleet [shape=ellipse, label="Theo dõi máy / telemetry\nprediction và độ mới dữ liệu"];
+      history [shape=ellipse, label="Tra cứu lịch sử / biểu đồ\nstatus và provenance"];
+      alerts [shape=ellipse, label="Xem danh sách / chi tiết alert\nvà lịch sử xử lý"];
+      lifecycle [shape=ellipse, label="ACK · START · ESCALATE\nRESOLVE · FALSE_ALERT"];
+      copilot [shape=ellipse, label="Yêu cầu Maintenance Brief\nchecklist + citations"];
+      feedback [shape=ellipse, label="Ghi nhận kiểm tra / feedback\nvà audit thao tác"];
+      summary [shape=ellipse, label="Xem monitoring summary\nvà báo cáo drift đã lưu"];
+    }
+    subgraph cluster_sim {
+      label="SIMULATOR UI → SENSOR CONTROL API"; color="#b3d8d0"; fillcolor="#effaf6";
+      sim [shape=ellipse, fillcolor="#e1f3eb", label="Xem control state theo máy\nPause / Resume / đổi scenario"];
+    }
+    subgraph cluster_platform {
+      label="UI CÔNG CỤ DO PLATFORM QUẢN LÝ"; color="#d5c6e4"; fillcolor="#faf6ff";
+      observe [shape=ellipse, fillcolor="#f0e7fa", label="Grafana: quan sát hệ thống\nML / Kafka / infrastructure / drift"];
+      experiments [shape=ellipse, fillcolor="#f0e7fa", label="MLflow: runs / metrics / artifacts\nmodel registry và lineage"];
+      release [shape=ellipse, fillcolor="#f0e7fa", label="Duyệt dataset / model release\nphát hành và rollback qua PR GitOps"];
+    }
+  }
+  viewer -> fleet; viewer -> history; viewer -> alerts; viewer -> summary;
+  technician -> fleet; technician -> history; technician -> alerts;
+  technician -> lifecycle; technician -> copilot; technician -> feedback;
+  operator -> sim;
+  platform -> observe; platform -> experiments; platform -> release;
+  ml -> experiments; ml -> release;
+
+}

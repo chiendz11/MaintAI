@@ -70,11 +70,12 @@ def test_duplicate_is_identical_and_creates_one_prediction(sample_csv, scenario_
         FaultMode.OUT_OF_RANGE,
     ],
 )
-def test_invalid_events_rejected_without_mock_inference(sample_csv, scenario_dir, backend, mode):
+def test_invalid_features_accepted_without_mock_inference(sample_csv, scenario_dir, backend, mode):
     cfg = config(sample_csv, scenario_dir, fault_mode=mode)
     with BackendClient("http://backend", transport=httpx.MockTransport(backend.handle)) as client:
         stats = ReplayRunner(cfg, ScenarioLoader.load(cfg.scenario_yaml), client=client).run()
-    assert stats.expected_rejections == stats.rejected == 3
+    assert stats.accepted == 3
+    assert stats.rejected == stats.expected_rejections == 0
     assert stats.exit_code == 0
     assert stats.retries == 0
     assert backend.predictions == 0
@@ -170,17 +171,17 @@ def test_malformed_200_response_never_becomes_success(sample_csv, body):
     ) as client:
         result = client.send(payload(sample_csv))
     assert result.outcome == "failed"
-    assert result.error == "INVALID_BACKEND_RESPONSE"
+    assert result.error == "INVALID_INGESTION_RESPONSE"
 
 
 def test_wrong_trace_identity_is_reported(sample_csv, backend):
     def wrong_trace(request):
         body = backend.handle(request).json()
         body["correlation_id"] = "cor_unrelated"
-        return httpx.Response(200, json=body)
+        return httpx.Response(202, json=body)
 
     with BackendClient("http://backend", transport=httpx.MockTransport(wrong_trace)) as client:
-        assert client.send(payload(sample_csv)).error == "INVALID_BACKEND_RESPONSE"
+        assert client.send(payload(sample_csv)).error == "INVALID_INGESTION_RESPONSE"
 
 
 @pytest.mark.parametrize("wrong_trace", [False, True])
@@ -297,5 +298,32 @@ def test_dataset_loop_and_metrics_labels(sample_csv, scenario_dir):
     assert stats.generated == 12
     assert len({json.loads(line)["event_id"] for line in output.getvalue().splitlines()}) == 12
     text = stats.prometheus_text()
-    assert "maintai_simulator_generated_total 12" in text
+    assert "maintai_replay_generated_total 12" in text
     assert "event_id" not in text and "machine_id" not in text
+
+
+@pytest.mark.parametrize(
+    "header,expected",
+    [("120", 120), ("999999", 300), ("bad", None), ("Thu, 01 Jan 1970 00:01:00 GMT", 60)],
+)
+def test_retry_after_policy_parses_dates_and_caps_delay(header, expected):
+    from simulator.client import retry_after
+
+    assert retry_after(header, now=0) == expected
+
+
+def test_retry_after_on_429_is_respected_without_new_event_identity(sample_csv, backend):
+    calls, waits = [], []
+
+    def limited(request):
+        calls.append(request)
+        if len(calls) == 1:
+            return httpx.Response(429, headers={"Retry-After": "2"})
+        return backend.handle(request)
+
+    with BackendClient(
+        "http://backend", transport=httpx.MockTransport(limited), sleep=waits.append
+    ) as client:
+        assert client.send(payload(sample_csv)).outcome == "accepted"
+    assert waits == [2]
+    assert calls[0].content == calls[1].content

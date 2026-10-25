@@ -1,58 +1,30 @@
-"""Bounded delivery retries preserve payload/idempotency and correlation identity."""
+"""Ingestion ACK transport; no prediction, risk or alert is awaited here."""
 
 import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from email.utils import parsedate_to_datetime
 from typing import Any, Literal
 from uuid import uuid4
 
 import httpx
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, HttpUrl, ValidationError
 
+from simulator.control.auth import AuthError
 from simulator.fault_injection import FaultMode
 from simulator.logging import log
 
 
-class ProcessedResponse(BaseModel):
-    model_config = ConfigDict(strict=True)
-    event_id: str
-    machine_id: str
-    validation_status: Literal["VALID"]
-    processing_status: Literal["COMPLETED"]
-    machine_state: Literal["NORMAL", "WATCH", "HIGH", "CRITICAL"]
-    prediction_id: str = Field(min_length=1)
-    alert_id: str | None
-    correlation_id: str
-
-
-class ValidationIssue(BaseModel):
-    model_config = ConfigDict(strict=True)
-    field: str
-    code: str
-    message: str
-
-
-class InvalidResponse(BaseModel):
-    model_config = ConfigDict(strict=True)
-    event_id: str
-    machine_id: str
-    validation_status: Literal["INVALID"]
-    machine_state: Literal["INVALID"]
-    errors: list[ValidationIssue] = Field(min_length=1)
-    prediction_id: None
-    alert_id: None
-    correlation_id: str
-
-
-class ValidationFailure(BaseModel):
-    model_config = ConfigDict(strict=True)
-    code: Literal["VALIDATION_FAILED"]
-    message: str
-    retryable: Literal[False]
-    details: dict[str, Any]
-    request_id: str
-    correlation_id: str
+class IngestAck(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+    event_id: str = Field(min_length=1)
+    machine_id: str = Field(min_length=1)
+    ingestion_status: Literal["ACCEPTED"]
+    processing_status: Literal["PENDING"]
+    server_accepted_at: AwareDatetime
+    status_url: HttpUrl
+    correlation_id: str = Field(min_length=1)
 
 
 @dataclass(frozen=True)
@@ -63,6 +35,22 @@ class SendResult:
     latency_ms: float
     error: str | None = None
     response: dict[str, Any] | None = None
+    retryable: bool = False
+    retry_after: float | None = None
+
+
+def retry_after(value: str | None, now: float | None = None) -> float | None:
+    try:
+        if value is None:
+            return None
+        delay = (
+            float(value)
+            if value.isdigit()
+            else parsedate_to_datetime(value).timestamp() - (time.time() if now is None else now)
+        )
+        return max(0, min(delay, 300))
+    except (ValueError, TypeError, OverflowError):
+        return None
 
 
 class BackendClient:
@@ -75,6 +63,8 @@ class BackendClient:
         retry_backoff_ms: float = 100,
         transport: httpx.BaseTransport | None = None,
         sleep: Callable[[float], None] = time.sleep,
+        credentials: Callable[[], str | None] = lambda: None,
+        observe: Callable[[str], None] = lambda outcome: None,
     ):
         self.endpoint = f"{base_url.rstrip('/')}/api/v1/sensor-readings"
         self.client = httpx.Client(
@@ -83,14 +73,13 @@ class BackendClient:
             headers={"Accept": "application/json"},
             follow_redirects=False,
         )
-        self.max_retries = max_retries
-        self.retry_backoff_ms = retry_backoff_ms
-        self.sleep = sleep
+        self.max_retries, self.retry_backoff_ms, self.sleep = max_retries, retry_backoff_ms, sleep
+        self.credentials, self.observe = credentials, observe
 
-    def __enter__(self) -> "BackendClient":
+    def __enter__(self):
         return self
 
-    def __exit__(self, *args) -> None:
+    def __exit__(self, *args):
         self.client.close()
 
     def send(
@@ -100,61 +89,63 @@ class BackendClient:
         correlation_id: str | None = None,
         fault: FaultMode = FaultMode.NONE,
     ) -> SendResult:
-        correlation_id = correlation_id or f"cor_{uuid4()}"
+        correlation_id = correlation_id or payload.get("correlation_id") or f"cor_{uuid4()}"
         started = time.perf_counter()
         for attempt in range(self.max_retries + 1):
             request_id = f"req_{uuid4()}"
-            attempt_started = time.perf_counter()
-            status_code = None
-            body = None
-            error = None
-            outcome = "failed"
-            retryable = False
+            outcome, error, body, status, retryable, wait = "failed", None, None, None, False, None
             try:
-                # Inject a first-attempt delivery failure without modifying the event.
+                token = self.credentials()
+                headers = {"X-Request-ID": request_id, "X-Correlation-ID": correlation_id}
+                if token:
+                    headers["Authorization"] = f"Bearer {token}"
                 if attempt == 0 and fault == FaultMode.NETWORK_TIMEOUT:
-                    raise httpx.ReadTimeout("Injected first-attempt timeout")
+                    raise httpx.ReadTimeout("Injected timeout")
                 if attempt == 0 and fault == FaultMode.NETWORK_DISCONNECT:
-                    raise httpx.ConnectError("Injected first-attempt disconnect")
-                response = self.client.post(
-                    self.endpoint,
-                    json=payload,
-                    headers={"X-Request-ID": request_id, "X-Correlation-ID": correlation_id},
-                )
-                status_code = response.status_code
+                    raise httpx.ConnectError("Injected disconnect")
+                response = self.client.post(self.endpoint, json=payload, headers=headers)
+                status = response.status_code
+                wait = retry_after(response.headers.get("Retry-After"))
                 try:
                     parsed = response.json()
                     body = parsed if isinstance(parsed, dict) else None
                 except ValueError:
                     pass
-                if 200 <= status_code < 300:
-                    ack = ProcessedResponse.model_validate(body)
-                    self._check_identity(ack, payload, correlation_id)
-                    outcome = "accepted"
-                elif status_code == 422:
-                    if body and body.get("validation_status") == "INVALID":
-                        ack = InvalidResponse.model_validate(body)
-                        self._check_identity(ack, payload, correlation_id)
-                        outcome, error = "rejected", "VALIDATION_FAILED"
-                    elif (
-                        body
-                        and isinstance(body.get("error"), dict)
-                        and body["error"].get("code") == "VALIDATION_FAILED"
+                if status == 202:
+                    ack = IngestAck.model_validate_json(response.content)
+                    if (
+                        ack.event_id != payload.get("event_id")
+                        or ack.machine_id != payload.get("machine_id")
+                        or ack.correlation_id != correlation_id
                     ):
-                        error_body = ValidationFailure.model_validate(body["error"])
-                        if error_body.correlation_id != correlation_id:
-                            raise ValueError("Error response has mismatched correlation identity")
-                        outcome, error = "rejected", "VALIDATION_FAILED"
-                    else:
-                        error = "INVALID_BACKEND_RESPONSE"
+                        raise ValueError("Mismatched ACK identity")
+                    outcome = "accepted"
+                elif 200 <= status < 300:
+                    error, retryable = "INVALID_INGESTION_RESPONSE", True
                 else:
                     envelope = body.get("error", {}) if body else {}
-                    if not isinstance(envelope, dict):
-                        envelope = {}
-                    error = str(envelope.get("code", f"HTTP_{status_code}"))
-                    retryable = status_code in {429, 500, 502, 503, 504}
-                    if envelope.get("retryable") is False:
-                        retryable = False
+                    envelope = envelope if isinstance(envelope, dict) else {}
+                    error = str(envelope.get("code", f"HTTP_{status}"))
+                    if status in (400, 422):
+                        if envelope.get("correlation_id") not in (
+                            None,
+                            correlation_id,
+                        ) or envelope.get("request_id") not in (None, request_id):
+                            error = "INVALID_INGESTION_RESPONSE"
+                        elif (
+                            envelope.get("retryable") is False
+                            and isinstance(envelope.get("code"), str)
+                            and isinstance(envelope.get("message"), str)
+                        ):
+                            outcome = "rejected"
+                        else:
+                            error = "INVALID_INGESTION_RESPONSE"
+                    retryable = (
+                        status in (408, 429, 500, 502, 503, 504)
+                        and envelope.get("retryable") is not False
+                    )
+            except AuthError:
+                error = "INGESTION_CREDENTIAL_UNAVAILABLE"
             except httpx.RequestError as exc:
                 error = (
                     "NETWORK_TIMEOUT"
@@ -163,7 +154,19 @@ class BackendClient:
                 )
                 retryable = True
             except (ValueError, ValidationError):
-                error = "INVALID_BACKEND_RESPONSE"
+                error, retryable = "INVALID_INGESTION_RESPONSE", True
+            label = (
+                "ACCEPTED"
+                if outcome == "accepted"
+                else "REJECTED"
+                if outcome == "rejected"
+                else "AUTH_ERROR"
+                if status in (401, 403) or error == "INGESTION_CREDENTIAL_UNAVAILABLE"
+                else "RETRY"
+                if retryable
+                else "OTHER"
+            )
+            self.observe(label)
             log(
                 "sensor_delivery_attempt",
                 level=logging.INFO if outcome == "accepted" else logging.WARNING,
@@ -172,33 +175,24 @@ class BackendClient:
                 request_id=request_id,
                 correlation_id=correlation_id,
                 attempt=attempt + 1,
-                status_code=status_code,
-                latency_ms=round((time.perf_counter() - attempt_started) * 1000, 3),
+                status_code=status,
+                latency_ms=round((time.perf_counter() - started) * 1000, 3),
                 outcome=outcome,
                 error=error,
             )
             if retryable and attempt < self.max_retries:
-                self.sleep(min(self.retry_backoff_ms / 1000 * 2**attempt, 5.0))
+                self.sleep(
+                    wait if wait is not None else min(self.retry_backoff_ms / 1000 * 2**attempt, 5)
+                )
                 continue
             return SendResult(
                 outcome,
-                status_code,
+                status,
                 attempt + 1,
                 (time.perf_counter() - started) * 1000,
                 error,
                 body,
+                retryable,
+                wait,
             )
-        raise AssertionError("Delivery loop must return a result")
-
-    @staticmethod
-    def _check_identity(
-        ack: ProcessedResponse | InvalidResponse,
-        payload: dict,
-        correlation_id: str,
-    ) -> None:
-        if (
-            ack.event_id != payload["event_id"]
-            or ack.machine_id != payload["machine_id"]
-            or ack.correlation_id != correlation_id
-        ):
-            raise ValueError("Backend response has mismatched event/trace identity")
+        raise AssertionError("Unreachable")

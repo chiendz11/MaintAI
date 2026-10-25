@@ -1,0 +1,25 @@
+# Applies to `docker build -f storage-consumer/Dockerfile .` only.
+**
+!messaging/
+!messaging/pyproject.toml
+!messaging/setup.py
+!messaging/README.md
+!messaging/src/
+!messaging/src/**
+!contracts/
+!contracts/kafka/
+!contracts/kafka/**
+!contracts/v1.3/
+!contracts/v1.3/schemas/
+!contracts/v1.3/schemas/runtime.schema.json
+!contracts/v1.3/events/
+!contracts/v1.3/events/alert-signal.schema.json
+!storage-consumer/
+!storage-consumer/pyproject.toml
+!storage-consumer/README.md
+!storage-consumer/requirements.lock
+!storage-consumer/src/
+!storage-consumer/src/**
+**/__pycache__/
+**/*.pyc
+**/*.egg-info/

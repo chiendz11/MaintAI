@@ -34,3 +34,21 @@ def test_unsafe_fixture_or_invalid_budgets_are_rejected(change):
     settings.update(change)
     with pytest.raises(ValueError):
         RelaySettings.from_env(settings)
+
+
+def test_sdk_relay_budget_names_are_used_and_conflicting_aliases_rejected():
+    config = {
+        **env(),
+        "OUTBOX_EXECUTION_MODE": "ordered",
+        "OUTBOX_CLAIM_LEASE_SECONDS": "60",
+        "OUTBOX_BATCH_SIZE": "3",
+        "OUTBOX_POLL_INTERVAL_MS": "500",
+    }
+    settings = RelaySettings.from_env(config)
+    assert (settings.lease_seconds, settings.batch_size, settings.poll_interval_seconds) == (
+        60,
+        3,
+        0.5,
+    )
+    with pytest.raises(ValueError):
+        RelaySettings.from_env({**config, "PROCESSING_OUTBOX_BATCH_SIZE": "2"})

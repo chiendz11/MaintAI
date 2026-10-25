@@ -1,3 +1,9 @@
+> **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
+> durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
+> có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
+> [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
+> readiness §19 ghi bằng chứng, commands và giới hạn; các snapshot cũ đọc theo ngày.
+
 # RECOVERY-01 — Jobs bền vững, phục hồi và vận hành
 
 Chi tiết kế thừa1.3.2, rà soát khi nhập target1.4 ngày2026-10-19. Giữ các quyết định
@@ -128,9 +134,11 @@ Raw archive vẫn giữ mọi Kafka receipt với topic/partition/offset, không
   archive job và hai brief jobs đồng thời mỗi runner; phải tính tổng khi tăng replicas.
 - API scale bằng RPS/p95/connections; Worker bằng lag/age/ML throughput; Relay bằng
   pending age; Storage bằng lag/archive age; không chỉ CPU.
-- Consumer parallelism chịu partition assignment; 12 partitions là profile
-  GitOps hiện có, không phải evidence chịu được một số máy cố định. Một hot key
-  vẫn gây hot partition. Đổi partition count phải kiểm tra per-machine ordering.
+- Partition assignment giới hạn số consumer members; target PROC-ORDER-01 cho
+  nhiều keyed tasks trong một member, khác máy cùng partition chạy đồng thời.
+  SDK hiện vẫn một in-flight/runner.12 partitions không là benchmark số máy.
+  Hot key/offset hole vẫn gây partition backpressure; đổi partition count cần
+  drain/fence/cutover để giữ per-machine source order.
 - Autoscaling không làm tăng năng lực DB/ML vô hạn; admission limit phải xét toàn
   cluster. UI coalescing không thay thế broker retention hoặc processing capacity.
 
@@ -151,6 +159,9 @@ failover/multiple replicas cần lease/fencing, không chỉ số replicas=1.
 
 ## 8. Observability và acceptance
 
+Catalog và exact update/reset semantics theo [OBS-01](OBSERVABILITY_IMPLEMENTATION.md),
+ưu tiên shorthand metric names kế thừa; MLflow dùng workflow riêng ở §9 bên dưới.
+
 Trace correlation xuyên HTTP/Kafka/job/archive bằng event_id/result_id/job_id và
 correlation_id trong logs/traces; IDs không làm Prometheus labels. Metrics:
 ACK/prediction/visible-alert latency, lag/oldest age, pool saturation, retry,
@@ -162,3 +173,55 @@ rebalance lúc inference, out-of-order results, multi-API fan-out, S3 outage vư
 archive cadence, stale lease completion, projection rebuild đồng thời live input,
 RAG timeout, catalog downtime+full reconcile và rolling schema2 consumer-first.
 Đây là acceptance specification, chưa phải các tests đã viết hoặc đã pass.
+
+
+## 9. MLflow operation recovery — MLFLOW-01
+
+Chi tiết ở [MLFLOW_INTEGRATION_GUIDE.md](MLFLOW_INTEGRATION_GUIDE.md) §6–8.
+Training orchestration ledger do platform quản lý, khác Business Copilot/job DB;
+không thêm training SQL tables vào mlflow_db hoặc DB ứng dụng khác.
+
+- training_id/run_key, owner-generation, lease/heartbeat, write-ahead create
+  intent và remote IDs phải checkpoint bền vững theo phase trước side effect kế.
+- Create-run/model-version timeout,5xx hoặc crash có thể đã commit remote. Không
+  tự tạo lại theo search0; search-before-create không có unique guarantee.
+- Reconciliation duyệt pages, đối chiếu run/source/artifact hashes;0/multiple
+  matches giữ UNKNOWN/triage. Lease expiry không hủy in-flight request cũ;
+  không cho writer mới create khi intent trước unresolved.
+- Re-log known-run metrics/artifacts giữ timestamp/key/path/bytes; verify partial
+  writes, không tự serialize/train lại khi chỉ publication bị lỗi.
+- Model-result đã commit thì retry cùng immutable result/change identity;
+  RELEASE_DISPATCHED/GitHub204 không chứng minh PR/merge/deploy thành công.
+
+Snapshot GitOps helper hiện có lease/model-result checkpoint nhưng chưa đủ
+step-level run/version recovery và fencing/heartbeat của chuẩn này. Đây là gap
+implementation, không tạo ledger adapter chỉ bằng ví dụ Python trong docs.
+
+## 10. PROC-ORDER-01 — recovery cho keyed tasks và ordered outbox
+
+Theo [đặc tả chuẩn](PROCESSING_CONCURRENCY_AND_ORDERING.md) §4–7; SDK0.2.0 đã có
+keyed/ordered/fenced implementations và tests; xem implementation report/readiness §19.
+
+- Mỗi partition có receipt ledger và safe completed prefix. Một lower-offset
+  task chưa durable giữ frontier dù các máy khác đã commit DB; crash replay
+  các receipts phía sau và dedupe theo logical identity/hash.
+- Revoke dừng admission partition, drain hữu hạn và commit prefix khi còn được
+  phép; lost assignment không commit. In-memory generation chỉ chặn offset,
+  durable owner generation fence mới chặn late SQL mutation. Không đợi HTTP
+  vô hạn trong rebalance callback hoặc giữ transaction lock suốt inference.
+- Timeout không chứng minh HTTP/producer đã hủy. Late completion không nhả key
+  lần hai, không tạo result mới; unknown DB commit đọc lại durable outcome.
+- Head relay đang backoff/ACK unknown chặn successor cùng topic/key. New lease
+  owner reconcile/retry cùng message bytes; không mark sent vì request đã enqueue.
+  DB fencing không hủy old network publish, downstream vẫn inbox/CAS.
+- Stop/drain row-only legacy relay và unfenced Worker trước enable capability
+  mới; không chạy mixed writers vượt key cursor. Rollback không reset cursor/
+  dispatch_seq/inbox/outbox, cần compatible binary hoặc reviewed maintenance.
+- Giới hạn queued/fetched/in-flight/done-behind-hole bằng records và bytes.
+  Nếu pause một partition vì hot key, các máy cùng partition có thể chờ; theo
+  dõi queue wait/frontier stall và downstream saturation, không drop để giảm lag.
+
+Future recovery drill phải có500 pending/501 completed, stale handler sau revoke,
+ML timeout còn chạy, hai relay tranh một key, head retry/ACK loss, graceful drain
+hết budget, source-order conflict và backlog catch-up. Chưa thực thi các drills
+production này đầy đủ; source tests/evidence cụ thể ở implementation report.

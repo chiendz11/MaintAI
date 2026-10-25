@@ -11,13 +11,14 @@ Trước khi triển khai hoặc thay đổi một module:
 1. Đọc `docs/README.md`, `architecture/README.md`, `architecture/runtime-map.json`,
    `docs/repository-layout.md`, README/Dockerfile/runtime.json của component.
 2. Target hiện tại là `docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md`,
-   revision `1.4.0`: đọc mục 0–4, 31–39 và mục liên quan. §34–39 ưu tiên phần kế thừa;
+   revision `1.4.0`: đọc mục 0–4, 31–42 và mục liên quan. §34–42 ưu tiên phần kế thừa;
    quyết định dự án tại `docs/README.md` giữ phân công 4 người và Simulator UI riêng.
    Đọc `docs/DEPLOYMENT_ARCHITECTURE.md`, `docs/RUNTIME_DATAFLOW.md`,
    `docs/VERSIONING_AND_PROVENANCE.md`, `docs/implementation-readiness.md`.
 3. Đọc các mục tương ứng trong
    `docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md`; Frontend đọc
-   §40–41 và phần v1.4 §42–47; `docs/IMPLEMENTATION_PLAN.md` là kế hoạch tương lai.
+   §40–41 và phần v1.4 §42–53; đọc §53 cho PROC-ORDER-01 và Plan §K.
+   `docs/IMPLEMENTATION_PLAN.md` là kế hoạch, không là runtime evidence.
    Đọc source/tests để phân biệt implementation v1.1, metadata/OpenAPI baseline1.3.2
    với target docs1.4.0. Kafka có implementation library riêng; full app/scaffold
    nêu trong bộ bàn giao vẫn chưa được nhập.
@@ -26,12 +27,16 @@ Trước khi triển khai hoặc thay đổi một module:
 5. Với HTTP API, đọc `contracts/README.md`, `contracts/v1.3/README.md` (six target OpenAPIs + schemas/examples) và
    `docs/api-contract-decisions.md`. Đây là baseline máy đọc được1.3.2, tự chứa toàn bộ
    schema/example; không chứng minh đã có quarantine/provenance v1.4. Freeze schemas
-   và migration trước khi thay producer/consumer. Schema kiểm thử wire cũ của Sensor
-   nằm riêng trong `sensor/tests/fixtures/`.
+   và migration trước khi thay producer/consumer. Sensor tests dùng SensorRequest/IngestAck/Control DTO hiện hành; generated features
+   vẫn kiểm allowlist sáu trường. Không phục hồi wire synchronous v1.1.
 6. Với Kafka, đọc `docs/KAFKA_DEVELOPMENT_GUIDE.md`, `contracts/kafka/README.md`
-   và `messaging/`. Canonical bundle1.0.0 writer outcome1.4.0 (`kind`), reader thêm
+   và `messaging/`. SDK0.2.0 + bundle1.1.0 writer outcome1.4.0 (`kind`), reader thêm
    legacy2.0.0 (`result_kind`), không writer1.1.0. SHA lock và SQL immutable theo
    bundle; bump bundle khi đổi. Không biến callback skeleton thành success giả.
+7. Processing/Outbox đọc `docs/PROCESSING_CONCURRENCY_AND_ORDERING.md`, Contracts
+   §42, Guide §53 và `docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md`. SDK đã
+   có keyed runner/coordinator/fenced handler/ordered relay; app DQ/ML/risk/history
+   callbacks, health server/image/deployment vẫn chưa hoàn tất.
 
 Với thay đổi chỉ về tài liệu/CI, đọc phần đặc tả liên quan đến thay đổi; không
 cần triển khai module hoặc chạy toàn bộ app tests chỉ vì tài liệu có checklist.
@@ -44,7 +49,9 @@ cần triển khai module hoặc chạy toàn bộ app tests chỉ vì tài li�
   không âm thầm coi baseline1.3.2 đã đáp ứng v1.4.
 - Stack/layout ghi là đề xuất trong Guide không bắt buộc. Source owners hiện có:
   `sensor/`, `ingestion-api/`, `processing/`, `storage-consumer/`, `backend/`
-  (Business Backend), `frontend/`, `ml-service/`, `rag-service/`, `drift-worker/`.
+  (Business Backend), `frontend/`, `sensor-simulator-UI/`, `ml-service/`, `rag-service/`, `drift-worker/`.
+  Simulator UI có client/demo riêng; đọc `sensor-simulator-UI/README.md` để chạy checks
+  và phân biệt mock tests với browser/provider HTTP integration và TLS OIDC fixtures.
 - Thư mục có `runtime.json` + `Dockerfile` là một planned workload. `backend/`,
   `processing/`, `ml-service/` là codebase containers; `shared/` không phải runtime.
   Dockerfile/image không quyết định số deployment. Metadata runtime không phải
@@ -59,7 +66,22 @@ cần triển khai module hoặc chạy toàn bộ app tests chỉ vì tài li�
 - GitOps/hạ tầng được quản lý trong hai repo riêng. Deployment manifests, lịch
   CronJob, Prometheus rules và Grafana dashboards thuộc các repo đó. Compose dành
   riêng cho integration tests có thể nằm trong component tests.
+  Local dev có folder riêng `../MaintAI-k3d/`, xem `docs/LOCAL_DEVELOPMENT_K3D.md`;
+  không chép Secrets/PLAINTEXT/replication1/image receipts local lên production.
+- Quyết định21/10: source đóng gói MLflow Server/UI, dependency/base pins, local
+  Compose và publisher ở `ml-service/mlflow/`; không gộp training/inference images.
+  MLflow vẫn là platform runtime: production manifests/config/IRSA ở GitOps/hạ tầng.
+  Đọc README module và MLFLOW-01; image source chuyển repo không tự bật deployment.
 - Ingestion API độc lập: envelope/auth + Kafka ACK, không deep DQ/ML/DB/SSE.
+- PROC-ORDER-01: cùng máy FIFO, khác máy song song có giới hạn; chỉ commit safe
+  completed prefix từng partition sau durability. Fetched/queued/done-behind-hole
+  cùng thuộc memory budget. Rebalance/timeout phải fence SQL lẫn offset.
+- Ordered relay dispatch head topic/máy; retry/unknown ACK chặn successor. Late
+  duplicates/cross-topic reordering vẫn cần inbox/CAS và alert lifecycle. Keyed
+  mode chỉ opt-in Processing; Storage/Business giữ default serial runner.
+- Giữ nguyên001 SQL;002 và activation là explicit Processing-owner operations
+  sau drain. Initial legacy source inbox cần reviewed cursor bootstrap; không
+  reset inbox hoặc bịa source order từ timestamp để enable.
 - Processing sở hữu DQ, inference client, risk, processing_db và outbox. Business
   sở hữu business_db, alerts/audit/feedback/latest projections và RAG client.
 - Business API và Business Consumer cùng codebase/DB owner nhưng khác Deployment.
@@ -104,3 +126,10 @@ cần triển khai module hoặc chạy toàn bộ app tests chỉ vì tài li�
   kết quả CI của đúng commit làm bằng chứng và ghi rõ nơi thực thi.
 - Giữ secrets/connection strings khỏi logs; không commit dataset đầy đủ,
   credentials hoặc output sinh ra ngoài các fixtures đã quản lý bằng Git.
+
+## Kiểm tra source PROC-ORDER-01
+
+Khi sửa keyed/ordered code, chạy Kafka unit + processing/tests, PostgreSQL ordering
+và real Kafka integration khi có local services. Commands/opt-in env trong report.
+Storage regression cần chạy khi SDK pin/default runner đổi. CI giữ kafka-ci và
+kafka-integration trong required; không tuyên bố Docker/K8s/load PASS từ unit tests.

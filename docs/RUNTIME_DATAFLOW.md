@@ -1,8 +1,38 @@
+> **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
+> durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
+> có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
+> [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
+> readiness §19 ghi bằng chứng, commands và giới hạn; các snapshot cũ đọc theo ngày.
+
 > **Tích hợp MaintAI — 2026-10-19:** Tài liệu thiết kế mục tiêu v1.4, chưa xác nhận code/DB/GitOps đã migrate. Đọc [docs index](README.md) để áp dụng quyết định nhóm 4 người, Simulator UI riêng và thứ tự ưu tiên; [readiness](implementation-readiness.md) ghi các schema/scaffold chưa được cung cấp.
 
 # MaintAI v1.4 — Luồng dữ liệu lúc chạy và các bất biến bắt buộc
 
 Đọc cùng [Kiến trúc Deployment](DEPLOYMENT_ARCHITECTURE.md) để hiểu ranh giới runtime, và [Quy chuẩn Versioning & Provenance](VERSIONING_AND_PROVENANCE.md) để hiểu các định danh bất biến.
+
+## 0. Điểm vào của bốn UI — UI-01, 2026-10-20
+
+| UI | Luồng request/data | Bất biến |
+| --- | --- | --- |
+| Business | Browser → Business REST/SSE → projections/history/RAG/drift facade | Không gọi Sensor Control, ML/RAG/Kafka/DB trực tiếp |
+| Simulator | Browser → Sensor Control → durable state/scheduler/spool → Ingestion | Browser không phát readings hoặc mutate Alert; không qua Business proxy |
+| Grafana | Browser → Grafana server → Prometheus/exporters + approved report datasource | Không tính lại detector hoặc sửa risk; metrics không thay report DB |
+| MLflow | Browser → MLflow Server → mlflow_db/artifact store | UI tracking/registry không tự promote inference release |
+
+Sensor backend chạy độc lập browser/UI rollout; đóng hoặc deploy lại Simulator UI
+không tự Pause máy. Business UI deploy riêng cũng không restart Sensor. Grafana
+hoặc MLflow UI lỗi không tự chặn Business query/Alert path; phụ thuộc lúc model
+startup/training phải đánh giá riêng. Xem [UI Architecture](UI_ARCHITECTURE.md).
+
+Control mutation dùng Idempotency-Key + expected_control_version; ACK200 sau
+persist,409/timeout cần GET reconcile. API hiện chỉ list/read/pause/resume/scenario;
+rate/counters/preview ở HTML cần contract bổ sung trước khi nối thật.
+
+Business summary/drift APIs vẫn tồn tại cho main user, trong khi Grafana chuyên
+điều tra kỹ thuật. Report detail datasource ở Grafana cần owner-approved interface
+hoặc read-only views/grants, không thêm Drift HTTP server chỉ để sao chép mock.
+Các server giữ credential riêng; frontend runtime config và Portal chỉ có public
+URLs/capabilities. Grafana/MLflow chưa Ready phải báo rõ, không dựng số liệu giả.
 
 ## 1. Nhận dữ liệu, archive, inference và cập nhật Frontend
 
@@ -12,7 +42,8 @@ sequenceDiagram
   participant I as Ingestion
   participant K as Kafka
   participant A as Storage Consumer
-  participant W as Processing Worker
+  participant W as Processing Worker / keyed scheduler
+  participant C as Offset coordinator (trong Worker)
   participant M as ML Service
   participant P as processing_db + Outbox
   participant R as Outbox Relay
@@ -33,6 +64,7 @@ sequenceDiagram
     D-->>U: Thông báo sau khi commit
   and
     K->>W: sensor.readings
+    W->>W: FIFO theo máy; máy khác được chạy song song
     W->>W: Data Quality
     alt VALID
       W->>M: predict (model release đã pin)
@@ -42,8 +74,9 @@ sequenceDiagram
       W->>W: Không gọi ML, lưu validation errors
     end
     W->>P: Outcome + Outbox trong cùng transaction
-    W->>K: Commit input offset
-    P->>R: Lấy outbox còn pending
+    W->>C: Durable completion + assignment generation
+    C->>K: Commit safe completed prefix từng partition
+    P->>R: Lấy head unpublished theo topic/máy
     R->>K: inference.results và alert.signals nếu có
     K->>B: Outcome / Alert Signal
     B->>D: Ghi prediction/alert + inbox
@@ -52,6 +85,11 @@ sequenceDiagram
 ```
 
 **Không được nhầm:** HTTP `202` chỉ chứng minh Kafka đã ACK, **không** chứng minh inference hoặc S3 archive đã xong. Archive có thể hoàn tất trước hoặc sau prediction. Kafka không bảo đảm thứ tự tổng giữa các topic; latest projections phải so sánh ordering token ổn định theo máy. React nhận SSE thông qua Business API, không phải HTTP response gửi ngược cho Sensor.
+
+Sơ đồ là target có bổ sung **PROC-ORDER-01 ngày23/10**: một event đại diện,
+không mô tả Worker phải chờ toàn bộ event trước mới nhận máy khác. Keyed
+scheduler/coordinator/ordered relay đã có trong SDK0.2.0; owner callbacks và
+full app còn thiếu. Chi tiết §10 và implementation report.
 
 ## 2. Trường hợp sai schema ở Ingestion
 
@@ -121,7 +159,10 @@ Không được quét toàn bộ S3 bucket để phục vụ mỗi truy vấn br
 ## 5. Chống trùng và bảo toàn thứ tự
 
 - `event_id` phải giữ nguyên qua retry. `rejection_id`/request identity phải cho phép chống trùng quarantine khi thích hợp. Vị trí `topic/partition/offset` lưu riêng với business IDs.
-- Transaction Processing lưu event/hash/outcome/risk/outbox; unique constraints ngăn ghi trùng. Commit offset sau commit DB.
+- Transaction Processing lưu event/hash/outcome/risk/outbox; unique constraints
+  và durable assignment fence ngăn duplicate/stale writes. Target keyed mode
+  commit offset theo safe completed prefix từng partition sau commit DB;
+  không commit offset lớn nhất trong các task đã xong.
 - Business Consumer dùng inbox idempotent theo `signal_id`/`result_id` trong cùng transaction cập nhật projection/Alert. Dedupe Alert theo policy + machine + window, không chỉ theo timestamp.
 - Latest telemetry, latest processing outcome và latest successful prediction là **ba projections khác nhau**. Dùng sequence tăng đơn điệu theo máy để không bị rollback do out-of-order. Reading INVALID mới không xóa last valid prediction cũ; UI cần nhãn STALE/historical.
 - History pagination dùng cặp `(server_accepted_at,event_id)` hoặc cursor contract đã freeze; không dùng thứ tự chuỗi event_id để xác định reading mới nhất.
@@ -149,3 +190,68 @@ code riêng trong [SDK/hướng dẫn Kafka](KAFKA_DEVELOPMENT_GUIDE.md). Chưa 
 real broker/S3 integration hoặc deployment. Còn cần hot/cold query, curated archive
 membership, migrations/app callbacks, endpoint prediction history nếu UI cần tab
 chi tiết và benchmark. SDK không hoàn tất toàn luồng trong sơ đồ này.
+
+## 8. Observability/tracking — OBS-01 và MLFLOW-01
+
+App metrics được đo tại boundary thật: broker ACK, owner DB/outbox commit,
+archive verification, ML/RAG completion; Prometheus/Grafana không tạo business
+success thay runtime. Retry/inbox duplicate không tăng committed business event
+lần nữa. Histograms cross-service dùng đúng accepted timestamp; Alert Signal1.0
+hiện thiếu field này, cần exact-event owner lookup hoặc reviewed schema migration,
+không lấy latest telemetry/received_at để đo p95 giả.
+
+Training có durable operation intents trước create-run/version, frozen artifacts,
+real selected run/registry identity và verified result trước release dispatch.
+MLflow create timeout/5xx có thể đã commit, nên không blind retry theo tag search.
+Dispatch ACK khác deploy success; metrics/logging outage không được làm rollback
+Alert hoặc đổi risk. Chi tiết source/gate/SDK/recovery ở
+[OBS-01](OBSERVABILITY_IMPLEMENTATION.md) và [MLFLOW-01](MLFLOW_INTEGRATION_GUIDE.md).
+
+
+## 9. Sensor provider đã implement
+
+Sensor0.3.0 lưu reading+sequence/cursor vào SQLite spool trước HTTP; sender chỉ
+xóa sau ACK202 đúng identity. Lỗi/mất response giữ same event/payload cho retry.
+Control state/version/receipt/audit commit trước200, Pause không xóa backlog.
+Scheduler và sender ở cùng Sensor Deployment, independent browser. Bằng chứng
+HTTP/browser/TLS fixtures và giới hạn deployment ở [readiness §15](implementation-readiness.md#15-sensor030--providerdurable-runtime2010).
+
+## 10. PROC-ORDER-01 — đọc, xử lý, commit và publish có thứ tự
+
+Nguồn chi tiết: [Processing concurrency/ordering](PROCESSING_CONCURRENCY_AND_ORDERING.md).
+Chuỗi trong Worker:
+
+```text
+Kafka poll/assignment → bounded FIFO theo machine_id → tối đa C active máy
+  → DQ → ML nếu VALID → risk → transaction inbox/history/cursor/outbox
+  → durable completion → partition coordinator → safe offset commit
+```
+
+Cùng máy chờ outcome trước durable; khác máy cùng partition có thể hoàn tất
+trước. Offset500 của A còn chạy và501 của B đã commit DB ⇒ committed offset
+vẫn500. Khi cả500/501 durable mới được commit502. B không phải chờ A để chạy,
+nhưng crash có thể replay cả B vì frontier còn bị A giữ. Inbox chống effect trùng.
+
+Relay chọn head theo `(topic,machine_id,dispatch_seq)`. Head đang retry/unknown
+ACK chặn successor cùng key/topic, máy khác tiếp tục. Dispatch order không là
+strict order của mọi physical receipt: old duplicate có thể đến muộn. Các topic
+results/signals vẫn độc lập; UI thấy HIGH chưa chắc alert đã được Business tạo.
+
+Latest telemetry, latest processing và latest valid prediction có guards riêng
+theo durable source sequence, không `(opaque epoch,sequence)` hoặc completed_at.
+Không bỏ historical signal chỉ vì UI có reading mới. INVALID giữ valid snapshot
+cũ; NORMAL mới không tự resolve Alert. Coalescing telemetry không giảm records
+phải lưu/xử lý; SSE sau Business commit và REST snapshot phục hồi.
+
+Revoke/lost/timeout phải fence late DB write lẫn offset commit, bounded drain
+và replay phần chưa xong. Queue/full hoặc completed-behind-hole đạt budget ⇒
+pause admission partition, tiếp tục poll; không skip. Read API/Storage không
+tham gia coordinator của Processing và có offsets/commit boundary riêng.
+
+## Phụ lục capacity:100 máy ban đầu, scale-ready choX>100
+
+Baseline100 máy×1 reading/s. Hệ thống scale-ready qua các stage riêng, nhưng khiX
+đổi phải tínhR=X×r và đo từ ingest tới browser, bao gồm queue/outbox/Business/SSE.
+Giữ cùng source ID cho mẫu latency, không cộng p95 các stage hay dùng202 làm kết
+quả inference. Đo/tối ưu bottleneck theo [Capacity §11](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100),
+không đổi ordering/durability hoặc bỏ history/alerts để giảm thời gian giả.

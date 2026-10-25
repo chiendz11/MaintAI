@@ -10,7 +10,7 @@ from dataclasses import dataclass, field, fields
 from pathlib import Path
 from urllib.parse import urlparse
 
-from maintai_messaging.config import KafkaSettings
+from maintai_messaging.config import KafkaSettings, KeyedSettings
 from maintai_messaging.contracts import strict_json
 from maintai_messaging.outcomes import ModelIdentity
 from processing.shared.data_quality.validator import FeatureValidator
@@ -40,10 +40,15 @@ class WorkerSettings:
     health_port: int
     health_host: str = "127.0.0.1"
     registry_token: str | None = field(default=None, repr=False)
+    execution_mode: str = "serial"
+    keyed_limits: KeyedSettings = field(default_factory=KeyedSettings)
 
     @classmethod
     def from_env(cls, env=None):
         env = os.environ if env is None else env
+        mode = env.get("PROCESSING_EXECUTION_MODE", "serial")
+        if mode not in {"serial", "keyed"}:
+            raise ValueError("Unsupported Processing execution mode")
         if env.get("PROCESSING_PROFILE") != "local-fixture":
             raise ValueError(
                 "Shared worker requires the reviewed registry/serving-identity handoff"
@@ -108,4 +113,6 @@ class WorkerSettings:
             port,
             health_host=probe_host(env),
             registry_token=env.get("BUSINESS_BEARER_TOKEN"),
+            execution_mode=mode,
+            keyed_limits=KeyedSettings.from_env(env),
         )

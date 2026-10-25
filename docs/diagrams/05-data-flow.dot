@@ -1,0 +1,101 @@
+// MaintAI diagram 05 — data flow and durable boundaries.
+digraph DataFlow {
+  graph [rankdir=TB, bgcolor="#ffffff", pad=0.45, nodesep=0.42, ranksep=0.70,
+    fontname="DejaVu Sans", fontsize=24, fontcolor="#10243a", labelloc=t,
+    label="MaintAI | 05 · Luồng dữ liệu\nAccepted / rejected, ba consumer groups độc lập và điểm xác nhận bền vững · mục tiêu v1.4",
+    compound=true, splines=polyline];
+  node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=12,
+    color="#9fb5c9", fillcolor="#edf5ff", fontcolor="#16324f", margin="0.20,0.14", penwidth=1.3];
+  edge [fontname="DejaVu Sans", fontsize=10, color="#69839b", fontcolor="#47617a", arrowsize=0.7];
+
+  csv [shape=folder, fillcolor="#edf2f6", label="AI4I CSV bất biến\n6 features; không gửi target labels"];
+  sim_ui [shape=tab, label="Simulator UI\nPause / Resume / scenario"];
+  sensor [label="1 · Sensor\nScheduler + machine cursor / sequence\nScenario → durable payload/spool"];
+  ingress [label="2 · Ingestion\nAuth / scope / size / envelope\nChờ broker ACK"];
+  accepted [shape=box3d, label="sensor.readings\nAccepted, chưa chứng minh DQ VALID\nKey = machine_id", fillcolor="#e6eefb"];
+  rejected [shape=box3d, label="sensor.rejected\nQuarantine metadata / HASH_ONLY\nChỉ request đủ điều kiện", fillcolor="#fbeee5"];
+
+  subgraph cluster_parallel {
+    label="ĐỌC ĐỘC LẬP · MỖI GROUP CÓ OFFSETS RIÊNG";
+    color="#bacbdc"; style="rounded,filled"; fillcolor="#f8fbff";
+    subgraph cluster_keyed_worker {
+      label="MỘT Processing Worker runtime · SDK0.2 CODE / APP KHUNG";
+      color="#d6b36a"; style="rounded,dashed";
+      keyed [label="3A · Poll → bounded keyed FIFO\ngroup processing-v1\nCùng máy tuần tự / khác máy song song"];
+      worker [label="Handler / executor\nDQ → chỉ VALID gọi ML → risk\nDurable assignment-generation fence"];
+      coordinator [label="Offset coordinator\nDurable completion ledger\nSafe prefix từng partition"];
+      keyed -> worker [label="1 active task / máy"];
+    }
+    telemetry [label="3B · Business telemetry handler\ngroup business-live-v1\nLatest raw receipt: UNVERIFIED"];
+    storage [label="3C · Storage Consumer\nraw-archive-v1\nraw-rejected-archive-v1"];
+  }
+  inference [label="ML inference\nFitted preprocessing + pinned model\nPrediction / probability / provenance"];
+  pdb [shape=cylinder, fillcolor="#fff0ce", label="4 · processing_db\nMột transaction: inbox + outcome/history\n+ outbox kết quả / alert signals"];
+  relay [label="5 · Outbox Relay · TARGET\nHead theo topic/machine + dispatch_seq\nHead retry chặn successor cùng key\nACK + durable mark rồi mới nhả next"];
+  results [shape=box3d, fillcolor="#e6eefb", label="inference.results\nPREDICTION_COMPLETED\nDATA_INVALID / INFERENCE_UNAVAILABLE"];
+  signals [shape=box3d, fillcolor="#e6eefb", label="alert.signals\nChỉ khi risk policy yêu cầu\nChưa phải business alert"];
+  prediction [label="6A · Business prediction handler\ngroup business-prediction-v1\nLatest processing / valid prediction"];
+  alert [label="6B · Business alert handler\ngroup business-alert-v1\nDedupe / lifecycle / audit / brief job"];
+  bdb [shape=cylinder, fillcolor="#e2edfb", label="7 · business_db\nInbox + CAS per-machine sequence\nLatest projections / alerts / feedback\nDurable brief jobs / report catalog"];
+  api [label="8 · Business API\nAuthorized REST snapshot / SSE\nFan-out qua PG LISTEN/NOTIFY"];
+  ui [shape=tab, label="9 · Business UI\nMerge riêng telemetry / prediction / status\nSequence guard + reconnect snapshot"];
+  raw [shape=folder, fillcolor="#edf2f6", label="S3 raw / rejected archive\nExact bytes → JSONL.gz + manifest\nHiện microbatch = 1 record"];
+  processed [shape=folder, fillcolor="#edf2f6", label="S3 processed archive\nVerified manifests / history tiers\nProcessing owner writer / maintenance"];
+  read_api [label="Processing Read API\nStatus / hot+cold history / chart\nVALID model-matched windows"];
+  rag [label="RAG / LLM\nRetrieve approved knowledge\nBrief + checklist + citations"];
+  jobs [label="Business background job loops\nCùng Business Consumer runtime\nLease brief job / sync drift catalog"];
+  knowledge [shape=cylinder, fillcolor="#eae5f7", label="knowledge_db + manuals\nRAG-owned knowledge / pgvector"];
+  drift [label="Drift Worker · batch\nWindow + model-matched reference\nKhông tự retrain / promote"];
+  reports [shape=folder, fillcolor="#fff0ce", label="drift_db + S3 report manifests\nReport/checkpoint của Drift owner"];
+  model_data [shape=folder, fillcolor="#edf2f6", label="Approved data / release artifacts\nDataset / split / fitted bundle\nModel-matched drift reference"];
+  training [label="Training batch · ngoài online path\nApproved dataset → train / evaluate\nMLflow tracking + registry"];
+  release [label="Release được duyệt qua PR GitOps\nPin model bundle / image digest\nKhông tự promote từ raw hoặc drift"];
+
+  csv -> sensor [label="record được gán cho máy"];
+  sim_ui -> sensor [label="Control API; chỉ future generation"];
+  sensor -> ingress [label="HTTP + credential\nRetry giữ nguyên event/payload"];
+  ingress -> accepted [label="publish accepted"];
+  accepted -> sensor [label="Broker ACK qua Ingestion → HTTP 202\nChưa có kết quả ML / S3", style=dashed, constraint=false];
+  ingress -> rejected [label="malformed/envelope rejection\nACK rồi mới trả 400/422", color="#b57943"];
+  accepted -> keyed [label="cùng reading · poll/assignment"];
+  accepted -> telemetry [label="cùng reading"];
+  accepted -> storage [label="cùng Kafka receipt"];
+  rejected -> storage [label="rejected receipt", color="#b57943"];
+  worker -> inference [label="chỉ VALID: HTTP predict", dir=both];
+  worker -> pdb [label="fenced transaction\ninbox + outcome/history + outbox"];
+  pdb -> coordinator [label="DB COMMIT / verified duplicate", constraint=false];
+  coordinator -> accepted [label="commit next offset của safe prefix\nKhông vượt lower-offset hole", style=dashed, constraint=false];
+  pdb -> relay [label="oldest unpublished từng topic/key"];
+  relay -> results [label="publish"];
+  relay -> signals [label="publish nếu có"];
+  results -> prediction; signals -> alert;
+  telemetry -> bdb [label="latest telemetry + inbox"];
+  prediction -> bdb [label="CAS từng projection\nINVALID không xóa last valid prediction"];
+  alert -> bdb [label="business mutation + inbox"];
+  bdb -> api [label="NOTIFY chỉ giao sau transaction commit"];
+  api -> ui [label="REST snapshot / named SSE"];
+  ui -> api [label="query / alert actions / brief request", constraint=false];
+  storage -> raw [label="object + manifest verified\nrồi commit archive offset"];
+  results -> storage [label="optional outcome-archive-v1\nMặc định tắt", style=dashed, constraint=false];
+  pdb -> processed [label="owner archive/export + verify", style=dashed];
+  api -> read_api [label="internal HTTP query"];
+  read_api -> pdb [label="indexed SELECT", constraint=false];
+  read_api -> processed [label="verified archive query"];
+  api -> bdb [label="alert actions / enqueue brief job", constraint=false];
+  bdb -> jobs [label="claim durable brief job", style=dashed];
+  jobs -> rag [label="HTTP request / grounded result", dir=both];
+  rag -> knowledge [label="retrieval / ingestion kiến thức"];
+  jobs -> bdb [label="lưu brief / catalog qua owner transaction", style=dashed, constraint=false];
+  read_api -> drift [label="VALID window có lineage"];
+  model_data -> drift [label="matching reference"];
+  drift -> reports [label="persist report / checkpoint"];
+  reports -> jobs [label="đọc committed S3 report manifest\nkhông cross-DB SQL", style=dashed, constraint=false];
+  model_data -> training [label="approved dataset"];
+  training -> release [label="evaluation + versioned artifacts"];
+  release -> inference [label="release pin", style=dashed, constraint=false];
+  release -> model_data [label="bundle / reference / lineage", style=dashed, constraint=false];
+
+  note [shape=note, fillcolor="#fff5dd", color="#d8b566", fontsize=11,
+    label="Đường liền: dữ liệu chính. Nét đứt: ACK / tùy chọn / background / release.\lKeyed FIFO/handler/coordinator là MODULES trong MỘT Worker, SDK0.2 ĐÃ CÓ; APP CALLBACKS/HEALTH/IMAGE PENDING.\l3A / 3B / 3C độc lập; 3B / 6A / 6B là handlers trong MỘT Business Consumer.\lOffset500 chưa durable:501 xong vẫn không commit502. Rebalance phải fence cả SQL lẫn offset.\lOrdered dispatch từng topic/máy; late duplicate vật lý có thể đến muộn, không total order xuyên topic.\lAt-least-once + inbox/CAS. Sequence bền vững xuyên epoch; không dùng epoch string để sort.\lData flow là target, không runtime/E2E evidence; xem README.md và PROC-ORDER-01.\l"];
+  ui -> note [style=invis];
+}

@@ -107,7 +107,10 @@ class RuntimeObservability:
 
         @self.app.get("/metrics")
         async def metrics():
-            return Response(generate_latest(self.registry), media_type="text/plain; version=0.0.4")
+            return Response(
+                await asyncio.to_thread(generate_latest, self.registry),
+                media_type="text/plain; version=0.0.4",
+            )
 
     def record_database_failure(self, error):
         if isinstance(error, psycopg.errors.QueryCanceled):

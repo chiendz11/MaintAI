@@ -70,3 +70,47 @@ def test_invalid_digest_cannot_be_saved_in_conflict_audit(migrated_database):
         connection.execute("""INSERT INTO processing_conflicts
             (event_id,source_topic,source_partition,source_offset,existing_sha256,incoming_sha256)
             VALUES ('evt','sensor.readings',0,1,NULL,'fake')""")
+
+
+def test_ordering_schema_is_explicitly_disabled_and_activation_rejects_legacy(owner_database):
+    from maintai_messaging.errors import ConfigurationError
+    from maintai_messaging.ordering import activate_processing_ordering
+
+    owner_database.migrate()
+    with owner_database.factory() as connection:
+        assert (
+            connection.execute("SELECT enabled FROM maintai_processing_capabilities").fetchone()[
+                "enabled"
+            ]
+            is False
+        )
+        with pytest.raises(ConfigurationError):
+            activate_processing_ordering(connection)
+    with owner_database.factory() as connection:
+        connection.execute(
+            """INSERT INTO maintai_kafka_inbox
+            (consumer_group,topic,message_id,identity_sha256,source_partition,source_offset,schema_version)
+            VALUES ('old','sensor.readings','old-event',%s,0,1,'1.3.0')""",
+            ("1" * 64,),
+        )
+    with pytest.raises(ConfigurationError), owner_database.factory() as connection:
+        activate_processing_ordering(connection, legacy_writers_drained=True)
+    with owner_database.factory() as connection:
+        assert (
+            connection.execute("SELECT count(*) AS n FROM maintai_kafka_inbox").fetchone()["n"] == 1
+        )
+
+
+def test_startup_mode_gate_rejects_mixed_writers_after_activation(migrated_database):
+    from maintai_messaging.errors import ConfigurationError
+    from maintai_messaging.ordering import activate_processing_ordering
+    from processing.shared.persistence.connection import validate_execution_mode
+
+    with pytest.raises(ConfigurationError), migrated_database.factory() as connection:
+        validate_execution_mode(connection, ordered=True)
+    with migrated_database.factory() as connection:
+        activate_processing_ordering(connection, legacy_writers_drained=True)
+    with pytest.raises(ConfigurationError), migrated_database.factory() as connection:
+        validate_execution_mode(connection, ordered=False)
+    with migrated_database.factory() as connection:
+        validate_execution_mode(connection, ordered=True)

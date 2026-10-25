@@ -184,3 +184,17 @@ Export Parquet dùng record schema1.0.0 (nested outcome, ZSTD); CSV UTF-8 có he
 flatten scalar outcome fields, features/errors/risk nested thành JSON trong quoted
 columns. Export manifest giữ query/snapshot/schema và checksum các parts. Buckets
 versioning phải bật để ObjectRef có version_id thật; không dùng giả version/ETag.
+
+## 9. PROC-ORDER-01 — history khi outcomes hoàn thành song song
+
+Theo [quyết định concurrency/ordering](PROCESSING_CONCURRENCY_AND_ORDERING.md),
+Processing có thể hoàn tất máy B trước A dù A có Kafka offset thấp hơn. Lưu
+source sequence/locator và completed_at riêng, không dùng completion order làm
+source order hoặc thay history pagination cursor đã freeze. History vẫn giữ
+mọi logical outcome; unique identity ngăn duplicate receipt tạo bản ghi logic mới.
+
+Offset coordinator chỉ advance safe completed prefix sau DB durability; processed
+archive/retention vẫn cần verified membership riêng. Frontier chưa tiến không
+chứng minh các outcomes sau hole chưa có trong DB. Raw Storage giữ từng receipt
+và runner/microbatch hiện hành; không đổi batching hoặc bỏ archive theo UI
+coalescing. Ordered outbox không thay snapshot/manifest/watermark rules của HISTORY-01.

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 import random
 import threading
 import uuid
@@ -108,14 +109,27 @@ class TransactionalHandler:
 
 
 class OutboxRelay:
-    def __init__(self, connection_factory, publisher, *, lease_seconds=120, batch_size=10):
+    def __init__(
+        self,
+        connection_factory,
+        publisher,
+        *,
+        lease_seconds=120,
+        batch_size=10,
+        poll_interval_seconds=0.25,
+    ):
         self.connection_factory, self.publisher = connection_factory, publisher
         self.owner = str(uuid.uuid4())
-        if lease_seconds <= publisher.settings.delivery_timeout_ms / 1000:
+        if not math.isfinite(lease_seconds) or lease_seconds <= (
+            publisher.settings.delivery_timeout_ms / 1000
+        ):
             raise ValueError("Outbox lease must exceed the delivery timeout")
         if not 1 <= batch_size <= 100:
             raise ValueError("Outbox batch size must be between 1 and 100")
+        if not math.isfinite(poll_interval_seconds) or not 0.01 <= poll_interval_seconds <= 10:
+            raise ValueError("Outbox polling interval must be between 0.01 and 10 seconds")
         self.lease_seconds, self.batch_size = lease_seconds, batch_size
+        self.poll_interval_seconds = poll_interval_seconds
 
     def run_once(self):
         with self.connection_factory() as connection, connection.transaction():
@@ -151,29 +165,33 @@ class OutboxRelay:
 
     def _finish(self, row, success, delay):
         with self.connection_factory() as connection, connection.transaction():
-            updated = connection.execute(
-                """UPDATE maintai_kafka_outbox
+            self._finish_in_connection(connection, row, success, delay)
+
+    def _finish_in_connection(self, connection, row, success, delay):
+        """Allow the ordered relay to atomically finish its row AND key cursor."""
+        updated = connection.execute(
+            """UPDATE maintai_kafka_outbox
                    SET status=%s, published_at=CASE WHEN %s THEN clock_timestamp() ELSE NULL END,
                        next_attempt_at=clock_timestamp()+(%s * interval '1 second'),
                        lease_owner=NULL, lease_until=NULL, last_error=%s
                    WHERE topic=%s AND message_id=%s AND status='LEASED'
                      AND lease_owner=%s AND fencing_token=%s
                      AND lease_until>=clock_timestamp() RETURNING message_id""",
-                (
-                    "PUBLISHED" if success else "PENDING",
-                    success,
-                    delay,
-                    None if success else "PUBLISH_UNACKNOWLEDGED",
-                    row["topic"],
-                    row["message_id"],
-                    self.owner,
-                    row["fencing_token"],
-                ),
-            ).fetchone()
-            if updated is None:
-                raise LeaseLost("Outbox lease was lost; no stale acknowledgement recorded")
+            (
+                "PUBLISHED" if success else "PENDING",
+                success,
+                delay,
+                None if success else "PUBLISH_UNACKNOWLEDGED",
+                row["topic"],
+                row["message_id"],
+                self.owner,
+                row["fencing_token"],
+            ),
+        ).fetchone()
+        if updated is None:
+            raise LeaseLost("Outbox lease was lost; no stale acknowledgement recorded")
 
     def run(self, stop: threading.Event):
         while not stop.is_set():
             self.run_once()
-            stop.wait(0.25)
+            stop.wait(self.poll_interval_seconds)

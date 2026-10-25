@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import json
 import logging
+import os
 import signal
 import sys
 import threading
@@ -12,16 +13,24 @@ from concurrent.futures import TimeoutError as FutureTimeout
 import httpx
 from maintai_messaging.consumer import ConsumerRunner
 from maintai_messaging.contracts import default_contracts
+from maintai_messaging.keyed import KeyedConsumerRunner
+from maintai_messaging.metrics import ProcessingMetrics
 from maintai_messaging.postgres import connect
 from processing.shared.data_quality.machine_registry import HTTPMachineRegistry
 from processing.shared.inference_client.client import InferenceClient
+from processing.shared.persistence.connection import validate_execution_mode
 
 from .config import WorkerSettings
-from .handler import ProcessingHandler
+from .handler import KeyedProcessingHandler, ProcessingHandler
 from .observability import RuntimeObservability, monitor_dependencies, start_probe_server
 
 
 async def run_worker(settings, stop, *, max_records=None):
+    def validate():
+        with connect(settings.database_url) as connection:
+            validate_execution_mode(connection, ordered=settings.execution_mode == "keyed")
+
+    await asyncio.to_thread(validate)
     observer = RuntimeObservability("worker", profile=settings.profile, stop=stop)
     server, probe_thread = start_probe_server(
         observer, settings.health_port, host=settings.health_host
@@ -80,6 +89,22 @@ async def run_worker(settings, stop, *, max_records=None):
                 validation_observer=observer.record_validation,
             )
 
+            def durable(event, record):
+                observer.records.labels("worker").inc()
+                logging.getLogger("maintai.processing").info(
+                    json.dumps(
+                        {
+                            "runtime": "processing-worker",
+                            "event_id": event.message_id,
+                            "correlation_id": event.payload["correlation_id"],
+                            "source_partition": record.partition,
+                            "source_offset": record.offset,
+                            "durable": True,
+                            "profile": settings.profile,
+                        }
+                    )
+                )
+
             def observed(event, record):
                 try:
                     receipt = handler(event, record)
@@ -102,7 +127,22 @@ async def run_worker(settings, stop, *, max_records=None):
                     observer.errors.labels("worker").inc()
                     raise
 
-            runner = ConsumerRunner(settings.kafka, "processing", observed, contracts=contracts)
+            if settings.execution_mode == "keyed":
+                keyed_handler = KeyedProcessingHandler(
+                    handler,
+                    on_receipt=durable,
+                    on_error=lambda: observer.errors.labels("worker").inc(),
+                )
+                runner = KeyedConsumerRunner(
+                    settings.kafka,
+                    "processing",
+                    keyed_handler,
+                    limits=settings.keyed_limits,
+                    metrics=ProcessingMetrics(observer.registry),
+                    contracts=contracts,
+                )
+            else:
+                runner = ConsumerRunner(settings.kafka, "processing", observed, contracts=contracts)
             await asyncio.to_thread(runner.run, stop, max_records=max_records)
     finally:
         stop.set()
@@ -117,12 +157,16 @@ def main(argv=None):
     parser = argparse.ArgumentParser(
         description=("Processing worker (local-fixture runtime; shared serving handoff pending)")
     )
-    parser.parse_args(argv)
+    parser.add_argument("--processing-mode", choices=["serial", "keyed"])
+    args = parser.parse_args(argv)
     stop = threading.Event()
     for signum in (signal.SIGINT, signal.SIGTERM):
         signal.signal(signum, lambda *_: stop.set())
     try:
-        settings = WorkerSettings.from_env()
+        env = dict(os.environ)
+        if args.processing_mode:
+            env["PROCESSING_EXECUTION_MODE"] = args.processing_mode
+        settings = WorkerSettings.from_env(env)
         logging.basicConfig(level=logging.INFO, format="%(message)s")
         asyncio.run(run_worker(settings, stop))
         return 0

@@ -67,3 +67,13 @@ def test_invalid_or_shared_fixture_configuration_is_rejected(worker_env, changes
     worker_env.update(changes)
     with pytest.raises(ValueError):
         WorkerSettings.from_env(worker_env)
+
+
+def test_keyed_limits_are_explicit_and_invalid_mode_fails(worker_env):
+    settings = WorkerSettings.from_env(
+        {**worker_env, "PROCESSING_EXECUTION_MODE": "keyed", "PROCESSING_MAX_ACTIVE_KEYS": "2"}
+    )
+    assert settings.execution_mode == "keyed"
+    assert settings.keyed_limits.max_active_keys == 2
+    with pytest.raises(ValueError):
+        WorkerSettings.from_env({**worker_env, "PROCESSING_EXECUTION_MODE": "pretend"})

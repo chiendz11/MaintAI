@@ -4,6 +4,8 @@ Revision ID: processing_0001
 Revises: None
 """
 
+import hashlib
+
 from alembic import op
 from maintai_messaging.contracts import default_contracts
 
@@ -15,10 +17,15 @@ depends_on = None
 
 def upgrade():
     contracts = default_contracts()
-    if contracts.bundle_version != "1.0.0":
-        raise RuntimeError("This revision requires frozen Kafka bundle 1.0.0")
+    sql = (contracts.directory / "migrations/001_messaging.sql").read_bytes()
+    # This historical schema remains byte-identical across bundle1.0/1.1.
+    if (
+        hashlib.sha256(sql).hexdigest()
+        != "12d2de438c1ebffb1169e19a777728d7b1953ee867101c90afcc09aa8ebea0f6"
+    ):
+        raise RuntimeError("Frozen SDK migration001 checksum differs")
     connection = op.get_bind()
-    connection.exec_driver_sql((contracts.directory / "migrations/001_messaging.sql").read_text())
+    connection.exec_driver_sql(sql.decode())
     connection.exec_driver_sql("""
         CREATE TABLE sensor_events (
             event_id TEXT PRIMARY KEY,

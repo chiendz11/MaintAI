@@ -3,7 +3,8 @@
 Phạm vi: app repo MaintAI và dependency giữa source, docs, contracts, CI.
 Không xóa dữ liệu local, .venv, credentials hoặc các repo platform bên cạnh.
 Lượt dọn2026-10-18 dùng target1.3.2; lượt nhập docs2026-10-19 dùng target1.4.
-Executable Sensor/Drift vẫn còn contract1.1, phần còn lại skeleton.
+Snapshot dọn19/10: Sensor/Drift còn contract1.1. Upgrade20/10: Sensor0.3.0 đã
+migrate ACK202/control; Drift giữ1.1. Xem Sensor README và readiness §15.
 
 ## 1. Placeholder đã xác nhận không dùng và đã xóa
 
@@ -43,22 +44,23 @@ chuyển nguyên bộ đặc tả ingestion đồng bộ cũ vào thư mục m�
 - Các ví dụ HTTP còn dùng ở `contracts/v1.3/examples/http/`; fixture manifest giữ
   các trường hợp provider/grounding/threshold/drift phù hợp. Validator kiểm tra
   mọi JSON example, từ chối orphan fixtures và references thoát khỏi bundle.
-- Sensor wire synchronous v1.1 giữ nguyên trong
-  `sensor/tests/fixtures/sensor-wire.schema.json`. Đây là frozen compatibility
-  fixture của module hiện có, không phải contract Ingestion ACK202 mục tiêu.
+- Fixture synchronous v1.1 từng được giữ khi dọn docs; upgrade Sensor0.3.0 đã gỡ
+  fixture này sau khi tests chuyển sang SensorRequest/IngestAck hiện hành.
 - Sensor/Drift test paths, README, AGENTS và CI đã chuyển sang các vị trí mới.
   Job `api-contracts` vẫn thuộc `CI / required`; không đổi branch protection.
 
 ## 4. Code và dữ liệu được giữ
 
-Không xóa hoặc đổi executable source Sensor/Drift, Dockerfile, scenarios,
-fixtures tích hợp, SQL loaders hoặc dữ liệu local. Sensor client hiện vẫn dùng
-synchronous v1.1; Drift direct-SQL adapter vẫn là implementation cũ. Chỉ đổi
-đường dẫn schema trong test code để chúng tiếp tục chạy sau khi dọn contracts.
+Trong lượt dọn19/10 không đổi executable source Sensor/Drift hoặc dữ liệu local;
+khi đó Sensor còn synchronous v1.1. Upgrade20/10 theo yêu cầu tiếp theo đã chuyển
+Sensor sang ACK202/control, giữ Drift direct-SQL adapter. Không xóa local data.
 
-13 runtime descriptors vẫn cùng target_contract_revision1.3.2; implementation_status
+Tại thời điểm dọn,13 runtime descriptors cùng target_contract_revision1.3.2; implementation_status
 vẫn skeleton/legacy_partial. Sensor/Drift có implemented_contract_revision1.1.0,
-phần chưa implement là null. Simulator UI vẫn planned-without-source.
+phần chưa implement là null. Simulator UI khi đó planned-without-source.
+Lượt implementation20/10 sau đó thêm React Simulator UI/client/demo và descriptor
+thứ14; sau đó Sensor0.3.0 bổ sung provider và local HTTP/browser evidence.
+Container/production rollout vẫn chưa verify.
 Việc dọn tài liệu không implement Kafka/SSE/control/history/archive, không thay
 DB ownership trong code và không triển khai thêm runtime.
 

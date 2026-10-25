@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "bundle_version": "1.0.0",
+  "bundle_version": "1.1.0",
   "target_design": "1.4.0",
   "sha256": {
     "kafka/archive/raw-manifest.schema.json": "e622f18d5b9f18f007fc0df7676f8217ebe4bf736fe8020f977b5471a7a8d407",
@@ -28,6 +28,8 @@
     "kafka/examples/sensor-request.json": "1ad8739d9fb9eb445d65882cf452b82fe0a57cbd7e2b81301e83092615944266",
     "kafka/examples/unavailable.json": "e4e3d785db264648456e3b079cce16edabc74340ebcca777a791509594ce61a6",
     "kafka/migrations/001_messaging.sql": "12d2de438c1ebffb1169e19a777728d7b1953ee867101c90afcc09aa8ebea0f6",
+    "kafka/migrations/002_processing_ordering.sql": "d7b51e993fa0c80b4ed79278be238c40900f56eae5a3c260cc94d589a2eb5522",
+    "kafka/releases/1.0.0.json": "911ddd0c216ff6fd1a0b3166b68ed8e84eb8b56e5adc2f8d294513931e033cc3",
     "kafka/topology.json": "b807d068e171247cc13fc469128dd533553fe9f66f4451749b62c9e5fc87de1b",
     "v1.3/events/alert-signal.schema.json": "ecb2a85f589b720c60c6ad583de49f1e1688ef5707463bfdb30e6ae29b36db7b",
     "v1.3/schemas/runtime.schema.json": "7699f9acca5cf93cb4aa465be21fbf5366330279b9d9ee18f1973e4aaa3d5254"

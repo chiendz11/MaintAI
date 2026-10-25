@@ -140,11 +140,38 @@ def test_http_to_terminal_outcomes_and_alert_signal_with_real_broker(
         registry_service = request.getfixturevalue("business_registry_service")
         env["BUSINESS_BASE_URL"] = registry_service.origin
         env["BUSINESS_BEARER_TOKEN"] = registry_service.token
+        env["PROCESSING_EXECUTION_MODE"] = "keyed"
+        from maintai_messaging.ordering import activate_processing_ordering
+
+        with pipeline_database.factory() as connection:
+            activate_processing_ordering(connection, legacy_writers_drained=True)
     settings = WorkerSettings.from_env(env)
     sample = json.loads((ROOT / "contracts/kafka/examples/sensor-request.json").read_text())
     expected = {}
     stop = threading.Event()
     try:
+        # A new test group starts at an explicit fixture boundary BEFORE these
+        # readings are published. Retained earlier test runs reuse source seq1..3
+        # and are not a valid ordered source. Never delete topics or reset a live group.
+        counter = Consumer(
+            kafka.consumer_config(contracts.topology["profiles"]["processing"]["group_id"])
+        )
+        try:
+            metadata = counter.list_topics("sensor.readings", timeout=5)
+            boundary = [
+                TopicPartition(
+                    "sensor.readings",
+                    partition,
+                    counter.get_watermark_offsets(
+                        TopicPartition("sensor.readings", partition), timeout=5
+                    )[1],
+                )
+                for partition in metadata.topics["sensor.readings"].partitions
+            ]
+            counter.assign(boundary)
+            counter.commit(offsets=boundary, asynchronous=False)
+        finally:
+            counter.close()
         ingestion = AppSettings.from_env(
             {
                 "INGESTION_ENV": "test",
@@ -179,19 +206,7 @@ def test_http_to_terminal_outcomes_and_alert_signal_with_real_broker(
                         ).status_code == 202
 
         asyncio.run(publish_http())
-        # Count retained receipts: rerunning the test must safely replay older
-        # valid fixture readings too, rather than deleting topics or skipping them.
-        counter = Consumer(kafka.consumer_config("counter-" + uuid4().hex))
-        try:
-            metadata = counter.list_topics("sensor.readings", timeout=5)
-            total = sum(
-                counter.get_watermark_offsets(
-                    TopicPartition("sensor.readings", partition), timeout=5
-                )[1]
-                for partition in metadata.topics["sensor.readings"].partitions
-            )
-        finally:
-            counter.close()
+        total = len(expected)
 
         async def consume():
             task = asyncio.create_task(run_worker(settings, stop, max_records=total))
@@ -213,7 +228,11 @@ def test_http_to_terminal_outcomes_and_alert_signal_with_real_broker(
             row["event_id"]: row["kind"] for row in rows if row["event_id"] in expected
         } == expected
         with KafkaPublisher(kafka, "outbox") as publisher:
-            relay = create_relay(pipeline_database.factory, publisher)
+            relay = create_relay(
+                pipeline_database.factory,
+                publisher,
+                mode="ordered" if stop_during_inference else "legacy",
+            )
             while relay.run_once():
                 pass
         output = Consumer(kafka.consumer_config("output-" + uuid4().hex))

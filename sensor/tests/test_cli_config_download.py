@@ -95,7 +95,7 @@ def test_cli_dry_run_and_json_logs(sample_csv, tmp_path, validator):
     logs = [json.loads(line) for line in result.stderr.splitlines()]
     assert logs[-1]["event"] == "replay_completed"
     assert logs[-1]["generated"] == 2
-    assert "maintai_simulator_generated_total 2" in metrics.read_text()
+    assert "maintai_replay_generated_total 2" in metrics.read_text()
 
 
 @pytest.mark.parametrize(
@@ -112,6 +112,7 @@ def test_cli_against_real_mock_http_backend(
     fault,
     expected_requests,
     expected_predictions,
+    tmp_path,
 ):
     url, backend = http_backend
     result = subprocess.run(
@@ -127,7 +128,14 @@ def test_cli_against_real_mock_http_backend(
             "--limit",
             "2",
             "--interval-ms",
-            "0",
+            "1",
+            "--machine-count",
+            "1",
+            "--state-path",
+            str(tmp_path / "state.sqlite3"),
+            "--local-anonymous",
+            "--ingestion-auth",
+            "none",
             "--fault-mode",
             fault,
         ],
@@ -179,3 +187,67 @@ def test_download_verifies_checksum_and_preserves_existing_file(tmp_path, monkey
     with pytest.raises(ValueError, match="checksum mismatch"):
         download.download_dataset(path, force=True)
     assert path.read_bytes() == data
+
+
+def test_serve_entrypoint_http_and_restart_receipt(sample_csv, http_backend, tmp_path):
+    import socket
+    import time
+
+    import httpx
+
+    url, _ = http_backend
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        port = listener.getsockname()[1]
+    command = [
+        sys.executable,
+        "-m",
+        "simulator",
+        "serve",
+        "--dataset",
+        str(sample_csv),
+        "--backend-url",
+        url,
+        "--port",
+        str(port),
+        "--state-path",
+        str(tmp_path / "state.sqlite3"),
+        "--local-anonymous",
+        "--ingestion-auth",
+        "none",
+    ]
+    origin = f"http://127.0.0.1:{port}"
+    response = None
+    for attempt in range(2):
+        process = subprocess.Popen(
+            command, env=clean_env(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        try:
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline:
+                try:
+                    if httpx.get(origin + "/health/ready", timeout=0.3).status_code == 200:
+                        break
+                except httpx.RequestError:
+                    pass
+                time.sleep(0.03)
+            else:
+                pytest.fail("Sensor CLI did not become ready")
+            result = httpx.post(
+                origin + "/api/v1/simulator/machines/M-001/pause",
+                headers={"Idempotency-Key": "persistent-command"},
+                json={"expected_control_version": 0},
+            )
+            assert result.status_code == 200
+            if attempt == 0:
+                response = result.json()
+            else:
+                assert result.json() == response
+            assert result.json()["stream_state"] == "PAUSED"
+        finally:
+            process.terminate()
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)

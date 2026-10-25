@@ -35,13 +35,12 @@ class ReplayStats:
     def prometheus_text(self) -> str:
         # Batch text artifact; no HTTP daemon and no event/machine ID metric labels.
         lines = [
-            "# HELP maintai_simulator_deliveries_total Logical deliveries, excluding retries.",
-            "# TYPE maintai_simulator_deliveries_total counter",
+            "# HELP maintai_replay_deliveries_total Logical deliveries, excluding retries.",
+            "# TYPE maintai_replay_deliveries_total counter",
         ]
         for outcome in ("accepted", "rejected", "failed"):
             lines.append(
-                f'maintai_simulator_deliveries_total{{outcome="{outcome}"}} '
-                f"{getattr(self, outcome)}"
+                f'maintai_replay_deliveries_total{{outcome="{outcome}"}} {getattr(self, outcome)}'
             )
         for name in (
             "generated",
@@ -52,8 +51,8 @@ class ReplayStats:
         ):
             lines.extend(
                 [
-                    f"# TYPE maintai_simulator_{name}_total counter",
-                    f"maintai_simulator_{name}_total {getattr(self, name)}",
+                    f"# TYPE maintai_replay_{name}_total counter",
+                    f"maintai_replay_{name}_total {getattr(self, name)}",
                 ]
             )
         return "\n".join(lines) + "\n"

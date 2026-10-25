@@ -3,7 +3,6 @@ import shutil
 from dataclasses import replace
 
 import pytest
-
 from maintai_messaging.config import KafkaSettings
 from maintai_messaging.contracts import canonical_json, strict_json
 from maintai_messaging.errors import ConfigurationError, ContractViolation, PublishUncertain

@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "image_group": "mlflow",
+  "source_repository": "chiendz11/MaintAI",
+  "publisher_workflow": "maintai-publish.yml",
+  "dockerfile": "ml-service/mlflow/Dockerfile",
+  "build_context": "ml-service/mlflow",
+  "mlflow_version": null,
+  "base_image": null,
+  "compatibility_reviewed": false,
+  "note": "Pin the reviewed upstream server patch/image digest and validate the SDK/dependency/flag pair before publication. Null blocks publication; no production image is fabricated."
+}
