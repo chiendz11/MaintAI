@@ -55,7 +55,7 @@ production publication bị chặn cho tới khi owner chốt và kiểm cặp S
 
 | Skeleton cũ | Skeleton hiện tại |
 | --- | --- |
-| `backend/sensor-ingestion/` | `ingestion-api/src/http_ingestion/` |
+| `backend/sensor-ingestion/` | `ingestion-api/src/maintai_ingestion/` (implementation M1; placeholder `http_ingestion/` đã dọn) |
 | `backend/data-quality/` | `processing/shared/data_quality/` |
 | `backend/inference-client/` | `processing/shared/inference_client/` |
 | `backend/risk-decision-engine/` | `processing/shared/risk_engine/` |
@@ -133,4 +133,10 @@ bundle pin review trước enable. Readiness §18 và Plan §K ghi source gaps.
 chỉ các thư mục `.gitkeep`. Entry point `maintai-ingestion`, runtime/dev locks,
 Dockerfile và tests đã thêm; metadata ghi local implementation, chưa deploy.
 HTTP Ingestion1.4.0 có health/metrics/error adaptation, các API khác giữ1.3.2.
-Không thay Kafka bundle hoặc Sensor legacy client trong M1.
+M1 dùng gateway/envelope/Kafka publisher của SDK `messaging/`, không nhân bản SDK
+vào các module rỗng. Lượt chuẩn hóa OBS-01 ngày2026-10-25 dọn bốn placeholder
+`http_ingestion/`, `envelope/`, `kafka_producer/`, `observability/` dưới Ingestion
+`src/`; HTTP/auth/guards/metrics thực thi ở package trên. SDK0.2.0/bundle1.1.0
+được pin từ lượt cập nhật ordering trước đó; cleanup này không đổi wire/bundle.
+Sensor0.3.0 đã có ACK202 client riêng. Local tests và image smoke không thay
+nghiệm thu shared OIDC/TLS/ACL, k3d hoặc đo tải; xem [runbook M1](../ingestion-api/README.md).

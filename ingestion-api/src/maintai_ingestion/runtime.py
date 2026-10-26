@@ -98,6 +98,7 @@ def build_runtime(settings, *, publisher_factory=None, verifier=None, probe=None
                 fetch_jwks=jwks_fetcher(settings.jwks_url, settings.jwks_timeout),
                 cache_seconds=settings.jwks_cache,
                 lock_timeout=settings.jwks_timeout,
+                observability=obs,
             )
     if probe is None:
         probe = KafkaReadinessProbe(settings.kafka, settings.probe_timeout)

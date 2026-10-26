@@ -5,11 +5,11 @@
   "runtime_id": "processing-outbox-relay",
   "workload_kind": "Deployment",
   "code_owner": "processing",
-  "implementation_status": "skeleton",
+  "implementation_status": "implemented_local_fixture",
   "image_group": "processing",
   "image_digest": null,
-  "entrypoint_status": "not_implemented_for_v1.3.2",
-  "purpose": "Publish Processing outbox via opt-in ordered topic/machine heads. SDK0.2.0 has durable key cursors and fenced ACK progression; image/health/deployment remain pending.",
+  "entrypoint_status": "implemented_m2_local_fixture_with_ordering_opt_in",
+  "purpose": "Publish durable Processing outbox sang Kafka rồi đánh dấu kết quả publish.",
   "source_paths": [
     "processing/outbox-relay/src",
     "processing/shared",
@@ -21,16 +21,24 @@
     "inference.results",
     "alert.signals"
   ],
-  "interfaces": [],
+  "interfaces": [
+    "GET /health/live",
+    "GET /health/ready",
+    "GET /metrics"
+  ],
   "boundaries": [
+    "Separate relay runtime, same Processing owner/database.",
+    "Delivery at least once with SDK leases/fencing; downstream dedupe remains required.",
+    "Local fixture evidence does not authorize shared cutover or GitOps deployment.",
     "Target PROC-ORDER-01/1.0.0: head retry/unknown ACK blocks successors of the same topic/machine; other keys may progress.",
     "Ordered mode requires explicit migration002 and activation; legacy writers/relays are rejected by the active DB gate.",
     "At-least-once delivery, late physical duplicates and cross-topic reordering still require consumer inbox/CAS.",
-    "Use processing/src/maintai_processing/outbox_relay.py; placeholder image is not buildable/runnable."
+    "Ordering requires explicit owner migration/activation after drain; no automatic legacy cursor bootstrap."
   ],
   "dockerfile": "processing/outbox-relay/Dockerfile",
-  "dockerfile_status": "placeholder",
-  "implemented_contract_revision": null,
+  "dockerfile_status": "implemented",
+  "implemented_contract_revision": "1.4.0",
+  "implemented_scope": "Owner DQ/registry/ML/risk/history with SDK0.2 keyed processing and ordered relay opt-in, validated locally with fixture ML/identity/policy; shared/provider/load/deployment acceptance remains pending.",
   "transport_implementation": {
     "package": "maintai-processing",
     "version": "0.1.0",
