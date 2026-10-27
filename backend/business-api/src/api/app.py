@@ -5,10 +5,13 @@ import logging
 import time
 from contextlib import asynccontextmanager
 from importlib.metadata import version
+from typing import Literal
 from uuid import uuid4
 
 import psycopg
-from fastapi import FastAPI, Request
+from backend.shared.projections.views import MachineViewUnavailable
+from fastapi import FastAPI, Query, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from prometheus_client import generate_latest
 
@@ -30,6 +33,7 @@ def create_app(repository, verifier, *, status_client=None, projections=None):
     app.state.metrics = metrics
     app.state.implementation_scope = {
         "registry": True,
+        "fleet_detail": projections is not None,
         "live": projections is not None,
         "status": status_client is not None,
     }
@@ -99,6 +103,36 @@ def create_app(repository, verifier, *, status_client=None, projections=None):
             headers={"WWW-Authenticate": "Bearer"} if exc.status == 401 else None,
         )
 
+    @app.exception_handler(RequestValidationError)
+    async def invalid_query(request: Request, exc: RequestValidationError):
+        return await failure(request, RegistryFailure(422, "VALIDATION_FAILED"))
+
+    def read_identity(request):
+        try:
+            return verifier.verify(request.headers.get("Authorization"))
+        except RegistryFailure as exc:
+            if exc.status == 503:
+                request.state.failed_dependency = "oidc"
+            raise
+
+    @app.get("/api/v1/machines")
+    def fleet(
+        request: Request,
+        state: Literal["NORMAL", "WATCH", "HIGH", "CRITICAL", "INVALID", "UNKNOWN"] | None = None,
+        limit: int = Query(50, ge=1, le=200),
+        offset: int = Query(0, ge=0),
+    ):
+        identity = read_identity(request)
+        if projections is None:
+            raise RegistryFailure(503, "DEPENDENCY_UNAVAILABLE")
+        try:
+            return projections.fleet(identity.machines, state=state, limit=limit, offset=offset)
+        except MachineViewUnavailable:
+            raise RegistryFailure(503, "DEPENDENCY_UNAVAILABLE") from None
+        except (psycopg.Error, ValueError):
+            request.state.failed_dependency = "business_db"
+            raise RegistryFailure(503, "DEPENDENCY_UNAVAILABLE") from None
+
     @app.get("/api/v1/machines/{machine_id:path}")
     def machine(machine_id: str, request: Request):
         # Inspect the raw fixed suffix before decoded opaque IDs. A detail ID ending
@@ -110,21 +144,21 @@ def create_app(repository, verifier, *, status_client=None, projections=None):
         if is_live:
             machine_id = machine_id[:-5]
             request.state.metric_route = "/api/v1/machines/{machine_id}/live"
-        try:
-            identity = verifier.verify(request.headers.get("Authorization"))
-        except RegistryFailure as exc:
-            if exc.status == 503:
-                request.state.failed_dependency = "oidc"
-            raise
+        identity = read_identity(request)
         identity.authorize(machine_id)
         try:
-            row = projections.live(machine_id) if is_live else repository.get(machine_id)
+            if projections is not None:
+                row = projections.live(machine_id) if is_live else projections.detail(machine_id)
+            else:
+                row = repository.get(machine_id)
+        except MachineViewUnavailable:
+            raise RegistryFailure(503, "DEPENDENCY_UNAVAILABLE") from None
         except (psycopg.Error, ValueError):
             request.state.failed_dependency = "business_db"
             raise RegistryFailure(503, "DEPENDENCY_UNAVAILABLE") from None
         if row is None:
             raise RegistryFailure(404, "MACHINE_NOT_FOUND")
-        if is_live:
+        if projections is not None:
             return row
         return {
             "machine_id": row["machine_id"],

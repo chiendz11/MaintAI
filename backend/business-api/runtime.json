@@ -5,10 +5,10 @@
   "runtime_id": "business-api",
   "workload_kind": "Deployment",
   "code_owner": "business-backend",
-  "implementation_status": "partial_registry_live_status_facade",
+  "implementation_status": "partial_machine_reads_live_status_facade",
   "image_group": "business-backend",
   "image_digest": null,
-  "entrypoint_status": "implemented_registry_live_status",
+  "entrypoint_status": "implemented_machine_reads_live_status",
   "purpose": "Business REST/SSE, RBAC, machine/alert/feedback/brief actions, Processing history facade, enqueue/poll jobs; no Simulator Control facade.",
   "source_paths": [
     "backend/business-api/src",
@@ -19,7 +19,8 @@
   "kafka_subscriptions": [],
   "kafka_publications": [],
   "interfaces": [
-    "Scoped registry/live REST",
+    "Scoped Fleet/MachineDetail REST (requires Alert read source)",
+    "Three-axis live REST",
     "Processing event status HTTP facade",
     "Health/metrics HTTP"
   ],
@@ -31,7 +32,7 @@
   "dockerfile": "backend/business-api/Dockerfile",
   "dockerfile_status": "implemented",
   "implemented_contract_revision": "1.3.2",
-  "implemented_scope": "Scoped registry lookup, three-axis live snapshots, internal Processing status HTTP facade with separate service identity, HTTP/probes/metrics; Fleet and MachineDetail projection compatibility, Alert/SSE/history/shared acceptance remain incomplete.",
+  "implemented_scope": "Scoped Fleet/MachineDetail readers with consistent projections and explicit 503 when Alert read source or required legacy risk is missing; three-axis live snapshots, Processing status HTTP facade with separate service identity, HTTP/probes/metrics. Alert source/lifecycle, legacy Fleet risk mapping, SSE/history/shared acceptance remain incomplete.",
   "planned_interfaces": [
     "Frontend SSE",
     "Business durable job state",

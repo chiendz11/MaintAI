@@ -330,6 +330,11 @@ def test_installed_status_live_consumer_two_db_roles_and_sigterm(business_databa
             assert value["latest_processing"]["processing_status"] == "COMPLETED"
             assert value["latest_valid_prediction"]["source_event_id"] == request["event_id"]
             assert value["telemetry"]["event_id"] == request["event_id"]
+            # Alert storage belongs to a later phase: never fake zero active alerts.
+            for resource in ("", "/M-001"):
+                unavailable = http.get(api_url + "/api/v1/machines" + resource, headers=viewer)
+                assert unavailable.status_code == 503
+                assert unavailable.json()["error"]["code"] == "DEPENDENCY_UNAVAILABLE"
             assert (
                 http.get(api_url + "/api/v1/machines/M-001/live", headers=headers).status_code
                 == 403

@@ -24,6 +24,15 @@ class Registry:
 
 
 class Projections:
+    def detail(self, machine_id):
+        return {
+            **Registry().get(machine_id),
+            "data_status": None,
+            "latest_sensor": None,
+            "latest_prediction": None,
+            "active_alerts": [],
+        }
+
     def live(self, machine_id):
         if machine_id == "missing":
             return None

@@ -80,5 +80,10 @@ gateway ACK, Worker callback/Relay và HTTP status/live. Worker ML/provenance/po
 là fixtures; đây không phải nghiệm thu provider production hoặc outer Ingestion HTTP.
 Các container app/DB/roles test được dọn sau mỗi case; volumes broker giữ riêng.
 
-Alert lifecycle/jobs, notifications/SSE và Fleet chưa được triển khai. Full
-history/archive/export thuộc Processing interfaces khác với status API.
+Fleet/MachineDetail readers nằm trong `shared/persistence/projections.py`; chúng
+không thay đổi các snapshots mà Consumer ghi. Nguồn đọc Alert chưa được nối vào
+runtime; Fleet/Detail báo503 khi cần nguồn này, không tạo dữ liệu rỗng thay thế.
+Tests `test_machine_reads.py` kiểm SQL scope/state/pagination, DTO và snapshot nhất
+quán bằng PostgreSQL thật cùng nguồn Alert fixture. Alert lifecycle/jobs và
+notifications/SSE chưa được triển khai. Full history/archive/export thuộc
+Processing interfaces khác với status API.
