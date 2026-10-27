@@ -633,7 +633,7 @@ jobs:
         run: |
           ruff check processing backend
           ruff format --check processing backend
-          python -m pytest --import-mode=importlib processing/worker/tests processing/outbox-relay/tests processing/tests backend/business-api/tests -m 'not integration'
+          python -m pytest --import-mode=importlib processing/worker/tests processing/outbox-relay/tests processing/read-api/tests processing/tests backend/business-api/tests backend/business-consumer/tests -m 'not integration'
           python -m pip check
           python -m build processing --wheel --outdir /tmp/m2-wheels
           python -m build backend --wheel --outdir /tmp/m2-wheels
@@ -648,6 +648,9 @@ jobs:
       MAINTAI_M2_INTEGRATION: '1'
       MAINTAI_M2_CONTAINER_TEST: '1'
       MAINTAI_M2_DATABASE_URL: postgresql://maintai_test:maintai_test@127.0.0.1:35432/maintai_processing_test
+      MAINTAI_M3_INTEGRATION: '1'
+      MAINTAI_M3_CONTAINER_TEST: '1'
+      MAINTAI_M3_DATABASE_URL: postgresql://maintai_test:maintai_test@127.0.0.1:35432/maintai_processing_test
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
@@ -669,8 +672,10 @@ jobs:
           docker build -f processing/worker/Dockerfile -t maintai-processing-worker:m2-local .
           docker build -f processing/outbox-relay/Dockerfile -t maintai-processing-relay:m2-local .
           docker build -f backend/business-api/Dockerfile -t maintai-business-registry:m2-local .
+          docker build -f processing/read-api/Dockerfile -t maintai-processing-read-api:m3-local .
+          docker build -f backend/business-consumer/Dockerfile -t maintai-business-consumer:m3-local .
       - name: Verify migrations permissions transactions replay and pipeline
-        run: python -m pytest --import-mode=importlib processing/worker/tests processing/outbox-relay/tests processing/tests backend/business-api/tests -m integration
+        run: python -m pytest --import-mode=importlib processing/worker/tests processing/outbox-relay/tests processing/read-api/tests processing/tests backend/business-api/tests backend/business-consumer/tests -m integration
       - name: Stop isolated M2 dependencies
         if: ${{ always() }}
         run: docker compose -f processing/worker/tests/compose.yaml down

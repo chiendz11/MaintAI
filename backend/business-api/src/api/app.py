@@ -1,22 +1,43 @@
-"""M2.R GET machine boundary; no projections, mutations, Alert, SSE or ML."""
+"""Business registry/live reads and the Processing status HTTP facade."""
 
+import asyncio
 import logging
+import time
+from contextlib import asynccontextmanager
 from importlib.metadata import version
 from uuid import uuid4
 
 import psycopg
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
+from prometheus_client import generate_latest
 
 from .auth import RegistryFailure
+from .observability import Metrics
 
 
-def create_app(repository, verifier):
-    app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
-    app.state.implementation_scope = "registry_lookup_only"
+def create_app(repository, verifier, *, status_client=None, projections=None):
+    @asynccontextmanager
+    async def lifespan(app):
+        try:
+            yield
+        finally:
+            if status_client is not None:
+                await status_client.aclose()
+
+    app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
+    metrics = Metrics()
+    app.state.metrics = metrics
+    app.state.implementation_scope = {
+        "registry": True,
+        "live": projections is not None,
+        "status": status_client is not None,
+    }
 
     @app.middleware("http")
     async def tracing(request, call_next):
+        started, status_code = time.perf_counter(), "UNHANDLED"
+
         def trace(name, prefix):
             value = request.headers.get(name, "")
             return (
@@ -27,25 +48,48 @@ def create_app(repository, verifier):
 
         request.state.request_id = trace("X-Request-ID", "req_")
         request.state.correlation_id = trace("X-Correlation-ID", "cor_")
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+        finally:
+            if request.url.path not in {"/metrics", "/health/live", "/health/ready"}:
+                route = request.scope.get("route")
+                try:
+                    template = getattr(
+                        request.state, "metric_route", getattr(route, "path", "__unmatched__")
+                    )
+                    metrics.http(
+                        template, request.method, status_code, time.perf_counter() - started
+                    )
+                except Exception:
+                    pass
         response.headers["X-Request-ID"] = request.state.request_id
         response.headers["X-Correlation-ID"] = request.state.correlation_id
-        logging.getLogger("maintai.business.registry").info(
-            "registry response status=%s request_id=%s correlation_id=%s",
-            response.status_code,
-            request.state.request_id,
-            request.state.correlation_id,
-        )
+        try:
+            logging.getLogger("maintai.business.registry").info(
+                "registry response status=%s request_id=%s correlation_id=%s",
+                response.status_code,
+                request.state.request_id,
+                request.state.correlation_id,
+            )
+        except Exception:
+            pass
         return response
 
     @app.exception_handler(RegistryFailure)
     async def failure(request: Request, exc: RegistryFailure):
+        dependency = getattr(request.state, "failed_dependency", None)
+        if dependency is not None and exc.status in {503, 504}:
+            try:
+                metrics.dependency(dependency)
+            except Exception:
+                pass
         return JSONResponse(
             {
                 "error": {
                     "code": exc.code,
                     "message": exc.code,
-                    "retryable": exc.status == 503,
+                    "retryable": exc.status in {503, 504} or exc.code == "EVENT_NOT_MATERIALIZED",
                     "details": {},
                     "request_id": request.state.request_id,
                     "correlation_id": request.state.correlation_id,
@@ -57,14 +101,31 @@ def create_app(repository, verifier):
 
     @app.get("/api/v1/machines/{machine_id:path}")
     def machine(machine_id: str, request: Request):
-        identity = verifier.verify(request.headers.get("Authorization"))
+        # Inspect the raw fixed suffix before decoded opaque IDs. A detail ID ending
+        # in /live must encode that slash; an actual live resource appends /live literally.
+        raw_path = request.scope.get("raw_path", request.url.path.encode()).split(b"?", 1)[0]
+        is_live = (
+            projections is not None and machine_id.endswith("/live") and raw_path.endswith(b"/live")
+        )
+        if is_live:
+            machine_id = machine_id[:-5]
+            request.state.metric_route = "/api/v1/machines/{machine_id}/live"
+        try:
+            identity = verifier.verify(request.headers.get("Authorization"))
+        except RegistryFailure as exc:
+            if exc.status == 503:
+                request.state.failed_dependency = "oidc"
+            raise
         identity.authorize(machine_id)
         try:
-            row = repository.get(machine_id)
-        except psycopg.Error:
+            row = projections.live(machine_id) if is_live else repository.get(machine_id)
+        except (psycopg.Error, ValueError):
+            request.state.failed_dependency = "business_db"
             raise RegistryFailure(503, "DEPENDENCY_UNAVAILABLE") from None
         if row is None:
             raise RegistryFailure(404, "MACHINE_NOT_FOUND")
+        if is_live:
+            return row
         return {
             "machine_id": row["machine_id"],
             "display_name": row["display_name"],
@@ -76,6 +137,28 @@ def create_app(repository, verifier):
             "active_alerts": [],
         }
 
+    @app.get("/api/v1/sensor-events/{event_id:path}/status")
+    async def status(event_id: str, request: Request):
+        try:
+            identity = await asyncio.to_thread(
+                verifier.verify,
+                request.headers.get("Authorization"),
+                allowed_roles={"VIEWER", "TECHNICIAN", "ADMIN", "SENSOR_SERVICE"},
+            )
+        except RegistryFailure as exc:
+            if exc.status == 503:
+                request.state.failed_dependency = "oidc"
+            raise
+        if status_client is None:
+            raise RegistryFailure(503, "DEPENDENCY_UNAVAILABLE")
+        value = await status_client.get(event_id, correlation_id=request.state.correlation_id)
+        identity.authorize(value["machine_id"])
+        return value
+
+    @app.get("/metrics")
+    def scrape():
+        return Response(generate_latest(metrics.registry), media_type="text/plain; version=0.0.4")
+
     @app.get("/health/live")
     def live():
         return {"status": "UP", "service": "backend", "version": version("maintai-business")}
@@ -83,7 +166,7 @@ def create_app(repository, verifier):
     @app.get("/health/ready")
     def ready():
         try:
-            database = repository.check()
+            database = projections.check() if projections is not None else repository.check()
         except psycopg.Error:
             database = False
         oidc = verifier.check()

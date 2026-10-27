@@ -5,10 +5,10 @@
   "runtime_id": "business-api",
   "workload_kind": "Deployment",
   "code_owner": "business-backend",
-  "implementation_status": "implemented_registry_only",
+  "implementation_status": "partial_registry_live_status_facade",
   "image_group": "business-backend",
   "image_digest": null,
-  "entrypoint_status": "implemented_m2r_registry_only",
+  "entrypoint_status": "implemented_registry_live_status",
   "purpose": "Business REST/SSE, RBAC, machine/alert/feedback/brief actions, Processing history facade, enqueue/poll jobs; no Simulator Control facade.",
   "source_paths": [
     "backend/business-api/src",
@@ -19,11 +19,9 @@
   "kafka_subscriptions": [],
   "kafka_publications": [],
   "interfaces": [
-    "Frontend REST/SSE",
-    "Processing read API",
-    "Business durable job state",
-    "Published drift report S3 objects",
-    "PG LISTEN/NOTIFY"
+    "Scoped registry/live REST",
+    "Processing event status HTTP facade",
+    "Health/metrics HTTP"
   ],
   "boundaries": [
     "Không consume Kafka trực tiếp để broadcast SSE; mỗi API replica nhận notification và đọc latest projections.",
@@ -33,5 +31,11 @@
   "dockerfile": "backend/business-api/Dockerfile",
   "dockerfile_status": "implemented",
   "implemented_contract_revision": "1.3.2",
-  "implemented_scope": "M2.R registry migration/provision and scoped GET machine only; projections/list/alerts/SSE/history and shared environment acceptance remain unimplemented/unvalidated."
+  "implemented_scope": "Scoped registry lookup, three-axis live snapshots, internal Processing status HTTP facade with separate service identity, HTTP/probes/metrics; Fleet and MachineDetail projection compatibility, Alert/SSE/history/shared acceptance remain incomplete.",
+  "planned_interfaces": [
+    "Frontend SSE",
+    "Business durable job state",
+    "Published drift report S3 objects",
+    "PG LISTEN/NOTIFY"
+  ]
 }

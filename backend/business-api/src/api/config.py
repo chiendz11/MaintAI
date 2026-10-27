@@ -23,6 +23,8 @@ class Settings:
     machines_claim: str
     host: str
     port: int
+    processing_read_url: str | None = None
+    processing_token_file: str | None = field(default=None, repr=False)
 
     @classmethod
     def from_env(cls, env=None):
@@ -65,4 +67,34 @@ class Settings:
                 raise ValueError("Local test issuer/JWKS must use loopback")
             if not local and url.scheme != "https":
                 raise ValueError("Shared OIDC requires HTTPS")
-        return cls(db, issuer, audience, jwks, roles, machines, host, port)
+        processing_url = env.get("BUSINESS_PROCESSING_READ_URL", "").strip()
+        processing_token = env.get("BUSINESS_PROCESSING_TOKEN_FILE", "").strip()
+        if bool(processing_url) != bool(processing_token):
+            raise ValueError("Processing status requires both service origin and credential file")
+        if processing_url:
+            url = urlparse(processing_url)
+            if (
+                not url.hostname
+                or url.username
+                or url.password
+                or url.query
+                or url.fragment
+                or url.scheme not in {"http", "https"}
+            ):
+                raise ValueError("Invalid Processing service origin")
+            if local and not loopback(url.hostname):
+                raise ValueError("Local test Processing origin must use loopback")
+            if not local and url.scheme != "https":
+                raise ValueError("Shared Processing service origin requires HTTPS")
+        return cls(
+            db,
+            issuer,
+            audience,
+            jwks,
+            roles,
+            machines,
+            host,
+            port,
+            processing_url or None,
+            processing_token or None,
+        )

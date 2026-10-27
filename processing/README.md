@@ -46,5 +46,6 @@ conflict fail closed. Offset coordinator không commit vượt lower-offset hole
 
 [Runbook/commands/tests](../docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md)
 ghi rõ explicit001/002 + activation sau drain. Initial legacy inbox cần reviewed
-cursor bootstrap; không xóa inbox để bật mode. Read API vẫn read-only/skeleton;
+cursor bootstrap; không xóa inbox để bật mode. [Read API](read-api/README.md) đã có
+internal status SELECT-only; history/chart/archive/export chưa triển khai;
 scheduler/coordinator không là deployment thứ tư.
