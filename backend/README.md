@@ -34,7 +34,7 @@ Kafka loops và transactional inbox dùng
 ## PROC-ORDER-01 — Business giữ projections/lifecycle độc lập
 
 [Decision §8](../docs/PROCESSING_CONCURRENCY_AND_ORDERING.md) áp keyed execution
-ở Processing; Business giữ serial role loops/inbox SDK0.2.0. Registry, projection
+ở Processing; Business giữ serial role loops/inbox SDK0.3.0. Registry, projection
 storage/callbacks, Consumer, live HTTP và status facade đã có. Fleet/MachineDetail
 đọc projections; thông tin Alert cần nguồn đọc cùng Business DB. Alert lifecycle
 chưa được triển khai, nên runtime chưa cấu hình nguồn này trả503 cho các máy cần đọc.
@@ -71,9 +71,9 @@ machine được yêu cầu. Chưa cấu hình hoặc trả thiếu dữ liệu:
 `active_alert_count=0` hay `active_alerts=[]`. Trang không có items vẫn trả200 và
 `total` đúng. Runtime hiện chưa nối nguồn Alert; tests dùng nguồn fixture riêng.
 
-Native outcome giữ nguyên risk đã ghi. Legacy không có risk không cản MachineDetail,
-nhưng Fleet có item ở trạng thái vận hành thiếu risk trả503 chờ mapping tương thích.
-Không tính lại risk trong GET. INVALID/FAILED/PENDING lần lượt hiển thị
+Outcome1.4.0 giữ nguyên risk đã ghi; SDK từ chối outcome2.0 trước callback.
+Không backfill legacy hoặc tính lại risk trong GET. Fleet thiếu risk đã lưu là
+lỗi dữ liệu và vẫn trả503; xem [quyết định cutover](../docs/OUTCOME_V1_4_MIGRATION.md). INVALID/FAILED/PENDING lần lượt hiển thị
 INVALID/UNKNOWN/UNKNOWN; Detail không trả prediction lịch sử như prediction hiện tại.
 `/live` giữ snapshot lịch sử độc lập. Khi Detail có `data_status=VALID`, telemetry
 chưa xác minh hoặc INVALID không được gắn nhãn VALID; `latest_sensor` trả null trong

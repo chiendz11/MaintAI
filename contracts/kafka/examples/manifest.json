@@ -33,19 +33,19 @@
       "valid": true
     },
     {
-      "file": "legacy-completed.json",
+      "file": "negative-legacy-completed.json",
       "topic": "inference.results",
-      "valid": true
+      "valid": false
     },
     {
-      "file": "legacy-invalid.json",
+      "file": "negative-legacy-invalid.json",
       "topic": "inference.results",
-      "valid": true
+      "valid": false
     },
     {
-      "file": "legacy-unavailable.json",
+      "file": "negative-legacy-unavailable.json",
       "topic": "inference.results",
-      "valid": true
+      "valid": false
     },
     {
       "file": "negative-invalid-with-prediction.json",

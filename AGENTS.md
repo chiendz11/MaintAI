@@ -25,13 +25,16 @@ Trước khi triển khai hoặc thay đổi một module:
 4. Xem JSON Schemas liên quan trong `contracts/v1.3/`; kiểm tra cả provider và consumer
    của interface trước khi sửa payload hoặc semantics.
 5. Với HTTP API, đọc `contracts/README.md`, `contracts/v1.3/README.md` (six target OpenAPIs + schemas/examples) và
-   `docs/api-contract-decisions.md`. Đây là baseline máy đọc được1.3.2, tự chứa toàn bộ
-   schema/example; không chứng minh đã có quarantine/provenance v1.4. Freeze schemas
+   `docs/api-contract-decisions.md`. API giữ các DTO baseline1.3.2; outcome/history
+   dùng schema Kafka1.4.0 qua local ref theo OUTCOME-14-ONLY. Các bộ schema phải
+   đi cùng nhau khi validate/package; không chứng minh mọi API đã lên v1.4. Freeze schemas
    và migration trước khi thay producer/consumer. Sensor tests dùng SensorRequest/IngestAck/Control DTO hiện hành; generated features
    vẫn kiểm allowlist sáu trường. Không phục hồi wire synchronous v1.1.
 6. Với Kafka, đọc `docs/KAFKA_DEVELOPMENT_GUIDE.md`, `contracts/kafka/README.md`
-   và `messaging/`. SDK0.2.0 + bundle1.1.0 writer outcome1.4.0 (`kind`), reader thêm
-   legacy2.0.0 (`result_kind`), không writer1.1.0. SHA lock và SQL immutable theo
+   và `messaging/`. SDK0.3.0 + bundle2.0.0 chỉ đọc/ghi outcome1.4.0 (`kind`);
+   đọc `docs/OUTCOME_V1_4_MIGRATION.md` (OUTCOME-14-ONLY). Không reader legacy2.0,
+   không suy risk từ probability hoặc backfill legacy. Business giữ risk gốc;
+   event cũ bị từ chối trước callback/commit. SHA lock và SQL immutable theo
    bundle; bump bundle khi đổi. Không biến callback skeleton thành success giả.
 7. Processing/Outbox đọc `docs/PROCESSING_CONCURRENCY_AND_ORDERING.md`, Contracts
    §42, Guide §53 và `docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md`. SDK đã

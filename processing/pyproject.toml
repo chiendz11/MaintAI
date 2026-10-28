@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "MaintAI Processing components in the existing owner skeleton"
 requires-python = ">=3.11"
 dependencies = [
-  "jsonschema>=4.23,<5", "maintai-messaging[postgres,observability]==0.2.0",
+  "jsonschema>=4.23,<5", "maintai-messaging[postgres,observability]==0.3.0",
   "httpx>=0.28,<1", "pydantic>=2.10,<3", "alembic>=1.14,<2",
   "fastapi>=0.115,<1", "uvicorn>=0.30,<1", "prometheus-client>=0.21,<1",
   "PyJWT[crypto]>=2.10,<3",

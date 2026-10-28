@@ -78,7 +78,9 @@ class Projector:
         elif event.topic == "inference.results":
             metadata = {
                 "result_id": event.message_id,
-                "risk_score": payload.get("risk_score"),
+                "risk_score": payload["risk_score"]
+                if event.kind == "PREDICTION_COMPLETED"
+                else None,
                 "machine_state": payload.get("machine_state"),
             }
             status = {
@@ -86,11 +88,7 @@ class Projector:
                 "processing_status": payload["processing_status"],
                 "validation_status": payload["validation_status"],
                 "updated_at": payload["occurred_at"],
-                "failure_code": (
-                    payload.get("failure_code")
-                    if event.legacy
-                    else payload.get("failure", {}).get("code")
-                ),
+                "failure_code": payload.get("failure", {}).get("code"),
             }
             self._put(connection, event, rows, "latest_processing", status, metadata=metadata)
             telemetry = rows["latest_telemetry"]

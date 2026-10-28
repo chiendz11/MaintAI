@@ -2648,30 +2648,18 @@ Ghi DB chỉ để phục vụ REST recovery/read model, **không phải điều
 4. `alert_handler` nhận `alert.signals`; inbox+dedupe/cooldown trong Business transaction -> alert row/history; notification -> `alert.created/updated`. Alert không tự đóng khi gặp reading NORMAL mới; RAG nằm ngoài alert path.
 5. API SSE không phải Kafka consumer cùng group: projector dùng `business_db` + NOTIFY/pubsub để fan-out đến **mọi** API replicas; FE mở SSE trước REST snapshot rồi merge theo `sequence_number` bền vững theo máy cho từng trục telemetry/prediction/status. UI cũ/mới có thể có source_event khác.
 
-## 33.5. `inference.results` chứa terminal processing outcomes
+## 33.5. Kết quả Processing — đã thay bằng outcome1.4.0
 
-Để UI có thể biết record INVALID hoặc inference thất bại **mà không tạo topic mới**, tên topic `inference.results` được giữ theo quyết định v1.3 nhưng là **discriminated-union event**. `result_kind` bắt buộc:
+Định dạng union2.0.0/result_kind và ví dụ1.1.0 trước đây đã bị thay thế.
+Tất cả producer/consumer nghiệp vụ dùng [schema outcome1.4.0](../contracts/kafka/events/inference-result.schema.json)
+và [fixtures hiện hành](../contracts/kafka/examples/manifest.json), theo §35 và
+[OUTCOME-14-ONLY](OUTCOME_V1_4_MIGRATION.md). Không viết producer từ ví dụ cũ.
 
-```json
-{
-  "schema_version": "2.0.0",
-  "result_id": "res_evt_104",
-  "result_kind": "DATA_INVALID",
-  "source_event_id": "evt_104",
-  "machine_id": "M-001",
-  "stream_epoch": "run_20261017_a",
-  "sequence_number": 104,
-  "processing_status": "INVALID",
-  "validation_status": "INVALID",
-  "validation_errors": [{"field":"features.rotational_speed_rpm", "code":"OUT_OF_RANGE"}],
-  "prediction": null,
-  "model_version": null,
-  "source_server_accepted_at": "2026-10-17T05:00:04Z",
-  "occurred_at": "2026-10-17T05:00:04.200Z"
-}
-```
-
-`result_kind` enum: `PREDICTION_COMPLETED`, `DATA_INVALID`, `INFERENCE_UNAVAILABLE`. Kafka key = `machine_id`; `result_id` unique/immutable idempotency key; `source_event_id` references original sensor event. This v1.3.1 union uses major event schema version `2.0.0` because it changes the former single-shape v1.3 example, and consumers must accept the new version before producer cutover. Với `PREDICTION_COMPLETED` cần `validation_status=VALID`, `processing_status=COMPLETED` và prediction fields / model_version / policy_version theo §32.3; với hai trạng thái còn lại `prediction=null`, không có `prediction.completed` SSE. Failure result chỉ terminal sau retries được cấu hình; trạng thái in-progress có thể suy ra từ telemetry accepted+lag hoặc status API, không buộc emit từng PENDING event. Producer phát version `schema_version=1.1.0` cho union mới, cập nhật JSON Schema/consumers trước cutover.
+`kind` gồm PREDICTION_COMPLETED, DATA_INVALID, INFERENCE_UNAVAILABLE. Kafka key
+là machine_id; result_id là identity bất biến; event_id dẫn về sensor event.
+COMPLETED cần risk_score cùng model/policy/source provenance; hai outcome lỗi
+không có prediction/risk giả. Lỗi inference chỉ terminal sau retry được cấu hình;
+PENDING có thể suy từ telemetry/status API, không cần phát mỗi trạng thái trung gian.
 
 ## 33.6. Simulator UI riêng, Pause/Resume và scenario (amendment1.3.2)
 
@@ -2723,11 +2711,13 @@ Giữ nguyên: Ingestion Deployment riêng; DQ ở Processing Worker; Business k
 
 # 35. v1.4 — Kafka topics, HTTP status và quyền sở hữu
 
-**Wire freeze của repo:** [Kafka bundle1.1.0](../contracts/kafka/README.md) và
+**Wire freeze của repo:** [Kafka bundle2.0.0](../contracts/kafka/README.md) và
 [hướng dẫn tích hợp](KAFKA_DEVELOPMENT_GUIDE.md) là ánh xạ máy đọc được của mục
-này: accepted1.3.0, rejected1.4.0, outcome writer1.4.0 `kind`, legacy reader2.0.0
-`result_kind`, alert1.0.0. Các ví dụ inherited1.1.0/2.0.0 tại §33.5 không phải
-writer mới. Quarantine mặc định HASH_ONLY, key theo verified source identity.
+này: accepted1.3.0, rejected1.4.0, outcome reader/writer1.4.0 `kind`, alert1.0.0.
+[OUTCOME-14-ONLY](OUTCOME_V1_4_MIGRATION.md) bỏ reader2.0.0; Business giữ
+risk_score gốc của COMPLETED, không lấy probability bù risk. Ví dụ inherited
+ở §33.5 đã được thay bằng schema hiện hành. Quarantine mặc định HASH_ONLY,
+key theo verified source identity.
 SDK cung cấp transaction/transport, application callbacks và HTTP DTO migrations
 vẫn cần owner triển khai; không suy ra toàn v1.4 đã hoàn tất.
 

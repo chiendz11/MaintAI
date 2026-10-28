@@ -44,7 +44,7 @@ def test_native_fleet_preserves_risk_instead_of_using_probability():
     }
 
 
-def test_legacy_risk_blocks_only_fleet_not_machine_detail():
+def test_missing_persisted_risk_is_an_error_without_get_time_fallback():
     source = row(risk=None)
     with pytest.raises(MachineViewUnavailable):
         machine_item(source, [])

@@ -46,8 +46,7 @@
       "max_message_bytes": 1048576,
       "writer_version": "1.4.0",
       "reader_schemas": {
-        "1.4.0": "events/inference-result.schema.json",
-        "2.0.0": "events/legacy-outcome.schema.json"
+        "1.4.0": "events/inference-result.schema.json"
       },
       "publishers": [
         "outbox"
