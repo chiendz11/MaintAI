@@ -92,3 +92,31 @@ riêng cho Processing HTTP. Health/scrape không tính vào REST latency.
 Mỗi runtime có command riêng: `maintai-business-api`, `maintai-business-consumer`.
 Migrations/provisioning vẫn là owner operations riêng. Xem [Consumer](business-consumer/README.md)
 và [Processing status API](../processing/read-api/README.md) để cấu hình/checks.
+
+## SSE và PostgreSQL fan-out
+
+`GET /api/v1/events/stream` nhận optional machine_id, yêu cầu VIEWER/TECHNICIAN/ADMIN
+và machine scope. Browser dùng authenticated fetch; không đưa token vào query.
+Stream đóng khi JWT hết hạn; lỗi auth/scope/listener trước handshake dùng Error DTO.
+
+Mỗi API process có một LISTEN connection vào business_db. Consumer gọi pg_notify
+trong transaction inbox/projections, nên notification chỉ đến sau commit. Payload
+chỉ là version và hash machine ID; API đọc lại live snapshot và fan-out tới clients
+được cấp quyền. Không dùng Kafka group làm broadcast hoặc NOTIFY làm history.
+
+| Biến | Mặc định |
+| --- | --- |
+| BUSINESS_NOTIFY_CHANNEL | maintai_business_live_v1; API và Consumer phải khớp |
+| BUSINESS_SSE_MAX_CONNECTIONS | 128 mỗi API process |
+| BUSINESS_SSE_CONNECTION_BYTES | 2097152 pending bytes mỗi connection |
+| BUSINESS_SSE_TOTAL_BYTES | 8388608 pending bytes mỗi API process |
+
+Coalesce tối đa1update/giây/máy; heartbeat15s. Slow client/vượt budget hoặc listener
+mất kết nối sẽ đóng stream để client reconnect và REST resync. Không durable replay
+từ Last-Event-ID; notification mất được phục hồi từ snapshot. Listener connection
+phải nối thẳng PostgreSQL hoặc session pooling, không transaction-pooling LISTEN.
+
+SSE dùng ba event types theo schema hiện có; INVALID/FAILED giữ valid prediction
+lịch sử. Metrics OBS-01 có maintai_sse_connections và maintai_sse_resync_total;
+HTTP metrics đo handshake, không toàn thời lượng stream. SQL/role ownership giữ
+nguyên; chưa thêm Alert source, full history hoặc deployment manifests.

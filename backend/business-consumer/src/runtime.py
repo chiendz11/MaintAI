@@ -96,7 +96,14 @@ def serve(settings, *, stop=None, connection_factory=None):
         monitor_thread.start()
         # No keyed limits: Business retains the SDK serial runner for each role.
         serve_consumers(
-            settings.kafka, make_handlers(factory, settings.kafka, metrics=metrics), stop
+            settings.kafka,
+            make_handlers(
+                factory,
+                settings.kafka,
+                metrics=metrics,
+                notification_channel=settings.notification_channel,
+            ),
+            stop,
         )
         if failed.is_set():
             raise RuntimeError("Business Consumer management loop failed")

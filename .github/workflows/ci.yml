@@ -650,6 +650,8 @@ jobs:
       MAINTAI_M2_DATABASE_URL: postgresql://maintai_test:maintai_test@127.0.0.1:35432/maintai_processing_test
       MAINTAI_M3_INTEGRATION: '1'
       MAINTAI_M3_CONTAINER_TEST: '1'
+      MAINTAI_M4_INTEGRATION: '1'
+      MAINTAI_M4_CONTAINER_TEST: '1'
       MAINTAI_M3_DATABASE_URL: postgresql://maintai_test:maintai_test@127.0.0.1:35432/maintai_processing_test
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -679,6 +681,60 @@ jobs:
       - name: Stop isolated M2 dependencies
         if: ${{ always() }}
         run: docker compose -f processing/worker/tests/compose.yaml down
+
+  frontend-ci:
+    name: Main UI and realtime integration (test ML and issuer)
+    needs: structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      MAINTAI_M4_INTEGRATION: '1'
+      MAINTAI_M3_DATABASE_URL: postgresql://maintai_test:maintai_test@127.0.0.1:35432/maintai_processing_test
+      KAFKA_TEST_BOOTSTRAP_SERVERS: 127.0.0.1:39092
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.12'
+      - name: Install locked Business and Processing test providers
+        run: |
+          python -m pip install build==1.6.1 setuptools==84.0.0 wheel==0.48.0
+          python -m build --no-isolation messaging --wheel --outdir /tmp/m4-wheels
+          python -m pip install --no-deps /tmp/m4-wheels/maintai_messaging-0.3.0-py3-none-any.whl
+          python -m pip install --find-links /tmp/m4-wheels -r processing/requirements-dev.lock -r backend/requirements-dev.lock
+          python -m pip install --no-deps --no-build-isolation -e ./processing -e ./backend
+      - name: Check fixture source and install locked frontend
+        run: |
+          ruff check frontend/tests/provider --config backend/pyproject.toml
+          ruff format --check frontend/tests/provider --config backend/pyproject.toml
+          npm ci --ignore-scripts --prefix frontend
+      - name: Frontend source contracts and build
+        run: |
+          npm run check --prefix frontend
+          npm test --prefix frontend
+          npm run build --prefix frontend
+      - name: Start isolated browser integration dependencies
+        run: docker compose -p maintai-m4-ci -f processing/worker/tests/compose.yaml up -d --wait
+      - name: Browser PKCE real Kafka and two-owner database integration
+        run: |
+          cd frontend
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+          python tests/provider/verify_cleanup.py
+      - name: Build and verify independent Main UI container
+        run: |
+          docker build -f frontend/Dockerfile -t maintai-frontend:m4-local .
+          python3 .github/scripts/container_smoke.py ui --image maintai-frontend:m4-local
+      - name: Stop isolated browser dependencies
+        if: ${{ always() }}
+        run: docker compose -p maintai-m4-ci -f processing/worker/tests/compose.yaml down
 
   component-ci:
     name: Component CI (${{ matrix.component }})
@@ -739,6 +795,7 @@ jobs:
       - ingestion-integration
       - processing-ci
       - processing-integration
+      - frontend-ci
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

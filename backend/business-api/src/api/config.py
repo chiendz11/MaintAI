@@ -5,6 +5,8 @@ import os
 from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
+from business_sse.hub import SSESettings
+
 
 def loopback(host):
     try:
@@ -25,6 +27,7 @@ class Settings:
     port: int
     processing_read_url: str | None = None
     processing_token_file: str | None = field(default=None, repr=False)
+    sse: SSESettings = field(default_factory=SSESettings)
 
     @classmethod
     def from_env(cls, env=None):
@@ -97,4 +100,5 @@ class Settings:
             port,
             processing_url or None,
             processing_token or None,
+            SSESettings.from_env(env),
         )

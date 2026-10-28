@@ -6,6 +6,7 @@ import socket
 import subprocess
 import threading
 import time
+from contextlib import ExitStack
 from datetime import UTC, datetime
 from functools import partial
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -253,6 +254,26 @@ def test_installed_status_live_consumer_two_db_roles_and_sigterm(business_databa
         )
         for origin in (read_url, api_url, f"http://127.0.0.1:{consumer_port}"):
             wait_ready(origin)
+        second_api = None
+        if os.environ.get("MAINTAI_M4_CONTAINER_TEST") == "1":
+            second_port = free_port()
+            second_api = f"http://127.0.0.1:{second_port}"
+            launch(
+                "api2",
+                "maintai-business-registry:m2-local",
+                {
+                    "BUSINESS_PROFILE": "local-test",
+                    "BUSINESS_HOST": "127.0.0.1",
+                    "BUSINESS_PORT": second_port,
+                    "BUSINESS_DATABASE_URL": role_dsn("business", "api"),
+                    "BUSINESS_OIDC_ISSUER": issuer,
+                    "BUSINESS_OIDC_AUDIENCE": "business-test",
+                    "BUSINESS_OIDC_JWKS_URL": issuer + "/jwks",
+                    "BUSINESS_ROLES_CLAIM": "roles",
+                    "BUSINESS_MACHINES_CLAIM": "machines",
+                },
+            )
+            wait_ready(second_api)
 
         class Capture:
             def __init__(self, publisher):
@@ -293,7 +314,19 @@ def test_installed_status_live_consumer_two_db_roles_and_sigterm(business_databa
             "Authorization": "Bearer " + token("business-test", "SENSOR_SERVICE"),
             "X-Correlation-ID": "cor-m3",
         }
-        with httpx.Client(trust_env=False, timeout=4) as http:
+        with httpx.Client(trust_env=False, timeout=5) as http, ExitStack() as streams:
+            stream_responses = []
+            if second_api is not None:
+                for origin in (api_url, second_api):
+                    response = streams.enter_context(
+                        http.stream(
+                            "GET",
+                            origin + "/api/v1/events/stream?machine_id=M-001",
+                            headers={"Authorization": "Bearer " + token("business-test", "VIEWER")},
+                        )
+                    )
+                    assert response.status_code == 200
+                    stream_responses.append(response)
             initial = http.get(ack.body["status_url"], headers=headers)
             assert initial.status_code == 404
             assert initial.json()["error"]["retryable"] is True
@@ -308,6 +341,15 @@ def test_installed_status_live_consumer_two_db_roles_and_sigterm(business_databa
             # HIGH fixture emits both its canonical outcome and an Alert Signal.
             # M3 Business consumes only the outcome; Alert lifecycle remains separate.
             assert published == 2
+            for stream in stream_responses:
+                for line in stream.iter_lines():
+                    if line.startswith("data: "):
+                        message = json.loads(line[6:])
+                        if message["type"] == "prediction.completed":
+                            assert message["data"]["source_event_id"] == request["event_id"]
+                            break
+                else:
+                    pytest.fail("Installed API replica did not receive committed SSE prediction")
             with processing_factory() as connection:
                 rows = connection.execute(
                     "SELECT topic,status FROM maintai_kafka_outbox"
