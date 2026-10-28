@@ -19,8 +19,7 @@ pytestmark = pytest.mark.integration
 def event(name, seq=1, event_id=None, **changes):
     payload = json.loads((ROOT / f"contracts/kafka/examples/{name}.json").read_text())
     payload["sequence_number"] = seq
-    field = "source_event_id" if payload["schema_version"] == "2.0.0" else "event_id"
-    payload[field] = event_id or f"e-{seq}"
+    payload["event_id"] = event_id or f"e-{seq}"
     if "result_id" in payload:
         payload["result_id"] += f"-{seq}"
     payload.update(changes)
@@ -178,7 +177,7 @@ def test_conflicting_terminal_is_durable_evidence_and_not_a_receipt(business_dat
         assert conn.execute("SELECT count(*) AS n FROM maintai_kafka_inbox").fetchone()["n"] == 1
 
 
-def test_live_snapshot_matches_frozen_schema_for_native_and_legacy(business_database):
+def test_live_snapshot_matches_schema_for_all_native_outcomes(business_database):
     from jsonschema import Draft202012Validator, FormatChecker
     from referencing import Registry, Resource
 
@@ -197,9 +196,7 @@ def test_live_snapshot_matches_frozen_schema_for_native_and_legacy(business_data
         format_checker=FormatChecker(),
     )
     validator.validate(snapshot(db))
-    for seq, name in enumerate(
-        ("completed", "legacy-completed", "legacy-invalid", "legacy-unavailable"), 1
-    ):
+    for seq, name in enumerate(("completed", "completed", "invalid", "unavailable"), 1):
         deliver(db, projector, event(name, seq))
         deliver(db, projector, event("sensor-reading", seq))
         validator.validate(snapshot(db))
@@ -241,7 +238,7 @@ def test_read_role_cannot_write_and_consumer_cannot_delete(business_database):
                 conn.execute(sql.SQL("DROP ROLE {}").format(sql.Identifier(role)))
 
 
-def test_native_risk_is_retained_without_fabricating_missing_legacy_risk(business_database):
+def test_native_risk_is_retained_independently_of_probability(business_database):
     db = business_database
     projector = setup(db)
     deliver(db, projector, event("completed", 1))
@@ -252,13 +249,13 @@ def test_native_risk_is_retained_without_fabricating_missing_legacy_risk(busines
             "risk_score": 0.5,
             "machine_state": "HIGH",
         }
-    deliver(db, projector, event("legacy-completed", 2))
+    deliver(db, projector, event("completed", 2, risk_score=0.25))
     with db.factory() as conn:
         row = conn.execute("SELECT metadata FROM latest_valid_prediction").fetchone()
         assert json.loads(bytes(row["metadata"])) == {
             "result_id": "res_fixture_1-2",
-            "risk_score": None,
-            "machine_state": "NORMAL",
+            "risk_score": 0.25,
+            "machine_state": "HIGH",
         }
 
 

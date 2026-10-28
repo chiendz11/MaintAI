@@ -38,9 +38,11 @@ không bị ghi đè thành PENDING. INVALID/FAILED không xóa prediction hợp
 Source cùng sequence nhưng khác event/epoch hoặc terminal có nội dung mâu thuẫn
 là conflict, kể cả khi các bảng latest đã chuyển sang event khác.
 
-Native1.4 và legacy2.0 được decode bằng SDK. Metadata giữ `risk_score` native;
-legacy thiếu trường này được lưu null, không lấy probability thay thế và không
-tự tính lại risk. REST Fleet và state summary cần mapping tương thích riêng.
+SDK0.3.0 chỉ decode outcome1.4.0. Metadata giữ `risk_score` do Processing
+phát; COMPLETED thiếu risk bị từ chối trước callback, không lấy probability
+thay thế. Outcome2.0 không còn được nhận. Xem
+[OUTCOME-14-ONLY](../../docs/OUTCOME_V1_4_MIGRATION.md) để chuẩn bị cutover và
+phân biệt kiểm tra schema với việc xử lý dữ liệu cũ trong môi trường.
 
 `ProjectionRepository.live(machine_id)` đọc ba trục trong một SQL statement và
 trả `LiveSnapshot`; máy chưa có dữ liệu có các trục null. Repository không query

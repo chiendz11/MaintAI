@@ -1,7 +1,7 @@
 # Hướng dẫn Kafka cho nhóm MaintAI
 
-Cập nhật: 2026-10-23. Python dùng chung, package `maintai-messaging==0.2.0`,
-Kafka contract bundle1.1.0. Đây là code transport và durable delivery để các
+Cập nhật: 2026-10-28. Python dùng chung, package `maintai-messaging==0.3.0`,
+Kafka contract bundle2.0.0. Đây là code transport và durable delivery để các
 thành viên phát triển nghiệp vụ; không phải xác nhận toàn hệ thống đã chạy.
 
 **PROC-ORDER-01:** §12 + [implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md)
@@ -80,12 +80,14 @@ Nguồn chính xác là [topology.json](../contracts/kafka/topology.json). Produ
 SDK default payload256KiB. Local chỉ1 broker, replica/minISR1. Không tự giảm số
 partition, không bật auto-create topic. Số máy tối đa còn phụ thuộc ML/DB/lag.
 
-Reader result hỗ trợ native1.4.0 `kind` và legacy2.0.0 `result_kind`. Writer mới
-chỉ phát1.4.0. Đây là hai lineage, không suy luận version lớn hơn là format mới
-hơn; result1.1.0 mâu thuẫn trong ví dụ cũ không được hỗ trợ. Adapter cung cấp
-`event.kind`/`event.source_event_id` để code gọi thống nhất, nhưng `event.payload`
-giữ wire nguyên gốc. Legacy không có hash lineage phải hiển thị thiếu dữ liệu,
-không điền hash giả. HTTP baseline, ML/RAG1.1.0, Drift1.0.0 không tự đổi version.
+Reader và writer outcome chỉ nhận1.4.0 `kind` theo
+[OUTCOME-14-ONLY](OUTCOME_V1_4_MIGRATION.md). `event.source_event_id` ánh xạ
+`payload.event_id`; payload/wire/hash giữ nguyên. COMPLETED cần risk_score
+gốc từ Processing; Business không suy ra từ probability. SDK không còn
+`event.legacy` hoặc đọc result_kind2.0.0. Consumer nghiệp vụ gặp event cũ sẽ
+dừng trước callback/commit; Storage vẫn lưu nguyên bytes làm bằng chứng.
+HTTP/history outcome entrypoint dùng cùng schema Kafka, các DTO và provider
+ML/RAG1.1.0, Drift1.0.0 không tự đổi version. Cutover dữ liệu có trong runbook.
 
 ## 4. Cài môi trường và chạy broker development
 

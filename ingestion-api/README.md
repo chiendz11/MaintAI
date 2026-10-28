@@ -10,7 +10,7 @@ Business và Processing có vòng triển khai/nghiệm thu riêng.
 - `POST /api/v1/sensor-readings`: auth/envelope/size/admission; không DQ sâu,
   ML, DB, RAG, SSE hoặc gọi Business HTTP.
 - `sensor.readings` wire1.3.0 keyed `machine_id`; `sensor.rejected` wire1.4.0 keyed
-  verified source subject, HASH_ONLY. SDK0.2.0 dùng canonical Kafka bundle1.1.0;
+  verified source subject, HASH_ONLY. SDK0.3.0 dùng canonical Kafka bundle2.0.0;
   lượt chuẩn hóa metrics này không đổi wire/bundle.
 - HTTP Ingestion OpenAPI1.4.0 là additive MINOR cho M1. Các HTTP APIs khác vẫn
   baseline1.3.2, không suy full target1.4 đã được triển khai.
@@ -26,7 +26,7 @@ SDK nội bộ được build từ checkout, không lấy từ public registry.
 ```bash
 .venv/bin/python -m pip install build==1.6.1 setuptools==84.0.0 wheel==0.48.0
 .venv/bin/python -m build messaging --wheel --outdir /tmp/maintai-m1-wheels
-.venv/bin/python -m pip install --no-deps /tmp/maintai-m1-wheels/maintai_messaging-0.2.0-py3-none-any.whl
+.venv/bin/python -m pip install --no-deps /tmp/maintai-m1-wheels/maintai_messaging-0.3.0-py3-none-any.whl
 .venv/bin/python -m pip install --find-links /tmp/maintai-m1-wheels -r ingestion-api/requirements-dev.lock
 .venv/bin/python -m pip install --no-deps --no-build-isolation -e ./ingestion-api
 ```
@@ -42,7 +42,7 @@ uv pip compile ingestion-api/requirements-dev.in --python .venv/bin/python --fin
 Kiểm tra diff versions, `pip check`, app và SDK tests sau regenerate; không sửa
 Messaging/Contracts locks để đồng bộ tùy tiện. Runtime image cài offline từ
 wheelhouse; SDK wheel được build từ source của repo và có bundled contracts.
-SDK hiện pin0.2.0 để dùng cùng source Kafka concurrency/ordering; Ingestion vẫn
+SDK hiện pin0.3.0 để dùng cùng source Kafka concurrency/ordering; Ingestion vẫn
 chỉ dùng gateway/publisher, không bật keyed Processing hoặc ordered relay.
 
 ## Chạy local với fixture identity

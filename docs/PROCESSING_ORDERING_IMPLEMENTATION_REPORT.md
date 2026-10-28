@@ -1,3 +1,7 @@
+> Cập nhật28/10: phiên bản hiện hành là SDK0.3.0/bundle2.0.0 theo
+> [OUTCOME-14-ONLY](OUTCOME_V1_4_MIGRATION.md). Báo cáo bên dưới giữ nguyên
+> bằng chứng ngày23/10 của SDK0.2.0; không phải kết quả kiểm tra của release mới.
+
 # PROC-ORDER-01 — source Kafka, migrations và cách tích hợp
 
 **Ngày2026-10-23.** SDK `maintai-messaging==0.2.0`, Kafka bundle `1.1.0`,

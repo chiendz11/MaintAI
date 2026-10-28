@@ -120,11 +120,13 @@ def test_alert_read_and_projection_read_use_same_database_snapshot(business_data
     assert repository.live("M-001")["latest_processing"]["processing_status"] == "INVALID"
 
 
-def test_legacy_missing_risk_does_not_block_detail_or_get_recomputed(business_database):
+def test_native_risk_serves_fleet_without_probability_recomputation(business_database):
     db = business_database
     projector = setup(db)
-    deliver(db, projector, event("legacy-completed"))
+    deliver(db, projector, event("completed"))
     repository = ProjectionRepository(db.factory, alert_reader=alerts_fixture)
     validate("MachineDetail", repository.detail("M-001"))
-    with pytest.raises(MachineViewUnavailable):
-        repository.fleet({"M-001"}, state=None, limit=50, offset=0)
+    value = repository.fleet({"M-001"}, state=None, limit=50, offset=0)
+    validate("MachineList", value)
+    assert value["items"][0]["latest_risk_score"] == 0.5
+    assert value["items"][0]["state"] == "HIGH"
