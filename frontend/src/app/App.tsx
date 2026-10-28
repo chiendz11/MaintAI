@@ -1,3 +1,6 @@
+import { AlertsPage } from "../features/alerts/AlertsPage";
+import { AlertDetailPage } from "../features/alerts/AlertDetailPage";
+import { watchAlerts } from "../realtime/alerts";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
@@ -33,6 +36,14 @@ export function App({
 }) {
   const [machine, setMachine] = useState(selectedMachine),
     [status, setStatus] = useState<Connection>("OFFLINE");
+  const [alertRoute, setAlertRoute] = useState(() =>
+    location.pathname.startsWith("/alerts"),
+  );
+  const [alertId, setAlertId] = useState(() =>
+    location.pathname.startsWith("/alerts/")
+      ? decodeURIComponent(location.pathname.slice(8))
+      : null,
+  );
   const [expired, setExpired] = useState(false);
   const unauthorized = useCallback(() => setExpired(true), []);
   const api = useMemo(
@@ -48,7 +59,15 @@ export function App({
     [config, session, unauthorized],
   );
   useEffect(() => {
-    const pop = () => setMachine(selectedMachine());
+    const pop = () => {
+      setMachine(selectedMachine());
+      setAlertRoute(location.pathname.startsWith("/alerts"));
+      setAlertId(
+        location.pathname.startsWith("/alerts/")
+          ? decodeURIComponent(location.pathname.slice(8))
+          : null,
+      );
+    };
     window.addEventListener("popstate", pop);
     return () => window.removeEventListener("popstate", pop);
   }, []);
@@ -59,8 +78,24 @@ export function App({
       machine === null ? "/machines" : "/machines/" + pathSegment(machine),
     );
     setMachine(machine);
+    setAlertRoute(false);
+    setAlertId(null);
     window.scrollTo(0, 0);
   }, []);
+  useEffect(() => {
+    if (session.authenticated && !expired && !machine) return watchAlerts(api);
+  }, [api, session.authenticated, expired, machine]);
+  const openAlert = (id: string | null) => {
+    history.pushState(
+      null,
+      "",
+      id === null ? "/alerts" : "/alerts/" + pathSegment(id),
+    );
+    setMachine(null);
+    setAlertRoute(true);
+    setAlertId(id);
+    window.scrollTo(0, 0);
+  };
   const connected = useCallback((value: Connection) => setStatus(value), []);
   if (!session.authenticated || expired)
     return (
@@ -92,7 +127,7 @@ export function App({
         <p className="nav-label">KHÔNG GIAN LÀM VIỆC</p>
         <nav>
           <button
-            className={!machine ? "nav-item active" : "nav-item"}
+            className={!machine && !alertRoute ? "nav-item active" : "nav-item"}
             onClick={() => navigate(null)}
           >
             <CircleGauge size={19} />
@@ -106,10 +141,14 @@ export function App({
             <Boxes size={19} />
             Thiết bị
           </button>
-          <div className="nav-item disabled" title="Chức năng chưa khả dụng">
+          <button
+            className={alertRoute ? "nav-item active" : "nav-item"}
+            onClick={() => openAlert(null)}
+          >
             <Bell size={19} />
-            Cảnh báo<span>Sắp có</span>
-          </div>
+            Cảnh báo
+            <ChevronRight size={15} />
+          </button>
           <div className="nav-item disabled" title="Chức năng chưa khả dụng">
             <Radio size={19} />
             Monitoring<span>Sắp có</span>
@@ -118,7 +157,7 @@ export function App({
         <div className="sidebar-bottom">
           <ShieldCheck size={18} />
           <div>
-            Business workspace<small>Chỉ đọc · Theo machine scope</small>
+            Business workspace<small>Theo quyền · Theo machine scope</small>
           </div>
         </div>
       </aside>
@@ -127,7 +166,13 @@ export function App({
           <div className="breadcrumb">
             Workspace
             <ChevronRight size={13} />
-            <strong>{machine ? "Machine detail" : "Fleet overview"}</strong>
+            <strong>
+              {alertRoute
+                ? "Alerts"
+                : machine
+                  ? "Machine detail"
+                  : "Fleet overview"}
+            </strong>
           </div>
           <div className="topbar-right">
             {config.mode === "demo" && (
@@ -157,7 +202,20 @@ export function App({
           </div>
         </header>
         <main className="content">
-          {machine ? (
+          {alertRoute ? (
+            alertId ? (
+              <AlertDetailPage
+                key={alertId}
+                api={api}
+                id={alertId}
+                back={() => openAlert(null)}
+                actor={session.subject}
+                canManage={session.canManage}
+              />
+            ) : (
+              <AlertsPage api={api} open={openAlert} />
+            )
+          ) : machine ? (
             <MachinePage
               key={machine}
               machine={machine}

@@ -5,7 +5,7 @@
   "runtime_id": "frontend",
   "workload_kind": "Deployment",
   "code_owner": "frontend",
-  "implementation_status": "implemented_main_ui_realtime_fixture_and_live",
+  "implementation_status": "implemented_m5_alerts_and_m4_realtime_local_fixture",
   "image_group": "frontend",
   "image_digest": null,
   "entrypoint_status": "implemented_vite_react_app",
@@ -22,5 +22,5 @@
   "dockerfile": "frontend/Dockerfile",
   "dockerfile_status": "implemented",
   "implemented_contract_revision": "1.3.2",
-  "implemented_scope": "Scoped Fleet UI and direct-ID Machine Detail, three independent live panels, OIDC PKCE, authenticated fetch SSE, BigInt source-order reducer and REST resync. Demo fixtures are explicit; Alert source/history/Copilot/drift and shared deployment acceptance remain separate."
+  "implemented_scope": "M4 realtime panels plus scoped Alert list/detail, lifecycle forms, timeline, feedback, session role hints, Alert invalidation/resync and explicit demo. Unknown POST outcomes are reconciled without automatic retry; history/Copilot/drift remain separate."
 }

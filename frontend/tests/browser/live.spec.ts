@@ -38,7 +38,10 @@ test("PKCE login, real Kafka projections and scoped SSE render in the browser be
   await expect(
     page.getByRole("heading", { name: "Tổng quan thiết bị" }),
   ).toBeVisible();
-  await expect(page.getByRole("alert")).toContainText("Không thể tải dữ liệu");
+  if (process.env.MAINTAI_M5_INTEGRATION !== "1")
+    await expect(page.getByRole("alert")).toContainText(
+      "Không thể tải dữ liệu",
+    );
   await page.getByLabel("ID máy").fill("M-001");
   await page.getByRole("button", { name: "Mở thiết bị" }).click();
   await expect(page.getByText("CONNECTED", { exact: true })).toBeVisible();
@@ -54,15 +57,24 @@ test("PKCE login, real Kafka projections and scoped SSE render in the browser be
   await expect(
     page.getByText(result.sequence_number, { exact: true }),
   ).toBeVisible();
-  await expect(
-    page.getByText("Thông tin bổ sung chưa khả dụng", { exact: true }),
-  ).toBeVisible();
+  if (process.env.MAINTAI_M5_INTEGRATION !== "1")
+    await expect(
+      page.getByText("Thông tin bổ sung chưa khả dụng", { exact: true }),
+    ).toBeVisible();
   expect(bearer.startsWith("Bearer ")).toBe(true);
   expect(
     await page.evaluate(() =>
       JSON.stringify({ ...localStorage, ...sessionStorage }),
     ),
   ).not.toContain(bearer.slice(7));
+  const alertsBefore =
+    process.env.MAINTAI_M5_INTEGRATION === "1"
+      ? await request
+          .get("http://127.0.0.1:18031/api/v1/alerts", {
+            headers: { Authorization: bearer },
+          })
+          .then((r) => r.json())
+      : null;
   const historical = await page.locator(".prediction-result").innerText();
   await request.post(issuer + "/fixture/publish", {
     data: { kind: "invalid" },
@@ -76,6 +88,17 @@ test("PKCE login, real Kafka projections and scoped SSE render in the browser be
     data: { kind: "unavailable" },
   });
   await expect(page.getByText(/Inference unavailable/)).toBeVisible();
+  if (alertsBefore) {
+    const after = await request
+      .get("http://127.0.0.1:18031/api/v1/alerts", {
+        headers: { Authorization: bearer },
+      })
+      .then((r) => r.json());
+    expect(after.total).toBe(alertsBefore.total);
+    expect(after.items.map((v: { status: string }) => v.status)).toEqual(
+      alertsBefore.items.map((v: { status: string }) => v.status),
+    );
+  }
   await request.post(issuer + "/fixture/restart-listeners");
   await expect(page.getByText("CONNECTED", { exact: true })).toBeVisible({
     timeout: 15000,

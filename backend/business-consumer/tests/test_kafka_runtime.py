@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[3]
 pytestmark = pytest.mark.integration
 
 
-def prepare_new_test_groups(settings):
+def prepare_new_test_groups(settings, *, include_processing=False):
     """Bootstrap fresh UUID test groups at captured offsets; never reset live groups."""
     if not settings.local_mode or not re.fullmatch(
         r"m3-(?:flow-)?[0-9a-f]{32}-", settings.group_prefix
@@ -34,7 +34,7 @@ def prepare_new_test_groups(settings):
         raise ValueError("Only isolated UUID M3 test groups may bootstrap offsets")
     admin = AdminClient(settings.client_config())
     contracts = default_contracts()
-    names = ("sensor.readings", "inference.results")
+    names = ("sensor.readings", "inference.results", "alert.signals")
     for future in admin.create_topics(
         [
             NewTopic(
@@ -127,7 +127,11 @@ def prepare_new_test_groups(settings):
         except (KafkaException, TimeoutError) as exc:
             retry(exc, "offset capture")
 
-    for role in ("business-live", "business-prediction"):
+    for role in (
+        ("business-live", "business-prediction", "business-alert", "processing")
+        if include_processing
+        else ("business-live", "business-prediction", "business-alert")
+    ):
         profile = contracts.topology["profiles"][role]
         topic = profile["topic"]
         partitions = [TopicPartition(topic, p, captured[(topic, p)]) for p in range(12)]

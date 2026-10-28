@@ -1,10 +1,11 @@
+import { DemoAlerts } from "./demo-alerts";
 import type { MachineApi } from "./client";
 import { ApiError } from "./client";
 import { parseLiveSnapshot } from "./codec";
 import type { LiveEvent, MachineDetail, MachinePage } from "../types/live";
 
 // Explicit offline fixtures. This driver is never selected after a live failure.
-export class DemoApi implements MachineApi {
+export class DemoApi extends DemoAlerts implements MachineApi {
   private sequence = 0;
   private readings = new Map<string, number>();
   private snapshots = new Map<string, ReturnType<typeof parseLiveSnapshot>>();

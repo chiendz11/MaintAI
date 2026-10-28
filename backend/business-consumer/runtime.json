@@ -5,10 +5,10 @@
   "runtime_id": "business-consumer",
   "workload_kind": "Deployment",
   "code_owner": "business-backend",
-  "implementation_status": "partial_telemetry_prediction_consumer",
+  "implementation_status": "implemented_m5_alert_lifecycle_local_fixture",
   "image_group": "business-backend",
   "image_digest": null,
-  "entrypoint_status": "implemented_two_serial_groups",
+  "entrypoint_status": "implemented_three_serial_groups",
   "purpose": "Telemetry/prediction/alert handlers + latest projections/lifecycle and bounded durable brief/drift-catalog job loop.",
   "source_paths": [
     "backend/business-consumer/src",
@@ -24,6 +24,10 @@
     {
       "topic": "inference.results",
       "group": "business-prediction-v1"
+    },
+    {
+      "topic": "alert.signals",
+      "group": "business-alert-v1"
     }
   ],
   "kafka_publications": [],
@@ -31,7 +35,8 @@
     "Telemetry/prediction Kafka subscriptions",
     "Business latest projection DB writes",
     "Health/metrics HTTP",
-    "Post-commit PostgreSQL NOTIFY invalidation hints"
+    "Post-commit PostgreSQL NOTIFY invalidation hints",
+    "Processing HTTP evidence; transactional immutable Alert notifications"
   ],
   "boundaries": [
     "Ba handlers là module của một deployment; không tạo telemetry-service/prediction-service riêng.",
@@ -45,13 +50,8 @@
     "brief-jobs",
     "drift-catalog-sync"
   ],
-  "implemented_scope": "Telemetry and prediction SDK serial groups, durable latest projections/source guards, probes and OBS-01 commit metrics; Alert/lifecycle/jobs/notifications and shared environment acceptance remain incomplete. Transactional PostgreSQL notification hints for visible projection changes; no separate notification history.",
-  "planned_kafka_subscriptions": [
-    {
-      "topic": "alert.signals",
-      "group": "business-alert-v1"
-    }
-  ],
+  "implemented_scope": "Telemetry/prediction projections plus inbox-protected Alert Signals; immutable hot evidence through Processing HTTP, fixed300s dedupe, audit and transactional Alert notifications. Brief/drift jobs, shared provider/deployment/load acceptance remain separate.",
+  "planned_kafka_subscriptions": [],
   "planned_interfaces": [
     "RAG API from leased brief jobs",
     "Committed drift report S3 manifests"

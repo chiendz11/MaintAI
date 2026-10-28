@@ -1,10 +1,10 @@
 # Business latest projections
 
 Các modules hiện có materialize latest telemetry, latest processing và latest
-valid prediction trong `business_db`. Runtime `maintai-business-consumer` chạy hai
-serial SDK loops `business-live-v1` và `business-prediction-v1` trong cùng process.
+valid prediction trong `business_db`. Runtime `maintai-business-consumer` chạy ba
+serial SDK loops `business-live-v1`, `business-prediction-v1`, `business-alert-v1` trong cùng process.
 Các callbacks nằm trong skeleton `src/handlers/telemetry` và `src/handlers/prediction`;
-không khởi động group Alert hoặc tạo handler ACK giả.
+Alert dùng evidence HTTP và transaction thật; không tạo handler ACK giả.
 
 ## Storage và transaction
 
@@ -72,7 +72,7 @@ Management HTTP mặc định `0.0.0.0:8083`, đổi bằng `BUSINESS_CONSUMER_H
 `/health/live` kiểm process; `/health/ready` dùng probe DB/Kafka có tuổi tối đa10s
 và từ chối khi draining. `/metrics` xuất duplicate receipts sau commit và histogram
 accepted-to-telemetry-visible theo OBS-01. Lỗi collector không thay đổi receipt.
-Shutdown SIGTERM đặt stop cho cả hai loops, chờ transaction đang chạy theo SDK và
+Shutdown SIGTERM đặt stop cho cả ba loops, chờ transaction đang chạy theo SDK và
 dừng management server. Runtime không tự tạo topics hoặc migrate DB.
 
 Tests Kafka dùng groups UUID riêng, bootstrap từ một boundary đầy đủ trước khi
@@ -83,11 +83,11 @@ là fixtures; đây không phải nghiệm thu provider production hoặc outer 
 Các container app/DB/roles test được dọn sau mỗi case; volumes broker giữ riêng.
 
 Fleet/MachineDetail readers nằm trong `shared/persistence/projections.py`; chúng
-không thay đổi các snapshots mà Consumer ghi. Nguồn đọc Alert chưa được nối vào
-runtime; Fleet/Detail báo503 khi cần nguồn này, không tạo dữ liệu rỗng thay thế.
+không thay đổi các snapshots mà Consumer ghi. M5 đã nối nguồn đọc Alert thật vào
+runtime; kết quả count0/list rỗng đến từ cùng Business transaction.
 Tests `test_machine_reads.py` kiểm SQL scope/state/pagination, DTO và snapshot nhất
-quán bằng PostgreSQL thật cùng nguồn Alert fixture. Alert lifecycle/jobs và
-notifications/SSE chưa được triển khai. Full history/archive/export thuộc
+quán bằng PostgreSQL thật cùng nguồn Alert fixture. M5 đã có Alert lifecycle/audit/feedback và
+notifications/SSE. Brief/drift jobs còn thuộc pha sau. Full history/archive/export thuộc
 Processing interfaces khác với status API.
 
 ## Notification sau commit
@@ -97,3 +97,21 @@ BUSINESS_NOTIFY_CHANNEL mặc định maintai_business_live_v1 phải khớp API
 chỉ gồm version/hash machine, không raw features hoặc credential. Rollback/duplicate
 không phát update mới. NOTIFY chỉ là invalidation hint; REST snapshot phục hồi khi
 mất thông báo, không cần thêm raw history hoặc đổi Kafka group.
+
+
+## Handler Alert M5
+
+Xem [Business runbook](../README.md#m5--alert-lifecycle-evidence-audit-và-feedback)
+và [report](../../docs/M5_IMPLEMENTATION_REPORT.md). Migration0003 là owner
+operation trước startup; không chạy migration trong Consumer. Credential evidence
+dùng `BUSINESS_PROCESSING_READ_URL` / `BUSINESS_PROCESSING_TOKEN_FILE` riêng.
+`BUSINESS_ALERT_NOTIFY_CHANNEL` phải khớp API và khác channel telemetry M4.
+
+Signal có thể đến trước prediction projection hoặc trễ hơn latest sequence: vẫn
+đọc evidence theo event/result gốc và xử lý. Worker commit history/outbox trước
+publish, nên không cần dựa vào Business latest snapshot. Lỗi upstream không trả
+receipt; sai evidence rollback và ghi chẩn đoán conflict qua transaction riêng.
+
+Snapshot/audit/feedback giữ bytes JSON để không làm mất ghi chú có escaped NUL.
+M5 không bật cleanup Processing hoặc xóa notification rows; retention/cleanup và
+archive lookup cần thiết kế M6 trước khi vận hành dài hạn.

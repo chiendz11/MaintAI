@@ -20,7 +20,9 @@ from .auth import RegistryFailure
 from .observability import Metrics
 
 
-def create_app(repository, verifier, *, status_client=None, projections=None, notifications=None):
+def create_app(
+    repository, verifier, *, status_client=None, projections=None, notifications=None, alerts=None
+):
     @asynccontextmanager
     async def lifespan(app):
         try:
@@ -230,6 +232,8 @@ def create_app(repository, verifier, *, status_client=None, projections=None, no
     def ready():
         try:
             database = projections.check() if projections is not None else repository.check()
+            if alerts is not None:
+                database = database and alerts.check()
         except psycopg.Error:
             database = False
         oidc = verifier.check()
@@ -246,5 +250,11 @@ def create_app(repository, verifier, *, status_client=None, projections=None, no
             },
             status_code=200 if healthy else 503,
         )
+
+    if alerts is not None:
+        alerts.metrics = metrics.alerts
+        from .alerts import install
+
+        install(app, verifier, alerts)
 
     return app

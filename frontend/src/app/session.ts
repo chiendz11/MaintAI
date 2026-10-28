@@ -11,7 +11,9 @@ export async function createSession(config: RuntimeConfig) {
     return {
       authenticated: true,
       name: "Demo Viewer",
-      role: "VIEWER",
+      role: "TECHNICIAN",
+      subject: "demo-technician",
+      canManage: true,
       token: async () => "",
       login: async () => {},
       logout: async () => {
@@ -49,7 +51,13 @@ export async function createSession(config: RuntimeConfig) {
           user.profile.name ?? user.profile.preferred_username ?? "Người dùng",
         )
       : "Chưa đăng nhập",
-    role: "Business",
+    role: String(user?.profile[auth.rolesClaim ?? "roles"] ?? "Business"),
+    subject: user?.profile.sub ?? "",
+    canManage:
+      Array.isArray(user?.profile[auth.rolesClaim ?? "roles"]) &&
+      (user?.profile[auth.rolesClaim ?? "roles"] as unknown[]).some(
+        (role) => role === "TECHNICIAN" || role === "ADMIN",
+      ),
     token: async () => {
       const value = await manager.getUser();
       if (!value || value.expired) throw new ApiError(401, "SESSION_EXPIRED");

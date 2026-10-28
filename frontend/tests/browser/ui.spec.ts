@@ -1,6 +1,28 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 
+test("demo Alert detail supports keyboard forms on mobile", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/alerts/demo-alert-1");
+  await expect(
+    page.getByRole("heading", { name: "Chi tiết cảnh báo", exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Ghi chú thao tác").fill("Demo inspection");
+  await page
+    .getByRole("button", { name: "Tiếp nhận", exact: true })
+    .press("Enter");
+  await expect(
+    page.getByRole("option", { name: "Bắt đầu xử lý", exact: true }),
+  ).toBeAttached();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});
+
 test("built UI works under the production Nginx content security policy", async ({
   page,
 }) => {

@@ -652,6 +652,8 @@ jobs:
       MAINTAI_M3_CONTAINER_TEST: '1'
       MAINTAI_M4_INTEGRATION: '1'
       MAINTAI_M4_CONTAINER_TEST: '1'
+      MAINTAI_M5_INTEGRATION: '1'
+      MAINTAI_M5_CONTAINER_TEST: '1'
       MAINTAI_M3_DATABASE_URL: postgresql://maintai_test:maintai_test@127.0.0.1:35432/maintai_processing_test
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -689,6 +691,7 @@ jobs:
     timeout-minutes: 25
     env:
       MAINTAI_M4_INTEGRATION: '1'
+      MAINTAI_M5_INTEGRATION: '1'
       MAINTAI_M3_DATABASE_URL: postgresql://maintai_test:maintai_test@127.0.0.1:35432/maintai_processing_test
       KAFKA_TEST_BOOTSTRAP_SERVERS: 127.0.0.1:39092
     steps:
@@ -708,8 +711,8 @@ jobs:
           python -m pip install build==1.6.1 setuptools==84.0.0 wheel==0.48.0
           python -m build --no-isolation messaging --wheel --outdir /tmp/m4-wheels
           python -m pip install --no-deps /tmp/m4-wheels/maintai_messaging-0.3.0-py3-none-any.whl
-          python -m pip install --find-links /tmp/m4-wheels -r processing/requirements-dev.lock -r backend/requirements-dev.lock
-          python -m pip install --no-deps --no-build-isolation -e ./processing -e ./backend
+          python -m pip install --find-links /tmp/m4-wheels -r processing/requirements-dev.lock -r backend/requirements-dev.lock -r ingestion-api/requirements-dev.lock
+          python -m pip install --no-deps --no-build-isolation -e ./processing -e ./backend -e ./ingestion-api
       - name: Check fixture source and install locked frontend
         run: |
           ruff check frontend/tests/provider --config backend/pyproject.toml

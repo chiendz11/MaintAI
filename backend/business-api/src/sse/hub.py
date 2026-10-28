@@ -5,11 +5,14 @@ import hashlib
 import logging
 import os
 import time
+from collections import deque
 from dataclasses import dataclass, field
 from uuid import uuid4
 
 import psycopg
 from api.auth import RegistryFailure
+from backend.shared.alerts.notifications import ALERT_CHANNEL
+from backend.shared.alerts.notifications import parse as parse_alert_hint
 from backend.shared.notifications import DEFAULT_CHANNEL, Notifier, machine_key, parse_hint
 from maintai_messaging.contracts import canonical_json
 from psycopg import sql
@@ -23,6 +26,7 @@ class SSESettings:
     total_bytes: int = 8 * 1024 * 1024
     coalesce_seconds: float = 1
     heartbeat_seconds: float = 15
+    alert_channel: str = ALERT_CHANNEL
 
     @classmethod
     def from_env(cls, env=None):
@@ -32,10 +36,14 @@ class SSESettings:
             max_connections=int(env.get("BUSINESS_SSE_MAX_CONNECTIONS", "128")),
             connection_bytes=int(env.get("BUSINESS_SSE_CONNECTION_BYTES", str(2 * 1024 * 1024))),
             total_bytes=int(env.get("BUSINESS_SSE_TOTAL_BYTES", str(8 * 1024 * 1024))),
+            alert_channel=env.get("BUSINESS_ALERT_NOTIFY_CHANNEL", ALERT_CHANNEL),
         )
 
     def __post_init__(self):
         Notifier(self.channel)
+        Notifier(self.alert_channel)
+        if self.channel == self.alert_channel:
+            raise ValueError("Alert and projection notification channels must differ")
         for value in (self.max_connections, self.connection_bytes, self.total_bytes):
             if type(value) is not int or value <= 0:
                 raise ValueError("SSE budgets must be positive integers")
@@ -72,7 +80,7 @@ def snapshot_events(snapshot):
 
 
 class NotificationHub:
-    def __init__(self, repository, *, dsn, settings=None, metrics=None):
+    def __init__(self, repository, *, dsn, settings=None, metrics=None, alert_repository=None):
         self.repository, self.dsn = repository, dsn
         self.settings, self.metrics = settings or SSESettings(), metrics
         self.ready = False
@@ -80,6 +88,8 @@ class NotificationHub:
         self.pending_bytes = 0
         self.stopping = asyncio.Event()
         self.connection = None
+        self.alert_repository = alert_repository
+        self.alert_hints = deque()
 
     def _metric(self, name, *args):
         if self.metrics is not None:
@@ -121,6 +131,7 @@ class NotificationHub:
         for subscription in tuple(self.subscriptions):
             self.unsubscribe(subscription)
         self.dirty.clear()
+        self.alert_hints.clear()
         self._metric("sse_resync", reason)
 
     def invalidate(self, key):
@@ -205,6 +216,59 @@ class NotificationHub:
             return None
         return frame
 
+    def invalidate_alert(self, payload):
+        key, identifier = parse_alert_hint(payload)
+        if not any(key in s.machines for s in self.subscriptions):
+            return
+        if len(self.alert_hints) >= 128:
+            self.disconnect_all("GAP")
+            return
+        self.alert_hints.append((key, identifier))
+
+    async def flush_alerts(self):
+        # Individual Alert changes retain transaction snapshots; never coalesce them.
+        for _ in range(32):
+            if not self.alert_hints:
+                break
+            key, identifier = self.alert_hints.popleft()
+            targets = [s for s in self.subscriptions if key in s.machines and not s.closed]
+            if not targets:
+                continue
+            machine = targets[0].machines[key]
+            try:
+                value = await asyncio.wait_for(
+                    asyncio.to_thread(self.alert_repository.notification, identifier, machine), 3
+                )
+                if value is None or value["machine_id"] != machine:
+                    raise ValueError("Alert notification evidence missing")
+                frame = (
+                    b"event: "
+                    + value["type"].encode()
+                    + b"\nid: "
+                    + identifier.encode()
+                    + b"\ndata: "
+                    + canonical_json(value)
+                    + b"\n\n"
+                )
+            except (psycopg.Error, ValueError, TimeoutError):
+                self.disconnect_all("OTHER")
+                return
+            for subscription in targets:
+                if subscription.closed:
+                    continue
+                if (
+                    subscription.expires_at <= time.time()
+                    or subscription.queue.full()
+                    or subscription.pending + len(frame) > self.settings.connection_bytes
+                    or self.pending_bytes + len(frame) > self.settings.total_bytes
+                ):
+                    self.unsubscribe(subscription)
+                    self._metric("sse_resync", "GAP")
+                    continue
+                subscription.queue.put_nowait(frame)
+                subscription.pending += len(frame)
+                self.pending_bytes += len(frame)
+
     async def _listen(self):
         delay = 1
         while not self.stopping.is_set():
@@ -216,11 +280,18 @@ class NotificationHub:
                     await connection.execute(
                         sql.SQL("LISTEN {}").format(sql.Identifier(self.settings.channel))
                     )
+                    if self.alert_repository is not None:
+                        await connection.execute(
+                            sql.SQL("LISTEN {}").format(sql.Identifier(self.settings.alert_channel))
+                        )
                     self.ready, delay = True, 1
                     while not self.stopping.is_set():
                         async for notification in connection.notifies(timeout=1):
                             try:
-                                self.invalidate(parse_hint(notification.payload))
+                                if notification.channel == self.settings.alert_channel:
+                                    self.invalidate_alert(notification.payload)
+                                else:
+                                    self.invalidate(parse_hint(notification.payload))
                             except (ValueError, RecursionError):
                                 continue
             except (psycopg.Error, OSError):
@@ -238,6 +309,7 @@ class NotificationHub:
     async def _pump(self):
         while not self.stopping.is_set():
             await self.flush()
+            await self.flush_alerts()
             try:
                 await asyncio.wait_for(self.stopping.wait(), 0.05)
             except TimeoutError:

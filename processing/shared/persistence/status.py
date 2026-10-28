@@ -38,3 +38,18 @@ class StatusRepository:
             connection.execute("SELECT event_id FROM sensor_events LIMIT 0")
             connection.execute("SELECT event_id FROM processing_results LIMIT 0")
         return True
+
+    def prediction(self, result_id):
+        from .evidence import history_record
+
+        with self.connection_factory() as connection:
+            row = connection.execute(
+                """SELECT e.*,r.result_id,r.kind,r.outcome,r.outcome_sha256,
+                p.prediction_id,p.label,p.failure_probability,p.model_threshold,p.model_identity,
+                d.risk_decision_id,d.risk_score,d.policy_version,d.policy_sha256,d.machine_state
+                FROM processing_results r JOIN sensor_events e USING(event_id)
+                LEFT JOIN predictions p USING(event_id) LEFT JOIN risk_decisions d USING(event_id)
+                WHERE r.result_id=%s AND e.processing_status IN ('COMPLETED','INVALID','FAILED')""",
+                (result_id,),
+            ).fetchone()
+        return None if row is None else history_record(row)

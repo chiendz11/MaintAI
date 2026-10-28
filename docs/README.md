@@ -36,6 +36,7 @@ hoặc tuyên bố throughput đã benchmark. Xem [quy trình scale](design-basi
 | [Readiness / khoảng cách tích hợp](implementation-readiness.md) | Implementation thực tế, artifacts chưa được cung cấp và điểm phải freeze |
 | [Repository layout](repository-layout.md) | Folder/runtime đang có và phần vẫn skeleton |
 | [OUTCOME-14-ONLY](OUTCOME_V1_4_MIGRATION.md) | Outcome1.4 duy nhất, risk gốc từ Processing, bỏ reader2.0, SDK0.3/bundle2.0 và runbook cutover |
+| [M5 implementation](M5_IMPLEMENTATION_REPORT.md) | Alert lifecycle/evidence/audit/feedback, hot point-read, notification/UI, role grants và kiểm chứng local |
 | [API decisions](api-contract-decisions.md) | Chi tiết HTTP của baseline máy đọc được1.3.2; chờ migration v1.4 |
 | [History/storage detail](history-storage-contract.md) | Thiết kế archive/chart/export chi tiết kế thừa; chỉ áp dụng khi không trái v1.4 |
 | [Recovery/jobs detail](recovery-jobs-operations.md) | Durable jobs, Drift catalog, replay/rolling; giữ các phần không bị v1.4 thay thế |
@@ -177,3 +178,6 @@ Ingestion có HTTP runtime và local tests/image; HTTP Ingestion OpenAPI additiv
 các API khác giữ baseline1.3.2. Xem [runbook](../ingestion-api/README.md) và
 [hướng dẫn và kiểm tra Ingestion](../ingestion-api/README.md). Không thay kết luận
 full-system readiness hoặc nghiệm thu shared OIDC/TLS/ACL/deployment.
+
+M5 có implementation local và tests; xem [M5 report](M5_IMPLEMENTATION_REPORT.md) cho source
+hiện hành. Các snapshot inventory cũ không chứng minh tất cả provider/deployment đã hoàn tất.

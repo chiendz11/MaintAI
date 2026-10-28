@@ -1,4 +1,15 @@
+import type {
+  AlertEvent,
+  AlertPage,
+  AlertDetail,
+  Transition,
+  FeedbackCreated,
+} from "../types/alerts";
 import {
+  alertPageValidator,
+  alertDetailValidator,
+  transitionValidator,
+  feedbackValidator,
   liveValidator,
   eventValidator,
   pageValidator,
@@ -113,10 +124,16 @@ export function parseLiveSnapshot(text: string): LiveSnapshot {
     latest_processing: axis(value.latest_processing),
   } as LiveSnapshot;
 }
-function parseEvent(text: string, name: string): LiveEvent {
+function parseEvent(text: string, name: string): LiveEvent | AlertEvent {
   const value = tokens(text);
   if (!object(value) || !object(value.data))
     throw new Error("Invalid SSE envelope");
+  if (name === "alert.created" || name === "alert.updated") {
+    const check = plain(value);
+    if (!eventValidator(check) || value.type !== name)
+      throw new Error("Invalid alert event");
+    return check as AlertEvent;
+  }
   integer(value.data.sequence_number);
   const check = plain(value) as RecordValue;
   (check.data as RecordValue).sequence_number = 1;
@@ -152,9 +169,9 @@ export function rawText(value: unknown): string {
     );
   return JSON.stringify(value) ?? "—";
 }
-export async function* decodeSSE(
+export async function* decodeEvents(
   stream: ReadableStream<Uint8Array>,
-): AsyncGenerator<LiveEvent> {
+): AsyncGenerator<LiveEvent | AlertEvent> {
   const reader = stream.getReader(),
     decoder = new TextDecoder("utf-8", { fatal: true });
   let pending = "",
@@ -183,6 +200,8 @@ export async function* decodeSSE(
               "telemetry.received",
               "prediction.completed",
               "processing.status_changed",
+              "alert.created",
+              "alert.updated",
             ].includes(name)
           )
             yield parseEvent(data.join("\n"), name);
@@ -204,3 +223,24 @@ export async function* decodeSSE(
     reader.releaseLock();
   }
 }
+
+export async function* decodeSSE(
+  stream: ReadableStream<Uint8Array>,
+): AsyncGenerator<LiveEvent> {
+  for await (const event of decodeEvents(stream))
+    if (event.type !== "alert.created" && event.type !== "alert.updated")
+      yield event as LiveEvent;
+}
+function parseAlertDto<T>(text: string, validate: (v: unknown) => boolean): T {
+  const value = plain(tokens(text));
+  if (!validate(value)) throw new Error("Invalid alert response schema");
+  return value as T;
+}
+export const parseAlertPage = (text: string) =>
+  parseAlertDto<AlertPage>(text, alertPageValidator);
+export const parseAlertDetail = (text: string) =>
+  parseAlertDto<AlertDetail>(text, alertDetailValidator);
+export const parseTransition = (text: string) =>
+  parseAlertDto<Transition>(text, transitionValidator);
+export const parseFeedback = (text: string) =>
+  parseAlertDto<FeedbackCreated>(text, feedbackValidator);

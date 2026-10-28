@@ -69,8 +69,27 @@ Processing, bật theo hướng dẫn tests trong component.
 
 ## Giới hạn
 
-Runtime hiện chỉ phục vụ status; history/chart/archive/export chưa được triển khai.
+Runtime M5 phục vụ status và hot point-read theo result_id; history danh sách,
+chart/archive/export chưa được triển khai.
 Business status facade và service credentials được cấu hình riêng. Installed
 HTTP/probes/role permissions/SIGTERM được kiểm trong test hai DB của Business;
 shared OIDC/TLS, provider production và deployment vẫn cần nghiệm thu riêng.
 Image source hoặc tests fixture không chứng minh đã deploy toàn hệ thống.
+
+
+## M5 — Hot evidence point-read
+
+`GET /api/v1/internal/predictions/{result_id}` trả HistoryRecord1.0.0 chứa outcome
+1.4.0 gốc, features_raw, source_server_accepted_at, risk_snapshot và raw_ref=null.
+Ba terminal outcomes đều đọc được; INVALID có thể giữ escaped NUL trong raw bytes.
+Chỉ BUSINESS_SERVICE và machine scope phù hợp được đọc. Không tồn tại trả404
+PREDICTION_NOT_FOUND; sai checksum/schema/source/model/risk trả503 đã sanitize.
+
+Repository join owner-local sensor_events, processing_results, predictions và
+risk_decisions. So thời gian accepted theo source_server_accepted_at, không dùng
+received_at của sensor. Schema và refs outcome được nạp từ SDK wheel đã đóng gói.
+Không cần checkout để validate và không quét S3 hoặc giả archive coverage.
+
+Processing reader role cần SELECT cả bốn bảng này; chạy owner grant helper hiện
+có, không cấp write hoặc credential DB cho Business. M5 không bật cleaner. Trước
+khi cleanup ở M6 phải bảo vệ evidence của signal còn backlog và có archive lookup.

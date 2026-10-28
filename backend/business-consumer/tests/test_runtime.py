@@ -4,12 +4,12 @@ import pytest
 from maintai_messaging.config import KafkaSettings
 
 
-def test_factory_enables_two_serial_business_roles_with_matching_inbox_groups():
+def test_factory_enables_three_serial_business_roles_with_matching_inbox_groups():
     from business_consumer.main import make_handlers
 
     settings = KafkaSettings(local_mode=True, security_protocol="PLAINTEXT", group_prefix="test-")
     handlers = make_handlers(lambda: None, settings)
-    assert set(handlers) == {"business-live", "business-prediction"}
+    assert set(handlers) == {"business-live", "business-prediction", "business-alert"}
     assert handlers["business-live"].consumer_group == "test-business-live-v1"
     assert handlers["business-prediction"].consumer_group == "test-business-prediction-v1"
     assert handlers["business-live"].topic == "sensor.readings"
@@ -89,7 +89,7 @@ def test_test_group_bootstrap_discards_partial_offsets_after_transient_leader_er
             return SimpleNamespace(
                 topics={
                     name: SimpleNamespace(error=None, partitions=partitions)
-                    for name in ("sensor.readings", "inference.results")
+                    for name in ("sensor.readings", "inference.results", "alert.signals")
                 }
             )
 
@@ -118,5 +118,5 @@ def test_test_group_bootstrap_discards_partial_offsets_after_transient_leader_er
         local_mode=True, security_protocol="PLAINTEXT", group_prefix="m3-" + "a" * 32 + "-"
     )
     bootstrap.prepare_new_test_groups(settings)
-    assert len(admin.requests) == 2
+    assert len(admin.requests) == 3
     assert {tp.offset for request in admin.requests for tp in request.topic_partitions} == {84}

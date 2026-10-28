@@ -1,5 +1,16 @@
+import type {
+  AlertApi,
+  AlertAction,
+  AlertEvent,
+  Feedback,
+} from "../types/alerts";
+import { UnknownOutcome, invalidateAlerts } from "../realtime/alerts";
 import {
-  decodeSSE,
+  decodeEvents,
+  parseAlertPage,
+  parseAlertDetail,
+  parseTransition,
+  parseFeedback,
   MAX_BODY,
   parseLiveSnapshot,
   parseMachineDetail,
@@ -69,14 +80,14 @@ export async function boundedText(response: Response): Promise<string> {
     reader.releaseLock();
   }
 }
-export class BusinessApi implements MachineApi {
+export class BusinessApi implements MachineApi, AlertApi {
   constructor(
     readonly base: string,
     readonly token: () => Promise<string>,
     readonly request: typeof fetch = globalThis.fetch.bind(globalThis),
     readonly unauthorized: () => void = () => {},
   ) {}
-  private async response(path: string, signal: AbortSignal) {
+  private async response(path: string, signal: AbortSignal, body?: unknown) {
     let token: string;
     try {
       token = await this.token();
@@ -91,9 +102,12 @@ export class BusinessApi implements MachineApi {
     }
     const response = await this.request(this.base.replace(/\/$/, "") + path, {
       signal,
+      method: body === undefined ? "GET" : "POST",
+      body: body === undefined ? undefined : JSON.stringify(body),
       redirect: "error",
       headers: {
         Authorization: "Bearer " + token,
+        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
         Accept: path.startsWith("/events/")
           ? "text/event-stream"
           : "application/json",
@@ -118,6 +132,7 @@ export class BusinessApi implements MachineApi {
     path: string,
     signal: AbortSignal,
     parse: (text: string) => T,
+    body?: unknown,
   ) {
     const deadline = new AbortController();
     const timer = setTimeout(() => deadline.abort(), 10000);
@@ -125,6 +140,7 @@ export class BusinessApi implements MachineApi {
       const response = await this.response(
         path,
         AbortSignal.any([signal, deadline.signal]),
+        body,
       );
       if (
         !response.headers
@@ -207,12 +223,107 @@ export class BusinessApi implements MachineApi {
         { signal: combined },
       );
       ready();
-      for await (const value of decodeSSE(body)) {
+      for await (const value of decodeEvents(body)) {
+        if (value.type === "alert.created" || value.type === "alert.updated") {
+          invalidateAlerts();
+          continue;
+        }
         if (value.machine_id !== machine)
           throw new Error("SSE machine scope mismatch");
         if (combined.aborted) return;
-        event(value);
+        event(value as LiveEvent);
       }
+    } finally {
+      clearTimeout(timer!);
+      idle.abort();
+    }
+  }
+  alerts(
+    filters: {
+      status?: string;
+      severity?: string;
+      machine_id?: string;
+      offset?: number;
+    },
+    signal: AbortSignal,
+  ) {
+    const query = new URLSearchParams({
+      limit: "50",
+      offset: String(filters.offset ?? 0),
+    });
+    for (const key of ["status", "severity", "machine_id"] as const)
+      if (filters[key]) query.set(key, filters[key]!);
+    return this.json("/alerts?" + query, signal, parseAlertPage);
+  }
+  alert(id: string, signal: AbortSignal) {
+    return this.json("/alerts/" + pathSegment(id), signal, parseAlertDetail);
+  }
+  async action(
+    id: string,
+    action: AlertAction,
+    body: Record<string, string>,
+    signal: AbortSignal,
+  ) {
+    try {
+      return await this.json(
+        "/alerts/" + pathSegment(id) + "/" + action,
+        signal,
+        parseTransition,
+        body,
+      );
+    } catch (error) {
+      if (signal.aborted) throw error;
+      if (error instanceof ApiError && error.status < 500) throw error;
+      throw new UnknownOutcome();
+    }
+  }
+  async feedback(id: string, body: Feedback, signal: AbortSignal) {
+    try {
+      return await this.json(
+        "/alerts/" + pathSegment(id) + "/feedback",
+        signal,
+        parseFeedback,
+        body,
+      );
+    } catch (error) {
+      if (signal.aborted) throw error;
+      if (error instanceof ApiError && error.status < 500) throw error;
+      throw new UnknownOutcome(true);
+    }
+  }
+  async alertStream(
+    signal: AbortSignal,
+    ready: () => void,
+    event: (value: AlertEvent) => void,
+  ) {
+    const idle = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    const touch = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => idle.abort(), 45000);
+    };
+    const combined = AbortSignal.any([signal, idle.signal]);
+    try {
+      touch();
+      const response = await this.response("/events/stream", combined);
+      if (
+        !response.body ||
+        !response.headers.get("Content-Type")?.startsWith("text/event-stream")
+      )
+        throw new Error("Invalid SSE response");
+      ready();
+      const body = response.body.pipeThrough(
+        new TransformStream<Uint8Array, Uint8Array>({
+          transform(chunk, controller) {
+            touch();
+            controller.enqueue(chunk);
+          },
+        }),
+        { signal: combined },
+      );
+      for await (const value of decodeEvents(body))
+        if (value.type === "alert.created" || value.type === "alert.updated")
+          event(value as AlertEvent);
     } finally {
       clearTimeout(timer!);
       idle.abort();

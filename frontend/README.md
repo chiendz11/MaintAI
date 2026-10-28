@@ -69,10 +69,11 @@ fallback thành HTML của SPA. Các cấu hình production này thuộc GitOps.
 
 - `/machines`: Fleet, state filter, pagination và nhập ID máy.
 - `/machines/{encodedMachineId}`: Detail, metadata và ba panel `/live` độc lập.
+- `/alerts`, `/alerts/{alert_id}`: danh sách/filter, evidence/timeline, lifecycle và feedback.
 - `/auth/callback`: OIDC callback, sau đó trở lại danh sách.
 
 Fleet chỉ dùng fields API hiện có. Không tính total toàn fleet từ một trang, không
-tự suy risk hoặc operational state từ probability/raw data. Khi thiếu nguồn Alert,
+tự suy risk hoặc operational state từ probability/raw data. M5 đã nối nguồn Alert thật ở backend. Khi dependency không khả dụng,
 Fleet/Detail có thể503; UI báo unavailable, vẫn cho mở máy bằng ID để đọc `/live`.
 Metadata lỗi không che các panel live; không tạo alert count0 hoặc alerts[] giả.
 
@@ -123,9 +124,34 @@ dùng SDK gateway; không chạy outer Ingestion HTTP trong case browser mới. 
 chứng minh Consumer/SSE/browser với DB/Kafka thật, không thay shared provider acceptance.
 Playwright dừng fixture bằng SIGTERM để cleanup databases/roles/processes.
 
-Chưa có full Alert lifecycle, history/export, Copilot hoặc Drift screens. Nguồn
-Alert và shared OIDC/TLS/ACL/ingress/provider thật cần tích hợp riêng. Tests hoặc
+M5 đã có Alert lifecycle, timeline, feedback và nguồn Alert. History/export,
+Copilot hoặc Drift screens còn thuộc M6/M7; shared OIDC/TLS/ACL/ingress/provider
+thật cần nghiệm thu riêng. Tests hoặc
 screenshot không chứng minh throughput100máy, production rollout hoặc toàn hệ thống hoàn tất.
 
 Thiết kế: [Frontend guide](../docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md),
 [UI Architecture](../docs/UI_ARCHITECTURE.md), [Business SSE](../backend/README.md).
+
+## M5 — Cảnh báo và xử lý lỗi mạng
+
+Live chỉ gọi Business REST/SSE. Menu Cảnh báo có list/filter/pagination và detail
+giữ evidence gốc, model/policy/risk, timeline, Copilot UNAVAILABLE, actions và
+feedback. Session lấy subject cùng role hints từ ID token; đổi tên roles claim
+bằng public config `auth.rolesClaim` (mặc định roles). Backend vẫn kiểm quyền,
+machine scope và actor_id. VIEWER không có form mutation.
+
+Actions chỉ hiển thị transition hợp lệ, resolve yêu cầu resolution, false-alert
+yêu cầu reason. Không optimistic báo success; request pending khóa nút. 409 tải
+lại detail. Mất phản hồi POST không tự retry: action đối soát qua detail/timeline;
+feedback báo kết quả chưa xác định vì AlertDetail không liệt kê feedback.
+
+Alert SSE chỉ invalidation: tải lại REST, không xếp trạng thái bằng timestamp/ID.
+Fleet, Detail metadata và Alerts tự refresh khi có signal, reconnect, tab resume
+và mỗi30s khi visible; response cũ bị hủy/bỏ. Trên màn hình máy dùng stream M4
+kèm Alert events; các màn hình còn lại dùng một stream chung theo scope.
+
+Demo có lifecycle/feedback riêng và nhãn mô phỏng; live không fallback sang demo.
+Browser M5 bật MAINTAI_M4_INTEGRATION=1 và MAINTAI_M5_INTEGRATION=1, dùng HTTP
+Ingestion thật, Kafka Worker/Relay và hai API replicas; ML/policy/registry/OIDC
+là fixtures. MAINTAI_TEST_PYTHON chọn interpreter của harness khi chạy local.
+Các job CI Người1 đã cài Ingestion và bật flags M5; không tự publish image hoặc deploy.

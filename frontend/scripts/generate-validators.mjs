@@ -24,6 +24,16 @@ const validators = {
   liveValidator: runtime.$defs.LiveSnapshot,
   eventValidator: runtime.$defs.SSEEvent,
   pageValidator: { $ref: base + "business.schema.json#/$defs/MachineList" },
+  alertPageValidator: { $ref: base + "business.schema.json#/$defs/AlertList" },
+  alertDetailValidator: {
+    $ref: base + "business.schema.json#/$defs/AlertDetail",
+  },
+  transitionValidator: {
+    $ref: base + "business.schema.json#/$defs/AlertTransitionResult",
+  },
+  feedbackValidator: {
+    $ref: base + "business.schema.json#/$defs/FeedbackCreated",
+  },
   detailValidator: { $ref: base + "business.schema.json#/$defs/MachineDetail" },
 };
 const exports = {};

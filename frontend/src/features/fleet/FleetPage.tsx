@@ -1,3 +1,4 @@
+import { useAlertRefresh } from "../alerts/useRefresh";
 import { useEffect, useState } from "react";
 import { ArrowRight, RefreshCw, Search } from "lucide-react";
 import type { MachineApi } from "../../api/client";
@@ -19,6 +20,7 @@ export function FleetPage({
     [error, setError] = useState<unknown>(null),
     [loading, setLoading] = useState(true),
     [machine, setMachine] = useState("");
+  const [alertRevision] = useAlertRefresh();
   useEffect(() => {
     const request = new AbortController();
     setLoading(true);
@@ -36,7 +38,7 @@ export function FleetPage({
         if (!request.signal.aborted) setLoading(false);
       });
     return () => request.abort();
-  }, [api, state, offset, revision]);
+  }, [api, state, offset, revision, alertRevision]);
   function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!machine.trim()) return;

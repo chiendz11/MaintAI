@@ -24,7 +24,7 @@ export default defineConfig({
     ...(process.env.MAINTAI_M4_INTEGRATION === "1"
       ? [
           {
-            command: `${existsSync("../.venv/bin/python") ? "../.venv/bin/python" : "python3"} -B tests/provider/server.py`,
+            command: `${process.env.MAINTAI_TEST_PYTHON ?? (existsSync("../.venv/bin/python") ? "../.venv/bin/python" : "python3")} -B tests/provider/server.py`,
             url: "http://127.0.0.1:18033/health/ready",
             reuseExistingServer: false,
             timeout: 90000,

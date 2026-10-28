@@ -1,3 +1,4 @@
+import { useAlertRefresh } from "../../alerts/useRefresh";
 import { useEffect, useState } from "react";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import type { MachineApi } from "../../../api/client";
@@ -29,6 +30,7 @@ export function MachinePage({
     [metadataError, setMetadataError] = useState(false),
     [revision, setRevision] = useState(0),
     [now, setNow] = useState(Date.now());
+  const [alertRevision] = useAlertRefresh();
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
@@ -38,6 +40,16 @@ export function MachinePage({
     setError(null);
     setDetail(null);
     setMetadataError(false);
+    const stop = watchMachine(api, machine, {
+      state: setValue,
+      connection,
+      error: setError,
+    });
+    return () => {
+      stop();
+    };
+  }, [api, machine, revision, connection]);
+  useEffect(() => {
     const request = new AbortController();
     api
       .detail(machine, request.signal)
@@ -47,16 +59,9 @@ export function MachinePage({
       .catch(() => {
         if (!request.signal.aborted) setMetadataError(true);
       });
-    const stop = watchMachine(api, machine, {
-      state: setValue,
-      connection,
-      error: setError,
-    });
-    return () => {
-      request.abort();
-      stop();
-    };
-  }, [api, machine, revision, connection]);
+    return () => request.abort();
+  }, [api, machine, revision, alertRevision]);
+
   return (
     <>
       <button className="back-link" onClick={back}>
