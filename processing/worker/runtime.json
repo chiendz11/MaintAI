@@ -5,11 +5,11 @@
   "runtime_id": "processing-worker",
   "workload_kind": "Deployment",
   "code_owner": "processing",
-  "implementation_status": "skeleton",
+  "implementation_status": "implemented_local_fixture",
   "image_group": "processing",
   "image_digest": null,
-  "entrypoint_status": "not_implemented_for_v1.3.2",
-  "purpose": "Consume sensor.readings using opt-in keyed Processing; DQ/ML/risk/history are supplied by owner callbacks. Offset coordinator and DB fence are in SDK0.2.0.",
+  "entrypoint_status": "implemented_m2_local_fixture_with_ordering_opt_in",
+  "purpose": "Consume sensor.readings -> feature/registry validation -> ML/risk -> owner history/outbox; archive/export jobs remain planned.",
   "source_paths": [
     "processing/worker/src",
     "processing/shared",
@@ -25,28 +25,34 @@
   ],
   "kafka_publications": [],
   "interfaces": [
+    "GET /health/live",
+    "GET /health/ready",
+    "GET /metrics",
     "ML POST /api/v1/predict",
-    "Versioned processed S3 archive/manifests"
+    "Business GET /api/v1/machines/{machine_id} (reviewed service access required for shared)"
   ],
   "boundaries": [
+    "History and terminal outbox commit before Kafka offset; Business owns Alerts.",
+    "Outcome1.4.0/kind is the only supported read/write format; see OUTCOME-14-ONLY before cutover.",
+    "Executable worker is explicit local-fixture only until reviewed serving identity and registry service access are available.",
     "Target PROC-ORDER-01/1.0.0: same machine FIFO, different machines concurrent; commit safe completed prefix per partition.",
-    "SDK0.2.0/bundle1.1.0 implement keyed runner, durable assignment fence, source cursor and ordered outbox. Application DQ/ML/risk/history callbacks and health server remain unimplemented.",
-    "Baseline inventory1.3.2 is preserved; Kafka outcome writer1.4.0/reader legacy2.0.0 are independently versioned.",
-    "Use processing/src/maintai_processing/worker.py and explicit reviewed factory; never infer successful implementation from this metadata."
+    "Baseline inventory1.3.2 is preserved; Kafka outcome reader/writer1.4.0 are independently versioned.",
+    "Ordering requires explicit owner migration/activation after drain; no automatic legacy cursor bootstrap."
   ],
   "dockerfile": "processing/worker/Dockerfile",
-  "dockerfile_status": "placeholder",
-  "implemented_contract_revision": null,
+  "dockerfile_status": "implemented",
+  "implemented_contract_revision": "1.4.0",
   "planned_background_tasks": [
     "processing-archive",
     "history-export",
     "verified-retention-cleanup"
   ],
+  "implemented_scope": "Owner DQ/registry/ML/risk/history with SDK0.2 keyed processing and ordered relay opt-in, validated locally with fixture ML/identity/policy; shared/provider/load/deployment acceptance remains pending.",
   "transport_implementation": {
     "package": "maintai-processing",
     "version": "0.1.0",
-    "sdk_version": "0.2.0",
-    "kafka_bundle_version": "1.1.0",
+    "sdk_version": "0.3.0",
+    "kafka_bundle_version": "2.0.0",
     "decision": "PROC-ORDER-01/1.0.0",
     "document": "docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md"
   }

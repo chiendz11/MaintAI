@@ -3,7 +3,7 @@
   "target_contract_revision": "1.4.0",
   "upstream_target_contract_revision": "1.4.0",
   "imported_on": "2026-10-17",
-  "amended_on": "2026-10-24",
+  "amended_on": "2026-10-28",
   "hash_semantics": "documents contains active paths with current sha256; upstream_sha256 preserves supplied/imported bytes; retired_documents preserves old checksums without active files",
   "documents": [
     {
@@ -15,13 +15,13 @@
     {
       "path": "docs/README.md",
       "source_filename": "README.md",
-      "sha256": "35d50798ef9a21ab8ee8dcbc0b5b7590311111f2ec0a77ba533b99f32e3589ed",
+      "sha256": "b6c862e1de08c7b75446597cd1a14103d4a4d011d8fb1dfabed15bf29d5bf6e8",
       "upstream_sha256": "b8f3731050d7cba47d5eecebd8ecfa7457dc4a7c427e9f408a1a22dd89c9b0d7"
     },
     {
       "path": "docs/api-contract-decisions.md",
       "source_filename": "api-contract-decisions.md",
-      "sha256": "48977ca44e5fe875b57366fd45ec14db9a5d00de4aaf5df40ab78e48b4ac3146",
+      "sha256": "1931ba06482e02f2dcb2247e2651b4ccbfe0ea184d80a2883b7248479c0ae417",
       "upstream_sha256": "153aea7b6f92e25fd11e9689092711f9806c59b0204099ae807e113fa830037b"
     },
     {
@@ -40,13 +40,13 @@
       "path": "docs/implementation-readiness.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "554c8b971e538533c28733e4e78382b8f55700d9a9775e2eed724001e8b2e067"
+      "sha256": "7d4a3195bc3c4932080745a15b6eecad96d1989c0c148d58e43f26c6317a3224"
     },
     {
       "path": "docs/repository-layout.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "3c86207f7db2c80f4144f33a8a0d9dca79fe53f5f842d8fdbdec9e6587e4fcfe"
+      "sha256": "6e6b100f0e2758886ac6e33f3eb660b0ee8881d214d5aed2790085af645e5842"
     },
     {
       "path": "docs/legacy-artifact-audit.md",
@@ -84,7 +84,7 @@
       "imported_on": "2026-10-19",
       "source_document_revision": "1.4.0",
       "upstream_sha256": "c677d5a991814c37392d2bb9cfafd2ed86535fd01eb044c4f9a6e457069f9f55",
-      "sha256": "85a853876b37e2625bccf9dccf5318a7507039135315773d4fc17d5f31a686c7"
+      "sha256": "9c387f177e71b9722b973a8eb1de322bab0ce5afe0e5572bac2b8a891e840ce5"
     },
     {
       "path": "docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md",
@@ -92,7 +92,7 @@
       "imported_on": "2026-10-19",
       "source_document_revision": "1.4.0",
       "upstream_sha256": "89f141f1a8695a7ce056a99512633ba7e2edd9f2311b7bf935ae94f2ecd6ffcc",
-      "sha256": "a9bafcf410ce6fb07b4dbfe59e9dfec7a8237956e4a0095cb1b178f77419405e"
+      "sha256": "a090951b0df5e8e3e852a505220f6173107e9428dde5b65fff31847e82c6f2e3"
     },
     {
       "path": "docs/IMPLEMENTATION_PLAN.md",
@@ -107,7 +107,7 @@
       "source_filename": null,
       "upstream_sha256": null,
       "added_on": "2026-10-19",
-      "sha256": "7cd3409da9faab159c762eb20dac7494897d414f4e3ac2ab05e69d44933eeaf1"
+      "sha256": "1613d0004a30b19ec6253e2c7cf42df298392f35dcf649eff5206935a705b6c9"
     },
     {
       "path": "docs/UI_ARCHITECTURE.md",
@@ -164,7 +164,7 @@
       "source_filename": null,
       "upstream_sha256": null,
       "added_on": "2026-10-23",
-      "sha256": "7d5985bbf9c9035c583f920de20905662577c436fec87d1b5ebd28fb6caceef5"
+      "sha256": "d21e779ca5b8f3b746d8fe6c11f9abe0742060dd97cfc1e7957332228efdde80"
     },
     {
       "path": "docs/LOCAL_DEVELOPMENT_K3D.md",
@@ -249,6 +249,11 @@
       "source_filename": null,
       "upstream_sha256": null,
       "sha256": "6fd5e3e5faf23d16e5ed6df40a27037d11bc51f6056b04945cfebae029cb53f8"
+    },
+    {
+      "path": "docs/OUTCOME_V1_4_MIGRATION.md",
+      "sha256": "a17c1bc7913685fbf50f5b7ed31fea733e8002f5c271573f7307f5fecb6534aa",
+      "decision_revision": "1.0.0"
     }
   ],
   "upstream_inherited_contract_revision": "1.3.1",
@@ -280,9 +285,9 @@
     }
   ],
   "latest_imported_on": "2026-10-19",
-  "kafka_contract_bundle_version": "1.1.0",
+  "kafka_contract_bundle_version": "2.0.0",
   "kafka_contract_manifest_sha256": "27d0187dd2aa1ff785bc39bd1167243516a6c6bc8d3d966320fd0d21c1e749c7",
-  "kafka_sdk_version": "0.2.0",
+  "kafka_sdk_version": "0.3.0",
   "project_ui_decision": {
     "id": "UI-01",
     "revision": "1.0.0",
@@ -359,6 +364,13 @@
       "readings_per_second_per_machine": 1,
       "architecture_property": "scale-ready",
       "scope": "100 is the initial design workload, not a hard machine limit. RecalculateR=X*r and stage capacity/concurrency/replicas, optimize bottlenecks and measure end-to-end alert latency forX>100; no automatic deployment/config/schema changes."
+    },
+    {
+      "id": "OUTCOME-14-ONLY",
+      "revision": "1.0.0",
+      "adopted_on": "2026-10-28",
+      "document": "docs/OUTCOME_V1_4_MIGRATION.md",
+      "scope": "Outcome1.4-only readers/writers and HTTP/history entrypoints; SDK0.3.0/bundle2.0.0; preserve producer risk and frozen SQL001/002. No legacy adapter/backfill or live data cutover."
     }
   ]
 }

@@ -13,7 +13,7 @@ contracts/
 ├── README.md
 ├── requirements.in
 ├── requirements.lock
-├── kafka/             # Topics/groups, v1.4 wire, legacy readers, fixtures, SQL và hash lock
+├── kafka/             # Topics/groups, v1.4-only outcome, strict readers, fixtures, SQL và hash lock
 └── v1.3/
     ├── openapi/       # Business, Ingestion, Processing, Simulator, ML, RAG
     ├── schemas/       # Runtime DTOs, shared/provider schemas, Drift report/reference
@@ -30,8 +30,8 @@ Sáu OpenAPI mô tả interface mục tiêu; chúng không xác nhận runtime �
 ## Versions và code hiện có
 
 Version baseline1.3.2 độc lập với wire protocol: ML/RAG giữ1.1.0, Drift report/reference
-giữ1.0.0, sensor envelope1.3.0 và processing result union2.0.0. Việc dọn tài liệu
-không tự thay payload hoặc migrate code.
+giữ1.0.0, sensor envelope1.3.0 và processing outcome1.4.0. Outcome/history entrypoints dùng chung schema Kafka;
+xem [OUTCOME-14-ONLY](../docs/OUTCOME_V1_4_MIGRATION.md). Không tự chuyển dữ liệu cũ.
 
 - Sensor0.3.0 dùng SensorRequest1.3.0, ACK202 và Control baseline1.3.2. Tests đối chiếu
   runtime.schema.json hiện hành; frozen fixture synchronous v1.1 đã gỡ khi migrate.

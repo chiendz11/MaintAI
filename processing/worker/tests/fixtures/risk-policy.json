@@ -1,0 +1,9 @@
+{
+  "policy_version": "fixture-risk-policy-1.0.0",
+  "thresholds": {
+    "watch": 0.40,
+    "high": 0.65,
+    "critical": 0.85
+  },
+  "create_alert_for": ["HIGH", "CRITICAL"]
+}

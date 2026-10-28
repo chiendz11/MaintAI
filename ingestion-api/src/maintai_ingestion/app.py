@@ -1,16 +1,17 @@
 """FastAPI wrapper: bounded raw body → verified SDK gateway → HTTP projection."""
 
 import asyncio
-import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from prometheus_client import CONTENT_TYPE_LATEST
 from starlette.exceptions import HTTPException
 from starlette.requests import ClientDisconnect
 from starlette.responses import JSONResponse, Response
 
 from . import __version__
 from .errors import EdgeFailure
+from .observability import RequestObservation, request_observation
 from .request_guards import check_media, read_bounded_body
 from .responses import edge_error, fresh_trace, resolve_request_identity, to_http
 from .runtime import build_runtime, run_blocking
@@ -48,22 +49,30 @@ def create_app(settings, *, publisher_factory=None, verifier=None, probe=None):
 
     @app.middleware("http")
     async def request_context(request, call_next):
-        started = time.monotonic()
+        runtime = request.app.state.runtime
+        started = runtime.obs.clock()
         trace = fresh_trace()
+        context = RequestObservation()
+        token = request_observation.set(context)
+        response = None
         try:
-            trace = resolve_request_identity(request.headers)
-            request.state.trace = trace
-            response = await call_next(request)
-        except EdgeFailure as failure:
-            response = edge_error(failure.status, failure.code, trace, retryable=failure.retryable)
-        except Exception:
-            response = edge_error(500, "INTERNAL_ERROR", trace)
+            try:
+                trace = resolve_request_identity(request.headers)
+                request.state.trace = trace
+                response = await call_next(request)
+            except EdgeFailure as failure:
+                context.error_code = failure.code
+                response = edge_error(
+                    failure.status, failure.code, trace, retryable=failure.retryable
+                )
+            except Exception:
+                response = edge_error(500, "INTERNAL_ERROR", trace)
+        finally:
+            runtime.obs.record_request(request, response, trace, started, context)
+            request_observation.reset(token)
         response.headers.update(
             {"X-Request-ID": trace.request_id, "X-Correlation-ID": trace.correlation_id}
         )
-        runtime = getattr(request.app.state, "runtime", None)
-        if runtime:
-            runtime.obs.record_request(request, response, trace, started)
         return response
 
     @app.exception_handler(HTTPException)
@@ -87,7 +96,8 @@ def create_app(settings, *, publisher_factory=None, verifier=None, probe=None):
                     retryable=True,
                 )
             admitted = True
-            rt.obs.inflight.inc()
+            context = request_observation.get()
+            context.admitted_at = rt.obs.clock()
             identity = await run_blocking(rt.verifier.verify, request.headers.get("authorization"))
             check_media(request.headers)
             raw = await read_bounded_body(
@@ -102,6 +112,7 @@ def create_app(settings, *, publisher_factory=None, verifier=None, probe=None):
                 request_id=trace.request_id,
                 correlation_id=trace.correlation_id,
             )
+            context.error_code = result.body.get("error", {}).get("code")
             return to_http(result, trace)
         except EdgeFailure as failure:
             return edge_error(failure.status, failure.code, trace, retryable=failure.retryable)
@@ -112,7 +123,6 @@ def create_app(settings, *, publisher_factory=None, verifier=None, probe=None):
             return edge_error(500, "INTERNAL_ERROR", trace)
         finally:
             if admitted:
-                rt.obs.inflight.dec()
                 rt.gate.release()
 
     @app.get("/health/live")
@@ -128,7 +138,7 @@ def create_app(settings, *, publisher_factory=None, verifier=None, probe=None):
     @app.get("/metrics")
     async def metrics():
         return Response(
-            app.state.runtime.obs.render(), media_type="text/plain; version=0.0.4; charset=utf-8"
+            app.state.runtime.obs.render(), headers={"Content-Type": CONTENT_TYPE_LATEST}
         )
 
     return app

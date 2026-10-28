@@ -467,7 +467,7 @@ jobs:
         run: |
           python -m pip install build==1.6.1 setuptools==84.0.0 wheel==0.48.0
           python -m build messaging --wheel --outdir /tmp/m1-wheels
-          python -m pip install --no-deps /tmp/m1-wheels/maintai_messaging-0.2.0-py3-none-any.whl
+          python -m pip install --no-deps /tmp/m1-wheels/maintai_messaging-0.3.0-py3-none-any.whl
           python -m pip install --find-links /tmp/m1-wheels -r ingestion-api/requirements-dev.lock
           python -m pip install --no-deps --no-build-isolation -e ./ingestion-api
       - name: Lint, unit, contract and installed artifacts
@@ -500,7 +500,7 @@ jobs:
         run: |
           python -m pip install build==1.6.1 setuptools==84.0.0 wheel==0.48.0
           python -m build messaging --wheel --outdir /tmp/m1-wheels
-          python -m pip install --no-deps /tmp/m1-wheels/maintai_messaging-0.2.0-py3-none-any.whl
+          python -m pip install --no-deps /tmp/m1-wheels/maintai_messaging-0.3.0-py3-none-any.whl
           python -m pip install --find-links /tmp/m1-wheels -r ingestion-api/requirements-dev.lock
           python -m pip install --no-deps --no-build-isolation -e ./ingestion-api
       - name: Start isolated broker
@@ -610,6 +610,76 @@ jobs:
           python ml-service/mlflow/release.py check-source
           python -m pytest ml-service/mlflow/tests
 
+  processing-ci:
+    name: Processing and Business registry checks
+    needs: structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.12'
+      - name: Build SDK and install locked Processing dependencies
+        run: |
+          python -m pip install build==1.6.1 setuptools==84.0.0 wheel==0.48.0
+          python -m build messaging --wheel --outdir /tmp/m2-wheels
+          python -m pip install --no-deps /tmp/m2-wheels/maintai_messaging-0.3.0-py3-none-any.whl
+          python -m pip install --find-links /tmp/m2-wheels -r processing/requirements-dev.lock -r backend/requirements-dev.lock
+          python -m pip install --no-deps --no-build-isolation -e ./processing -e ./backend
+      - name: Verify source and installed wheel
+        run: |
+          ruff check processing backend
+          ruff format --check processing backend
+          python -m pytest --import-mode=importlib processing/worker/tests processing/outbox-relay/tests processing/read-api/tests processing/tests backend/business-api/tests backend/business-consumer/tests -m 'not integration'
+          python -m pip check
+          python -m build processing --wheel --outdir /tmp/m2-wheels
+          python -m build backend --wheel --outdir /tmp/m2-wheels
+          python messaging/scripts/lock_contracts.py --check
+
+  processing-integration:
+    name: Processing and registry integration (test ML and issuer)
+    needs: processing-ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      MAINTAI_M2_INTEGRATION: '1'
+      MAINTAI_M2_CONTAINER_TEST: '1'
+      MAINTAI_M2_DATABASE_URL: postgresql://maintai_test:maintai_test@127.0.0.1:35432/maintai_processing_test
+      MAINTAI_M3_INTEGRATION: '1'
+      MAINTAI_M3_CONTAINER_TEST: '1'
+      MAINTAI_M3_DATABASE_URL: postgresql://maintai_test:maintai_test@127.0.0.1:35432/maintai_processing_test
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.12'
+      - name: Install Processing and existing M1 gateway for pipeline tests
+        run: |
+          python -m pip install build==1.6.1 setuptools==84.0.0 wheel==0.48.0
+          python -m build messaging --wheel --outdir /tmp/m2-wheels
+          python -m pip install --no-deps /tmp/m2-wheels/maintai_messaging-0.3.0-py3-none-any.whl
+          python -m pip install --find-links /tmp/m2-wheels -r processing/requirements-dev.lock -r backend/requirements-dev.lock -r ingestion-api/requirements-dev.lock
+          python -m pip install --no-deps --no-build-isolation -e ./processing -e ./backend -e ./ingestion-api
+      - name: Start isolated M2 integration dependencies
+        run: docker compose -f processing/worker/tests/compose.yaml up -d --wait
+      - name: Build installed runtime images
+        run: |
+          docker build -f processing/worker/Dockerfile -t maintai-processing-worker:m2-local .
+          docker build -f processing/outbox-relay/Dockerfile -t maintai-processing-relay:m2-local .
+          docker build -f backend/business-api/Dockerfile -t maintai-business-registry:m2-local .
+          docker build -f processing/read-api/Dockerfile -t maintai-processing-read-api:m3-local .
+          docker build -f backend/business-consumer/Dockerfile -t maintai-business-consumer:m3-local .
+      - name: Verify migrations permissions transactions replay and pipeline
+        run: python -m pytest --import-mode=importlib processing/worker/tests processing/outbox-relay/tests processing/read-api/tests processing/tests backend/business-api/tests backend/business-consumer/tests -m integration
+      - name: Stop isolated M2 dependencies
+        if: ${{ always() }}
+        run: docker compose -f processing/worker/tests/compose.yaml down
+
   component-ci:
     name: Component CI (${{ matrix.component }})
     needs: structure
@@ -667,6 +737,8 @@ jobs:
       - component-ci
       - ingestion-ci
       - ingestion-integration
+      - processing-ci
+      - processing-integration
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

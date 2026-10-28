@@ -1,0 +1,13 @@
+maintai-messaging[postgres,observability]==0.3.0
+jsonschema>=4.23,<5
+httpx>=0.28,<1
+pydantic>=2.10,<3
+alembic>=1.14,<2
+# Keep the shared HTTP stack at the versions already locked/tested by M1.
+fastapi==0.161.1
+certifi==2026.10.19
+# Match the SDK's current tested dependency instead of selecting a new major.
+python-dateutil==2.9.0.post0
+uvicorn>=0.30,<1
+prometheus-client>=0.21,<1
+PyJWT[crypto]>=2.10,<3

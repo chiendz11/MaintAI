@@ -33,8 +33,8 @@ def test_metrics_are_bounded_and_secrets_not_logged(edge, payload, caplog):
             headers={"Authorization": "Bearer SECRET-token"},
         )
         text = c.get("/metrics").text
-        assert "maintai_ingestion_publish_total" in text
-        assert "sensor.readings" in text
+        assert "maintai_ingestion_accepted_total 1.0" in text
+        assert 'outcome="ACCEPTED"' in text
         assert "M-001" not in text and payload["event_id"] not in text
     assert '"service": "ingestion-api"' in caplog.text
     assert "SECRET-token" not in caplog.text

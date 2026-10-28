@@ -17,7 +17,7 @@ Các module DQ/inference client/risk được chuyển từ backend skeleton cũ
 Shared [messaging SDK](../messaging/README.md) có durable Kafka consumer,
 inbox/outbox SQL, OutcomeFactory và relay. Người1 tích hợp callback DQ/ML/risk,
 history SQL và owner migrations; Read API và app entrypoints/probes vẫn skeleton.
-Writer result1.4.0, reader hỗ trợ legacy2.0.0. Xem
+Writer và reader chỉ outcome1.4.0; không tương thích legacy2.0.0. Xem
 [hướng dẫn nhóm §5](../docs/KAFKA_DEVELOPMENT_GUIDE.md) và
 [runtime map](../architecture/README.md).
 
@@ -29,8 +29,8 @@ Writer result1.4.0, reader hỗ trợ legacy2.0.0. Xem
 
 ## PROC-ORDER-01 — transport source đã có, app còn cần tích hợp
 
-Package transport0.1.0 ở processing/src/maintai_processing/ dùng SDK0.2.0 và
-bundle1.1.0. Dockerfile Worker/Relay vẫn placeholder; full app chưa implement.
+Package transport0.1.0 ở processing/src/maintai_processing/ dùng SDK0.3.0 và
+bundle2.0.0. Dockerfile Worker/Relay vẫn placeholder; full app chưa implement.
 
 | Phần | Source đã có | Owner còn làm |
 | --- | --- | --- |
@@ -46,5 +46,6 @@ conflict fail closed. Offset coordinator không commit vượt lower-offset hole
 
 [Runbook/commands/tests](../docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md)
 ghi rõ explicit001/002 + activation sau drain. Initial legacy inbox cần reviewed
-cursor bootstrap; không xóa inbox để bật mode. Read API vẫn read-only/skeleton;
+cursor bootstrap; không xóa inbox để bật mode. [Read API](read-api/README.md) đã có
+internal status SELECT-only; history/chart/archive/export chưa triển khai;
 scheduler/coordinator không là deployment thứ tư.

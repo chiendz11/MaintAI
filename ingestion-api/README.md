@@ -3,14 +3,15 @@
 HTTP edge độc lập: authenticated raw request → SDK gateway → Kafka ACK → HTTP.
 Implementation local có unit/HTTP contract tests, real Kafka integration và image
 smoke; **chưa nghiệm thu shared OIDC/TLS/ACL hoặc deploy Kubernetes**. Processing,
-Business và Sensor202 migration vẫn là công việc riêng.
+Business và Processing có vòng triển khai/nghiệm thu riêng.
 
 ## Ranh giới và phiên bản
 
 - `POST /api/v1/sensor-readings`: auth/envelope/size/admission; không DQ sâu,
   ML, DB, RAG, SSE hoặc gọi Business HTTP.
 - `sensor.readings` wire1.3.0 keyed `machine_id`; `sensor.rejected` wire1.4.0 keyed
-  verified source subject, HASH_ONLY. Canonical Kafka bundle1.0.0 không đổi.
+  verified source subject, HASH_ONLY. SDK0.3.0 dùng canonical Kafka bundle2.0.0;
+  lượt chuẩn hóa metrics này không đổi wire/bundle.
 - HTTP Ingestion OpenAPI1.4.0 là additive MINOR cho M1. Các HTTP APIs khác vẫn
   baseline1.3.2, không suy full target1.4 đã được triển khai.
 - HTTP ACK bỏ `schema_version` nội bộ SDK. Error được map sang HTTP Error hiện có;
@@ -25,7 +26,7 @@ SDK nội bộ được build từ checkout, không lấy từ public registry.
 ```bash
 .venv/bin/python -m pip install build==1.6.1 setuptools==84.0.0 wheel==0.48.0
 .venv/bin/python -m build messaging --wheel --outdir /tmp/maintai-m1-wheels
-.venv/bin/python -m pip install --no-deps /tmp/maintai-m1-wheels/maintai_messaging-0.2.0-py3-none-any.whl
+.venv/bin/python -m pip install --no-deps /tmp/maintai-m1-wheels/maintai_messaging-0.3.0-py3-none-any.whl
 .venv/bin/python -m pip install --find-links /tmp/maintai-m1-wheels -r ingestion-api/requirements-dev.lock
 .venv/bin/python -m pip install --no-deps --no-build-isolation -e ./ingestion-api
 ```
@@ -41,7 +42,7 @@ uv pip compile ingestion-api/requirements-dev.in --python .venv/bin/python --fin
 Kiểm tra diff versions, `pip check`, app và SDK tests sau regenerate; không sửa
 Messaging/Contracts locks để đồng bộ tùy tiện. Runtime image cài offline từ
 wheelhouse; SDK wheel được build từ source của repo và có bundled contracts.
-SDK hiện pin0.2.0 để dùng cùng source Kafka concurrency/ordering; Ingestion vẫn
+SDK hiện pin0.3.0 để dùng cùng source Kafka concurrency/ordering; Ingestion vẫn
 chỉ dùng gateway/publisher, không bật keyed Processing hoặc ordered relay.
 
 ## Chạy local với fixture identity
@@ -67,7 +68,9 @@ curl -i -H 'Content-Type: application/json' --data-binary @contracts/kafka/examp
 
 202 chỉ chứng minh broker ACK. `status_url` trỏ Business origin được cấu hình;
 M1 không gọi URL đó và Business có thể chưa chạy. Không mong thấy prediction/Alert
-trong ACK. Sensor CLI legacy vẫn chờ synchronous response, chưa là client nghiệm thu202.
+trong ACK. Sensor0.3.0 đã có client ACK202 và durable spool; xem
+[Sensor README](../sensor/README.md). Source/tests local không chứng minh đã nghiệm
+thu Sensor→Ingestion với OIDC/TLS/ACL trên shared deployment.
 
 ## Cấu hình
 
@@ -118,13 +121,40 @@ validation422 không retry mù. Wrapper không tự retry publish sau uncertaint
 - `/health/ready`: config/Kafka metadata/auth key state. Check stale, missing topics,
   unavailable dependency hoặc shutdown drain→503. Metadata không chứng minh produce
   ACL, ISR quorum, archive S3 hay Business endpoint.
-- `/metrics`: finite route/method/status/topic/outcome labels. Platform phải giới hạn
+- `/metrics`: catalog [OBS-01 §3.1–3.2](../docs/OBSERVABILITY_IMPLEMENTATION.md),
+  một registry/process, Content-Type từ Prometheus client. Platform giới hạn
   network access. Không machine/event IDs, tokens, bodies hoặc raw URLs làm labels.
 - Một publisher/process, blocking SDK/JWKS/probes qua worker threads. Khi request
   bị cancel, đợi worker kết thúc trước release admission slot; khi shutdown drain
   rồi flush. Client disconnect/timeout sau enqueue vẫn có thể đã tới Kafka.
 - SIGTERM graceful timeout tính từ body/publish budget; logs không echo exceptions,
   credential/body. Access log server tắt; app chỉ log trace IDs/route/status/duration.
+
+| Metric | Semantics / labels |
+| --- | --- |
+| `maintai_http_requests_total` | REST kết thúc; `route,method,status`, route template hoặc `__unmatched__` |
+| `maintai_http_request_duration_seconds` | HTTP histogram; `route,method`; bỏ health/scrape |
+| `maintai_ingestion_accepted_total` | Sau broker ACK `sensor.readings`, trước202; retry có thể tăng lại |
+| `maintai_ingestion_rejected_total` | Một terminal rejection/request; `reason=MALFORMED_JSON/VALIDATION_FAILED/AUTH/SIZE/OTHER` |
+| `maintai_ingestion_publish_failures_total` | Publish lỗi; `error_type` hữu hạn theo OBS-01 |
+| `maintai_ingestion_ack_duration_seconds` | Admission trước auth/body → ACK hoặc publish error; `outcome=ACCEPTED/REJECTED/ERROR` |
+| `maintai_dependency_errors_total` | Lỗi call Kafka/JWKS thật; `dependency,error_type`; không đếm invalid JWT local thành provider lỗi |
+| `maintai_metric_samples_dropped_total` | Bỏ latency thiếu thời điểm/âm/không hữu hạn; `reason` theo OBS-01 |
+
+Hai histogram dùng HTTP buckets `0.005,0.01,0.025,0.05,0.1,0.25,0.5,1,2,5,10`
+seconds, thêm `+Inf`. Auth/size/admission reject không publish thì không có ACK
+sample. Quarantine publish lỗi trả503/504 không được đếm thành completed rejection.
+Quarantine ACK thành công vẫn đếm rejection nếu client hủy request trước khi nhận
+response; middleware không đếm lại rejection đã ghi ở ACK.
+ACK bất định dùng `UNAVAILABLE`; chỉ dùng `TIMEOUT` khi exception type chứng minh.
+Instrumentation lỗi ghi log an toàn, không đổi ACK/HTTP; scrape lỗi phải hiện thiếu
+dữ liệu, không giả counter0. Các tên cũ `maintai_ingestion_http_*`,
+`maintai_ingestion_publish_total`, `maintai_ingestion_publish_duration_seconds` và
+inflight gauge đã gỡ; Người4 cập nhật queries/rules/dashboard ở repo Platform.
+
+Source HTTP/auth/guards/metrics ở `src/maintai_ingestion/`; gateway/envelope và
+Kafka transport dùng SDK `messaging/`. Bốn placeholder `http_ingestion`, `envelope`,
+`kafka_producer`, `observability` đã dọn, không tạo implementation trùng SDK.
 
 ## Kiểm tra
 

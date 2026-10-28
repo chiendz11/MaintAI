@@ -12,7 +12,7 @@ from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
 
 ROOT = Path(__file__).resolve().parent
-CONTRACTS = ROOT
+CONTRACTS = ROOT.parent
 
 
 def unique_pairs(pairs):
@@ -121,7 +121,8 @@ def semantic_checks(value):
                 raise ValueError("Prediction label disagrees with threshold")
         if "outcome" in node and "result_id" in node:
             for key in ("result_id", "source_event_id", "machine_id"):
-                if node[key] != node["outcome"][key]:
+                outcome_key = "event_id" if key == "source_event_id" else key
+                if node[key] != node["outcome"][outcome_key]:
                     raise ValueError(f"History lineage mismatch: {key}")
         if {
             "overall_status",
@@ -154,9 +155,9 @@ def semantic_checks(value):
 
 def main():
     documents = {}
-    for path in CONTRACTS.rglob("*.json"):
+    for path in [*ROOT.rglob("*.json"), CONTRACTS / "kafka/events/inference-result.schema.json"]:
         documents[path.resolve()] = read_json(path)
-    for path in CONTRACTS.rglob("*.yaml"):
+    for path in ROOT.rglob("*.yaml"):
         documents[path.resolve()] = yaml.load(path.read_text(), Loader=UniqueLoader)
     resources = []
     for path, value in documents.items():

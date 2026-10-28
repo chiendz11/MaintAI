@@ -1,0 +1,303 @@
+alembic==1.20.1
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements.lock
+    #   -r processing/requirements.in
+annotated-doc==0.0.5
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   fastapi
+annotated-types==0.8.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   pydantic
+anyio==4.15.1
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   httpx
+    #   starlette
+arrow==1.4.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   isoduration
+attrs==26.1.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   jsonschema
+    #   referencing
+certifi==2026.10.19
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   -r processing/requirements.in
+    #   httpcore
+    #   httpx
+cffi==2.1.1
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   cryptography
+click==8.5.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   uvicorn
+confluent-kafka==2.16.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   maintai-messaging
+cryptography==50.0.2
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   pyjwt
+fastapi==0.161.1
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   -r processing/requirements.in
+fqdn==1.6.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   jsonschema
+h11==0.16.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   httpcore
+    #   uvicorn
+httpcore==1.0.9
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   httpx
+httpx==0.28.1
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   -r processing/requirements.in
+idna==3.20
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   anyio
+    #   httpx
+    #   jsonschema
+isoduration==20.11.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   jsonschema
+jsonpointer==3.4
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   jsonschema
+jsonschema==4.26.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   -r processing/requirements.in
+    #   maintai-messaging
+jsonschema-specifications==2025.9.1
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   jsonschema
+lark==1.3.1
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   rfc3987-syntax
+maintai-messaging==0.3.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   -r processing/requirements.in
+mako==1.4.3
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements.lock
+    #   alembic
+markupsafe==3.0.4
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements.lock
+    #   mako
+opentelemetry-api==1.45.1
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   fastapi
+prometheus-client==0.26.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   -r processing/requirements.in
+    #   maintai-messaging
+psycopg==3.3.6
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements.lock
+    #   maintai-messaging
+psycopg-binary==3.3.6
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements.lock
+    #   psycopg
+pycparser==3.12
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   cffi
+pydantic==2.14.1
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   -r processing/requirements.in
+    #   fastapi
+pydantic-core==2.50.1
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   pydantic
+pyjwt==2.15.1
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -r processing/requirements.in
+python-dateutil==2.9.0.post0
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   -r processing/requirements.in
+    #   arrow
+referencing==0.37.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   jsonschema
+    #   jsonschema-specifications
+rfc3339-validator==0.1.4
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   jsonschema
+rfc3986-validator==0.1.1
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   jsonschema
+rfc3987-syntax==1.1.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   jsonschema
+rpds-py==2026.9.1
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   jsonschema
+    #   referencing
+six==1.17.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   python-dateutil
+    #   rfc3339-validator
+sqlalchemy==2.1.6
+    # via
+    #   -c backend/requirements.lock
+    #   -c processing/requirements.lock
+    #   alembic
+starlette==1.9.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   fastapi
+typing-extensions==4.16.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   alembic
+    #   anyio
+    #   fastapi
+    #   opentelemetry-api
+    #   psycopg
+    #   pydantic
+    #   pydantic-core
+    #   referencing
+    #   sqlalchemy
+    #   starlette
+    #   typing-inspection
+typing-inspection==0.4.4
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   fastapi
+    #   pydantic
+tzdata==2026.5
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   arrow
+uri-template==1.3.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   jsonschema
+uvicorn==0.54.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   -r processing/requirements.in
+webcolors==25.10.0
+    # via
+    #   -c backend/requirements.lock
+    #   -c ingestion-api/requirements.lock
+    #   -c processing/requirements.lock
+    #   jsonschema

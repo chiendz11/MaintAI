@@ -58,6 +58,7 @@ class OidcIdentityVerifier:
         cache_seconds=300,
         clock=time.monotonic,
         lock_timeout=2,
+        observability=None,
     ):
         self.issuer, self.audience, self.algorithms = issuer, audience, algorithms
         self.roles_claim, self.machines_claim = roles_claim, machines_claim
@@ -67,6 +68,7 @@ class OidcIdentityVerifier:
         self._last_attempt = float("-inf")
         self._lock = threading.Lock()
         self.lock_timeout = lock_timeout
+        self.observability = observability
 
     def _load(self, *, force=False):
         if not self._lock.acquire(timeout=self.lock_timeout):
@@ -94,7 +96,9 @@ class OidcIdentityVerifier:
                 ]
                 if not keys:
                     raise ValueError("No usable signing keys")
-            except Exception:
+            except Exception as error:
+                if self.observability is not None:
+                    self.observability.record_dependency_error("oidc", error)
                 self._last_attempt = self.clock()
                 raise EdgeFailure(503, "DEPENDENCY_UNAVAILABLE", retryable=True) from None
             self._keys, self._fetched_at = keys, self.clock()

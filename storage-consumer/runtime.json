@@ -37,7 +37,7 @@
   ],
   "boundaries": [
     "Archive all Kafka accepted receipts including feature-invalid and permitted rejected HASH_ONLY evidence; no HTTP intake or discarded-body reconstruction.",
-    "Shared SDK controls durable receipts, rebalance fencing and offset commits; one-record raw manifest1.0.0 from Kafka bundle1.1.0.",
+    "Shared SDK controls durable receipts, rebalance fencing and offset commits; one-record raw manifest1.0.0 from Kafka bundle2.0.0.",
     "No business_db/processing_db access, ML, risk, training trigger or processed-history cleanup.",
     "External Kafka/S3 credentials and versioned bucket required for serve; offline verify/tests need no AWS. No real S3/container/rollout evidence yet."
   ],
@@ -45,7 +45,7 @@
   "dockerfile_status": "implemented_not_built",
   "implemented_contract_revision": "1.4.0",
   "application_version": "0.1.0",
-  "kafka_contract_bundle_version": "1.1.0",
+  "kafka_contract_bundle_version": "2.0.0",
   "archive_schema_version": "1.0.0",
-  "kafka_sdk_version": "0.2.0"
+  "kafka_sdk_version": "0.3.0"
 }
