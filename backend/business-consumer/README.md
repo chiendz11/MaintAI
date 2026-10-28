@@ -89,3 +89,11 @@ Tests `test_machine_reads.py` kiểm SQL scope/state/pagination, DTO và snapsho
 quán bằng PostgreSQL thật cùng nguồn Alert fixture. Alert lifecycle/jobs và
 notifications/SSE chưa được triển khai. Full history/archive/export thuộc
 Processing interfaces khác với status API.
+
+## Notification sau commit
+
+Consumer gọi pg_notify trong cùng transaction khi latest projection visible thay đổi.
+BUSINESS_NOTIFY_CHANNEL mặc định maintai_business_live_v1 phải khớp API. Payload nhỏ
+chỉ gồm version/hash machine, không raw features hoặc credential. Rollback/duplicate
+không phát update mới. NOTIFY chỉ là invalidation hint; REST snapshot phục hồi khi
+mất thông báo, không cần thêm raw history hoặc đổi Kafka group.

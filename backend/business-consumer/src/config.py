@@ -5,6 +5,7 @@ import os
 from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
+from backend.shared.notifications import DEFAULT_CHANNEL, Notifier
 from maintai_messaging.config import KafkaSettings
 
 
@@ -21,6 +22,7 @@ class Settings:
     kafka: KafkaSettings
     host: str
     port: int
+    notification_channel: str = DEFAULT_CHANNEL
 
     @classmethod
     def from_env(cls, env=None):
@@ -43,4 +45,5 @@ class Settings:
                 raise ValueError("Local test Consumer requires loopback DB/bind and local Kafka")
         elif kafka.local_mode:
             raise ValueError("Shared Consumer cannot enable local Kafka mode")
-        return cls(database_url, kafka, host, port)
+        channel = Notifier(env.get("BUSINESS_NOTIFY_CHANNEL", DEFAULT_CHANNEL)).channel
+        return cls(database_url, kafka, host, port, channel)
