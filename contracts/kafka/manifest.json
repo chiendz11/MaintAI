@@ -1,25 +1,24 @@
 {
   "schema_version": "1.0.0",
-  "bundle_version": "1.1.0",
+  "bundle_version": "2.0.0",
   "target_design": "1.4.0",
   "sha256": {
     "kafka/archive/raw-manifest.schema.json": "e622f18d5b9f18f007fc0df7676f8217ebe4bf736fe8020f977b5471a7a8d407",
     "kafka/events/alert-signal.schema.json": "3c9d18d5dd9504fa4ee349017399694719ced9d3343f32fb5aa4f4666a82ad4d",
     "kafka/events/inference-result.schema.json": "ac81a328216100714e2690f0744f9b29eb39200ad68b4cde893ae6e0b9fbcf5e",
-    "kafka/events/legacy-outcome.schema.json": "72af2b68d17d8ab66232713af25126c69e0a02484aa8188af54ab3f6df38cf73",
     "kafka/events/sensor-reading.schema.json": "ed694f63bab943e65f17b44687cab68007ad381f6bec0f2959a748056c78bc54",
     "kafka/events/sensor-rejected.schema.json": "a3c7864d15c979708e7b9dc0da028e4b3ad2d7b50cb30ebd856c376772ca9c4c",
     "kafka/events/sensor-request.schema.json": "379f0622141fd3604b0814a8da55b327963510f4184443fb33c240cd5bf365ef",
     "kafka/examples/alert-signal.json": "1aae2fd5bf570f636fe95d1b1d7a01e99716e6015fb48190ce762c6fcc4ae081",
     "kafka/examples/completed.json": "d4c4cd2db1f6a2eba54cb8178b64aaa296ceab2d4fa9ddaf844e6860f39ec14e",
     "kafka/examples/invalid.json": "d43d8da34a69b2d1040ac14d42ce7fe3d31be0b6eac9707152e7a8ff34442b3e",
-    "kafka/examples/legacy-completed.json": "76ff0da9b307484718f8a2121eb5d986224e9491051eaf45e001fe8b24c20ff4",
-    "kafka/examples/legacy-invalid.json": "8e1ea9be522fc7942588fe2def7529fa7a642c3c11b17602668f526d239bbf88",
-    "kafka/examples/legacy-unavailable.json": "f0f8303718408e26a5d9f10242f2bb01a26549345706ad75a00122993a24bf4c",
-    "kafka/examples/manifest.json": "63217ca38685cbe25e0a827f610711fe679d2e1c3b6c8ef6d6da9683933630fe",
+    "kafka/examples/manifest.json": "14c4bc115f9e41d75fef3ea7b689ee5782fec87e6eff21d3d8a886fbfa0fb14c",
     "kafka/examples/negative-invalid-image.json": "549e747ea9f244e386eafd010b76604fedc6b6c18f710208dccb7fe7774e217d",
     "kafka/examples/negative-invalid-source-offset.json": "d7eca7ec1cbe66b189accfa28f5baa0d1841c0e59337585f69ef0e287a5db11f",
     "kafka/examples/negative-invalid-with-prediction.json": "a364abe74fb585198db75ba766df3c1b35230800f640079899d88f81b3074ab2",
+    "kafka/examples/negative-legacy-completed.json": "76ff0da9b307484718f8a2121eb5d986224e9491051eaf45e001fe8b24c20ff4",
+    "kafka/examples/negative-legacy-invalid.json": "8e1ea9be522fc7942588fe2def7529fa7a642c3c11b17602668f526d239bbf88",
+    "kafka/examples/negative-legacy-unavailable.json": "f0f8303718408e26a5d9f10242f2bb01a26549345706ad75a00122993a24bf4c",
     "kafka/examples/negative-unavailable-with-probability.json": "763b2b20c13b2ceae0d9751db3fc5553df8529292dcb1e44566faca04974bf28",
     "kafka/examples/negative-unknown-version.json": "773abb4d5bc2d8df3d510b256781aa1a4d6015df4f13ed321b5f4f655989842f",
     "kafka/examples/negative-wrong-label.json": "0cdd04da93d0542a757dee000f94d57141775e4a8e11c18e36287407a0607afa",
@@ -30,8 +29,9 @@
     "kafka/migrations/001_messaging.sql": "12d2de438c1ebffb1169e19a777728d7b1953ee867101c90afcc09aa8ebea0f6",
     "kafka/migrations/002_processing_ordering.sql": "d7b51e993fa0c80b4ed79278be238c40900f56eae5a3c260cc94d589a2eb5522",
     "kafka/releases/1.0.0.json": "911ddd0c216ff6fd1a0b3166b68ed8e84eb8b56e5adc2f8d294513931e033cc3",
-    "kafka/topology.json": "b807d068e171247cc13fc469128dd533553fe9f66f4451749b62c9e5fc87de1b",
+    "kafka/releases/1.1.0.json": "27d0187dd2aa1ff785bc39bd1167243516a6c6bc8d3d966320fd0d21c1e749c7",
+    "kafka/topology.json": "04303b7d0eedd52bb1de36fc34b94e154c36055437b1ec6f0d9d88042391384b",
     "v1.3/events/alert-signal.schema.json": "ecb2a85f589b720c60c6ad583de49f1e1688ef5707463bfdb30e6ae29b36db7b",
-    "v1.3/schemas/runtime.schema.json": "7699f9acca5cf93cb4aa465be21fbf5366330279b9d9ee18f1973e4aaa3d5254"
+    "v1.3/schemas/runtime.schema.json": "57b0cd893120703813400e0af911e9933ad6d69c04413a924169ea1974eb0bcb"
   }
 }

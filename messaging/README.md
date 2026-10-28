@@ -4,7 +4,15 @@ Shared Python Kafka plumbing, versioned contracts, owner-local inbox/outbox and
 S3 archive adapters. This package is a library, not another Deployment.
 
 Canonical contract source: `../contracts/kafka/`. Wheels/sdists include those
-files and the exact legacy schemas needed by compatibility readers.
+files; inference.results readers and writers accept only outcome 1.4.0.
+
+## SDK0.3.0 / bundle2.0.0 — OUTCOME-14-ONLY
+
+The legacy2.0 reader and DecodedEvent.legacy are removed. Completed outcomes
+require producer-supplied risk_score; Business does not synthesize a fallback.
+Retired payloads are negative fixtures. Storage still archives opaque evidence.
+See [migration and rollout](../docs/OUTCOME_V1_4_MIGRATION.md). SQL001/002 remain
+byte-identical; the ordering behavior introduced in SDK0.2.0 below is unchanged.
 
 See [the four-person development guide](../docs/KAFKA_DEVELOPMENT_GUIDE.md) for
 installation, local Kafka, handler factories, transaction examples and GitOps.

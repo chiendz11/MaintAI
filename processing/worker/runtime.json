@@ -33,10 +33,10 @@
   ],
   "boundaries": [
     "History and terminal outbox commit before Kafka offset; Business owns Alerts.",
-    "Outcome writer1.4.0/kind; legacy2.0.0 is reader-only. Shared cutover is consumer-first.",
+    "Outcome1.4.0/kind is the only supported read/write format; see OUTCOME-14-ONLY before cutover.",
     "Executable worker is explicit local-fixture only until reviewed serving identity and registry service access are available.",
     "Target PROC-ORDER-01/1.0.0: same machine FIFO, different machines concurrent; commit safe completed prefix per partition.",
-    "Baseline inventory1.3.2 is preserved; Kafka outcome writer1.4.0/reader legacy2.0.0 are independently versioned.",
+    "Baseline inventory1.3.2 is preserved; Kafka outcome reader/writer1.4.0 are independently versioned.",
     "Ordering requires explicit owner migration/activation after drain; no automatic legacy cursor bootstrap."
   ],
   "dockerfile": "processing/worker/Dockerfile",
@@ -51,8 +51,8 @@
   "transport_implementation": {
     "package": "maintai-processing",
     "version": "0.1.0",
-    "sdk_version": "0.2.0",
-    "kafka_bundle_version": "1.1.0",
+    "sdk_version": "0.3.0",
+    "kafka_bundle_version": "2.0.0",
     "decision": "PROC-ORDER-01/1.0.0",
     "document": "docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md"
   }

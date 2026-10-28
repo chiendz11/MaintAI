@@ -1,4 +1,4 @@
-"""Strict offline schemas, compatibility readers and immutable event identities."""
+"""Strict offline schemas and immutable event identities."""
 
 from __future__ import annotations
 
@@ -69,13 +69,9 @@ class DecodedEvent:
         return self.payload["schema_version"]
 
     @property
-    def legacy(self) -> bool:
-        return self.topic == "inference.results" and self.schema_version == "2.0.0"
-
-    @property
     def kind(self) -> str:
         if self.topic == "inference.results":
-            return self.payload["result_kind" if self.legacy else "kind"]
+            return self.payload["kind"]
         return self.topic
 
     @property
@@ -91,7 +87,7 @@ class DecodedEvent:
     @property
     def source_event_id(self) -> str | None:
         if self.topic == "inference.results":
-            return self.payload["source_event_id" if self.legacy else "event_id"]
+            return self.payload["event_id"]
         return self.payload.get("event_id")
 
     @property
@@ -193,7 +189,7 @@ class ContractRegistry:
         if version not in entry["reader_schemas"]:
             raise ContractViolation("Unsupported Kafka event schema version")
         if writer and version != entry["writer_version"]:
-            raise ContractViolation("Legacy wire versions are read-only")
+            raise ContractViolation("Event schema version is not enabled for writing")
         validator = self.validator(entry["reader_schemas"][version])
         if not validator.is_valid(payload):
             # jsonschema messages can echo sensitive input. Do not put them in logs/errors.

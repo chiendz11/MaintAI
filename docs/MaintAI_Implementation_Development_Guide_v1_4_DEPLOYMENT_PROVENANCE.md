@@ -3259,8 +3259,9 @@ Feature INVALID nhưng envelope đúng vẫn được `202` sau `sensor.readings
 JSON Schema của repo: [inference-result.schema.json](../contracts/kafka/events/inference-result.schema.json);
 fixtures ở [Kafka examples](../contracts/kafka/examples/manifest.json). Python SDK và
 owner integration ở [Kafka guide](KAFKA_DEVELOPMENT_GUIDE.md). Transactional outbox
-tạo bản ghi cho cả outcome không có Alert. Reader hỗ trợ1.4.0 `kind` và legacy2.0.0
-`result_kind`, writer chỉ1.4.0; rollout reader trước writer, không bịa provenance legacy.
+tạo bản ghi cho cả outcome không có Alert. Reader/writer chỉ1.4.0 `kind` theo
+[OUTCOME-14-ONLY](OUTCOME_V1_4_MIGRATION.md); bỏ reader2.0.0, không tính risk
+thay legacy và không tự migrate dữ liệu cũ. Đọc §56 trước cutover.
 
 ## 44.3. S3 archive manifest và History Query
 
@@ -3619,3 +3620,22 @@ inbox/outbox và full history, không bỏ reading/alert để làm latency đ�
 [Capacity §11](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100)
 có ví dụX=100/200/500/1.000 với assumptions rõ;1.000 chỉ là ví dụ mở rộng, không là
 yêu cầu ban đầu. Các phép tính không thay load test hoặc tự bật HPA/Deployment.
+
+
+# 56. OUTCOME-14-ONLY — Chỉ dùng outcome1.4.0 (28/10)
+
+Đọc [hướng dẫn migration](OUTCOME_V1_4_MIGRATION.md). Processing đã tạo outcome1.4;
+phần thay đổi là SDK và Business chỉ nhận định dạng đó, bỏ nhánh legacy2.0.
+COMPLETED bắt buộc risk_score do Processing cung cấp. Business persist điểm gốc,
+Fleet đọc latest_risk_score; không lấy probability làm fallback hoặc tính lại
+policy. INVALID/FAILED không tạo risk mới và không xóa latest valid prediction cũ.
+
+SDK0.3.0/bundle2.0.0 đồng bộ tất cả package pins và CI. Schema HTTP/history dùng
+cùng schema Kafka, tránh một bên tiếp tục chấp nhận union2.0.0. SQL001/002 giữ
+nguyên bytes; không có owner migration backfill legacy risk. Các negative fixtures
+2.0.0 kiểm chứng hành vi từ chối. Storage vẫn lưu opaque bytes làm bằng chứng.
+
+Trước rollout cần kiểm kê Kafka/outbox/projection cũ. Với môi trường demo mới,
+khởi tạo cô lập và phát readings mới; không mặc định reset một group/DB đang hoạt
+động. Với dữ liệu cần giữ, cutover phải có kế hoạch riêng. Thay đổi source không
+chứng minh đã migrate data, chạy Docker/DB, nối Alert provider hoặc nghiệm thu E2E.

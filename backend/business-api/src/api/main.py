@@ -4,9 +4,12 @@ import argparse
 import logging
 import sys
 
+import httpx
 import psycopg
 import uvicorn
+from backend.shared.persistence.projections import ProjectionRepository
 from backend.shared.persistence.registry import RegistryRepository
+from business_processing_client import ProcessingStatusClient
 from psycopg.rows import dict_row
 
 from .app import create_app
@@ -34,9 +37,21 @@ def main(argv=None):
             machines_claim=settings.machines_claim,
             fetch_jwks=jwks_fetcher(settings.jwks_url),
         )
+        status_client = None
+        if settings.processing_read_url:
+            status_client = ProcessingStatusClient(
+                httpx.AsyncClient(trust_env=False, follow_redirects=False),
+                base_url=settings.processing_read_url,
+                token_file=settings.processing_token_file,
+            )
         logging.basicConfig(level=logging.INFO, format="%(message)s")
         uvicorn.run(
-            create_app(repository, verifier),
+            create_app(
+                repository,
+                verifier,
+                status_client=status_client,
+                projections=ProjectionRepository(repository.connection_factory),
+            ),
             host=settings.host,
             port=settings.port,
             access_log=False,

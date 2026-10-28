@@ -12,8 +12,10 @@ cài package, validate config hoặc chạy unit tests.** `serve` cần Kafka v�
 | `sensor.rejected` | `raw-rejected-archive-v1` | Bật, giữ quarantine do Ingestion đã cho phép |
 | `inference.results` | `outcome-archive-v1` | Chỉ bật bằng `STORAGE_ARCHIVE_OUTCOMES=true` |
 
-Dùng `maintai-messaging[s3]==0.2.0` và [Kafka bundle1.1.0](../contracts/kafka/README.md):
-accepted1.3.0, rejected1.4.0, optional outcome writer1.4/legacy2.0 giữ nguyên bytes.
+Dùng `maintai-messaging[s3]==0.3.0` và [Kafka bundle2.0.0](../contracts/kafka/README.md):
+accepted1.3.0, rejected1.4.0, optional outcome1.4.0. Archive giữ nguyên bytes,
+kể cả event sai/cũ; không decode legacy thành kết quả nghiệp vụ. Xem
+[OUTCOME-14-ONLY](../docs/OUTCOME_V1_4_MIGRATION.md).
 Package0.1.0, raw frame/manifest1.0.0, target docs1.4.0 là các version độc lập.
 Không đổi wire schemas để triển khai runtime.
 

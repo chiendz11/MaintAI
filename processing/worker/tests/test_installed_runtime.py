@@ -34,8 +34,8 @@ def test_worker_image_contains_installed_commands_and_nonroot_user():
             "from maintai_messaging.contracts import default_contracts; "
             "from consumer.handler import KeyedProcessingHandler; "
             "import importlib; "
-            "assert version('maintai-messaging') == '0.2.0'; "
-            "assert default_contracts().bundle_version == '1.1.0'; "
+            "assert version('maintai-messaging') == '0.3.0'; "
+            "assert default_contracts().bundle_version == '2.0.0'; "
             "migration = importlib.import_module('processing.migrations.versions.0002_ordering'); "
             "assert migration.down_revision == 'processing_0001'",
         ],

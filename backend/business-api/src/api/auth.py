@@ -112,7 +112,7 @@ class IdentityVerifier:
         except RegistryFailure:
             return False
 
-    def verify(self, authorization):
+    def verify(self, authorization, *, allowed_roles=None):
         if not authorization or len(authorization) > 16384:
             raise RegistryFailure(401, "UNAUTHORIZED")
         parts = authorization.split()
@@ -145,7 +145,9 @@ class IdentityVerifier:
         if (
             not isinstance(roles, list)
             or not all(isinstance(r, str) for r in roles)
-            or not set(roles).intersection({"VIEWER", "TECHNICIAN", "ADMIN"})
+            or not set(roles).intersection(
+                {"VIEWER", "TECHNICIAN", "ADMIN"} if allowed_roles is None else allowed_roles
+            )
             or not isinstance(machines, list)
             or not machines
             or not all(isinstance(m, str) and m and m != "*" and "\x00" not in m for m in machines)

@@ -353,7 +353,7 @@ Simulator UI gọi Sensor trực tiếp qua management origin; không Business f
 [System Contracts §34](MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md) và các normative
 specs ưu tiên mọi baseline cũ. Six provider descriptions:
 `contracts/v1.3/openapi/openapi-{ingestion,processing,business,simulator,ml,rag}.yaml`.
-ML/RAG provider payload vẫn1.1.0, description version1.3.2. Union result schema2.0.0.
+ML/RAG provider payload vẫn1.1.0, description version1.3.2. ProcessingResult/history hiện dùng outcome1.4.0 theo OUTCOME-14-ONLY bên dưới.
 
 - HISTORY-01 chốt range/point/raw/chart/export routes, HMAC cursor + snapshot10m,
   limits, full coverage/error410/503 và private download303.
@@ -454,3 +454,13 @@ Ingestion API description tăng MINOR lên1.4.0 theo System §25 vì thêm opera
 - /health/live không phụ thuộc Kafka; /health/ready kiểm tra config, cached Kafka metadata và auth key state; metadata không chứng minh producer ACL/ACK quorum. /metrics chỉ expose platform metrics, hạn chế network ingress.
 - 202 sau accepted ACK; authenticated malformed/envelope-invalid400/422 sau rejected ACK. Feature invalid vẫn202;503/504 retry giữ event ID/payload. Request headers invalid là transport400 trước gateway, không quarantine sensor body.
 - Shared OIDC/TLS/ACL và Sensor migration202 cần bằng chứng tích hợp riêng; local tests không đủ nghiệm thu deployment.
+
+
+## OUTCOME-14-ONLY — 2026-10-28
+
+[Quyết định outcome1.4](OUTCOME_V1_4_MIGRATION.md) ưu tiên các đoạn inherited
+về union2.0.0. Kafka và entrypoint ProcessingResult/history chỉ dùng schema
+1.4.0, discriminator kind, event_id nguồn và risk_score bắt buộc cho COMPLETED.
+Wrapper history giữ source_event_id và so với outcome.event_id. SSE result_kind
+là field riêng, không tự đổi cùng Kafka. Fleet lấy risk gốc từ projection;
+không có probability fallback hoặc hỗ trợ đọc/backfill legacy.

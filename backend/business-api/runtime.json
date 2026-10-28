@@ -5,10 +5,10 @@
   "runtime_id": "business-api",
   "workload_kind": "Deployment",
   "code_owner": "business-backend",
-  "implementation_status": "implemented_registry_only",
+  "implementation_status": "partial_machine_reads_live_status_facade",
   "image_group": "business-backend",
   "image_digest": null,
-  "entrypoint_status": "implemented_m2r_registry_only",
+  "entrypoint_status": "implemented_machine_reads_live_status",
   "purpose": "Business REST/SSE, RBAC, machine/alert/feedback/brief actions, Processing history facade, enqueue/poll jobs; no Simulator Control facade.",
   "source_paths": [
     "backend/business-api/src",
@@ -19,19 +19,29 @@
   "kafka_subscriptions": [],
   "kafka_publications": [],
   "interfaces": [
-    "Frontend REST/SSE",
-    "Processing read API",
-    "Business durable job state",
-    "Published drift report S3 objects",
-    "PG LISTEN/NOTIFY"
+    "Scoped Fleet/MachineDetail REST (requires Alert read source)",
+    "Three-axis live REST",
+    "Processing event status HTTP facade",
+    "Health/metrics HTTP"
   ],
   "boundaries": [
-    "Không consume Kafka trực tiếp để broadcast SSE; mỗi API replica nhận notification và đọc latest projections.",
-    "Không query processing_db, không tính ML/risk; REST snapshot resync khi mất notification.",
+    "Kh\u00f4ng consume Kafka tr\u1ef1c ti\u1ebfp \u0111\u1ec3 broadcast SSE; m\u1ed7i API replica nh\u1eadn notification v\u00e0 \u0111\u1ecdc latest projections.",
+    "Kh\u00f4ng query processing_db, kh\u00f4ng t\u00ednh ML/risk; REST snapshot resync khi m\u1ea5t notification.",
     "Main UI only; Simulator UI calls Sensor Control API directly on management origin. RAG execution belongs to durable Consumer jobs."
   ],
   "dockerfile": "backend/business-api/Dockerfile",
   "dockerfile_status": "implemented",
   "implemented_contract_revision": "1.3.2",
-  "implemented_scope": "M2.R registry migration/provision and scoped GET machine only; projections/list/alerts/SSE/history and shared environment acceptance remain unimplemented/unvalidated."
+  "implemented_scope": "Scoped Fleet/MachineDetail readers with consistent projections and explicit 503 when Alert read source or required persisted risk is missing; three-axis live snapshots, Processing status HTTP facade with separate service identity, HTTP/probes/metrics. Alert source/lifecycle, SSE/history/shared acceptance remain incomplete.",
+  "planned_interfaces": [
+    "Frontend SSE",
+    "Business durable job state",
+    "Published drift report S3 objects",
+    "PG LISTEN/NOTIFY"
+  ],
+  "outcome_contract": {
+    "read_version": "1.4.0",
+    "legacy_reader": false,
+    "document": "docs/OUTCOME_V1_4_MIGRATION.md"
+  }
 }

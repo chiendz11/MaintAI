@@ -5,10 +5,10 @@
   "runtime_id": "business-consumer",
   "workload_kind": "Deployment",
   "code_owner": "business-backend",
-  "implementation_status": "skeleton",
+  "implementation_status": "partial_telemetry_prediction_consumer",
   "image_group": "business-backend",
   "image_digest": null,
-  "entrypoint_status": "not_implemented_for_v1.3.2",
+  "entrypoint_status": "implemented_two_serial_groups",
   "purpose": "Telemetry/prediction/alert handlers + latest projections/lifecycle and bounded durable brief/drift-catalog job loop.",
   "source_paths": [
     "backend/business-consumer/src",
@@ -24,28 +24,41 @@
     {
       "topic": "inference.results",
       "group": "business-prediction-v1"
-    },
+    }
+  ],
+  "kafka_publications": [],
+  "interfaces": [
+    "Telemetry/prediction Kafka subscriptions",
+    "Business latest projection DB writes",
+    "Health/metrics HTTP"
+  ],
+  "boundaries": [
+    "Ba handlers l\u00e0 module c\u1ee7a m\u1ed9t deployment; kh\u00f4ng t\u1ea1o telemetry-service/prediction-service ri\u00eang.",
+    "Ch\u1ec9 latest telemetry/latest valid prediction/latest processing v\u00e0 business data; kh\u00f4ng full raw/history.",
+    "Inbox/CAS tr\u00ean sequence_number b\u1ec1n v\u1eefng; kh\u00f4ng sort epoch/event_id; kh\u00f4ng x\u00f3a last valid prediction khi event m\u1edbi INVALID."
+  ],
+  "dockerfile": "backend/business-consumer/Dockerfile",
+  "dockerfile_status": "implemented",
+  "implemented_contract_revision": "1.3.2",
+  "planned_background_tasks": [
+    "brief-jobs",
+    "drift-catalog-sync"
+  ],
+  "implemented_scope": "Telemetry and prediction SDK serial groups, durable latest projections/source guards, probes and OBS-01 commit metrics; Alert/lifecycle/jobs/notifications and shared environment acceptance remain incomplete.",
+  "planned_kafka_subscriptions": [
     {
       "topic": "alert.signals",
       "group": "business-alert-v1"
     }
   ],
-  "kafka_publications": [],
-  "interfaces": [
+  "planned_interfaces": [
     "PG NOTIFY after durable projection commit",
     "RAG API from leased brief jobs",
     "Committed drift report S3 manifests"
   ],
-  "boundaries": [
-    "Ba handlers là module của một deployment; không tạo telemetry-service/prediction-service riêng.",
-    "Chỉ latest telemetry/latest valid prediction/latest processing và business data; không full raw/history.",
-    "Inbox/CAS trên sequence_number bền vững; không sort epoch/event_id; không xóa last valid prediction khi event mới INVALID."
-  ],
-  "dockerfile": "backend/business-consumer/Dockerfile",
-  "dockerfile_status": "placeholder",
-  "implemented_contract_revision": null,
-  "planned_background_tasks": [
-    "brief-jobs",
-    "drift-catalog-sync"
-  ]
+  "outcome_contract": {
+    "read_version": "1.4.0",
+    "legacy_reader": false,
+    "document": "docs/OUTCOME_V1_4_MIGRATION.md"
+  }
 }
