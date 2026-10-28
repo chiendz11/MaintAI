@@ -23,6 +23,9 @@ class Settings:
     host: str
     port: int
     notification_channel: str = DEFAULT_CHANNEL
+    alert_channel: str = "maintai_business_alert_v1"
+    processing_read_url: str | None = None
+    processing_token_file: str | None = field(default=None, repr=False)
 
     @classmethod
     def from_env(cls, env=None):
@@ -46,4 +49,33 @@ class Settings:
         elif kafka.local_mode:
             raise ValueError("Shared Consumer cannot enable local Kafka mode")
         channel = Notifier(env.get("BUSINESS_NOTIFY_CHANNEL", DEFAULT_CHANNEL)).channel
-        return cls(database_url, kafka, host, port, channel)
+        alert_channel = Notifier(
+            env.get("BUSINESS_ALERT_NOTIFY_CHANNEL", "maintai_business_alert_v1")
+        ).channel
+        if alert_channel == channel:
+            raise ValueError("Alert and telemetry channels must differ")
+        url, token = (
+            env.get("BUSINESS_PROCESSING_READ_URL", ""),
+            env.get("BUSINESS_PROCESSING_TOKEN_FILE", ""),
+        )
+        if bool(url) != bool(token):
+            raise ValueError("Evidence requires both service origin and credential file")
+        if profile == "shared" and not url:
+            raise ValueError("Shared Alert Consumer requires Processing evidence credentials")
+        if url:
+            value = urlparse(url)
+            if (
+                value.scheme not in {"http", "https"}
+                or not value.hostname
+                or value.username
+                or value.password
+                or value.query
+                or value.fragment
+                or value.path not in {"", "/"}
+                or (profile == "shared" and value.scheme != "https")
+                or (profile == "local-test" and not loopback(value.hostname))
+            ):
+                raise ValueError("Invalid Processing evidence origin")
+        return cls(
+            database_url, kafka, host, port, channel, alert_channel, url or None, token or None
+        )

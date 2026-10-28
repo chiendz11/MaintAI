@@ -16,7 +16,7 @@ maintai-business-migrate = "backend.shared.persistence.migration:main"
 maintai-business-provision = "backend.shared.persistence.provision:main"
 
 [tool.setuptools]
-packages = ["backend", "backend.shared", "backend.shared.persistence", "backend.shared.projections", "backend.shared.notifications", "backend.shared.inbox", "backend.shared.ordering", "backend.migrations", "backend.migrations.versions", "api", "business_consumer", "business_consumer.handlers", "business_consumer.handlers.telemetry", "business_consumer.handlers.prediction", "business_processing_client", "business_sse"]
+packages = ["backend", "backend.shared", "backend.shared.persistence", "backend.shared.projections", "backend.shared.notifications", "backend.shared.inbox", "backend.shared.alerts", "backend.shared.audit", "backend.shared.feedback", "backend.shared.ordering", "backend.migrations", "backend.migrations.versions", "api", "business_consumer", "business_consumer.handlers", "business_consumer.handlers.telemetry", "business_consumer.handlers.prediction", "business_consumer.handlers.alert", "business_processing_client", "business_sse"]
 package-dir = {backend = ".", api = "business-api/src/api", business_consumer = "business-consumer/src", business_processing_client = "business-api/src/processing_client", business_sse = "business-api/src/sse"}
 
 [tool.pytest.ini_options]

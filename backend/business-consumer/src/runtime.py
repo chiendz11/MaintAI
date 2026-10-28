@@ -17,6 +17,13 @@ def serve(settings, *, stop=None, connection_factory=None):
     stop = stop if stop is not None else threading.Event()
     factory = connection_factory or (lambda: connect(settings.database_url))
     metrics = Metrics(stop=stop)
+    from backend.shared.alerts.evidence import EvidenceClient
+
+    evidence = (
+        EvidenceClient(settings.processing_read_url, settings.processing_token_file)
+        if settings.processing_read_url
+        else None
+    )
     failed = threading.Event()
     previous = {}
     server = uvicorn.Server(
@@ -55,6 +62,9 @@ def serve(settings, *, stop=None, connection_factory=None):
                             "latest_valid_prediction",
                             "business_source_inbox",
                             "maintai_kafka_inbox",
+                            "alerts",
+                            "alert_notifications",
+                            "alert_evidence_snapshots",
                         ):
                             # All table names are internal constants.
                             connection.execute(f"SELECT 1 FROM {table} LIMIT 0")
@@ -68,7 +78,7 @@ def serve(settings, *, stop=None, connection_factory=None):
                     metadata = admin.list_topics(timeout=2)
                     kafka = all(
                         name in metadata.topics and metadata.topics[name].error is None
-                        for name in ("sensor.readings", "inference.results")
+                        for name in ("sensor.readings", "inference.results", "alert.signals")
                     )
                 except Exception:
                     try:
@@ -102,12 +112,16 @@ def serve(settings, *, stop=None, connection_factory=None):
                 settings.kafka,
                 metrics=metrics,
                 notification_channel=settings.notification_channel,
+                alert_channel=settings.alert_channel,
+                evidence=evidence,
             ),
             stop,
         )
         if failed.is_set():
             raise RuntimeError("Business Consumer management loop failed")
     finally:
+        if evidence is not None:
+            evidence.close()
         stop.set()
         server.should_exit = True
         if monitor_thread.ident is not None:

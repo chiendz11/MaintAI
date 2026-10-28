@@ -20,7 +20,6 @@ import time
 from datetime import UTC, datetime
 from functools import partial
 from pathlib import Path
-from types import SimpleNamespace
 from urllib.parse import parse_qs, urlencode, urlparse
 from uuid import uuid4
 
@@ -36,11 +35,8 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from maintai_messaging.config import KafkaSettings
-from maintai_messaging.consumer import Record
-from maintai_messaging.contracts import canonical_json, default_contracts
-from maintai_messaging.ingestion import IngestionGateway, SourceIdentity
-from maintai_messaging.postgres import OutboxRelay, connect
-from maintai_messaging.producer import KafkaPublisher
+from maintai_messaging.contracts import canonical_json
+from maintai_messaging.postgres import connect
 from psycopg import sql
 from sqlalchemy.engine import make_url
 
@@ -48,9 +44,7 @@ from backend.shared.persistence.migration import upgrade as business_upgrade
 from backend.shared.persistence.permissions import grant_business_permissions
 from backend.shared.persistence.projections import ProjectionRepository
 from backend.shared.persistence.registry import RegistryRepository
-from processing.shared.inference_client.client import PredictionAttempt
 from processing.shared.persistence.connection import upgrade as processing_upgrade
-from processing.worker.tests.test_worker_transaction import Providers, handler
 
 ROOT = Path(__file__).resolve().parents[3]
 ISSUER = "http://127.0.0.1:18033"
@@ -72,9 +66,13 @@ def serve_fixture():
         owner: make_url(dsn).set(database=name).render_as_string(hide_password=False)
         for owner, name in databases.items()
     }
-    roles = {name: "m4_" + name + "_" + suffix for name in ("reader", "consumer")}
+    roles = {
+        name: "m4_" + name + "_" + suffix
+        for name in ("reader", "consumer", "api", "processing_reader")
+    }
     password = uuid4().hex
     channel = "m4_" + suffix
+    alert_channel = "m5_alert_" + suffix
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     jwks = {
         "keys": [
@@ -87,7 +85,15 @@ def serve_fixture():
         ]
     }
     codes = {}
+    m5 = os.environ.get("MAINTAI_M5_INTEGRATION") == "1"
+    processing_server = None
+    processing_thread = None
     consumer = None
+    edge_server = None
+    edge_thread = None
+    receipts = {}
+    scenarios = {}
+    worker = None
     servers, threads, hubs = [], [], []
     lock = threading.Lock()
     sequence = 2**80
@@ -99,14 +105,15 @@ def serve_fixture():
         allow_headers=["Content-Type"],
     )
 
-    def signed(audience, nonce=None):
+    def signed(audience, nonce=None, role=None):
+        role = role or ("TECHNICIAN" if m5 else "VIEWER")
         now = int(time.time())
         payload = {
             "iss": ISSUER,
             "aud": audience,
             "sub": "m4-browser",
             "name": "Fixture Viewer",
-            "roles": ["VIEWER"],
+            "roles": [role],
             "machines": ["M-001"],
             "iat": now,
             "exp": now + 300,
@@ -137,7 +144,7 @@ def serve_fixture():
     def authorize(request: Request):
         query = dict(request.query_params)
         if (
-            query.get("client_id") != "business-ui-fixture"
+            query.get("client_id") not in {"business-ui-fixture", "business-ui-fixture-viewer"}
             or query.get("redirect_uri") != UI + "/auth/callback"
             or query.get("response_type") != "code"
             or query.get("code_challenge_method") != "S256"
@@ -173,11 +180,17 @@ def serve_fixture():
         ):
             raise HTTPException(400, "Invalid fixture PKCE exchange")
         return {
-            "access_token": signed("business-test"),
+            "access_token": signed(
+                "business-test", role="VIEWER" if code["client_id"].endswith("-viewer") else None
+            ),
             "token_type": "Bearer",
             "expires_in": 300,
             "scope": "openid profile",
-            "id_token": signed("business-ui-fixture", code.get("nonce")),
+            "id_token": signed(
+                code["client_id"],
+                code.get("nonce"),
+                role="VIEWER" if code["client_id"].endswith("-viewer") else None,
+            ),
         }
 
     @app.get("/health/ready")
@@ -205,11 +218,14 @@ def serve_fixture():
         )
         with business_factory() as connection:
             grant_business_permissions(
-                connection, reader_role=roles["reader"], consumer_role=roles["consumer"]
+                connection,
+                reader_role=roles["reader"],
+                consumer_role=roles["consumer"],
+                api_role=roles["api"],
             )
         reader_dsn = (
             make_url(dsns["business"])
-            .set(username=roles["reader"], password=password)
+            .set(username=roles["api"] if m5 else roles["reader"], password=password)
             .render_as_string(hide_password=False)
         )
         consumer_dsn = (
@@ -226,8 +242,59 @@ def serve_fixture():
         # Existing helper only initializes new UUID local groups; never resets live groups.
         importlib.import_module(
             "backend.business-consumer.tests.test_kafka_runtime"
-        ).prepare_new_test_groups(kafka)
+        ).prepare_new_test_groups(kafka, include_processing=True)
         with tempfile.TemporaryDirectory(prefix="maintai-m4-browser-") as temporary:
+            from processing_read_api.app import create_app as read_app
+            from processing_read_api.auth import IdentityVerifier as ReadVerifier
+
+            from processing.shared.persistence.status import StatusRepository
+
+            with processing_factory() as connection:
+                connection.execute(
+                    sql.SQL("GRANT USAGE ON SCHEMA public TO {}").format(
+                        sql.Identifier(roles["processing_reader"])
+                    )
+                )
+                connection.execute(
+                    sql.SQL(
+                        "GRANT SELECT ON sensor_events,predictions,"
+                        "risk_decisions,processing_results "
+                        "TO {}"
+                    ).format(sql.Identifier(roles["processing_reader"]))
+                )
+            read_dsn = (
+                make_url(dsns["processing"])
+                .set(username=roles["processing_reader"], password=password)
+                .render_as_string(hide_password=False)
+            )
+            read_factory = partial(
+                psycopg.connect,
+                read_dsn,
+                row_factory=psycopg.rows.dict_row,
+                options="-c default_transaction_read_only=on -c statement_timeout=3000",
+            )
+            processing_server = uvicorn.Server(
+                uvicorn.Config(
+                    read_app(
+                        StatusRepository(read_factory),
+                        ReadVerifier(
+                            issuer=ISSUER,
+                            audience="processing-internal",
+                            roles_claim="roles",
+                            machines_claim="machines",
+                            fetch_jwks=lambda: jwks,
+                        ),
+                    ),
+                    host="127.0.0.1",
+                    port=18036,
+                    access_log=False,
+                    log_level="error",
+                )
+            )
+            processing_thread = threading.Thread(target=processing_server.run, daemon=True)
+            processing_thread.start()
+            service_token = Path(temporary) / "processing-token"
+            service_token.write_text(signed("processing-internal", role="BUSINESS_SERVICE"))
             log_path = Path(temporary) / "consumer.log"
             with log_path.open("wb") as log:
                 consumer = subprocess.Popen(
@@ -241,6 +308,9 @@ def serve_fixture():
                         "BUSINESS_CONSUMER_HOST": "127.0.0.1",
                         "BUSINESS_CONSUMER_PORT": "18034",
                         "BUSINESS_NOTIFY_CHANNEL": channel,
+                        "BUSINESS_ALERT_NOTIFY_CHANNEL": alert_channel,
+                        "BUSINESS_PROCESSING_READ_URL": "http://127.0.0.1:18036",
+                        "BUSINESS_PROCESSING_TOKEN_FILE": str(service_token),
                         "KAFKA_LOCAL_MODE": "true",
                         "KAFKA_SECURITY_PROTOCOL": "PLAINTEXT",
                         "KAFKA_BOOTSTRAP_SERVERS": kafka.bootstrap_servers,
@@ -268,9 +338,22 @@ def serve_fixture():
                 raise RuntimeError("Fixture Consumer did not become ready")
             for selected in (18031, 18032):
                 registry = RegistryRepository(partial(connect, reader_dsn))
-                projections = ProjectionRepository(registry.connection_factory)
+                from backend.shared.alerts.repository import AlertRepository
+
+                alerts = (
+                    AlertRepository(registry.connection_factory, channel=alert_channel)
+                    if m5
+                    else None
+                )
+                projections = ProjectionRepository(
+                    registry.connection_factory,
+                    alert_reader=None if alerts is None else alerts.active,
+                )
                 hub = NotificationHub(
-                    projections, dsn=reader_dsn, settings=SSESettings(channel=channel)
+                    projections,
+                    dsn=reader_dsn,
+                    settings=SSESettings(channel=channel, alert_channel=alert_channel),
+                    alert_repository=alerts,
                 )
                 verifier = IdentityVerifier(
                     issuer=ISSUER,
@@ -280,7 +363,7 @@ def serve_fixture():
                     fetch_jwks=jwks_fetcher(ISSUER + "/jwks"),
                 )
                 business = create_app(
-                    registry, verifier, projections=projections, notifications=hub
+                    registry, verifier, projections=projections, notifications=hub, alerts=alerts
                 )
                 server = uvicorn.Server(
                     uvicorn.Config(
@@ -297,6 +380,31 @@ def serve_fixture():
                 threads.append(thread)
                 hubs.append(hub)
                 thread.start()
+
+            from http_ingestion import application
+
+            edge_server = uvicorn.Server(
+                uvicorn.Config(
+                    application(kafka, ISSUER, jwks, receipts),
+                    host="127.0.0.1",
+                    port=18035,
+                    access_log=False,
+                    log_level="error",
+                    timeout_graceful_shutdown=2,
+                )
+            )
+            edge_thread = threading.Thread(target=edge_server.run, daemon=True)
+            edge_thread.start()
+            deadline = time.monotonic() + 10
+            while not edge_server.started:
+                if time.monotonic() >= deadline:
+                    raise RuntimeError("HTTP Ingestion fixture did not start")
+                time.sleep(0.05)
+
+            from worker import WorkerHarness
+
+            worker = WorkerHarness(kafka, processing_factory, scenarios)
+            worker.start()
 
             @app.post("/fixture/publish")
             def publish(value: dict):
@@ -317,61 +425,30 @@ def serve_fixture():
                     if kind == "invalid":
                         payload["features"]["rotational_speed_rpm"] = "invalid-fixture"
 
-                    class Capture:
-                        def __init__(self, publisher):
-                            self.publisher = publisher
-                            self.settings = publisher.settings
-
-                        def publish(self, topic, payload):
-                            delivery = self.publisher.publish(topic, payload)
-                            event = default_contracts().decode(topic, canonical_json(payload))
-                            self.event = event
-                            self.record = Record(
-                                event.topic,
-                                delivery.partition,
-                                delivery.offset,
-                                event.key.encode(),
-                                event.wire_bytes,
-                            )
-
-                    class CurrentProviders(Providers):
-                        def predict(self, **kwargs):
-                            time.sleep(1.5)
-                            attempt = super().predict(**kwargs)
-                            if attempt.response is None:
-                                return attempt
-                            return PredictionAttempt(
-                                attempt.response.model_copy(
-                                    update={"predicted_at": datetime.now(UTC)}
-                                ),
-                                None,
-                                1,
-                            )
-
-                    with KafkaPublisher(kafka, "ingestion") as publisher:
-                        capture = Capture(publisher)
-                        ack = IngestionGateway(capture, "http://127.0.0.1:18031").handle(
-                            canonical_json(payload),
-                            identity=SourceIdentity("fixture", frozenset({"M-001"})),
-                            request_id="req-m4",
-                            correlation_id="cor-m4",
-                        )
-                    if ack.status != 202:
-                        raise RuntimeError("Fixture gateway did not ACK")
-                    providers = CurrentProviders(
-                        probability=0.12,
-                        failure="ML_UNAVAILABLE" if kind == "unavailable" else None,
+                    scenarios[payload["event_id"]] = kind
+                    ack = httpx.post(
+                        "http://127.0.0.1:18035/api/v1/sensor-readings",
+                        content=canonical_json(payload),
+                        headers={
+                            "Content-Type": "application/json",
+                            "Authorization": "Bearer " + signed("ingestion", role="SENSOR_SERVICE"),
+                        },
+                        timeout=5,
+                        trust_env=False,
                     )
-                    handler(SimpleNamespace(factory=processing_factory), providers)(
-                        capture.event, capture.record
-                    )
-                    with KafkaPublisher(kafka, "outbox") as publisher:
-                        published = OutboxRelay(processing_factory, publisher).run_once()
+                    if ack.status_code != 202:
+                        raise RuntimeError("HTTP Ingestion did not ACK")
+                    receipts.pop(payload["event_id"])
+                    deadline = time.monotonic() + 15
+                    while StatusRepository(processing_factory).get(payload["event_id"]) is None:
+                        if worker.failed or time.monotonic() >= deadline:
+                            raise RuntimeError("Kafka Worker did not commit: " + str(worker.failed))
+                        time.sleep(0.05)
                     return {
                         "event_id": payload["event_id"],
                         "sequence_number": str(number),
-                        "ml_calls": providers.calls,
-                        "published": published,
+                        "ml_calls": 0 if kind == "invalid" else 1,
+                        "published": True,
                     }
 
             @app.post("/fixture/restart-listeners")
@@ -385,6 +462,16 @@ def serve_fixture():
 
             uvicorn.run(app, host="127.0.0.1", port=18033, access_log=False, log_level="error")
     finally:
+        if worker is not None:
+            worker.close()
+        if processing_server is not None:
+            processing_server.should_exit = True
+        if processing_thread is not None:
+            processing_thread.join(timeout=6)
+        if edge_server is not None:
+            edge_server.should_exit = True
+        if edge_thread is not None:
+            edge_thread.join(timeout=6)
         for server in servers:
             server.should_exit = True
         for thread in threads:

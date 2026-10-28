@@ -19,7 +19,7 @@ if os.environ.get("MAINTAI_M4_INTEGRATION") == "1":
             ).fetchone()[0]
             roles = connection.execute(
                 "SELECT count(*) FROM pg_roles WHERE rolname ~ "
-                "'^m4_(reader|consumer)_[0-9a-f]{32}$'"
+                "'^m4_(reader|consumer|api|processing_reader)_[0-9a-f]{32}$'"
             ).fetchone()[0]
         if databases == roles == 0:
             print("Browser fixture databases/roles: cleanup PASS")

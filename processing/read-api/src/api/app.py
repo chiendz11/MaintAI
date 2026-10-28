@@ -89,6 +89,19 @@ def create_app(repository, verifier):
     def scrape():
         return Response(generate_latest(metrics.registry), media_type="text/plain; version=0.0.4")
 
+    @app.get("/api/v1/internal/predictions/{result_id:path}")
+    def evidence(result_id: str, request: Request):
+        identity = verifier.verify(request.headers.get("Authorization"))
+        try:
+            row = repository.prediction(result_id)
+        except (psycopg.Error, ValueError):
+            request.state.failed_dependency = "processing_db"
+            raise ReadFailure(503, "DEPENDENCY_UNAVAILABLE") from None
+        if row is None:
+            raise ReadFailure(404, "PREDICTION_NOT_FOUND")
+        identity.authorize(row["machine_id"])
+        return row
+
     @app.get("/health/live")
     def live():
         return {"status": "UP", "service": "processing-read-api", "version": "0.1.0"}

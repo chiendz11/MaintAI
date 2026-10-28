@@ -20,7 +20,8 @@ toàn bộ processing history. Consumer commit projection/inbox trước notific
 Không query `processing_db`; gọi Processing read API/S3 theo contract. Không chạy
 ML/risk tại Business. API hiện có scoped registry lookup; các callbacks và repository
 latest projections nằm trong [Business projections](business-consumer/README.md).
-Consumer chạy hai role loops telemetry/prediction; Alert/job loops chưa được triển khai.
+Consumer chạy ba serial role loops telemetry/prediction/alert. Alert lifecycle đã có ở M5;
+brief/drift jobs vẫn thuộc pha sau.
 Kafka loops và transactional inbox dùng
 [messaging SDK](../messaging/README.md); cách tích hợp tại [Kafka guide §6](../docs/KAFKA_DEVELOPMENT_GUIDE.md). Xem
 [runtime map](../architecture/README.md) và [migration](../docs/repository-layout.md).
@@ -36,8 +37,8 @@ Kafka loops và transactional inbox dùng
 [Decision §8](../docs/PROCESSING_CONCURRENCY_AND_ORDERING.md) áp keyed execution
 ở Processing; Business giữ serial role loops/inbox SDK0.3.0. Registry, projection
 storage/callbacks, Consumer, live HTTP và status facade đã có. Fleet/MachineDetail
-đọc projections; thông tin Alert cần nguồn đọc cùng Business DB. Alert lifecycle
-chưa được triển khai, nên runtime chưa cấu hình nguồn này trả503 cho các máy cần đọc.
+đọc projections; thông tin Alert cần nguồn đọc cùng Business DB. M5 đã nối Alert reader thật vào runtime; chưa có Alert được trả count0/list rỗng
+từ truy vấn Business DB.
 Telemetry, latest processing và valid prediction có CAS riêng bằng durable source
 sequence xuyên epoch; không sort UUID/offset giữa partition. INVALID giữ valid
 snapshot lịch sử. Signal đến muộn vẫn cần dedupe/lifecycle/audit, không bị bỏ vì
@@ -69,7 +70,8 @@ Alert. `ProjectionRepository(..., alert_reader=...)` nhận nguồn đọc trong
 connection Business; nguồn này phải trả đầy đủ danh sách active alert IDs cho từng
 machine được yêu cầu. Chưa cấu hình hoặc trả thiếu dữ liệu:503, không thay bằng
 `active_alert_count=0` hay `active_alerts=[]`. Trang không có items vẫn trả200 và
-`total` đúng. Runtime hiện chưa nối nguồn Alert; tests dùng nguồn fixture riêng.
+`total` đúng. Runtime M5 đã nối nguồn Alert thật trong cùng transaction đọc; tests giữ cả
+trường hợp thiếu nguồn để không phục hồi fallback giả.
 
 Outcome1.4.0 giữ nguyên risk đã ghi; SDK từ chối outcome2.0 trước callback.
 Không backfill legacy hoặc tính lại risk trong GET. Fleet thiếu risk đã lưu là
@@ -119,4 +121,44 @@ phải nối thẳng PostgreSQL hoặc session pooling, không transaction-pooli
 SSE dùng ba event types theo schema hiện có; INVALID/FAILED giữ valid prediction
 lịch sử. Metrics OBS-01 có maintai_sse_connections và maintai_sse_resync_total;
 HTTP metrics đo handshake, không toàn thời lượng stream. SQL/role ownership giữ
-nguyên; chưa thêm Alert source, full history hoặc deployment manifests.
+nguyên; Alert source/lifecycle được bổ sung ở M5 bên dưới. Full history và
+deployment manifests thuộc pha/repo khác.
+
+
+## M5 — Alert lifecycle, evidence, audit và feedback
+
+Handler Alert chạy trong Consumer hiện có với group `business-alert-v1`. Nó lấy
+status của đúng event và HistoryRecord theo result_id qua Processing HTTP, tổng
+budget3s gồm credential/status/point-read/validate. Không SQL xuyên owner, không
+lấy latest prediction thay evidence và không tính lại risk. Inbox duplicate
+được xác nhận trước callback nên không gọi HTTP lần nữa.
+
+Owner chạy migration `business_0003_alerts` rồi cấp quyền theo
+`grant_business_permissions(..., reader_role=..., consumer_role=..., api_role=...)`.
+Ba role phải khác nhau; API có UPDATE(updated_at) trên machines để lấy khóa
+chung, UPDATE(status,updated_at) trên alerts và INSERT audit/feedback/notification.
+Consumer chỉ tạo/gộp Alert; không sửa lifecycle. Reader chỉ SELECT. Không application
+role nào được sửa/xóa evidence, audit hoặc feedback. Helper không tự tạo role.
+
+- Đọc `GET /api/v1/alerts` và `/alerts/{alert_id}`: VIEWER/TECHNICIAN/ADMIN với machine scope.
+- POST ack/start/escalate/resolve/false-alert: TECHNICIAN/ADMIN; actor_id phải khớp token.
+- POST feedback: TECHNICIAN/ADMIN, actor lấy từ token; append-only, trả201.
+- Dedupe: cùng máy/severity, còn active, fixed300s từ created_at; đúng300s tạo Alert mới.
+- Mutation khóa máy trước Alert; state/audit/notification commit cùng nhau. Action lặp trả409.
+- Evidence gốc bất biến. Signal gộp cập nhật latest metadata/link; không tạo audit lifecycle giả.
+
+Consumer và API dùng cùng `BUSINESS_ALERT_NOTIFY_CHANNEL`, mặc định
+`maintai_business_alert_v1`. Một PostgreSQL listener/API process nghe cả channel
+M4 và Alert. Hint nhỏ chỉ có version/machine hash/notification ID; notification
+row lưu snapshot đúng transaction. Không coalesce bỏ Alert mutations; quá budget
+hoặc mất listener đóng stream để REST resync.
+
+Consumer shared bắt buộc `BUSINESS_PROCESSING_READ_URL` (HTTPS origin) và
+`BUSINESS_PROCESSING_TOKEN_FILE` (credential BUSINESS_SERVICE theo scope máy).
+Token file được đọc lại mỗi fetch để hỗ trợ rotation; không dùng browser token.
+Local-test không cấu hình evidence chỉ phục vụ các fixture không phát signal;
+gặp signal sẽ fail closed và không commit offset. Không dùng cấu hình này để demo M5.
+
+API probes kiểm cả bảng M5. Metrics Alert created/dedup/transitions/visibility
+được cập nhật sau commit theo OBS-01; retry/duplicate không tăng tạo Alert.
+Chi tiết tests/file inventory nằm trong [M5 report](../docs/M5_IMPLEMENTATION_REPORT.md).

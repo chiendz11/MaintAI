@@ -8,6 +8,7 @@ export type RuntimeConfig = {
     clientId: string;
     scope: string;
     audience?: string;
+    rolesClaim?: string;
   };
 };
 export function parseConfig(value: unknown, origin: string): RuntimeConfig {

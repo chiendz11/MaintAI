@@ -14,7 +14,8 @@ benchmark, Docker image/deployment và môi trường k3d mới chưa được x
 - Runtime map:14 app +1 platform descriptor MLflow, baseline1.3.2; Simulator UI client/descriptor,
   không bump wire version hoặc khẳng định đã deploy.
 - Sensor0.3.0: wire1.3.0/Control1.3.2; Drift executable1.1; Simulator UI client0.1.0;
-  Ingestion có M1 local; Storage runtime0.1.0 có source/tests/Dockerfile; các application runtimes khác vẫn skeleton.
+  Ingestion có M1 local; Storage runtime0.1.0 có source/tests/Dockerfile;
+  Processing/Business/Main UI đã có source M1–M5, ML/RAG và phần M6/M7 còn riêng.
 - Kafka library0.3.0 + canonical bundle2.0.0: outcome reader/writer chỉ1.4.0,
   keyed/ordered/fenced adapters và additive Processing migration002; xem §18–19.
 
@@ -449,3 +450,13 @@ callback skeleton. Tuy nhiên nguồn Alert runtime vẫn chưa nối, nên Flee
 có thể trả503 dù risk hợp lệ. Phần đó không được sửa bởi outcome migration.
 Kiểm tra unit/contract và build wheel khác với tests DB/Kafka/container; chỉ
 được ghi full pipeline PASS khi có bằng chứng thực thi phù hợp.
+
+
+## 24. M5 — Alert lifecycle và nền M4 realtime
+
+M4 được merge qua PR12; M5 thêm Alert handler thứ ba, hot evidence HTTP point-read,
+owner migration0003, append-only audit/feedback và immutable Alert notification
+snapshots. Fleet/Detail đã có nguồn Alert thật; Main UI có Alert list/detail/actions.
+[Report](M5_IMPLEMENTATION_REPORT.md) ưu tiên các mô tả inherited còn ghi hai loops,
+Frontend skeleton hoặc thiếu Alert source. Shared providers/production/load acceptance
+không tự hoàn tất. M6/M7/M8 giữ phạm vi riêng; không bật archive cleaner trong M5.

@@ -6,6 +6,9 @@ from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram
 class Metrics:
     def __init__(self):
         self.registry = CollectorRegistry()
+        from backend.shared.alerts.metrics import AlertMetrics
+
+        self.alerts = AlertMetrics(self.registry)
         self.requests = Counter(
             "maintai_http_requests_total",
             "Completed REST requests",

@@ -7,6 +7,7 @@ import sys
 import httpx
 import psycopg
 import uvicorn
+from backend.shared.alerts.repository import AlertRepository
 from backend.shared.persistence.projections import ProjectionRepository
 from backend.shared.persistence.registry import RegistryRepository
 from business_processing_client import ProcessingStatusClient
@@ -46,15 +47,22 @@ def main(argv=None):
                 token_file=settings.processing_token_file,
             )
         logging.basicConfig(level=logging.INFO, format="%(message)s")
-        projections = ProjectionRepository(repository.connection_factory)
+        alerts = AlertRepository(repository.connection_factory, channel=settings.sse.alert_channel)
+        projections = ProjectionRepository(
+            repository.connection_factory, alert_reader=alerts.active
+        )
         uvicorn.run(
             create_app(
                 repository,
                 verifier,
                 status_client=status_client,
                 projections=projections,
+                alerts=alerts,
                 notifications=NotificationHub(
-                    projections, dsn=settings.database_url, settings=settings.sse
+                    projections,
+                    dsn=settings.database_url,
+                    settings=settings.sse,
+                    alert_repository=alerts,
                 ),
             ),
             host=settings.host,
