@@ -20,8 +20,8 @@ Trước khi triển khai hoặc thay đổi một module:
    §40–41 và phần v1.4 §42–53; đọc §53 cho PROC-ORDER-01 và Plan §K.
    `docs/IMPLEMENTATION_PLAN.md` là kế hoạch, không là runtime evidence.
    Đọc source/tests để phân biệt implementation v1.1, metadata/OpenAPI baseline1.3.2
-   với target docs1.4.0. Kafka có implementation library riêng; full app/scaffold
-   nêu trong bộ bàn giao vẫn chưa được nhập.
+   với target docs1.4.0. Kafka SDK và các phần Người 1 đến M5 đã có source;
+   đọc báo cáo từng mốc để biết phần đã kiểm chứng và phần còn dùng fixtures.
 4. Xem JSON Schemas liên quan trong `contracts/v1.3/`; kiểm tra cả provider và consumer
    của interface trước khi sửa payload hoặc semantics.
 5. Với HTTP API, đọc `contracts/README.md`, `contracts/v1.3/README.md` (six target OpenAPIs + schemas/examples) và
@@ -36,10 +36,21 @@ Trước khi triển khai hoặc thay đổi một module:
    không suy risk từ probability hoặc backfill legacy. Business giữ risk gốc;
    event cũ bị từ chối trước callback/commit. SHA lock và SQL immutable theo
    bundle; bump bundle khi đổi. Không biến callback skeleton thành success giả.
-7. Processing/Outbox đọc `docs/PROCESSING_CONCURRENCY_AND_ORDERING.md`, Contracts
+7. Với Alert/audit/feedback/Processing evidence, đọc `docs/M5_IMPLEMENTATION_REPORT.md`.
+   Dedupe fixed300s dùng clock sau machine lock, snapshot gốc bất biến, actions
+   machine-first rồi Alert lock; không retry POST unknown hoặc dùng latest thay evidence.
+8. Processing/Outbox đọc `docs/PROCESSING_CONCURRENCY_AND_ORDERING.md`, Contracts
    §42, Guide §53 và `docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md`. SDK đã
-   có keyed runner/coordinator/fenced handler/ordered relay; app DQ/ML/risk/history
-   callbacks, health server/image/deployment vẫn chưa hoàn tất.
+   có keyed runner/coordinator/fenced handler/ordered relay và app DQ/inference-client/
+   risk/owner persistence cùng health server/images. History/archive đầy đủ thuộc M6;
+   source và local tests không chứng minh deployment hoặc provider production đã sẵn sàng.
+9. Với M6 đọc `docs/M6_HISTORY_ARCHITECTURE_DECISION.md` và
+   `docs/M6_RAW_ARCHIVE_HANDOFF.md` (quyết định29/10, ưu tiên history cũ).
+   Không thêm processing-maintenance hoặc export/archive loop vào Worker.
+   Read API có pool SELECT dữ liệu gốc và pool ghi metadata quyền hẹp; không cấp
+   write outcome/outbox. Processed_at = completed_at hiện có; raw received_at +
+   Kafka locator. M6 không processed archive/cleanup thật. Storage catalog/coverage,
+   machine API/schema/migration và platform grants vẫn cần implement, không giả ready.
 
 Với thay đổi chỉ về tài liệu/CI, đọc phần đặc tả liên quan đến thay đổi; không
 cần triển khai module hoặc chạy toàn bộ app tests chỉ vì tài liệu có checklist.
@@ -90,7 +101,8 @@ cần triển khai module hoặc chạy toàn bộ app tests chỉ vì tài li�
 - Business API và Business Consumer cùng codebase/DB owner nhưng khác Deployment.
   Ba consumer handlers telemetry/prediction/alert không phải ba microservices.
 - Business DB chỉ giữ latest telemetry/latest valid prediction/latest processing
-  và business data; raw ở S3/MinIO; Processing history hot DB + verified S3 archive.
+  và business data; raw ở S3/MinIO. M6 giữ processed history trong processing_db;
+  verified processed archive là phần hoãn sau M6. Không xóa data theo hot window cũ.
 - Không query DB xuyên owner. Business/Drift dùng Processing read API/curated S3.
 - Main Frontend chỉ gọi Business REST/SSE; Simulator UI riêng gọi Sensor Control API. PG NOTIFY/pubsub fan-out tới
   mọi API replica, REST snapshot khôi phục; không dùng Kafka group làm SSE broadcast.

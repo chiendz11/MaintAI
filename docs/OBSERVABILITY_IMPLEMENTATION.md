@@ -521,3 +521,22 @@ render. Chỉ backend DB-visible metric không chứng minh target alert UI p95�
 Tính n/c/pool theo [Capacity §11](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100),
 đo lại sau mỗi thay đổi để giữ latency/coverage. Planning utilization70% là giả định;
 không có threshold HPA hoặc SLO metric mới được tự áp dụng bởi mục này.
+
+
+## Storage catalog0.2.0 — M6-RAW-01 extension29/10
+
+Catalog opt-in thêm dependency `catalog` trong cached health. Catalog failure không
+thay raw object/manifest → Kafka commit boundary; liveness giữ heartbeat, readiness
+phản ánh dependency failure. Chưa caught-up có thể ready nhưng coverage LAGGING;
+không dùng Pod Ready để suy History COMPLETE.
+
+| Metric | Type / labels | Semantics |
+| --- | --- | --- |
+| maintai_storage_catalog_sync_total | Counter; status SUCCESS/ERROR | Số chu kỳ sync, không phải số receipts duy nhất |
+| maintai_storage_catalog_entries_total | Counter; không labels | Entries đã verify được đưa vào publication; retry/rebuild có thể đếm lại |
+| maintai_storage_catalog_partitions | Gauge; topic allowlist + status COMPLETE/LAGGING/GAP/UNKNOWN | Số partitions theo trạng thái, không per-machine/partition/event labels |
+
+Không thêm alert/dashboard production trong app; Chiến cập nhật repo GitOps khi
+bật module. Catalog generation heartbeat mặc định30s khi idle để có captured_at;
+readers vẫn kiểm snapshot/cutoff/gaps/freshness, không suy complete từ max timestamp.
+Xem [Storage report](STORAGE_CATALOG_IMPLEMENTATION_REPORT.md).

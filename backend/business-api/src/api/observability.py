@@ -1,11 +1,14 @@
 """Bounded OBS-01 HTTP/dependency series for the Business API."""
 
-from prometheus_client import CollectorRegistry, Counter, Histogram
+from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram
 
 
 class Metrics:
     def __init__(self):
         self.registry = CollectorRegistry()
+        from backend.shared.alerts.metrics import AlertMetrics
+
+        self.alerts = AlertMetrics(self.registry)
         self.requests = Counter(
             "maintai_http_requests_total",
             "Completed REST requests",
@@ -25,6 +28,25 @@ class Metrics:
             ["dependency", "error_type"],
             registry=self.registry,
         )
+        self.connections = Gauge(
+            "maintai_sse_connections",
+            "Authenticated active SSE connections",
+            registry=self.registry,
+        )
+        self.resync = Counter(
+            "maintai_sse_resync_total",
+            "Server-known resync triggers",
+            ["reason"],
+            registry=self.registry,
+        )
+
+    def sse_connection(self, delta):
+        self.connections.inc(delta)
+
+    def sse_resync(self, reason):
+        self.resync.labels(
+            reason if reason in {"RECONNECT", "GAP", "NOTIFY_LOST"} else "OTHER"
+        ).inc()
 
     def http(self, route, method, status, elapsed):
         method = (

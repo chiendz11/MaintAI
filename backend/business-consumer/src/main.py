@@ -4,19 +4,42 @@ import argparse
 import sys
 
 
-def make_handlers(connection_factory, settings, *, metrics=None):
+def make_handlers(
+    connection_factory,
+    settings,
+    *,
+    metrics=None,
+    notification_channel=None,
+    evidence=None,
+    alert_channel=None,
+):
+    from backend.shared.alerts.notifications import ALERT_CHANNEL
+    from backend.shared.alerts.repository import AlertRepository
+    from backend.shared.notifications import DEFAULT_CHANNEL, Notifier
     from maintai_messaging.contracts import default_contracts
 
+    from .handlers.alert import build_handler as alert
     from .handlers.prediction import build_handler as prediction
     from .handlers.telemetry import build_handler as telemetry
 
     profiles = default_contracts().topology["profiles"]
-    return {
+    handlers = {
         role: builder(
-            connection_factory, settings.group_prefix + profiles[role]["group_id"], metrics=metrics
+            connection_factory,
+            settings.group_prefix + profiles[role]["group_id"],
+            metrics=metrics,
+            notify=Notifier(notification_channel or DEFAULT_CHANNEL),
         )
         for role, builder in (("business-live", telemetry), ("business-prediction", prediction))
     }
+    handlers["business-alert"] = alert(
+        connection_factory,
+        settings.group_prefix + profiles["business-alert"]["group_id"],
+        evidence=evidence,
+        metrics=metrics,
+        repository=AlertRepository(connection_factory, channel=alert_channel or ALERT_CHANNEL),
+    )
+    return handlers
 
 
 def main(argv=None):

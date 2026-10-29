@@ -5,11 +5,11 @@
   "runtime_id": "processing-read-api",
   "workload_kind": "Deployment",
   "code_owner": "processing",
-  "implementation_status": "partial_internal_status",
+  "implementation_status": "partial_status_and_hot_evidence",
   "image_group": "processing",
   "image_digest": null,
-  "entrypoint_status": "implemented_status_only",
-  "purpose": "Internal status/history/point/chart/export APIs; route hot DB + verified S3 archive, stable snapshots and VALID windows.",
+  "entrypoint_status": "implemented_status_and_hot_point_read",
+  "purpose": "Internal status/evidence and target M6 DB outcome history, raw catalog reads, bounded snapshots/exports with a separate scoped metadata writer.",
   "source_paths": [
     "processing/read-api/src",
     "processing/shared"
@@ -19,18 +19,22 @@
   "kafka_publications": [],
   "interfaces": [
     "Internal event status HTTP API",
-    "Health/metrics HTTP"
+    "Health/metrics HTTP",
+    "GET /api/v1/internal/predictions/{result_id}"
   ],
   "boundaries": [
     "Cùng owner/migrations với Processing Worker; đây không phải một logical DB khác.",
-    "Business và Drift gọi API/curated S3, không query trực tiếp processing_db."
+    "Business và Drift gọi API/curated S3, không query trực tiếp processing_db.",
+    "M6 target only: SELECT original data + scoped history_meta writes; durable export runner in Read API, no new deployment, processed archive or real source cleanup."
   ],
   "dockerfile": "processing/read-api/Dockerfile",
   "dockerfile_status": "implemented",
   "implemented_contract_revision": "1.3.2",
-  "implemented_scope": "Internal SELECT-only terminal event status, scoped BUSINESS_SERVICE JWT, HTTP/probes/OBS-01 metrics; history/chart/archive/export and shared environment acceptance remain incomplete.",
+  "implemented_scope": "SELECT-only status and result_id hot HistoryRecord evidence; checksum/source/model/risk verification, BUSINESS_SERVICE scope, probes and metrics. Full history/chart/archive/export remain M6.",
   "planned_interfaces": [
-    "Processed archive catalog/S3",
-    "Internal history/chart/export HTTP APIs"
-  ]
+    "M6 raw catalog/coverage from versioned S3/MinIO generations",
+    "M6 outcome history/chart, snapshots and CSV/Parquet export HTTP APIs",
+    "M6 separate metadata writer pool with no original data/outbox writes"
+  ],
+  "design_decision": "M6-HISTORY-01/1.0.0"
 }

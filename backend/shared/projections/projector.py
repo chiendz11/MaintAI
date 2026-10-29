@@ -12,6 +12,13 @@ TABLES = ("latest_telemetry", "latest_processing", "latest_valid_prediction")
 
 
 class Projector:
+    def __init__(self, *, notify=None):
+        self.notify = notify
+
+    def _notify(self, connection, machine_id, changed):
+        if changed and self.notify is not None:
+            self.notify(connection, machine_id)
+
     def __call__(self, connection, event, record, outbox):
         payload = event.payload
         machine = connection.execute(
@@ -60,7 +67,7 @@ class Projector:
                 "validation_status": validation,
             }
             visible = self._put(connection, event, rows, "latest_telemetry", telemetry)
-            self._put(
+            changed = self._put(
                 connection,
                 event,
                 rows,
@@ -74,6 +81,7 @@ class Projector:
                 },
                 pending=True,
             )
+            self._notify(connection, event.key, visible or changed)
             return visible
         elif event.topic == "inference.results":
             metadata = {
@@ -90,10 +98,13 @@ class Projector:
                 "updated_at": payload["occurred_at"],
                 "failure_code": payload.get("failure", {}).get("code"),
             }
-            self._put(connection, event, rows, "latest_processing", status, metadata=metadata)
+            changed = self._put(
+                connection, event, rows, "latest_processing", status, metadata=metadata
+            )
             telemetry = rows["latest_telemetry"]
             if telemetry and telemetry["sequence_number"] == payload["sequence_number"]:
                 value = json.loads(bytes(telemetry["snapshot"]))
+                changed = changed or value["validation_status"] != payload["validation_status"]
                 value["validation_status"] = payload["validation_status"]
                 connection.execute(
                     "UPDATE latest_telemetry SET snapshot=%s WHERE machine_id=%s",
@@ -118,7 +129,7 @@ class Projector:
                     },
                     "machine_state_at_prediction": payload["machine_state"],
                 }
-                self._put(
+                prediction_changed = self._put(
                     connection,
                     event,
                     rows,
@@ -126,6 +137,8 @@ class Projector:
                     prediction,
                     metadata=metadata,
                 )
+                changed = changed or prediction_changed
+            self._notify(connection, event.key, changed)
         else:
             raise ValueError("Unsupported Business projection topic")
         return False

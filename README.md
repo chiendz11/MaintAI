@@ -79,13 +79,14 @@ Business DB chỉ chứa latest projections và business data, không full raw h
   [drift worker](drift-worker/README.md) để dùng implementation hiện có.
 - [messaging/](messaging/README.md) có Kafka ACK/consumer, owner-local inbox/outbox,
   relay và raw S3 adapter; [Kafka guide](docs/KAFKA_DEVELOPMENT_GUIDE.md) hướng dẫn
-  4 người tích hợp. Nghiệp vụ/entrypoint của Processing/Business,
-  ML/RAG/Business Frontend và SSE/history vẫn cần implement; Sensor Control đã có.
+  4 người tích hợp. Processing/Business M1–M5 đã có local implementation/tests: DQ/ML client/risk,
+  projections, SSE, Alert lifecycle/audit/feedback và Main UI. ML/RAG providers thật,
+  full history/archive/export và Copilot còn thuộc các pha sau.
 - [Simulator UI](sensor-simulator-UI/README.md) có React/TypeScript, demo5 máy, live
   Control API client, OIDC, command recovery và checks riêng. Sensor Control API
   đã implement; browser chạy với provider thật + fixture Ingestion; chưa deploy UI.
-- Cả14 app runtime folders có Dockerfile:9 placeholders; Sensor, Ingestion, Drift,
-  Simulator UI và Storage có source. MLflow thêm platform image descriptor/Dockerfile riêng với
+- Cả14 app runtime folders có Dockerfile; ML inference/training và RAG còn3
+  placeholders. Các runtime đã có source không tự đồng nghĩa đã deploy. MLflow thêm platform image descriptor/Dockerfile riêng với
   base/version pins còn unset, chưa build/publish.
 - [OpenAPI/schemas/examples](contracts/README.md) hiện tập trung tại
   [v1.3/](contracts/v1.3/README.md): sáu OpenAPI; outcome/history entrypoints dùng
@@ -113,7 +114,7 @@ Hệ thống scale-ready: khiX>100, tính lại capacity và tối ưu latency t
 
 [System Contracts §34–43](docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md)
 và [Guide §42–55](docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md)
-bổ sung rejected archive, Read API read-only, MLflow/dataset/model/release lineage
+bổ sung rejected archive, Read API đọc original data, MLflow/dataset/model/release lineage
 và rollout/rollback. [Docs index](docs/README.md) giữ quyết định nhóm 4 người,
 Simulator UI riêng và phân cấp tài liệu. [Readiness](docs/implementation-readiness.md)
 ghi các khác biệt cần freeze và artifacts chưa có; không coi docs là runtime evidence.
@@ -134,3 +135,15 @@ xong khi500 chưa durable vẫn không cho commit502. Head Outbox retry giữ su
 [báo cáo triển khai/cách dùng](docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md).
 Full DQ/ML/risk/history callbacks, health server, image/owner DB activation và
 rollout còn cần tích hợp. Storage/Business giữ serial default; không thêm runtime.
+
+M5 runbook, tests và file inventory: [M5 implementation report](docs/M5_IMPLEMENTATION_REPORT.md).
+
+
+## M6 đã chốt29/10 — History trực tiếp và export
+
+[Quyết định M6](docs/M6_HISTORY_ARCHITECTURE_DECISION.md) giữ ba Deployment Processing:
+Worker realtime; Read API history/snapshot/export với metadata writer quyền hẹp;
+Relay outbox. Outcomes giữ DB, raw qua catalog MinIO/S3 của Storage theo
+[handoff cho Chiến](docs/M6_RAW_ARCHIVE_HANDOFF.md). Không processed archive hoặc
+cleanup thật M6. Demo DB-only khác full raw demo dùng MinIO local; AWS không bắt
+buộc. Đây là thiết kế đã chốt, không tự thêm code/schema/grants/deployment.

@@ -34,6 +34,9 @@ class Metrics:
             ["reason"],
             registry=self.registry,
         )
+        from backend.shared.alerts.metrics import AlertMetrics
+
+        self.alerts = AlertMetrics(self.registry, dropped=self.dropped, wall_time=self.wall_time)
         self.errors = Counter(
             "maintai_dependency_errors_total",
             "Dependency attempt failures",

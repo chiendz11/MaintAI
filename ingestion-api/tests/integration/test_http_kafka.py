@@ -8,12 +8,15 @@ from uuid import uuid4
 
 import pytest
 from confluent_kafka import Consumer
+from confluent_kafka.admin import AdminClient
 from maintai_messaging.admin import create_local_topics
 from maintai_messaging.config import KafkaSettings
 from maintai_messaging.contracts import default_contracts
 from starlette.testclient import TestClient
 
 from maintai_ingestion.app import create_app
+
+from ..kafka_bootstrap import ReadyTopicAdmin
 
 pytestmark = pytest.mark.integration
 
@@ -31,7 +34,12 @@ def broker():
         security_protocol="PLAINTEXT",
         delivery_timeout_ms=3000,
     )
-    create_local_topics(cfg)
+    contracts = default_contracts()
+    create_local_topics(
+        cfg,
+        contracts=contracts,
+        client=ReadyTopicAdmin(AdminClient(cfg.client_config()), contracts.topology["topics"]),
+    )
     return cfg
 
 

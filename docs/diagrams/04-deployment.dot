@@ -39,7 +39,7 @@ digraph Deployment {
         label="3 DEPLOYMENTS · CÙNG IMAGE GROUP processing";
         color="#d6b36a"; style="rounded,filled"; fillcolor="#fffaf0";
         worker [label="processing-worker · TARGET\nKeyed FIFO + offset coordinator nội bộ\nScale theo lag / queue / ML-DB budget"];
-        read_api [label="processing-read-api + Service\nScale theo query RPS / p95\nDB role read-only"];
+        read_api [label="processing-read-api + Service\nScale theo query RPS / p95\nOriginal SELECT / metadata RW"];
         relay [label="processing-outbox-relay · TARGET\nHead-of-key / topic-machine order\nScale theo pending / blocked-key age"];
       }
       subgraph cluster_business {
@@ -69,7 +69,7 @@ digraph Deployment {
       mdb [shape=cylinder, label="mlflow_db"];
       kdb [shape=cylinder, label="knowledge_db\npgvector"];
     }
-    s3 [shape=folder, label="S3 · logical object groups\nRaw / quarantine / processed archive\nApproved datasets / model bundles\nManuals / reports / MLflow artifacts", fillcolor="#edf2f6"];
+    s3 [shape=folder, label="S3 · logical object groups\nRaw / quarantine / catalog / exports\nApproved datasets / model bundles\nManuals / reports / MLflow artifacts", fillcolor="#edf2f6"];
     iam [shape=hexagon, label="IAM / IRSA / secrets / TLS\nQuyền riêng theo workload", fillcolor="#edf2f6"];
   }
 

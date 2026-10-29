@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import math
 import threading
 import time
 from dataclasses import dataclass
@@ -20,6 +21,7 @@ class RegistryFailure(Exception):
 class Identity:
     subject: str
     machines: frozenset[str]
+    expires_at: float | None = None
 
     def authorize(self, machine_id):
         if machine_id not in self.machines:
@@ -137,9 +139,12 @@ class IdentityVerifier:
                 options={"require": ["exp", "iss", "aud", "sub"]},
             )
             subject = claims["sub"]
+            expiry = claims["exp"]
+            if type(expiry) not in (int, float) or not math.isfinite(expiry):
+                raise RegistryFailure(401, "UNAUTHORIZED")
             if not isinstance(subject, str) or not 1 <= len(subject) <= 256:
                 raise RegistryFailure(401, "UNAUTHORIZED")
-        except (jwt.PyJWTError, ValueError, TypeError, KeyError):
+        except (jwt.PyJWTError, ValueError, TypeError, KeyError, OverflowError):
             raise RegistryFailure(401, "UNAUTHORIZED") from None
         roles, machines = claims.get(self.roles_claim), claims.get(self.machines_claim)
         if (
@@ -153,4 +158,4 @@ class IdentityVerifier:
             or not all(isinstance(m, str) and m and m != "*" and "\x00" not in m for m in machines)
         ):
             raise RegistryFailure(403, "FORBIDDEN")
-        return Identity(subject, frozenset(machines))
+        return Identity(subject, frozenset(machines), float(expiry))

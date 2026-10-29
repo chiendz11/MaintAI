@@ -3,15 +3,19 @@
 from psycopg import sql
 
 
-def grant_business_permissions(connection, *, reader_role, consumer_role):
-    roles = (reader_role, consumer_role)
-    if any(not isinstance(role, str) or not role.strip() for role in roles) or len(set(roles)) != 2:
+def grant_business_permissions(connection, *, reader_role, consumer_role, api_role=None):
+    roles = (
+        (reader_role, consumer_role) if api_role is None else (reader_role, consumer_role, api_role)
+    )
+    if any(not isinstance(role, str) or not role.strip() for role in roles) or len(
+        set(roles)
+    ) != len(roles):
         raise ValueError("Distinct existing Business reader and consumer roles are required")
     rows = connection.execute(
         "SELECT rolname FROM pg_roles WHERE rolname=ANY(%s)",
         (list(roles),),
     ).fetchall()
-    if len(rows) != 2:
+    if len(rows) != len(roles):
         raise ValueError("Provision roles separately before granting owner permissions")
     schema = connection.execute("SELECT current_schema() AS name").fetchone()["name"]
     if not schema:
@@ -47,3 +51,32 @@ def grant_business_permissions(connection, *, reader_role, consumer_role):
             "business_projection_conflicts",
         ),
     )
+    # The additive M5 tables are owned by the same schema; no cross-owner grants.
+    if connection.execute("SELECT to_regclass('alerts') AS name").fetchone()["name"] is not None:
+        tables = (
+            "alerts",
+            "alert_evidence_snapshots",
+            "alert_signal_links",
+            "alert_events",
+            "feedback",
+            "alert_notifications",
+        )
+        grant(reader_role, "SELECT", tables)
+        grant(consumer_role, "SELECT", tables)
+        grant(
+            consumer_role,
+            "INSERT",
+            (
+                "alerts",
+                "alert_evidence_snapshots",
+                "alert_signal_links",
+                "alert_events",
+                "alert_notifications",
+            ),
+        )
+        grant(consumer_role, "UPDATE (updated_at,latest_signal_id,latest_metadata)", ("alerts",))
+        if api_role is not None:
+            grant(api_role, "SELECT", ("machines", *projections, *tables))
+            grant(api_role, "UPDATE (updated_at)", ("machines",))
+            grant(api_role, "UPDATE (status,updated_at)", ("alerts",))
+            grant(api_role, "INSERT", ("alert_events", "feedback", "alert_notifications"))

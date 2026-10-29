@@ -10,6 +10,7 @@ from uuid import uuid4
 
 import psycopg
 from backend.shared.projections.views import MachineViewUnavailable
+from business_sse.response import SSEResponse
 from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
@@ -19,23 +20,32 @@ from .auth import RegistryFailure
 from .observability import Metrics
 
 
-def create_app(repository, verifier, *, status_client=None, projections=None):
+def create_app(
+    repository, verifier, *, status_client=None, projections=None, notifications=None, alerts=None
+):
     @asynccontextmanager
     async def lifespan(app):
         try:
+            if notifications is not None:
+                await notifications.start()
             yield
         finally:
+            if notifications is not None:
+                await notifications.stop()
             if status_client is not None:
                 await status_client.aclose()
 
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     metrics = Metrics()
+    if notifications is not None:
+        notifications.metrics = metrics
     app.state.metrics = metrics
     app.state.implementation_scope = {
         "registry": True,
         "fleet_detail": projections is not None,
         "live": projections is not None,
         "status": status_client is not None,
+        "sse": notifications is not None,
     }
 
     @app.middleware("http")
@@ -93,7 +103,8 @@ def create_app(repository, verifier, *, status_client=None, projections=None):
                 "error": {
                     "code": exc.code,
                     "message": exc.code,
-                    "retryable": exc.status in {503, 504} or exc.code == "EVENT_NOT_MATERIALIZED",
+                    "retryable": exc.status in {429, 503, 504}
+                    or exc.code == "EVENT_NOT_MATERIALIZED",
                     "details": {},
                     "request_id": request.state.request_id,
                     "correlation_id": request.state.correlation_id,
@@ -171,6 +182,26 @@ def create_app(repository, verifier, *, status_client=None, projections=None):
             "active_alerts": [],
         }
 
+    @app.get("/api/v1/events/stream")
+    async def events(request: Request, machine_id: str | None = None):
+        identity = await asyncio.to_thread(read_identity, request)
+        machines = identity.machines
+        if machine_id is not None:
+            identity.authorize(machine_id)
+            machines = frozenset({machine_id})
+        if notifications is None or not notifications.ready:
+            raise RegistryFailure(503, "DEPENDENCY_UNAVAILABLE")
+        if machine_id is not None:
+            try:
+                existing = await asyncio.to_thread(repository.get, machine_id)
+            except psycopg.Error:
+                request.state.failed_dependency = "business_db"
+                raise RegistryFailure(503, "DEPENDENCY_UNAVAILABLE") from None
+            if existing is None:
+                raise RegistryFailure(404, "MACHINE_NOT_FOUND")
+        subscription = notifications.subscribe(machines, expires_at=identity.expires_at)
+        return SSEResponse(notifications, subscription)
+
     @app.get("/api/v1/sensor-events/{event_id:path}/status")
     async def status(event_id: str, request: Request):
         try:
@@ -201,16 +232,29 @@ def create_app(repository, verifier, *, status_client=None, projections=None):
     def ready():
         try:
             database = projections.check() if projections is not None else repository.check()
+            if alerts is not None:
+                database = database and alerts.check()
         except psycopg.Error:
             database = False
         oidc = verifier.check()
-        healthy = database and oidc
+        listener = notifications is None or notifications.ready
+        healthy = database and oidc and listener
         return JSONResponse(
             {
                 "status": "UP" if healthy else "DEGRADED",
-                "checks": {"database": database, "oidc_keys": oidc},
+                "checks": {
+                    "database": database,
+                    "oidc_keys": oidc,
+                    **({"notifications": listener} if notifications is not None else {}),
+                },
             },
             status_code=200 if healthy else 503,
         )
+
+    if alerts is not None:
+        alerts.metrics = metrics.alerts
+        from .alerts import install
+
+        install(app, verifier, alerts)
 
     return app

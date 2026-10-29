@@ -6,6 +6,7 @@ import socket
 import subprocess
 import threading
 import time
+from contextlib import ExitStack
 from datetime import UTC, datetime
 from functools import partial
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -76,7 +77,10 @@ def test_installed_status_live_consumer_two_db_roles_and_sigterm(business_databa
         owner: make_url(root_dsn).set(database=name).render_as_string(hide_password=False)
         for owner, name in databases.items()
     }
-    roles = {role: "m3_" + role + "_" + suffix for role in ("api", "reader", "consumer")}
+    roles = {
+        role: "m3_" + role + "_" + suffix
+        for role in ("api", "reader", "consumer", "business_reader")
+    }
     password = uuid4().hex
     containers, exit_errors = [], []
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -172,7 +176,10 @@ def test_installed_status_live_consumer_two_db_roles_and_sigterm(business_databa
         )
         with business_factory() as connection:
             grant_business_permissions(
-                connection, reader_role=roles["api"], consumer_role=roles["consumer"]
+                connection,
+                reader_role=roles["business_reader"],
+                consumer_role=roles["consumer"],
+                api_role=roles["api"],
             )
         with processing_factory() as connection:
             connection.execute(
@@ -181,9 +188,10 @@ def test_installed_status_live_consumer_two_db_roles_and_sigterm(business_databa
                 )
             )
             connection.execute(
-                sql.SQL("GRANT SELECT ON sensor_events,processing_results TO {}").format(
-                    sql.Identifier(roles["reader"])
-                )
+                sql.SQL(
+                    "GRANT SELECT ON sensor_events,predictions,"
+                    "risk_decisions,processing_results TO {}"
+                ).format(sql.Identifier(roles["reader"]))
             )
         with connect(role_dsn("processing", "reader")) as connection:
             with pytest.raises(psycopg.errors.InsufficientPrivilege), connection.transaction():
@@ -245,14 +253,37 @@ def test_installed_status_live_consumer_two_db_roles_and_sigterm(business_databa
                 "BUSINESS_CONSUMER_HOST": "127.0.0.1",
                 "BUSINESS_CONSUMER_PORT": consumer_port,
                 "BUSINESS_DATABASE_URL": role_dsn("business", "consumer"),
+                "BUSINESS_PROCESSING_READ_URL": read_url,
+                "BUSINESS_PROCESSING_TOKEN_FILE": "/run/secrets/status-token",
                 "KAFKA_LOCAL_MODE": "true",
                 "KAFKA_SECURITY_PROTOCOL": "PLAINTEXT",
                 "KAFKA_BOOTSTRAP_SERVERS": kafka.bootstrap_servers,
                 "KAFKA_GROUP_PREFIX": kafka.group_prefix,
             },
+            ("-v", str(credential) + ":/run/secrets/status-token:ro"),
         )
         for origin in (read_url, api_url, f"http://127.0.0.1:{consumer_port}"):
             wait_ready(origin)
+        second_api = None
+        if os.environ.get("MAINTAI_M4_CONTAINER_TEST") == "1":
+            second_port = free_port()
+            second_api = f"http://127.0.0.1:{second_port}"
+            launch(
+                "api2",
+                "maintai-business-registry:m2-local",
+                {
+                    "BUSINESS_PROFILE": "local-test",
+                    "BUSINESS_HOST": "127.0.0.1",
+                    "BUSINESS_PORT": second_port,
+                    "BUSINESS_DATABASE_URL": role_dsn("business", "api"),
+                    "BUSINESS_OIDC_ISSUER": issuer,
+                    "BUSINESS_OIDC_AUDIENCE": "business-test",
+                    "BUSINESS_OIDC_JWKS_URL": issuer + "/jwks",
+                    "BUSINESS_ROLES_CLAIM": "roles",
+                    "BUSINESS_MACHINES_CLAIM": "machines",
+                },
+            )
+            wait_ready(second_api)
 
         class Capture:
             def __init__(self, publisher):
@@ -293,7 +324,19 @@ def test_installed_status_live_consumer_two_db_roles_and_sigterm(business_databa
             "Authorization": "Bearer " + token("business-test", "SENSOR_SERVICE"),
             "X-Correlation-ID": "cor-m3",
         }
-        with httpx.Client(trust_env=False, timeout=4) as http:
+        with httpx.Client(trust_env=False, timeout=5) as http, ExitStack() as streams:
+            stream_responses = []
+            if second_api is not None:
+                for origin in (api_url, second_api):
+                    response = streams.enter_context(
+                        http.stream(
+                            "GET",
+                            origin + "/api/v1/events/stream?machine_id=M-001",
+                            headers={"Authorization": "Bearer " + token("business-test", "VIEWER")},
+                        )
+                    )
+                    assert response.status_code == 200
+                    stream_responses.append(response)
             initial = http.get(ack.body["status_url"], headers=headers)
             assert initial.status_code == 404
             assert initial.json()["error"]["retryable"] is True
@@ -308,6 +351,15 @@ def test_installed_status_live_consumer_two_db_roles_and_sigterm(business_databa
             # HIGH fixture emits both its canonical outcome and an Alert Signal.
             # M3 Business consumes only the outcome; Alert lifecycle remains separate.
             assert published == 2
+            for stream in stream_responses:
+                for line in stream.iter_lines():
+                    if line.startswith("data: "):
+                        message = json.loads(line[6:])
+                        if message["type"] == "prediction.completed":
+                            assert message["data"]["source_event_id"] == request["event_id"]
+                            break
+                else:
+                    pytest.fail("Installed API replica did not receive committed SSE prediction")
             with processing_factory() as connection:
                 rows = connection.execute(
                     "SELECT topic,status FROM maintai_kafka_outbox"
@@ -330,11 +382,41 @@ def test_installed_status_live_consumer_two_db_roles_and_sigterm(business_databa
             assert value["latest_processing"]["processing_status"] == "COMPLETED"
             assert value["latest_valid_prediction"]["source_event_id"] == request["event_id"]
             assert value["telemetry"]["event_id"] == request["event_id"]
-            # Alert storage belongs to a later phase: never fake zero active alerts.
+            deadline = time.monotonic() + 15
+            while time.monotonic() < deadline:
+                alert_page = http.get(api_url + "/api/v1/alerts", headers=viewer)
+                if alert_page.status_code == 200 and alert_page.json()["total"] == 1:
+                    break
+                time.sleep(0.1)
+            else:
+                for name in containers:
+                    print("=====", name, "=====")
+                    print(docker("logs", "--tail", "150", name))
+                pytest.fail("Installed Alert Consumer did not materialize its evidence")
             for resource in ("", "/M-001"):
-                unavailable = http.get(api_url + "/api/v1/machines" + resource, headers=viewer)
-                assert unavailable.status_code == 503
-                assert unavailable.json()["error"]["code"] == "DEPENDENCY_UNAVAILABLE"
+                assert (
+                    http.get(api_url + "/api/v1/machines" + resource, headers=viewer).status_code
+                    == 200
+                )
+            aid = alert_page.json()["items"][0]["alert_id"]
+            tech = {"Authorization": "Bearer " + token("business-test", "TECHNICIAN")}
+            detail = http.get(api_url + "/api/v1/alerts/" + aid, headers=viewer)
+            assert (
+                detail.status_code == 200
+                and detail.json()["sensor_event"]["event_id"] == request["event_id"]
+            )
+            # Explicit machine scope and actor identity from the signed fixture principal.
+            subject = jwt.decode(
+                tech["Authorization"].split()[1], options={"verify_signature": False}
+            )["sub"]
+            assert (
+                http.post(
+                    api_url + "/api/v1/alerts/" + aid + "/ack",
+                    headers=tech,
+                    json={"actor_id": subject},
+                ).status_code
+                == 200
+            )
             assert (
                 http.get(api_url + "/api/v1/machines/M-001/live", headers=headers).status_code
                 == 403
