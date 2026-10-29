@@ -740,6 +740,14 @@ jobs:
           docker build -f backend/business-consumer/Dockerfile -t maintai-business-consumer:m3-local .
       - name: Verify migrations permissions transactions replay and pipeline
         run: python -m pytest --import-mode=importlib processing/worker/tests processing/outbox-relay/tests processing/read-api/tests processing/tests backend/business-api/tests backend/business-consumer/tests -m integration
+      - name: Dump container logs on failure
+        if: ${{ failure() }}
+        run: |
+          docker ps -a
+          for c in $(docker ps -aq); do
+            echo "===== $(docker inspect --format '{{.Name}}' "$c") ====="
+            docker logs --tail 150 "$c" 2>&1
+          done
       - name: Stop isolated M2 dependencies
         if: ${{ always() }}
         run: docker compose -f processing/worker/tests/compose.yaml down

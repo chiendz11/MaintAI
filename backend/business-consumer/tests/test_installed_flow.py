@@ -389,6 +389,9 @@ def test_installed_status_live_consumer_two_db_roles_and_sigterm(business_databa
                     break
                 time.sleep(0.1)
             else:
+                for name in containers:
+                    print("=====", name, "=====")
+                    print(docker("logs", "--tail", "150", name))
                 pytest.fail("Installed Alert Consumer did not materialize its evidence")
             for resource in ("", "/M-001"):
                 assert (
