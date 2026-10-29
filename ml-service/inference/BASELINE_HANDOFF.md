@@ -158,8 +158,12 @@ thay cho các giá trị fixture.
 - Metrics đếm đúng một SUCCESS, một INVALID_INPUT và một prediction.
 - Container không mount model: live 200, ready 503, predict 503 MODEL_NOT_READY.
 
-Hai tests metrics bổ sung và kiểm tra reference bằng loader worker
-cần lưu kết quả thực thi khi hoàn tất; không mặc định coi là đã PASS.
+- Tổng 32 tests API/startup/contract/metrics PASS.
+- Loader thực của Drift Worker đọc reference thành công.
+- Phân bố sáu features được tính lại từ train bằng code worker và khớp reference.
+- Worker từ chối model_version hoặc dataset_version không khớp.
+- Kiểm tra reference là offline compatibility, chưa chạy worker với DB/runtime data.
+- Log kiểm thử đi kèm thư mục bàn giao: ml-tests.txt và reference-check.txt.
 
 ## Giới hạn tích hợp
 
