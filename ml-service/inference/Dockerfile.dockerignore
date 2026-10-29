@@ -1,0 +1,8 @@
+**
+!ml-service/
+!ml-service/inference/
+!ml-service/inference/Dockerfile
+!ml-service/inference/Dockerfile.dockerignore
+!ml-service/inference/requirements-serving.txt
+!ml-service/inference/api/
+!ml-service/inference/api/local_baseline.py
