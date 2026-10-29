@@ -1,3 +1,6 @@
+﻿from unittest.mock import MagicMock, patch
+
+from langchain_core.documents import Document
 
 from metadata_filter.filter import MetadataFilter
 from vector_retriever.retriever import VectorRetriever
@@ -10,22 +13,38 @@ def test_retrieval_flow():
         source="pdffile.pdf"
     )
 
-    retriever = VectorRetriever()
+    expected_documents = [
+        Document(
+            page_content="Check the motor cooling system.",
+            metadata={
+                "chunk_id": "chunk-001",
+                "page": 13,
+                "source": "pdffile.pdf",
+            },
+        )
+    ]
 
-    documents = retriever.search(
-        query=query,
-        top_k=3,
-        filters=filters
-    )
+    with patch(
+        "vector_retriever.retriever.PostgresVectorStore"
+    ) as mock_store_class:
+        mock_store = MagicMock()
+        mock_store.search.return_value = expected_documents
+        mock_store_class.return_value = mock_store
 
-    print(f"\nRetrieved: {len(documents)}")
+        retriever = VectorRetriever()
+
+        documents = retriever.search(
+            query=query,
+            top_k=3,
+            filters=filters,
+        )
+
+    assert len(documents) == 1
+    assert len(documents) <= 3
 
     for doc in documents:
-        print("Metadata:", doc.metadata)
-        print("Content:", doc.page_content[:200])
-        print("---")
-
         assert isinstance(doc.metadata["chunk_id"], str)
         assert "page" in doc.metadata
+        assert doc.metadata["source"] == "pdffile.pdf"
 
-    assert len(documents) <= 3
+    mock_store.search.assert_called_once()

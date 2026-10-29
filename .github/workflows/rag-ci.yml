@@ -1,4 +1,4 @@
-﻿name: RAG checks
+name: RAG checks
 
 on:
   pull_request:
