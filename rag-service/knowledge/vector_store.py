@@ -91,9 +91,34 @@ class PostgresVectorStore:
                 page_content=content,
                 metadata={
                     **(metadata or {}),
-                    "chunk_id": chunk_id,
+                    "chunk_id": str(chunk_id),
                     "distance": float(distance)
                 }
             )
             documents.append(document)
         return documents
+       
+    def document_exists(
+        self,
+        document_id: str,
+        document_version: str,
+    ) -> bool:
+        with psycopg.connect(self.connection_string) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM knowledge_chunks
+                        WHERE metadata @> %s::jsonb
+                    )
+                    """,
+                    (
+                        json.dumps({
+                            "document_id": document_id,
+                            "document_version": document_version,
+                        }),
+                    ),
+                )
+                return bool(cursor.fetchone()[0])
+

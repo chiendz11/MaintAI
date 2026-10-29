@@ -1,30 +1,32 @@
 
+from unittest.mock import MagicMock, patch
 
 from langchain_core.documents import Document
 
-from ingestion.embedding import Embedder
 from knowledge.vector_store import PostgresVectorStore
 
 
-# 1. Tạo một đoạn văn bản thử nghiệm
-documents = [
-    Document(
-        page_content="Động cơ quá nhiệt có thể do thông gió kém.",
+def test_vector_store_add():
+    document = Document(
+        page_content="Check motor ventilation.",
         metadata={
-            "source": "test",
-            "page": 1
-        }
+            "document_id": "manual-001",
+            "document_version": "1.0",
+            "section": "Maintenance",
+            "page": 1,
+        },
     )
-]
 
-# 2. Biến đoạn văn bản thành dãy số
-embedder = Embedder()
+    embedding = [0.0] * 384
 
-texts = [doc.page_content for doc in documents]
-embeddings = embedder.encode(texts)
+    with patch("psycopg.connect") as mock_connect:
+        connection = MagicMock()
+        cursor = MagicMock()
 
-# 3. Lưu vào PostgreSQL
-store = PostgresVectorStore()
-store.add(documents, embeddings)
+        mock_connect.return_value.__enter__.return_value = connection
+        connection.cursor.return_value.__enter__.return_value = cursor
 
-print("Kiểm tra hoàn tất!")
+        store = PostgresVectorStore()
+        store.add([document], [embedding])
+
+        assert mock_connect.called

@@ -1,5 +1,5 @@
 
-from typing import List
+from typing import Any
 
 from langchain_core.documents import Document
 
@@ -15,8 +15,9 @@ class VectorRetriever:
     def search(
         self,
         query: str,
-        top_k: int = 3
-    ) -> List[Document]:
+        top_k: int = 3,
+        filters: dict[str, Any] | None = None
+    ) -> list[Document]:
 
         if not query or not query.strip():
             return []
@@ -24,16 +25,15 @@ class VectorRetriever:
         if top_k <= 0:
             return []
 
-        # 1. Chuyển câu hỏi thành embedding
+        # Chuyển câu truy vấn thành vector
         embeddings = self.embedder.encode([query])
-
-        # 2. Lấy vector đầu tiên
         query_embedding = embeddings[0]
 
-        # 3. Tìm các chunks liên quan trong PostgreSQL
+        # Truy vấn PostgreSQL với bộ lọc metadata
         documents = self.vector_store.search(
             query_embedding=query_embedding,
-            top_k=top_k
+            top_k=top_k,
+            filters=filters
         )
 
         return documents

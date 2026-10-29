@@ -1,33 +1,38 @@
-from knowledge.pdf_parser import load_pdf
-from knowledge.processor import KnowledgeProcessor
+
+from langchain_core.documents import Document
+
 from vector_retriever.retriever import VectorRetriever
 
-# 1. Đọc PDF
-pages = load_pdf("documents/pdffile.pdf")
 
-# 2. Chia chunks
-processor = KnowledgeProcessor()
-all_chunks = []
+def test_retriever_search():
+    retriever = VectorRetriever.__new__(VectorRetriever)
 
-for page in pages:
-    chunks = processor.load_document_from_text(
-        text=page["text"],
-        metadata=page["metadata"]
+    class FakeEmbedder:
+        def encode(self, texts):
+            return [[0.0] * 384 for _ in texts]
+
+    class FakeStore:
+        def search(self, query_embedding, top_k=3, filters=None):
+            return [
+                Document(
+                    page_content="Check motor ventilation.",
+                    metadata={
+                        "chunk_id": "1",
+                        "document_id": "manual-001",
+                        "document_version": "1.0",
+                        "section": "Maintenance",
+                        "page": 1,
+                    },
+                )
+            ]
+
+    retriever.embedder = FakeEmbedder()
+    retriever.vector_store = FakeStore()
+
+    results = retriever.search(
+        query="motor overheating",
+        top_k=3,
     )
-    all_chunks.extend(chunks)
 
-# 3. Khởi tạo VectorRetriever
-retriever = VectorRetriever()
-
-# 4. Embedding + lưu vào FAISS
-retriever.add_document(all_chunks)
-
-# 5. Thử tìm kiếm
-query = "What are the causes of motor overheating?"
-
-results = retriever.search(query, top_k=3)
-
-for i, doc in enumerate(results, start=1):
-    print(f"\n===== RESULT {i} =====")
-    print("Nguồn:", doc.metadata)
-    print("Nội dung:", doc.page_content[:700])
+    assert len(results) == 1
+    assert results[0].metadata["chunk_id"] == "1"
