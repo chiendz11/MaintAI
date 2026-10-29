@@ -1,4 +1,5 @@
-FROM python:3.11-slim
+# Official Python OCI index resolved 2026-10-29; includes linux/amd64.
+FROM python:3.11-slim@sha256:673719e071ecf27434fd2635bbd8d00f49f4fdd81f243143438a42ced8bedf60
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 HF_HOME=/opt/maintai/model-cache SENTENCE_TRANSFORMERS_HOME=/opt/maintai/model-cache
 WORKDIR /app
 RUN groupadd -r maintai && useradd -r -g maintai -d /app maintai && mkdir -p /opt/maintai/model-cache /tmp/maintai && chown -R maintai:maintai /opt/maintai /tmp/maintai /app
