@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: maintai-postgres
+    environment:
+      POSTGRES_USER: maintai
+      POSTGRES_PASSWORD: maintai_dev_password
+      POSTGRES_DB: maintai_knowledge
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+volumes:
+  postgres_data:
