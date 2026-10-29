@@ -1,5 +1,8 @@
 name: RAG checks
 
+permissions:
+  contents: read
+
 on:
   pull_request:
     paths:
@@ -35,9 +38,9 @@ jobs:
         working-directory: rag-service
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/test
-          OLLAMA_BASE_URL: http://localhost:11434
-          OLLAMA_MODEL: qwen2.5:3b
-          OLLAMA_TIMEOUT: "120"
+          GROQ_API_KEY: ci-fixture-not-a-real-key
+          GROQ_MODEL: llama-3.3-70b-versatile
+          GROQ_TIMEOUT_SECONDS: "2"
           EMBEDDING_MODEL: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
         run: python -m pytest -q tests
 
@@ -54,9 +57,9 @@ jobs:
         run: |
           docker run -d --name rag-smoke -p 8002:8002 \
             -e DATABASE_URL=postgresql://test:test@localhost:5432/test \
-            -e OLLAMA_BASE_URL=http://host.docker.internal:11434 \
-            -e OLLAMA_MODEL=qwen2.5:3b \
-            -e OLLAMA_TIMEOUT=120 \
+            -e GROQ_API_KEY=ci-fixture-not-a-real-key \
+            -e GROQ_MODEL=llama-3.3-70b-versatile \
+            -e GROQ_TIMEOUT_SECONDS=2 \
             -e EMBEDDING_MODEL=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 \
             maintai-rag:ci
 

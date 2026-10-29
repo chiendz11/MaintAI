@@ -1,175 +1,151 @@
+"""Groq Chat Completions over HTTPS with locally validated JSON output."""
 
-import os
-import httpx
 import json
+import threading
+import time
+from functools import lru_cache
 
-from dotenv import load_dotenv
+import httpx
 
-load_dotenv()
+from llm_generator.config import GROQ_BASE_URL, GroqSettings
+
+
+class LLMProviderError(RuntimeError):
+    def __init__(self, reason, *, retryable):
+        self.reason = reason
+        self.retryable = retryable
+        super().__init__("Groq generation unavailable: " + reason)
+
+
+def json_object(raw):
+    def pairs(items):
+        result = {}
+        for key, value in items:
+            if key in result:
+                raise ValueError("Duplicate JSON key")
+            result[key] = value
+        return result
+
+    def nonfinite(_):
+        raise ValueError("Non-finite JSON number")
+
+    value = json.loads(raw, object_pairs_hook=pairs, parse_constant=nonfinite)
+    if not isinstance(value, dict):
+        raise ValueError("Expected JSON object")
+    json.dumps(value, ensure_ascii=False, allow_nan=False).encode("utf-8")
+    return value
 
 
 class LLMGenerator:
-    def __init__(self):
-        self.base_url = os.getenv(
-            "OLLAMA_BASE_URL",
-            "http://localhost:11434"
-        ).rstrip("/")
+    provider = "groq"
 
-        self.model = os.getenv(
-            "OLLAMA_MODEL",
-            "qwen2.5:3b"
+    def __init__(self, *, settings=None, transport=None, clock=time.monotonic):
+        self.settings = settings or GroqSettings.from_env()
+        self.model = self.settings.model
+        self.transport = transport
+        self.clock = clock
+        self._ready_until = 0
+        self._ready = False
+        self._ready_lock = threading.Lock()
+
+    def _client(self, timeout):
+        return httpx.Client(
+            timeout=httpx.Timeout(timeout, connect=min(5, timeout)),
+            transport=self.transport,
+            follow_redirects=False,
+            headers={"Authorization": "Bearer " + self.settings.api_key},
         )
 
-        self.timeout = float(
-            os.getenv("OLLAMA_TIMEOUT", "120")
-        )
+    def is_available(self):
+        """Cached credential/model check; never generate or spend completion tokens."""
+        with self._ready_lock:
+            if self.clock() < self._ready_until:
+                return self._ready
+            self._ready = False
+            try:
+                with self._client(min(3, self.settings.timeout_seconds)) as client:
+                    response = client.get(GROQ_BASE_URL + "/models")
+                    response.raise_for_status()
+                    models = json_object(response.content).get("data")
+                    self._ready = isinstance(models, list) and any(
+                        isinstance(model, dict) and model.get("id") == self.model
+                        for model in models
+                    )
+            except (httpx.HTTPError, ValueError, OSError):
+                pass
+            self._ready_until = self.clock() + (30 if self._ready else 5)
+            return self._ready
 
-        if self.timeout <= 0:
-            raise ValueError(
-                "OLLAMA_TIMEOUT phải lớn hơn 0"
-            )
-
-    def generate(self, prompt: str) -> str:
-        if not prompt or not prompt.strip():
-            raise ValueError(
-                "Prompt không được để trống"
-            )
-
-        url = f"{self.base_url}/api/generate"
-
+    def _generate(self, prompt, *, structured):
+        if not isinstance(prompt, str) or not prompt.strip():
+            raise ValueError("Prompt must be a non-empty string")
+        system = "Use only the supplied maintenance evidence. Do not invent citations or change machine/alert state."
+        if structured:
+            system += " Return only a JSON object matching the format requested by the user."
         payload = {
             "model": self.model,
-            "prompt": prompt.strip(),
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": prompt.strip()},
+            ],
+            "temperature": 0.1,
+            "max_completion_tokens": self.settings.max_completion_tokens,
             "stream": False,
-            "options": {
-                "temperature": 0.1
-            }
         }
-
+        if structured:
+            payload["response_format"] = {"type": "json_object"}
         try:
-            with httpx.Client(
-                timeout=self.timeout
-            ) as client:
-                response = client.post(
-                    url,
-                    json=payload
-                )
-
+            with self._client(self.settings.timeout_seconds) as client:
+                response = client.post(GROQ_BASE_URL + "/chat/completions", json=payload)
                 response.raise_for_status()
-                data = response.json()
-
-        except httpx.TimeoutException as exc:
-            raise RuntimeError(
-                "LLM xử lý quá thời gian cho phép"
-            ) from exc
-
-        except httpx.ConnectError as exc:
-            raise RuntimeError(
-                "Không kết nối được Ollama. "
-                "Hãy kiểm tra Ollama đã chạy chưa."
-            ) from exc
-
-        except httpx.HTTPStatusError as exc:
-            raise RuntimeError(
-                f"Ollama trả về lỗi HTTP "
-                f"{exc.response.status_code}: "
-                f"{exc.response.text[:300]}"
-            ) from exc
-
-        except (httpx.RequestError, ValueError) as exc:
-            raise RuntimeError(
-                f"Lỗi khi gọi Ollama: {exc}"
-            ) from exc
-
-        if not isinstance(data, dict):
-            raise RuntimeError(
-                "Ollama trả về dữ liệu không hợp lệ"
-            )
-
-        answer = data.get("response")
-
-        if not isinstance(answer, str) or not answer.strip():
-            raise RuntimeError(
-                "LLM không tạo được câu trả lời"
-            )
-
-        return answer.strip()
-    
-    def generate_json(self, prompt: str) -> dict:
-        if not prompt or not prompt.strip():
-            raise ValueError("Prompt không được để trống")
-
-        url = f"{self.base_url}/api/generate"
-
-        payload = {
-            "model": self.model,
-            "prompt": prompt.strip(),
-            "stream": False,
-            "format": "json",
-            "options": {
-                "temperature": 0.1
-            }
-        }
-
+        except httpx.TimeoutException:
+            raise LLMProviderError("TIMEOUT", retryable=True) from None
+        except httpx.HTTPStatusError as error:
+            status = error.response.status_code
+            if status in {401, 403}:
+                raise LLMProviderError("AUTHENTICATION_FAILED", retryable=False) from None
+            if status == 429:
+                raise LLMProviderError("RATE_LIMITED", retryable=True) from None
+            if status >= 500:
+                raise LLMProviderError("UPSTREAM_UNAVAILABLE", retryable=True) from None
+            raise LLMProviderError("REQUEST_REJECTED", retryable=False) from None
+        except (httpx.RequestError, OSError):
+            raise LLMProviderError("CONNECTION_FAILED", retryable=True) from None
+        # Do not retry an uncertain generation request or expose provider bodies.
         try:
-            with httpx.Client(timeout=self.timeout) as client:
-                response = client.post(url, json=payload)
-                response.raise_for_status()
-                data = response.json()
+            if len(response.content) > 1_000_000:
+                raise ValueError("Oversized provider response")
+            data = json_object(response.content)
+            choice = data["choices"][0]
+            if choice.get("finish_reason") == "length":
+                raise LLMProviderError("OUTPUT_TRUNCATED", retryable=False)
+            content = choice["message"]["content"]
+            if data.get("model") != self.model:
+                raise ValueError("Serving model differs from the configured model")
+            if not isinstance(content, str) or not content.strip():
+                raise ValueError("Empty provider response")
+            return content.strip()
+        except (ValueError, KeyError, TypeError, IndexError, AttributeError):
+            raise LLMProviderError("INVALID_RESPONSE", retryable=False) from None
 
-        except httpx.TimeoutException as exc:
-            raise RuntimeError(
-                "LLM xử lý quá thời gian cho phép"
-            ) from exc
+    def generate(self, prompt):
+        return self._generate(prompt, structured=False)
 
-        except httpx.ConnectError as exc:
-            raise RuntimeError(
-                "Không kết nối được Ollama"
-            ) from exc
-
-        except httpx.HTTPStatusError as exc:
-            raise RuntimeError(
-                f"Ollama HTTP {exc.response.status_code}: "
-                f"{exc.response.text[:300]}"
-            ) from exc
-
-        except httpx.RequestError as exc:
-            raise RuntimeError(
-                f"Lỗi kết nối Ollama: {exc}"
-            ) from exc
-
+    def generate_json(self, prompt):
+        answer = self._generate(prompt, structured=True)
         try:
-            answer = data["response"]
-            result = json.loads(answer)
-        except (KeyError, TypeError, ValueError) as exc:
-            raise RuntimeError(
-                "Ollama không trả về JSON hợp lệ"
-            ) from exc
+            result = json_object(answer)
+            if not isinstance(result.get("summary"), str) or not result["summary"].strip():
+                raise ValueError("Missing summary")
+            if not isinstance(result.get("uncertainty"), str) or not isinstance(
+                result.get("checklist"), list
+            ):
+                raise ValueError("Invalid uncertainty/checklist")
+            return result
+        except (ValueError, TypeError):
+            raise LLMProviderError("INVALID_RESPONSE", retryable=False) from None
 
-        if not isinstance(result, dict):
-            raise RuntimeError(
-                "Kết quả JSON phải là một object"
-            )
 
-        required_fields = {
-            "summary",
-            "uncertainty",
-            "checklist"
-        }
-
-        if not required_fields.issubset(result):
-            raise RuntimeError(
-                "LLM trả về thiếu trường bắt buộc"
-            )
-
-        if (
-            not isinstance(result["summary"], str)
-            or not isinstance(result["uncertainty"], str)
-            or not isinstance(result["checklist"], list)
-        ):
-            raise RuntimeError(
-                "LLM trả về sai kiểu dữ liệu"
-            )
-
-        return result
-
+@lru_cache(maxsize=1)
+def get_generator():
+    return LLMGenerator()

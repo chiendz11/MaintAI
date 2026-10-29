@@ -15,7 +15,7 @@
     {
       "path": "docs/README.md",
       "source_filename": "README.md",
-      "sha256": "e1c321ca44b97571345572a7e70c1915512c6fc71a05795f6d47945a2fbf4496",
+      "sha256": "e50aa70238c814ae5bfd1cb9be16f867c2a69da85a7d680b6172cabee5ae1214",
       "upstream_sha256": "b8f3731050d7cba47d5eecebd8ecfa7457dc4a7c427e9f408a1a22dd89c9b0d7"
     },
     {
@@ -304,6 +304,12 @@
       "source_filename": null,
       "upstream_sha256": null,
       "sha256": "2440fce0d2b34d74c530aae73d719b30ac276257b28bd4fe6bb403180031159d"
+    },
+    {
+      "path": "docs/RAG_GROQ_PROVIDER.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "da2a16596c195142fb704e07d6f1dd13abb6232b120a72054251744255524cf5"
     }
   ],
   "upstream_inherited_contract_revision": "1.3.1",

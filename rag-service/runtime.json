@@ -27,22 +27,28 @@
   },
   "dependencies": {
     "database": "postgresql-pgvector",
-    "llm_provider": "ollama",
+    "llm_provider": "groq-api",
     "embedding": "sentence-transformers"
   },
   "environment": {
     "required": [
       "DATABASE_URL",
-      "OLLAMA_BASE_URL",
-      "OLLAMA_MODEL",
+      "GROQ_MODEL",
       "EMBEDDING_MODEL"
     ],
     "optional": {
-      "OLLAMA_TIMEOUT": "120",
       "HF_HOME": "/opt/maintai/model-cache",
       "SENTENCE_TRANSFORMERS_HOME": "/opt/maintai/model-cache",
-      "MODEL_LOCAL_FILES_ONLY": "true"
-    }
+      "MODEL_LOCAL_FILES_ONLY": "true",
+      "GROQ_TIMEOUT_SECONDS": "60",
+      "GROQ_MAX_COMPLETION_TOKENS": "2048"
+    },
+    "required_any_of": [
+      [
+        "GROQ_API_KEY",
+        "GROQ_API_KEY_FILE"
+      ]
+    ]
   },
   "commands": {
     "migration": "python -m migrations.cli up",
@@ -53,8 +59,8 @@
     "platform": "kubernetes",
     "local_cluster": "k3d",
     "manifest_directory": "rag-service/k8s",
-    "ollama_location": "host-laptop",
-    "ollama_endpoint": "http://host.k3d.internal:11434"
+    "llm_provider_location": "external-api",
+    "llm_endpoint": "https://api.groq.com/openai/v1/chat/completions"
   },
   "runtime_id": "rag-service",
   "target_contract_revision": "1.3.2",
@@ -64,6 +70,10 @@
     "rag-service/ingestion",
     "rag-service/knowledge",
     "rag-service/migrations",
-    "rag-service/vector_retriever"
+    "rag-service/vector_retriever",
+    "rag-service/llm_generator",
+    "rag-service/runtime_config.py",
+    "rag-service/pipeline.py",
+    "rag-service/api"
   ]
 }

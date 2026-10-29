@@ -1,3 +1,7 @@
+> **Tài liệu lịch sử của PR14/16 — không dùng làm hướng dẫn runtime hiện hành.**
+> RAG đã chuyển generation sang Groq API. Xem [README hiện tại](README.md).
+> Các lệnh Ollama/Qwen bên dưới chỉ ghi lại bản bàn giao trước đây.
+
 # PR #14 — RAG deployment (k3d + Ollama on laptop)
 
 Build context **repository root**: `docker build -f rag-service/Dockerfile -t maintai-rag:pr14 .`

@@ -69,6 +69,10 @@ freeze schema/migration trước khi đổi producer hoặc consumer. Không t�
 
 ## Quyết định dự án còn hiệu lực
 
+- **RAG-GROQ-01,30/10:** RAG generation gọi Groq API, không dùng Ollama/Qwen local;
+  embedding MiniLM và pgvector vẫn giữ. Credential qua env/Secret file, JSON/citations
+  vẫn được validate; readiness không sinh completion. [Provider handoff](RAG_GROQ_PROVIDER.md).
+
 - **RISK-POLICY-01,30/10:** Nội dung/schema/catalog policy thuộc
   `processing/config/risk-policies/` trong app. GitOps khóa app commit + policy
   version/hash, tạo ConfigMap và mount Worker; infrastructure không yêu cầu bản
