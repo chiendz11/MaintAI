@@ -14,8 +14,9 @@ benchmark, Docker image/deployment và môi trường k3d mới chưa được x
 - Runtime map:14 app +1 platform descriptor MLflow, baseline1.3.2; Simulator UI client/descriptor,
   không bump wire version hoặc khẳng định đã deploy.
 - Sensor0.3.0: wire1.3.0/Control1.3.2; Drift executable1.1; Simulator UI client0.1.0;
-  Ingestion có M1 local; Storage runtime0.1.0 có source/tests/Dockerfile; các application runtimes khác vẫn skeleton.
-- Kafka library0.2.0 + canonical bundle1.1.0: wire target1.4/legacy reader2.0,
+  Ingestion có M1 local; Storage runtime0.1.0 có source/tests/Dockerfile;
+  Processing/Business/Main UI đã có source M1–M5, ML/RAG và phần M6/M7 còn riêng.
+- Kafka library0.3.0 + canonical bundle2.0.0: outcome reader/writer chỉ1.4.0,
   keyed/ordered/fenced adapters và additive Processing migration002; xem §18–19.
 
 `IMPLEMENTATION_PLAN.md` mô tả các bước implementation tương lai. Những yêu cầu
@@ -26,7 +27,7 @@ tạo branch, CURRENT_STATE, migration, test/build/deploy trong đó không ph�
 
 | Chủ đề | Quyết định / nguồn |
 | --- | --- |
-| Terminal result union | Baseline2.0.0; Kafka writer1.4.0/reader1.4+legacy2.0, consumer-first cutover |
+| Terminal result union | OUTCOME-14-ONLY: Kafka/HTTP/history dùng outcome1.4.0; bỏ reader2.0, cutover dữ liệu riêng |
 | Simulator UI | Frontend riêng -> Sensor; Main UI -> Business; không Business control facade |
 | History | Processing Read API thống nhất hot DB + S3; HISTORY-01 |
 | Prediction archive | Processing-owned DB batch export; verified membership trước cleanup |
@@ -47,7 +48,7 @@ validate; các invariant transaction/cursor/authorization cần runtime tests ri
 | --- | --- | --- |
 | Sensor | 0.3.0: ACK202, SQLite state/sequence/spool,5 Control APIs, JWT/scopes, metrics | Persistent volume/recovery vận hành, production IdP/Kafka và image/rollout evidence |
 | Drift | Legacy CLI/detector/persistence/metrics | API/S3 input, owner migration, committed report publication |
-| Ingestion | M1 HTTP/auth/guards/lifecycle/probes/metrics; Sensor đã có client202; SDK pin0.2.0 | Shared OIDC/TLS/ACL, tích hợp liên service và GitOps deployment acceptance |
+| Ingestion | M1 HTTP/auth/guards/lifecycle/probes/metrics; Sensor đã có client202; SDK pin0.3.0 | Shared OIDC/TLS/ACL, tích hợp liên service và GitOps deployment acceptance |
 | Processing | SDK durable runner/inbox/outbox/relay/SQL; app callbacks skeleton | DQ/ML/risk/history, owner migrations/read API và archive/export/snapshot jobs |
 | Business | SDK3 role loops/inbox transaction adapter; app callbacks skeleton | Projections/alert SQL, REST/SSE/RBAC/lifecycle, jobs/catalog |
 | Storage | Runtime0.1.0: SDK consumers, immutable microbatch/manifest, retry/supervision, probes/OBS-01, CLI/config, locked package/image/CI | AWS bucket/region/IRSA/ACL thật; Kafka+S3/container integration, rollout và capacity/cost validation |
@@ -147,7 +148,7 @@ Báo cáo dependency/giữ-xóa:
 | Chủ đề | Đã nhận / đang có | Việc cần freeze hoặc triển khai |
 | --- | --- | --- |
 | Quarantine | `contracts/kafka/` có rejected1.4 HASH_ONLY; SDK auth identity/size/envelope boundary, ACK trước400/422; Storage0.1.0 có rejected runtime/probes; GitOps topic/ACL | Ingestion HTTP auth/runtime, real broker/S3 integration; không lưu unauthorized/oversized body |
-| Outcome wire | Canonical writer1.4.0/kind; compatibility reader2.0.0/result_kind, no writer1.1.0; source/DQ/model/risk lineage schema+fixtures | Owner callbacks/provider DTOs, consumer-first rollout; chưa có cutover/deployment; baseline vẫn nguyên vẹn |
+| Outcome wire | Canonical reader/writer1.4.0/kind; bỏ reader2.0.0 theo OUTCOME-14-ONLY; source/DQ/model/risk lineage schema+fixtures | Owner callbacks/provider DTOs, consumer-first rollout; chưa có cutover/deployment; baseline vẫn nguyên vẹn |
 | History cursor | System §36 ghi received_at/event_id; Plan §C/§E và Dataflow dùng accepted-time ordering; baseline có opaque snapshot cursor | Chốt canonical timestamp/cursor, stable pagination, API filters/indexes và khả năng tương thích |
 | Read API read-only | v1.4 yêu cầu role `processing_ro`; thiết kế snapshot/export cũ có durable write state | Giữ Read API SELECT-only; bố trí owner writer/maintenance cho snapshot/export trước khi implement |
 | Hot/cold/archive | Chi tiết HISTORY-01 giữ original outcomes và coverage; v1.4 cho phép optional outcome archive qua Storage | Chọn writer/membership/manifest contract tương thích; không làm mất bằng chứng gốc hoặc cleanup chưa verify |
@@ -434,3 +435,28 @@ chữ ký với JWKS fixture local được kiểm tra riêng. Không suy shared
 TLS/ACL, S3 archive, Business/ML integration hoặc full-system v1.4 từ các tests này.
 GitHub CI/deployment chưa được chạy trong lượt local này. Kế hoạch M1 và kết quả
 kiểm tra cụ thể nằm trong docs/superpowers/plans/ và báo cáo phiên làm việc.
+
+
+## 23. Outcome1.4-only — source migration ngày28/10
+
+[OUTCOME-14-ONLY](OUTCOME_V1_4_MIGRATION.md) thay mọi chỉ dẫn compatibility2.0
+trong snapshot cũ. SDK0.3.0/bundle2.0.0 bỏ reader legacy, Business giữ risk gốc,
+HTTP/history ProcessingResult dùng schema Kafka1.4. SQL001/002 không thay đổi;
+không có backfill risk, không rewrite Kafka, không reset offset hoặc migration
+dữ liệu trong lần sửa này. Negative fixtures giữ legacy chỉ để kiểm chứng từ chối.
+
+Nhánh source này dựa trên M3: đã có Projector và Fleet reader, không còn chỉ là
+callback skeleton. Tuy nhiên nguồn Alert runtime vẫn chưa nối, nên Fleet/Detail
+có thể trả503 dù risk hợp lệ. Phần đó không được sửa bởi outcome migration.
+Kiểm tra unit/contract và build wheel khác với tests DB/Kafka/container; chỉ
+được ghi full pipeline PASS khi có bằng chứng thực thi phù hợp.
+
+
+## 24. M5 — Alert lifecycle và nền M4 realtime
+
+M4 được merge qua PR12; M5 thêm Alert handler thứ ba, hot evidence HTTP point-read,
+owner migration0003, append-only audit/feedback và immutable Alert notification
+snapshots. Fleet/Detail đã có nguồn Alert thật; Main UI có Alert list/detail/actions.
+[Report](M5_IMPLEMENTATION_REPORT.md) ưu tiên các mô tả inherited còn ghi hai loops,
+Frontend skeleton hoặc thiếu Alert source. Shared providers/production/load acceptance
+không tự hoàn tất. M6/M7/M8 giữ phạm vi riêng; không bật archive cleaner trong M5.

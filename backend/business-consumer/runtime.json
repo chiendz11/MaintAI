@@ -5,10 +5,10 @@
   "runtime_id": "business-consumer",
   "workload_kind": "Deployment",
   "code_owner": "business-backend",
-  "implementation_status": "skeleton",
+  "implementation_status": "implemented_m5_alert_lifecycle_local_fixture",
   "image_group": "business-backend",
   "image_digest": null,
-  "entrypoint_status": "not_implemented_for_v1.3.2",
+  "entrypoint_status": "implemented_three_serial_groups",
   "purpose": "Telemetry/prediction/alert handlers + latest projections/lifecycle and bounded durable brief/drift-catalog job loop.",
   "source_paths": [
     "backend/business-consumer/src",
@@ -32,9 +32,11 @@
   ],
   "kafka_publications": [],
   "interfaces": [
-    "PG NOTIFY after durable projection commit",
-    "RAG API from leased brief jobs",
-    "Committed drift report S3 manifests"
+    "Telemetry/prediction Kafka subscriptions",
+    "Business latest projection DB writes",
+    "Health/metrics HTTP",
+    "Post-commit PostgreSQL NOTIFY invalidation hints",
+    "Processing HTTP evidence; transactional immutable Alert notifications"
   ],
   "boundaries": [
     "Ba handlers là module của một deployment; không tạo telemetry-service/prediction-service riêng.",
@@ -42,10 +44,21 @@
     "Inbox/CAS trên sequence_number bền vững; không sort epoch/event_id; không xóa last valid prediction khi event mới INVALID."
   ],
   "dockerfile": "backend/business-consumer/Dockerfile",
-  "dockerfile_status": "placeholder",
-  "implemented_contract_revision": null,
+  "dockerfile_status": "implemented",
+  "implemented_contract_revision": "1.3.2",
   "planned_background_tasks": [
     "brief-jobs",
     "drift-catalog-sync"
-  ]
+  ],
+  "implemented_scope": "Telemetry/prediction projections plus inbox-protected Alert Signals; immutable hot evidence through Processing HTTP, fixed300s dedupe, audit and transactional Alert notifications. Brief/drift jobs, shared provider/deployment/load acceptance remain separate.",
+  "planned_kafka_subscriptions": [],
+  "planned_interfaces": [
+    "RAG API from leased brief jobs",
+    "Committed drift report S3 manifests"
+  ],
+  "outcome_contract": {
+    "read_version": "1.4.0",
+    "legacy_reader": false,
+    "document": "docs/OUTCOME_V1_4_MIGRATION.md"
+  }
 }

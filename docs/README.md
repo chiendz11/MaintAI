@@ -1,6 +1,6 @@
 # MaintAI docs — thiết kế mục tiêu v1.4
 
-Cập nhật: **2026-10-23**. Sáu tài liệu v1.4 đã được nhập vào repo và hiệu chỉnh
+Cập nhật: **2026-10-28**. Sáu tài liệu v1.4 đã được nhập vào repo và hiệu chỉnh
 đường dẫn cùng các quyết định dự án đã chốt. Bộ Kafka Python dùng chung đã được
 thêm riêng; DB/application/image/deployment chưa tự migrate theo tài liệu.
 
@@ -22,8 +22,8 @@ hoặc tuyên bố throughput đã benchmark. Xem [quy trình scale](design-basi
 | [Bộ sơ đồ trực quan](diagrams/README.md) | Use Case, kiến trúc logic, deployment và data flow; SVG/PNG, nguồn DOT và gallery offline có zoom/pan |
 | [Runtime Dataflow](RUNTIME_DATAFLOW.md) | Accepted/rejected, DQ/inference/alerts, history và crash boundaries |
 | [Versioning & Provenance](VERSIONING_AND_PROVENANCE.md) | Dataset/split/model/image/policy/manual/release lineage, approvals và rollback |
-| [Implementation Guide v1.4](MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md) §42–55 | Deployment/provenance, UI, instrumentation, Sensor/Storage/MLflow, concurrency và capacity100→X |
-| [Kafka/Processing implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) | SDK0.2.0/bundle1.1.0, callbacks/modes/migration/defaults, real broker/DB evidence và app/platform gaps |
+| [Implementation Guide v1.4](MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md) §42–56 | Deployment/provenance, UI, instrumentation, Sensor/Storage/MLflow, concurrency, capacity100→X và outcome1.4-only |
+| [Kafka/Processing implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) | Bằng chứng23/10 của SDK0.2.0/bundle1.1.0; xem OUTCOME-14-ONLY cho release hiện hành; callbacks/modes/migration/defaults, real broker/DB evidence và app/platform gaps |
 | [PROC-ORDER-01 — Processing concurrency/ordering](PROCESSING_CONCURRENCY_AND_ORDERING.md) | Keyed FIFO/executor, safe offset frontier, durable ownership fence, ordered outbox, budgets và migration/acceptance; SDK source đã có, app/prod integration pending |
 | [Implementation Plan](IMPLEMENTATION_PLAN.md) | Thứ tự PR 00–10, migration và tiêu chí nghiệm thu cho công việc triển khai sau này |
 | [Functional Overview](MaintAI_Functional_Overview.md) | Chức năng và trải nghiệm của người dùng |
@@ -35,6 +35,8 @@ hoặc tuyên bố throughput đã benchmark. Xem [quy trình scale](design-basi
 | [Storage0.1.0 runtime](../storage-consumer/README.md) | Archive accepted/rejected/optional outcomes, offline config/tests, S3/MinIO settings, retry/probes/metrics và CI |
 | [Readiness / khoảng cách tích hợp](implementation-readiness.md) | Implementation thực tế, artifacts chưa được cung cấp và điểm phải freeze |
 | [Repository layout](repository-layout.md) | Folder/runtime đang có và phần vẫn skeleton |
+| [OUTCOME-14-ONLY](OUTCOME_V1_4_MIGRATION.md) | Outcome1.4 duy nhất, risk gốc từ Processing, bỏ reader2.0, SDK0.3/bundle2.0 và runbook cutover |
+| [M5 implementation](M5_IMPLEMENTATION_REPORT.md) | Alert lifecycle/evidence/audit/feedback, hot point-read, notification/UI, role grants và kiểm chứng local |
 | [API decisions](api-contract-decisions.md) | Chi tiết HTTP của baseline máy đọc được1.3.2; chờ migration v1.4 |
 | [History/storage detail](history-storage-contract.md) | Thiết kế archive/chart/export chi tiết kế thừa; chỉ áp dụng khi không trái v1.4 |
 | [Recovery/jobs detail](recovery-jobs-operations.md) | Durable jobs, Drift catalog, replay/rolling; giữ các phần không bị v1.4 thay thế |
@@ -60,6 +62,11 @@ freeze schema/migration trước khi đổi producer hoặc consumer. Không t�
 đang được CI kiểm tra chỉ để đổi nhãn thành v1.4.
 
 ## Quyết định dự án còn hiệu lực
+
+- **OUTCOME-14-ONLY,28/10:** Kafka reader/writer và HTTP/history outcome entrypoint
+  chỉ dùng1.4.0. Business giữ risk_score do Processing phát; bỏ compatibility2.0
+  và không backfill probability thành risk. SDK0.3.0/bundle2.0.0 giữ SQL001/002.
+  [Runbook](OUTCOME_V1_4_MIGRATION.md) phân biệt source migration với dữ liệu cũ.
 
 - **CAPACITY-BASE100-01,23/10:** baseline100 máy×1 reading/s; kiến trúc scale-ready,
   khiX>100 tính/đo lại capacity và tối ưu latency từng stage theo Contracts §43,
@@ -125,7 +132,8 @@ freeze schema/migration trước khi đổi producer hoặc consumer. Không t�
 Tài liệu mục tiêu là **1.4.0**; `contracts/v1.3/` và14 runtime descriptors vẫn là
 **baseline1.3.2**; có thêm platform descriptor MLflow ở app, không thêm deployment
 mới. Sensor0.3.0 dùng wire1.3.0/control1.3.2, Drift còn implementation1.1. `contracts/kafka/`
-bundle1.1.0 bổ sung migration002, giữ rejected1.4/result1.4 cùng compatibility reader2.0 và `messaging/`
+bundle2.0.0 giữ migration002/rejected1.4 và chỉ đọc/ghi result1.4. HTTP/history
+outcome entrypoint cũng dùng schema này. SDK0.3.0 ở `messaging/`
 có transport/durable adapters; không phải toàn bộ implementation v1.4. Chưa có
 release manifest/provider DTO migrations hoặc full app/K8s scaffold của bộ bàn
 giao. Các lệnh `implementation/scripts/...`
@@ -170,3 +178,6 @@ Ingestion có HTTP runtime và local tests/image; HTTP Ingestion OpenAPI additiv
 các API khác giữ baseline1.3.2. Xem [runbook](../ingestion-api/README.md) và
 [hướng dẫn và kiểm tra Ingestion](../ingestion-api/README.md). Không thay kết luận
 full-system readiness hoặc nghiệm thu shared OIDC/TLS/ACL/deployment.
+
+M5 có implementation local và tests; xem [M5 report](M5_IMPLEMENTATION_REPORT.md) cho source
+hiện hành. Các snapshot inventory cũ không chứng minh tất cả provider/deployment đã hoàn tất.

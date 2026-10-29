@@ -139,8 +139,7 @@ paths:
     get:
       operationId: internalGetProcessingHistory
       summary: Read one original processing outcome
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented.'
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. M5 implementation available; shared deployment acceptance remains separate.'
       x-maintai-roles:
       - BUSINESS_SERVICE
       parameters:

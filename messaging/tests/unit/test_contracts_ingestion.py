@@ -27,13 +27,52 @@ def test_tampered_contract_bundle_is_rejected(contracts, tmp_path):
         ContractRegistry(root)
 
 
-def test_all_fixture_outcomes_and_reader_only_legacy(contracts, example):
+def test_all_fixtures_and_native_outcome_reader_writer(contracts, example):
     assert contracts.check_examples() == 15
-    legacy = contracts.decode("inference.results", canonical_json(example("legacy-invalid")))
-    assert legacy.legacy and legacy.kind == "DATA_INVALID"
-    assert legacy.source_event_id == legacy.payload["source_event_id"]
-    with pytest.raises(ContractViolation, match="read-only"):
-        contracts.encode("inference.results", legacy.payload)
+    assert contracts.topology["topics"]["inference.results"]["reader_schemas"] == {
+        "1.4.0": "events/inference-result.schema.json"
+    }
+    for name in ("completed", "invalid", "unavailable"):
+        payload = example(name)
+        event = contracts.encode("inference.results", payload)
+        decoded = contracts.decode("inference.results", event.wire_bytes)
+        assert decoded.kind == payload["kind"]
+        assert decoded.source_event_id == payload["event_id"]
+        assert decoded.payload == payload
+        assert decoded.identity_sha256 == event.identity_sha256
+
+
+@pytest.mark.parametrize("name", ["completed", "invalid", "unavailable"])
+def test_retired_outcome_is_rejected_by_readers_and_writers(contracts, example, name):
+    payload = example("negative-legacy-" + name)
+    with pytest.raises(ContractViolation, match="Unsupported"):
+        contracts.decode("inference.results", canonical_json(payload))
+    with pytest.raises(ContractViolation, match="Unsupported"):
+        contracts.encode("inference.results", payload)
+
+
+@pytest.mark.parametrize("risk", [None, -0.01, 1.01, True, "0.5"])
+def test_completed_requires_numeric_bounded_risk(contracts, example, risk):
+    payload = {**example("completed"), "risk_score": risk}
+    with pytest.raises(ContractViolation):
+        contracts.decode("inference.results", canonical_json(payload))
+
+
+def test_completed_without_risk_cannot_fall_back_to_probability(contracts, example):
+    payload = example("completed")
+    del payload["risk_score"]
+    with pytest.raises(ContractViolation):
+        contracts.encode("inference.results", payload)
+
+
+def test_version_relabel_does_not_upgrade_legacy_lineage(contracts, example):
+    payload = example("negative-legacy-completed")
+    payload["schema_version"] = "1.4.0"
+    payload["kind"] = payload.pop("result_kind")
+    payload["event_id"] = payload.pop("source_event_id")
+    payload["risk_score"] = 0.12
+    with pytest.raises(ContractViolation):
+        contracts.encode("inference.results", payload)
 
 
 @pytest.mark.parametrize(

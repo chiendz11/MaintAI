@@ -1,4 +1,4 @@
-maintai-messaging[postgres,observability]==0.2.0
+maintai-messaging[postgres,observability]==0.3.0
 jsonschema>=4.23,<5
 httpx>=0.28,<1
 pydantic>=2.10,<3
@@ -10,3 +10,4 @@ certifi==2026.10.19
 python-dateutil==2.9.0.post0
 uvicorn>=0.30,<1
 prometheus-client>=0.21,<1
+PyJWT[crypto]>=2.10,<3

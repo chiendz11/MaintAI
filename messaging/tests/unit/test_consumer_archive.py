@@ -133,6 +133,46 @@ def test_schema_poison_and_wrong_key_fail_closed(settings, contracts, example):
         assert not client.commits and not handler_called
 
 
+@pytest.mark.parametrize("name", ["completed", "invalid", "unavailable"])
+def test_business_rejects_retired_outcome_before_effects_or_offset_commit(
+    settings, contracts, example, name
+):
+    payload = example("negative-legacy-" + name)
+    client = ConsumerClient(
+        [Message(canonical_json(payload), topic="inference.results", key=b"M-001")]
+    )
+    called = []
+    runner = ConsumerRunner(
+        settings,
+        "business-prediction",
+        lambda *args: called.append(args),
+        contracts=contracts,
+        client=client,
+    )
+    with pytest.raises(ConsumerFailed):
+        runner.run(max_records=1)
+    assert not called and not client.commits and client.closed
+
+
+def test_storage_preserves_retired_wire_as_evidence_without_interpreting_it(
+    settings, contracts, example
+):
+    raw = canonical_json(example("negative-legacy-completed"))
+    client = ConsumerClient([Message(raw, topic="inference.results", key=b"M-001")])
+    store = ObjectStore()
+    runner = ConsumerRunner(
+        settings,
+        "storage-outcomes",
+        S3RecordArchive(store, "fixture-bucket"),
+        contracts=contracts,
+        client=client,
+    )
+    assert runner.run(max_records=1) == 1
+    body = next(v["Body"] for k, v in store.objects.items() if k.endswith(".jsonl.gz"))
+    assert base64.b64decode(json.loads(gzip.decompress(body))["value_base64"]) == raw
+    assert len(client.commits) == 1
+
+
 def test_raw_archive_replay_is_immutable_and_preserves_wire_bytes():
     client = ObjectStore()
     archive = S3RecordArchive(client, "fixture-bucket")

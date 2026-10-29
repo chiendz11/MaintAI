@@ -10,6 +10,9 @@
 **/*.egg-info
 **/build
 **/dist
+**/node_modules
+**/test-results
+**/playwright-report
 .pytest_cache
 .ruff_cache
 .env

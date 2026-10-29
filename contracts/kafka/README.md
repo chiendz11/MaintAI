@@ -1,4 +1,4 @@
-# Kafka contracts — bundle 1.1.0
+# Kafka contracts — bundle 2.0.0
 
 Nguồn wire contract cho SDK [messaging/](../../messaging/README.md), target thiết
 kế MaintAI1.4.0. [Hướng dẫn nhóm](../../docs/KAFKA_DEVELOPMENT_GUIDE.md) giải thích
@@ -8,13 +8,15 @@ cách tích hợp và quyền của từng thành viên. Đây không phải m�
 | --- | --- | --- | --- |
 | `sensor.readings` | 1.3.0 | 1.3.0 | `machine_id` |
 | `sensor.rejected` | 1.4.0 | 1.4.0 | `source_identity` |
-| `inference.results` | 1.4.0, discriminator `kind` | 1.4.0 và legacy2.0.0 `result_kind` | `machine_id` |
+| `inference.results` | 1.4.0, discriminator `kind` | Chỉ 1.4.0 `kind` | `machine_id` |
 | `alert.signals` | 1.0.0 | 1.0.0 | `machine_id` |
 
 Version của tài liệu, bundle, Python package và từng event độc lập. Result1.4.0
 là lineage wire mới theo target §35, **không phải** một nâng cấp SemVer tương thích
-của result2.0.0. Không có writer result1.1.0. Cần rollout reader trước writer;
-reader giữ payload gốc, không tự thêm provenance giả vào legacy event.
+của result2.0.0. SDK0.3.0 bỏ reader result2.0.0; bundle2.0.0 đánh dấu breaking
+change đó, không đổi version của outcome. Đọc
+[OUTCOME-14-ONLY](../../docs/OUTCOME_V1_4_MIGRATION.md) trước rollout: không
+đổi nhãn/backfill event cũ, không tự reset offset hoặc xóa projection.
 
 - [topology.json](topology.json): topics, partitions, groups và schema/version map.
 - [events/](events/): accepted/quarantine, tagged result union và alert signal.
@@ -27,7 +29,7 @@ reader giữ payload gốc, không tự thêm provenance giả vào legacy event
 - [manifest.json](manifest.json): SHA-256 của mọi JSON/SQL input cùng hai dependency
   schema baseline. SDK kiểm tra hash trước khi nhận/publish event.
 
-Accepted/alert/legacy wrappers dùng các schema baseline đã freeze trong
+Accepted/alert wrappers dùng các schema dependency đã kiểm hash trong
 `../v1.3/`. SDK wheel/sdist đóng gói đúng các dependency đó để chạy độc lập;
 không cần checkout toàn bộ application khi cài wheel.
 
@@ -45,7 +47,8 @@ baseline HTTP/SSE/ML/RAG/Drift chỉ để đồng bộ nhãn version Kafka.
 
 Bundle1.1.0/SDK0.2.0 thêm [002](migrations/002_processing_ordering.sql), giữ
 byte-identical001, event schemas và topology. [Manifest1.0.0](releases/1.0.0.json)
-được lưu nguyên; wheel/sdist đóng gói cả hai migrations.
+được lưu nguyên; [manifest1.1.0](releases/1.1.0.json) cũng được lưu khi chuyển
+sang bundle2.0.0. Wheel/sdist đóng gói cả hai migrations; SQL giữ nguyên bytes.
 
 002 chỉ cho Processing owner: capability mặc định tắt, assignment generation,
 source cursor và outbox dispatch sequence/key cursor/lease. Migration khác
