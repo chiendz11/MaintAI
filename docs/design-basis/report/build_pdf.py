@@ -167,7 +167,7 @@ def box(content: str, style: ParagraphStyle, accent: bool = False) -> Table:
     return flow
 
 
-def table(lines: list[str], sty: dict[str, ParagraphStyle]) -> Table:
+def table(lines: list[str], sty: dict[str, ParagraphStyle], *, compact: bool = False) -> Table:
     raw = [
         [cell.strip() for cell in line.strip().strip("|").split("|")]
         for line in lines
@@ -177,6 +177,7 @@ def table(lines: list[str], sty: dict[str, ParagraphStyle]) -> Table:
     if any(len(row) != columns for row in raw):
         raise ValueError("Inconsistent report table columns")
     ratios = (
+        [0.25, 0.75] if raw[0] == ["Mã sinh viên", "Họ và tên"] else
         [0.18, 0.82] if raw[0][0] == "UI" else
         [0.38, 0.62] if columns == 2 else [0.22, 0.37, 0.41]
     )
@@ -197,8 +198,8 @@ def table(lines: list[str], sty: dict[str, ParagraphStyle]) -> Table:
         ("LINEBELOW", (0, 1), (-1, -1), 0.35, RULE),
         ("LEFTPADDING", (0, 0), (-1, -1), 8),
         ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 3 if compact else 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3 if compact else 6),
     ]))
     result.spaceAfter = 8
     return result
@@ -330,7 +331,7 @@ class SvgFigure(Flowable):
         self.canv.restoreState()
 
 
-def parse_page(text: str, sty: dict[str, ParagraphStyle]) -> list:
+def parse_page(text: str, sty: dict[str, ParagraphStyle], *, compact_tables: bool = False) -> list:
     lines = text.strip().splitlines()
     flowables = []
     i = 0
@@ -374,7 +375,7 @@ def parse_page(text: str, sty: dict[str, ParagraphStyle]) -> list:
             while i < len(lines) and lines[i].strip().startswith("|"):
                 group.append(lines[i].strip())
                 i += 1
-            flowables.append(table(group, sty))
+            flowables.append(table(group, sty, compact=compact_tables))
             continue
         if line.startswith("### "):
             flowables.append(Paragraph(markup(line[4:]), sty["subsection"]))
@@ -406,8 +407,8 @@ def parse_page(text: str, sty: dict[str, ParagraphStyle]) -> list:
 def chrome(canvas, document) -> None:
     canvas.saveState()
     page_width, page_height = canvas._pagesize
-    canvas.setTitle("MaintAI — Cơ sở lựa chọn kiến trúc")
-    canvas.setAuthor("MaintAI")
+    canvas.setTitle("MaintAI — Thiết kế kiến trúc")
+    canvas.setAuthor("Nhóm 8 — MaintAI")
     canvas.setSubject("Yêu cầu, giả định 100 máy và biện luận kiến trúc hệ thống")
     canvas.setCreator("MaintAI report builder")
     canvas.setStrokeColor(RULE)
@@ -444,7 +445,7 @@ def main() -> None:
     parser.add_argument("--source", type=Path, default=HERE / "report.md")
     parser.add_argument(
         "--output", type=Path,
-        default=HERE / "Nhóm-11_ MaintAI_Kien-truc.pdf",
+        default=HERE / "Nhóm-8_MaintAI_Kien-truc.pdf",
     )
     args = parser.parse_args()
     register_fonts(args.fonts, args.symbols)
@@ -458,7 +459,29 @@ def main() -> None:
             if index == 6:
                 story.append(NextPageTemplate("Landscape"))
             story.append(PageBreak())
-        story.extend(parse_page(page, sty))
+        page_styles = sty
+        if index == 0:
+            # Fit the member roster on page one without changing fonts or later pages.
+            page_styles = {
+                **sty,
+                "body": ParagraphStyle(
+                    "FirstPageBody", parent=sty["body"], leading=14.6, spaceAfter=4,
+                ),
+                "title": ParagraphStyle(
+                    "FirstPageTitle", parent=sty["title"], leading=26, spaceAfter=5,
+                ),
+                "subtitle": ParagraphStyle(
+                    "FirstPageSubtitle", parent=sty["subtitle"], spaceAfter=4,
+                ),
+                "section": ParagraphStyle(
+                    "Section", parent=sty["section"], leading=21, spaceAfter=6,
+                ),
+                "subsection": ParagraphStyle(
+                    "FirstPageSubsection", parent=sty["subsection"],
+                    leading=15, spaceBefore=6, spaceAfter=4,
+                ),
+            }
+        story.extend(parse_page(page, page_styles, compact_tables=index == 0))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="maintai-report-") as temp:
         temporary = Path(temp) / "report.pdf"
@@ -467,7 +490,7 @@ def main() -> None:
             str(temporary), pagesize=A4,
             leftMargin=MARGIN - 6, rightMargin=MARGIN - 6,
             topMargin=45, bottomMargin=45, pageCompression=1,
-            title="MaintAI — Cơ sở lựa chọn kiến trúc", author="MaintAI",
+            title="MaintAI — Thiết kế kiến trúc", author="Nhóm 8 — MaintAI",
         )
         portrait_frame = Frame(
             document.leftMargin, document.bottomMargin,

@@ -5,11 +5,11 @@
   "runtime_id": "storage-consumer",
   "workload_kind": "Deployment",
   "code_owner": "raw-archive",
-  "implementation_status": "implemented_storage_runtime",
+  "implementation_status": "implemented_raw_archive_and_m6_catalog_provider",
   "image_group": "storage-consumer",
   "image_digest": null,
   "entrypoint_status": "implemented_serve_and_offline_verify",
-  "purpose": "Archive accepted/rejected Kafka receipts into immutable JSONL.gz microbatches and versioned S3/MinIO manifests; optional outcome wire copy.",
+  "purpose": "Archive exact raw receipts and publish opt-in M6 catalog1.0.0 with CAS immutable delta generations, Kafka audit coverage and S3 rebuild; no processed archive.",
   "source_paths": [
     "storage-consumer/src/maintai_storage"
   ],
@@ -33,19 +33,24 @@
   "kafka_publications": [],
   "interfaces": [
     "S3/MinIO raw archive",
-    "Internal management HTTP: /health/live, /health/ready, /metrics"
+    "Internal management HTTP: /health/live, /health/ready, /metrics",
+    "M6-RAW-01 catalog1.0.0 schemas/examples, pointer/delta generations and exact-version reader",
+    "CLI validate-catalog / catalog-sync / catalog-rebuild / catalog-inspect"
   ],
   "boundaries": [
     "Archive all Kafka accepted receipts including feature-invalid and permitted rejected HASH_ONLY evidence; no HTTP intake or discarded-body reconstruction.",
     "Shared SDK controls durable receipts, rebalance fencing and offset commits; one-record raw manifest1.0.0 from Kafka bundle2.0.0.",
     "No business_db/processing_db access, ML, risk, training trigger or processed-history cleanup.",
-    "External Kafka/S3 credentials and versioned bucket required for serve; offline verify/tests need no AWS. No real S3/container/rollout evidence yet."
+    "External Kafka/S3 credentials and versioned bucket required for serve; offline verify/tests need no AWS. No real S3/container/rollout evidence yet.",
+    "M6 catalog opt-in requires versioned raw-only configuration; read-only audit never commits Kafka, catalog failure does not change raw commit boundary."
   ],
   "dockerfile": "storage-consumer/Dockerfile",
-  "dockerfile_status": "implemented_not_built",
+  "dockerfile_status": "implemented_ci_build_pending",
   "implemented_contract_revision": "1.4.0",
-  "application_version": "0.1.0",
+  "application_version": "0.2.0",
   "kafka_contract_bundle_version": "2.0.0",
   "archive_schema_version": "1.0.0",
-  "kafka_sdk_version": "0.3.0"
+  "kafka_sdk_version": "0.3.0",
+  "planned_interfaces": [],
+  "catalog_schema_version": "1.0.0"
 }

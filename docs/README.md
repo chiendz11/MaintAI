@@ -1,6 +1,6 @@
 # MaintAI docs — thiết kế mục tiêu v1.4
 
-Cập nhật: **2026-10-28**. Sáu tài liệu v1.4 đã được nhập vào repo và hiệu chỉnh
+Cập nhật: **2026-10-29**. Sáu tài liệu v1.4 đã được nhập vào repo và hiệu chỉnh
 đường dẫn cùng các quyết định dự án đã chốt. Bộ Kafka Python dùng chung đã được
 thêm riêng; DB/application/image/deployment chưa tự migrate theo tài liệu.
 
@@ -37,6 +37,10 @@ hoặc tuyên bố throughput đã benchmark. Xem [quy trình scale](design-basi
 | [Repository layout](repository-layout.md) | Folder/runtime đang có và phần vẫn skeleton |
 | [OUTCOME-14-ONLY](OUTCOME_V1_4_MIGRATION.md) | Outcome1.4 duy nhất, risk gốc từ Processing, bỏ reader2.0, SDK0.3/bundle2.0 và runbook cutover |
 | [M5 implementation](M5_IMPLEMENTATION_REPORT.md) | Alert lifecycle/evidence/audit/feedback, hot point-read, notification/UI, role grants và kiểm chứng local |
+| [M6-HISTORY-01 — Quyết định M6](M6_HISTORY_ARCHITECTURE_DECISION.md) | Ba Deployment Processing; Read API ghi metadata giới hạn, snapshot/export trong Read API; processed history chỉ DB, không cleanup thật |
+| [M6-RAW-01 — Storage handoff cho Chiến](M6_RAW_ARCHIVE_HANDOFF.md) | Catalog generation/receipt lookup, coverage từng partition, MinIO local, quyền và acceptance; provider Storage0.2.0 có source |
+| [Storage catalog0.2.0 report](STORAGE_CATALOG_IMPLEMENTATION_REPORT.md) | Source/CI, failure-recovery evidence, local fixture harness và giới hạn k3d/M6 |
+| [M6 Reader Guide](../storage-consumer/M6_READER_GUIDE.md) | Packaged schemas/examples, delta-chain sync, coverage và cách Người1 tích hợp |
 | [API decisions](api-contract-decisions.md) | Chi tiết HTTP của baseline máy đọc được1.3.2; chờ migration v1.4 |
 | [History/storage detail](history-storage-contract.md) | Thiết kế archive/chart/export chi tiết kế thừa; chỉ áp dụng khi không trái v1.4 |
 | [Recovery/jobs detail](recovery-jobs-operations.md) | Durable jobs, Drift catalog, replay/rolling; giữ các phần không bị v1.4 thay thế |
@@ -46,7 +50,9 @@ hoặc tuyên bố throughput đã benchmark. Xem [quy trình scale](design-basi
 
 ## Thứ tự ưu tiên
 
-1. Yêu cầu người dùng và các quyết định dự án tại mục dưới.
+1. Yêu cầu người dùng và các quyết định dự án tại mục dưới. **M6-HISTORY-01**
+   ưu tiên các mô tả cũ về history clocks/cursor, SELECT-only toàn Read API,
+   maintenance loop ở Worker, processed archive và retention M6.
 2. System Contracts v1.4 §34–43, UI-01 và các điều khoản Deployment/Dataflow/Provenance tương ứng.
    §41 ủy quyền catalog OBS-01/1.0.0 và workflow MLFLOW-01/1.0.0 làm chi tiết
    chuẩn, thay các short names, mã drift0..4 hoặc get-or-create assumptions cũ.
@@ -62,6 +68,15 @@ freeze schema/migration trước khi đổi producer hoặc consumer. Không t�
 đang được CI kiểm tra chỉ để đổi nhãn thành v1.4.
 
 ## Quyết định dự án còn hiệu lực
+
+- **M6-HISTORY-01,29/10:** Giữ ba Deployment Processing. Worker chỉ realtime;
+  Read API sở hữu history/snapshot/export và runner nền bền vững, dùng pool SELECT
+  cho dữ liệu gốc + pool ghi metadata riêng. Kết quả sort processed_at/result_id,
+  raw sort received_at/Kafka locator; không đổi latest sequence guard. Chưa archive
+  processed outcomes hoặc xóa dữ liệu thật; không thêm processing-maintenance.
+  [Decision](M6_HISTORY_ARCHITECTURE_DECISION.md), [handoff Chiến/Người4](M6_RAW_ARCHIVE_HANDOFF.md).
+  Demo DB-only khác full M6 với MinIO local; không cần AWS S3. Đây là design freeze,
+  không khẳng định History OpenAPI/migration đã implement; Storage publisher0.2.0 có report riêng.
 
 - **OUTCOME-14-ONLY,28/10:** Kafka reader/writer và HTTP/history outcome entrypoint
   chỉ dùng1.4.0. Business giữ risk_score do Processing phát; bỏ compatibility2.0
@@ -111,10 +126,11 @@ freeze schema/migration trước khi đổi producer hoặc consumer. Không t�
 - Ingestion ACK `status_url`/`Location` dùng absolute Business API URL được cấu
   hình; Ingestion không sở hữu status endpoint. Ví dụ relative URL kế thừa cần
   được chuẩn hóa khi migrate DTO/fixtures.
-- Processing sở hữu DQ/inference/risk và processed history/archive; Storage sở hữu
+- Processing sở hữu DQ/inference/risk và processed history; Storage sở hữu
   raw accepted/rejected archive; Business sở hữu alerts/lifecycle và latest projections.
   Không SQL xuyên DB owner. `processing-read-api` là runtime riêng cùng Processing,
-  dùng DB read-only; các thao tác ghi snapshot/export phải do owner writer thực hiện.
+  đọc dữ liệu gốc bằng pool read-only, ghi metadata snapshot/export/catalog bằng
+  pool quyền hẹp riêng theo M6-HISTORY-01. Processed archive hoãn sau M6.
 - ML training và inference có image riêng. Approved dataset kích hoạt batch
   training; model phát hành qua PR GitOps. Drift không tự retrain/promote hay đổi risk.
 - GitOps/hạ tầng nằm ở hai repo riêng; mỗi module owner tự làm tests, Dockerfile,

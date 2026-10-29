@@ -1,6 +1,15 @@
-# MaintAI — Cơ sở lựa chọn kiến trúc
+# MaintAI — Thiết kế kiến trúc
 
 Chủ đề 3 · Predictive Maintenance & Technician Copilot · 24/10/2026
+
+**Nhóm 8 — Danh sách thành viên**
+
+| Mã sinh viên | Họ và tên |
+| --- | --- |
+| 24021486 | Nguyễn Công Huy Hoàng |
+| 24021482 | Nguyễn Duy Hòa |
+| 24021414 | Lại Tuấn Đức |
+| 23021490 | Bùi Anh Chiến |
 
 ## 1. Từ bài toán bảo trì đến các yêu cầu thiết kế
 

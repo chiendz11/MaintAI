@@ -3188,7 +3188,7 @@ Các mô tả module trong v1.3.1 phía trên vẫn được sử dụng, **tr�
 
 ## 42.1. Danh sách Deployments/runtimes cần triển khai đúng
 
-Bổ sung rõ `processing-read-api` là **Kubernetes Deployment độc lập** với `processing-worker`, được expose bằng internal ClusterIP Service và dùng PostgreSQL credential `processing_ro` (read-only). `processing-outbox-relay` là runtime riêng có thể khởi động lại và tăng replica tùy backlog, nhưng phải bảo đảm không publish trùng side effects. `business-api` và `business-consumer` giữ hai Deployments cùng Business codebase. **Không tạo `history_db` thứ sáu** và không bắt buộc History Service riêng trong MVP. Simulator Control chỉ dành demo; training là Job chạy theo yêu cầu, drift là CronJob. Kafka/Postgres/MinIO chạy in-cluster demo hoặc bên ngoài; không mặc định có HA.
+Bổ sung rõ `processing-read-api` là **Kubernetes Deployment độc lập** với `processing-worker`, được expose bằng internal ClusterIP Service; M6 dùng processing_ro SELECT original data và pool metadata writer quyền hẹp riêng theo §57. `processing-outbox-relay` là runtime riêng có thể khởi động lại và tăng replica tùy backlog, nhưng phải bảo đảm không publish trùng side effects. `business-api` và `business-consumer` giữ hai Deployments cùng Business codebase. **Không tạo `history_db` thứ sáu** và không bắt buộc History Service riêng trong MVP. Simulator Control chỉ dành demo; training là Job chạy theo yêu cầu, drift là CronJob. Kafka/Postgres/MinIO chạy in-cluster demo hoặc bên ngoài; không mặc định có HA.
 
 ## 42.2. Truy vết từ repository đến image và Deployment
 
@@ -3267,7 +3267,12 @@ thay legacy và không tự migrate dữ liệu cũ. Đọc §56 trước cutove
 
 Storage Consumer tạo object key xác định từ `topic/partition/offset` và checksum. Batch manifest phải có `record_count`, offset range, schema version, object path và hash. Chỉ commit Kafka offset sau khi object và manifest đã được ghi bền vững. Có thể archive outcome bằng consumer group riêng.
 
-`processing-read-api` đọc indexed hot history từ `processing_db`; với cold S3 phải tra object bằng partition/date/manifest trước, không quét toàn bucket mỗi UI request. Business API là facade duy nhất cho Frontend. Alert History vẫn ở `business_db`, không truy vấn từ Processing. Read API dùng role read-only; Business không cross-DB SQL. Filter INVALID cần versioned query contracts/cursor. Khi schema-rejected thiếu machine ID, lọc theo source/request/time sau auth.
+`processing-read-api` M6 đọc outcomes từ processing_db, raw qua catalog/manifest
+S3/MinIO; không processed cold archive hoặc bucket scan mỗi request. Business là
+facade; Alert vẫn ở business_db. Read API ghi snapshot/export/catalog metadata bằng
+pool quyền hẹp, original data vẫn SELECT-only. Worker không chạy maintenance/export.
+History sort/cursor/permissions theo §57 và M6-HISTORY-01; OpenAPI/schema cần migrate.
+Quarantine thiếu máy/time có auth/source/request scope riêng, không bịa fields.
 
 # 45. v1.4 — Quy trình CI/CD, phát hành và rollback
 
@@ -3639,3 +3644,34 @@ Trước rollout cần kiểm kê Kafka/outbox/projection cũ. Với môi trư�
 khởi tạo cô lập và phát readings mới; không mặc định reset một group/DB đang hoạt
 động. Với dữ liệu cần giữ, cutover phải có kế hoạch riêng. Thay đổi source không
 chứng minh đã migrate data, chạy Docker/DB, nối Alert provider hoặc nghiệm thu E2E.
+
+# 57. M6-HISTORY-01 — Triển khai History/Export trong Read API
+
+Quyết định29/10/2026 tại [M6 architecture](M6_HISTORY_ARCHITECTURE_DECISION.md)
+và [Storage handoff cho Chiến](M6_RAW_ARCHIVE_HANDOFF.md) ưu tiên lời văn cũ về
+maintenance/processed archive/role/history clocks. Ba Deployment Processing giữ
+nguyên. Quyết định đã chốt, code/schema/migration/platform M6 vẫn cần triển khai.
+
+1. Người1 version OpenAPI/history cursor với processed_at=completed_at/result_id,
+   raw received_at/topic/partition/offset; giữ status/evidence M5 và latest guards.
+2. Owner migration tạo history_meta tables/grants, indexes và immutable snapshot
+   membership. Pool read processing_ro giữ read-only; pool metadata chỉ DML trong
+   phạm vi được duyệt. Test âm chứng minh không sửa original outcome/outbox.
+3. Implement raw catalog reader/sync trong Read API, ghi metadata mirror quyền hẹp;
+   pin generations, verify object versions/checksums và offset coverage. Chiến giữ
+   publisher/reconciliation trong Storage, không nhận DB credential Processing.
+4. Implement history/chart JSON trước; user không cần CSV để xem history. CSV nhỏ
+   preflight/streaming có budget; CSV/Parquet lớn dùng durable job202 + lease/retry,
+   pool riêng, startup recovery, shutdown/drain, idempotency và authorized download.
+5. Không thêm export/archive loop Worker hoặc processing-maintenance. Không bật
+   optional outcomes archive Storage, processed cold lookup hoặc cleanup source data.
+6. Demo outcomes DB/CSV nhỏ không cần object store; demo full raw/job artifacts dùng
+   MinIO versioned buckets, app credentials và URL browser truy cập được. Không cần
+   AWS S3; source k3d/Argo manifests không là evidence cluster đã chạy.
+7. Acceptance: timestamp trùng, late commits, snapshot TTL, scope đổi, wrong cursor,
+   job crash/retry/concurrent API replicas, catalog lag/gap/rebuild, raw missing/hash
+   mismatch, SQL rights và M1–M5 regressions. Báo tách fixtures/local-provider/K8s.
+
+Chiến/Người4 cập nhật platform Secrets/grants/S3 policies trong hai repo tương ứng
+khi implementation được bật; không dùng owner role để né giới hạn. Reference schema
+và runtime metadata phải giữ planned/partial cho tới khi các bước có bằng chứng.

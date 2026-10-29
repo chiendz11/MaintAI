@@ -44,6 +44,12 @@ class Settings:
     probe_timeout_seconds: float = 3
     readiness_max_age_seconds: float = 60
     liveness_max_age_seconds: float = 90
+    catalog_enabled: bool = False
+    catalog_prefix: str = "raw-catalog/v1"
+    catalog_interval_seconds: float = 5
+    catalog_batch_records: int = 100
+    catalog_poll_seconds: float = 0.5
+    catalog_heartbeat_seconds: float = 30
 
     @classmethod
     def from_env(cls, env=None):
@@ -68,6 +74,17 @@ class Settings:
             part in {"", ".", ".."} for part in prefix.split("/")
         ):
             raise ConfigurationError("S3_RAW_PREFIX must be a stable relative object prefix")
+        catalog_prefix = env.get("STORAGE_CATALOG_PREFIX", "raw-catalog/v1")
+        if not re.fullmatch(r"[A-Za-z0-9_./=-]{1,200}", catalog_prefix) or any(
+            part in {"", ".", ".."} for part in catalog_prefix.split("/")
+        ):
+            raise ConfigurationError("Invalid STORAGE_CATALOG_PREFIX")
+        if (
+            prefix == catalog_prefix
+            or prefix.startswith(catalog_prefix + "/")
+            or catalog_prefix.startswith(prefix + "/")
+        ):
+            raise ConfigurationError("Raw and catalog prefixes must not overlap")
         endpoint = env.get("S3_ENDPOINT_URL") or None
         if endpoint:
             try:
@@ -118,7 +135,17 @@ class Settings:
             probe_timeout_seconds=number(env, "STORAGE_PROBE_TIMEOUT_SECONDS", 3, 0.1, 10),
             readiness_max_age_seconds=number(env, "STORAGE_READINESS_MAX_AGE_SECONDS", 60, 1, 180),
             liveness_max_age_seconds=number(env, "STORAGE_LIVENESS_MAX_AGE_SECONDS", 90, 2, 300),
+            catalog_enabled=flag(env.get("STORAGE_CATALOG_ENABLED", "false")),
+            catalog_prefix=catalog_prefix,
+            catalog_interval_seconds=number(env, "STORAGE_CATALOG_INTERVAL_SECONDS", 5, 0.1, 60),
+            catalog_batch_records=number(
+                env, "STORAGE_CATALOG_BATCH_RECORDS", 100, 1, 100, integer=True
+            ),
+            catalog_poll_seconds=number(env, "STORAGE_CATALOG_POLL_SECONDS", 0.5, 0.1, 5),
+            catalog_heartbeat_seconds=number(env, "STORAGE_CATALOG_HEARTBEAT_SECONDS", 30, 1, 60),
         )
+        if result.catalog_enabled and (result.allow_unversioned or result.archive_outcomes):
+            raise ConfigurationError("M6 catalog requires versioning and raw-only archive groups")
         if result.retry_initial_seconds > result.retry_max_seconds:
             raise ConfigurationError("Retry initial delay exceeds maximum delay")
         if result.readiness_max_age_seconds <= result.probe_interval_seconds:

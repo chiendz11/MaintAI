@@ -15,6 +15,7 @@ from maintai_messaging.contracts import ContractRegistry
 from maintai_messaging.errors import ConfigurationError
 
 from .archive import RetryingArchive, classify
+from .catalog_runtime import CatalogRuntime, KafkaAudit
 from .consumer import ObservedConsumer
 from .health import ManagementServer
 from .metrics import Metrics
@@ -35,7 +36,9 @@ class Runtime:
     ):
         self.settings = settings
         self.contracts = contracts or ContractRegistry()
-        self.state = State(settings.roles)
+        self.state = State(settings.roles + (("catalog",) if settings.catalog_enabled else ()))
+        if settings.catalog_enabled:
+            self.state.dependency("catalog", False)
         self.metrics = Metrics(self.state)
         self.s3 = s3 if s3 is not None else settings.create_s3_client()
         self.admin = (
@@ -160,6 +163,17 @@ class Runtime:
                         args=(role, stop),
                         name=role,
                     )
+                    workers.append(worker)
+                    worker.start()
+                if self.settings.catalog_enabled:
+                    catalog = CatalogRuntime(
+                        self.settings,
+                        self.s3,
+                        KafkaAudit(self.settings, self.admin),
+                        state=self.state,
+                        metrics=self.metrics,
+                    )
+                    worker = threading.Thread(target=catalog.run, args=(stop,), name="catalog")
                     workers.append(worker)
                     worker.start()
                 next_probe = time.monotonic() + self.settings.probe_interval_seconds
