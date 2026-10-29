@@ -68,15 +68,20 @@ class PostgresVectorStore:
             with conn.cursor() as cursor:
                 cursor.execute(
                     """
-                    SELECT
-                        id,
-                        content,
-                        metadata,
-                        embedding <=> %s::vector AS distance
-                    FROM knowledge_chunks
-                    WHERE metadata @> %s::jsonb
-                    ORDER BY distance ASC
-                    LIMIT %s
+                        SELECT
+                            id,
+                            content,
+                            metadata,
+                            embedding <=> %s::vector AS distance
+                        FROM knowledge_chunks
+                        WHERE metadata @> %s::jsonb
+                        AND jsonb_typeof(metadata) = 'object'
+                        AND NULLIF(BTRIM(metadata->>'document_id'), '') IS NOT NULL
+                        AND NULLIF(BTRIM(metadata->>'document_version'), '') IS NOT NULL
+                        AND NULLIF(BTRIM(metadata->>'section'), '') IS NOT NULL
+                        AND NULLIF(BTRIM(metadata->>'page'), '') IS NOT NULL
+                        ORDER BY distance ASC
+                        LIMIT %s
                     """,
                     (
                         vector_str,

@@ -132,7 +132,43 @@ def ingest(
 
 
 if __name__ == "__main__":
-    raise SystemExit(
-        "Hãy gọi ingest() với path, document_id, "
-        "document_version và section."
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Ingest PDF into MaintAI knowledge database"
     )
+
+    parser.add_argument(
+        "--path",
+        required=True,
+        help="Path to PDF file",
+    )
+
+    parser.add_argument(
+        "--document-id",
+        required=True,
+        help="Unique document identifier",
+    )
+
+    parser.add_argument(
+        "--document-version",
+        required=True,
+        help="Document version",
+    )
+
+    parser.add_argument(
+        "--section",
+        required=True,
+        help="Document section",
+    )
+
+    args = parser.parse_args()
+
+    count = ingest(
+        path=args.path,
+        document_id=args.document_id,
+        document_version=args.document_version,
+        section=args.section,
+    )
+
+    print(f"Total chunks inserted: {count}")

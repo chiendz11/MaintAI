@@ -1,0 +1,45 @@
+name: RAG checks
+on:
+  pull_request:
+    paths:
+      - 'rag-service/**'
+      - '.github/workflows/rag-ci.yml'
+  push:
+    paths:
+      - 'rag-service/**'
+      - '.github/workflows/rag-ci.yml'
+jobs:
+  unit-and-http:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r rag-service/requirements-test.txt
+      - run: python -m pytest -q tests
+        working-directory: rag-service
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+          OLLAMA_BASE_URL: http://localhost:11434
+          OLLAMA_MODEL: qwen2.5:3b
+          EMBEDDING_MODEL: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+  image-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f rag-service/Dockerfile -t maintai-rag:ci .
+      - name: Container HTTP smoke test
+        run: |
+          docker run -d --name rag-smoke -p 8002:8002 \
+            -e DATABASE_URL=postgresql://test:test@localhost:5432/test \
+            -e OLLAMA_BASE_URL=http://host.docker.internal:11434 \
+            -e OLLAMA_MODEL=qwen2.5:3b \
+            -e EMBEDDING_MODEL=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 \
+            maintai-rag:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8002/health/live; then exit 0; fi
+            sleep 2
+          done
+          docker logs rag-smoke
+          exit 1

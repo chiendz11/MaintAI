@@ -1,10 +1,11 @@
-# MaintAI runtime skeleton — target contract 1.3.1.
-# Runtime: rag-service
-# Workload: Deployment
-# Code owner: knowledge
-# Image group: rag-service
-# Purpose: Retrieval/LLM/citation validation và knowledge ingestion modules ngoài critical alert path.
-# Planned build context: MaintAI repository root.
-# Source paths: rag-service
-# TODO: Add the chosen base image, locked dependencies and runtime entrypoint.
-# Placeholder only: this file is not buildable/runnable until implementation.
+FROM python:3.11-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 HF_HOME=/opt/maintai/model-cache SENTENCE_TRANSFORMERS_HOME=/opt/maintai/model-cache
+WORKDIR /app
+RUN groupadd -r maintai && useradd -r -g maintai -d /app maintai && mkdir -p /opt/maintai/model-cache /tmp/maintai && chown -R maintai:maintai /opt/maintai /tmp/maintai /app
+COPY rag-service/requirements-runtime.lock /app/requirements-runtime.lock
+RUN pip install --no-cache-dir -r requirements-runtime.lock
+COPY rag-service/ /app/
+RUN chown -R maintai:maintai /app
+USER maintai
+EXPOSE 8002
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8002"]
