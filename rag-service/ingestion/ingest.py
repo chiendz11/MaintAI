@@ -3,6 +3,9 @@ from ingestion.chunking import Chunking
 from ingestion.parsing import load_pdf
 from ingestion.embedding import Embedder
 from knowledge.vector_store import PostgresVectorStore
+import hashlib
+import os
+from pathlib import Path
 
 
 def ingest(
@@ -68,8 +71,12 @@ def ingest(
         print("Không có chunk nào được tạo.")
         return 0
 
+    pdf_sha256 = hashlib.sha256(Path(path).read_bytes()).hexdigest()
     for index, doc in enumerate(documents):
         doc.metadata["chunk_index"] = index
+        doc.metadata["source_pdf_sha256"] = pdf_sha256
+        doc.metadata["embedding_model"] = os.environ.get("EMBEDDING_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+        doc.metadata["embedding_revision"] = os.environ.get("EMBEDDING_REVISION", "unversioned")
 
     # 5. Validate metadata trước khi lưu
     required_fields = (

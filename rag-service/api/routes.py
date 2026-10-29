@@ -1,10 +1,10 @@
-
 import logging
 from uuid import uuid4
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from functools import lru_cache
+from llm_generator.generator import LLMProviderError
 
 from api.schemas import (
     MaintenanceBriefRequest,
@@ -53,7 +53,9 @@ def error_response(
 @lru_cache(maxsize=1)
 def get_pipeline():
     from pipeline import RAGPipeline
+
     return RAGPipeline()
+
 
 # Endpoint tạo Maintenance Brief
 @router.post(
@@ -80,17 +82,29 @@ def create_maintenance_brief(
         result = pipeline.run(request)
 
         # Kiểm tra response theo contract
-        response = MaintenanceBriefResponse.model_validate(
-            result
-        )
+        response = MaintenanceBriefResponse.model_validate(result)
 
         return response
 
+    except LLMProviderError as error:
+        logger.warning(
+            "RAG provider unavailable: request_id=%s reason=%s", request_id, error.reason
+        )
+        return error_response(
+            status_code=503,
+            code="RAG_UNAVAILABLE",
+            message="RAG generation provider is unavailable",
+            retryable=error.retryable,
+            request_id=request_id,
+            details={"dependency": "groq", "reason": error.reason},
+        )
+
     except (
-    RAGUnavailableError,
-    ConnectionError,
-    TimeoutError,
-    RuntimeError,):
+        RAGUnavailableError,
+        ConnectionError,
+        TimeoutError,
+        RuntimeError,
+    ):
         logger.exception(
             "RAG unavailable: request_id=%s",
             request_id,

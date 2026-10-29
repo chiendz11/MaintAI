@@ -14,7 +14,8 @@
     "processing/worker/src",
     "processing/shared",
     "processing/migrations",
-    "processing/src"
+    "processing/src",
+    "processing/config/risk-policies"
   ],
   "logical_database": "processing_db",
   "kafka_subscriptions": [

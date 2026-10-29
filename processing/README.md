@@ -1,5 +1,11 @@
 # Processing — một owner, ba runtime folders
 
+**RISK-POLICY-01:** Source policy/schema/catalog ở
+[`config/risk-policies/`](config/risk-policies/README.md). GitOps chọn version/hash
+và tạo ConfigMap read-only cho Worker; infrastructure không sở hữu nội dung
+policy. Xem [quyết định30/10](../docs/RISK_POLICY_OWNERSHIP.md). Policy demo dùng
+ngưỡng tham khảo, không có production calibration hoặc guarantee tạo Alert.
+
 | Runtime folder | Workload | Trách nhiệm |
 | --- | --- | --- |
 | [`worker/`](worker/Dockerfile) | Deployment `processing-worker` | Kafka → DQ → ML → risk; persist history/outbox. |

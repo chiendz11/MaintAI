@@ -76,7 +76,7 @@ def grounded():
             "retrieved_chunk_ids": ["chunk-123"],
         },
         "generator": {
-            "provider": "ollama",
+            "provider": "groq",
             "model": "configured-model",
         },
         "generated_at": datetime.now(timezone.utc),

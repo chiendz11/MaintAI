@@ -31,7 +31,10 @@ def test_retrieval_flow():
         mock_store.search.return_value = expected_documents
         mock_store_class.return_value = mock_store
 
-        retriever = VectorRetriever()
+        # Provider-independent unit test: never download embedding weights here.
+        with patch("vector_retriever.retriever.Embedder") as embedding:
+            embedding.return_value.encode.return_value = [[0.0] * 384]
+            retriever = VectorRetriever()
 
         documents = retriever.search(
             query=query,
