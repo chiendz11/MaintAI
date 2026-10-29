@@ -17,9 +17,17 @@ import pandas as pd
 import sklearn
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    CollectorRegistry,
+    Counter,
+    Gauge,
+    Histogram,
+    generate_latest,
+)
 
 LOGGER = logging.getLogger("uvicorn.error")
 
@@ -34,6 +42,43 @@ FEATURES = [
 
 STATE = {"pipeline": None, "metadata": None}
 
+# Registry riêng để các module test import API độc lập không trùng metrics.
+METRICS = CollectorRegistry()
+
+ML_REQUESTS = Counter(
+    "maintai_ml_inference_requests_total",
+    "Prediction requests by outcome",
+    ["status"],
+    registry=METRICS,
+)
+
+ML_DURATION = Histogram(
+    "maintai_ml_inference_duration_seconds",
+    "Preprocessing, prediction and result construction time",
+    buckets=(0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5),
+    registry=METRICS,
+)
+
+ML_PREDICTIONS = Counter(
+    "maintai_ml_predictions_total",
+    "Successful predictions by label",
+    ["prediction"],
+    registry=METRICS,
+)
+
+ML_PROBABILITY = Histogram(
+    "maintai_ml_failure_probability",
+    "Failure probabilities of successful predictions",
+    buckets=(0, 0.01, 0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 0.99, 1),
+    registry=METRICS,
+)
+
+ML_MODEL = Gauge(
+    "maintai_ml_model_info",
+    "Currently loaded model",
+    ["model_version"],
+    registry=METRICS,
+)
 
 class StrictBody(BaseModel):
     model_config = ConfigDict(
@@ -63,6 +108,8 @@ async def lifespan(app):
     # Mỗi lần khởi động phải kiểm tra và load lại từ đầu.
     STATE["pipeline"] = None
     STATE["metadata"] = None
+
+    ML_MODEL.clear()
 
     if os.environ.get("MAINTAI_LOCAL_ONLY") != "1":
         raise RuntimeError(
@@ -142,6 +189,11 @@ async def lifespan(app):
         # Chỉ công bố ready sau khi tất cả kiểm tra thành công.
         STATE["pipeline"] = pipeline
         STATE["metadata"] = metadata
+
+        ML_MODEL.labels(
+            model_version=metadata["model_version"]
+        ).set(1)
+
         LOGGER.info("Local baseline loaded: %s", metadata["model_version"])
 
     except Exception:
@@ -152,6 +204,7 @@ async def lifespan(app):
 
     STATE["pipeline"] = None
     STATE["metadata"] = None
+    ML_MODEL.clear()
 
 
 app = FastAPI(
@@ -170,11 +223,32 @@ async def tracing(request: Request, call_next):
         request.headers.get("X-Correlation-ID") or f"cor_{uuid4().hex}"
     )
 
-    response = await call_next(request)
+    is_prediction = (
+        request.method == "POST"
+        and request.url.path == "/api/v1/predict"
+    )
+
+    try:
+        response = await call_next(request)
+    except Exception:
+        if is_prediction:
+            ML_REQUESTS.labels(status="ERROR").inc()
+        raise
+
+    # Đếm đúng một lần khi request dự đoán hoàn tất.
+    if is_prediction:
+        status = {
+            200: "SUCCESS",
+            400: "INVALID_INPUT",
+            422: "INVALID_INPUT",
+            503: "NOT_READY",
+        }.get(response.status_code, "ERROR")
+
+        ML_REQUESTS.labels(status=status).inc()
+
     response.headers["X-Request-ID"] = request.state.request_id
     response.headers["X-Correlation-ID"] = request.state.correlation_id
     return response
-
 
 def error_response(request, status, code, message, retryable):
     return JSONResponse(
@@ -233,6 +307,14 @@ def health_ready():
         },
     )
 
+@app.get("/metrics")
+def metrics():
+    """Xuất metrics để công cụ monitoring thu thập."""
+    return Response(
+        content=generate_latest(METRICS),
+        headers={"Content-Type": CONTENT_TYPE_LATEST},
+    )
+
 @app.post("/api/v1/predict")
 def predict(body: PredictionRequest, request: Request):
     pipeline = STATE["pipeline"]
@@ -244,9 +326,9 @@ def predict(body: PredictionRequest, request: Request):
             "Model artifact is not ready", True,
         )
 
-    try:
-        start = perf_counter()
+    start = perf_counter()
 
+    try:
         frame = pd.DataFrame(
             [body.features.model_dump()],
             columns=FEATURES,
@@ -257,13 +339,12 @@ def predict(body: PredictionRequest, request: Request):
             raise ValueError("Model returned invalid probability")
 
         threshold = metadata["threshold"]
+        label = "FAILURE" if probability >= threshold else "NORMAL"
 
-        return {
+        result = {
             "prediction_id": f"pred_{uuid4().hex}",
             "event_id": body.event_id,
-            "prediction": (
-                "FAILURE" if probability >= threshold else "NORMAL"
-            ),
+            "prediction": label,
             "failure_probability": probability,
             "model_version": metadata["model_version"],
             "preprocessor_version": metadata["preprocessor_version"],
@@ -271,6 +352,23 @@ def predict(body: PredictionRequest, request: Request):
             "inference_ms": (perf_counter() - start) * 1000,
             "predicted_at": datetime.now(timezone.utc).isoformat(),
         }
+
+        # Chỉ ghi nhận prediction khi đã tạo kết quả thành công.
+        ML_PREDICTIONS.labels(prediction=label).inc()
+        ML_PROBABILITY.observe(probability)
+
+        LOGGER.info(
+            json.dumps({
+                "event": "prediction_completed",
+                "request_id": request.state.request_id,
+                "correlation_id": request.state.correlation_id,
+                "model_version": metadata["model_version"],
+                "prediction": label,
+                "inference_ms": result["inference_ms"],
+            })
+        )
+
+        return result
 
     except Exception:
         LOGGER.exception(
@@ -281,3 +379,7 @@ def predict(body: PredictionRequest, request: Request):
             request, 500, "INTERNAL_ERROR",
             "Inference failed", False,
         )
+
+    finally:
+        # Đo cả inference thành công và inference ném lỗi.
+        ML_DURATION.observe(perf_counter() - start)
