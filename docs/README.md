@@ -1,6 +1,6 @@
 # MaintAI docs — thiết kế mục tiêu v1.4
 
-Cập nhật: **2026-10-29**. Sáu tài liệu v1.4 đã được nhập vào repo và hiệu chỉnh
+Cập nhật: **2026-10-30**. Sáu tài liệu v1.4 đã được nhập vào repo và hiệu chỉnh
 đường dẫn cùng các quyết định dự án đã chốt. Bộ Kafka Python dùng chung đã được
 thêm riêng; DB/application/image/deployment chưa tự migrate theo tài liệu.
 
@@ -68,6 +68,12 @@ freeze schema/migration trước khi đổi producer hoặc consumer. Không t�
 đang được CI kiểm tra chỉ để đổi nhãn thành v1.4.
 
 ## Quyết định dự án còn hiệu lực
+
+- **RISK-POLICY-01,30/10:** Nội dung/schema/catalog policy thuộc
+  `processing/config/risk-policies/` trong app. GitOps khóa app commit + policy
+  version/hash, tạo ConfigMap và mount Worker; infrastructure không yêu cầu bản
+  policy chỉnh tay trong private data. Policy demo chưa calibration, workloads
+  không tự bật. [Quyết định và migration](RISK_POLICY_OWNERSHIP.md).
 
 - **M6-HISTORY-01,29/10:** Giữ ba Deployment Processing. Worker chỉ realtime;
   Read API sở hữu history/snapshot/export và runner nền bền vững, dùng pool SELECT

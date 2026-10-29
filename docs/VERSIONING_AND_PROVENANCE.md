@@ -330,3 +330,12 @@ cho target1.4.0. Không đổi wire schema chỉ để đồng bộ revision c�
 
 Docs manifest lưu local amendment và decision; upstream imported hashes tiếp tục
 bảo toàn nguồn gốc. Diagrams revision1.2.0 mô tả target, không image/deploy proof.
+
+## RISK-POLICY-01 — App source và release config, 30/10/2026
+
+Nguồn chuẩn policy nằm trong app `processing/config/risk-policies/`. Catalog
+phân biệt SHA256 file bytes với canonical `policy_sha256` mà Worker phát. GitOps
+chọn app Git SHA + version + cả hai hashes và materialize vào ConfigMap có content
+hash; không sửa ngưỡng độc lập. Đổi policy là release cấu hình có provenance,
+không buộc đổi ML model hoặc Kafka wire. Infrastructure không sở hữu policy
+trong private data. Xem [RISK-POLICY-01](RISK_POLICY_OWNERSHIP.md).

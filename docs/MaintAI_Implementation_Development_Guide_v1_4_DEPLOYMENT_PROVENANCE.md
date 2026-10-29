@@ -653,7 +653,7 @@ thresholds:
   watch: 0.40
   high: 0.65
   critical: 0.85
-alert_on:
+create_alert_for:
   - HIGH
   - CRITICAL
 ```
@@ -3675,3 +3675,21 @@ nguyên. Quyết định đã chốt, code/schema/migration/platform M6 vẫn c�
 Chiến/Người4 cập nhật platform Secrets/grants/S3 policies trong hai repo tương ứng
 khi implementation được bật; không dùng owner role để né giới hạn. Reference schema
 và runtime metadata phải giữ planned/partial cho tới khi các bước có bằng chứng.
+
+# 58. RISK-POLICY-01 — Versioned policy trong app và ConfigMap local
+
+1. Dev Processing thay đổi policy trong `processing/config/risk-policies/`, dùng
+   version mới nếu đổi ngưỡng hoặc create_alert_for; cập nhật catalog và tests.
+2. Review policy/schema và commit app; app source lock cùng selector GitOps phải
+   trỏ đúng commit thật và có raw/canonical hashes khớp.
+3. Khi prepare apps, infrastructure truyền app checkout tới GitOps bằng
+   `--app-root`. GitOps chỉ đọc source đã xác minh; không tự chọn latest.
+4. Generator tạo ConfigMap có content hash, mount read-only tại `/local/config`,
+   cấp `PROCESSING_RISK_POLICY_FILE=/local/config/risk-policy.json`. Không thêm
+   policy file vào `local/.local/data/fixtures` hoặc profile Worker `files`.
+5. Review GitOps diff, push, Argo sync và rollout Worker; không có hot reload.
+
+Dùng field `create_alert_for` của Contract/parser, không dùng alias `alert_on`.
+Ví dụ kế thừa §10 đã đồng bộ tên field này. Schema/profile production và Kafka không thay đổi. Policy
+demo0.40/0.65/0.85 chưa calibration. Model identity vẫn cần file/checksum riêng.
+Hướng dẫn chi tiết: [Risk policy ownership](RISK_POLICY_OWNERSHIP.md).

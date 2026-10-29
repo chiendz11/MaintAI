@@ -2975,3 +2975,19 @@ processed archive/retention của các chương kế thừa khi mâu thuẫn.
 7. Local DB-only demo khác full M6 dùng MinIO; AWS S3 không bắt buộc. Không giả raw
    history empty/COMPLETE khi provider chưa sẵn sàng. Không tự thay wire schemas,
    migrations/SQL SDK, implementation status hoặc platform config bởi quyết định docs.
+
+# 45. RISK-POLICY-01 — Source policy thuộc app, cấp qua GitOps
+
+Quyết định30/10/2026: app owner Processing quản lý policy JSON, schema1.0.0 và
+catalog ở `processing/config/risk-policies/`. GitOps giữ selector app Git SHA +
+policy path/version/raw SHA/canonical SHA; lấy đúng committed source để tạo
+ConfigMap read-only tại `/local/config/risk-policy.json`. Infrastructure không
+cấp một bản policy chỉnh tay trong private fixtures. Worker vẫn dùng
+`PROCESSING_RISK_POLICY_FILE`, đọc lúc khởi động và ghi canonical policy hash
+vào outcome; không đổi Kafka wire hoặc RiskPolicy DTO.
+
+Policy `demo-risk-v1` dùng ngưỡng tham khảo §9.2, manifest ghi demo/chưa calibration;
+không bảo đảm scenario Critical tạo alert. ConfigMap content hash thay Pod
+reference khi đổi policy. Model identity và receipts vẫn là gate riêng. Flow
+local được triển khai; production cutover phải review riêng, không sửa schema
+production đã freeze. Xem [quyết định đầy đủ](RISK_POLICY_OWNERSHIP.md).

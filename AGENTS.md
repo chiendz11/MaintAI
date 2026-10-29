@@ -57,6 +57,12 @@ cần triển khai module hoặc chạy toàn bộ app tests chỉ vì tài li�
 
 ## Xử lý khác biệt
 
+- RISK-POLICY-01: đọc `docs/RISK_POLICY_OWNERSHIP.md` trước khi đổi policy.
+  Source JSON/schema/catalog ở `processing/config/risk-policies/`; GitOps chọn
+  app commit + version/raw SHA/canonical SHA và tạo ConfigMap. Không thêm bản
+  policy chỉnh tay trong infrastructure private data hoặc override env path.
+  Policy demo chưa calibration; model identity/receipts là gate riêng.
+
 - System Contracts là nguồn chuẩn cho payload, enums, API, DB/artifact và failure
   semantics. Nếu ví dụ trong Guide khác contract, dùng contract. Khi các nguồn v1.4
   còn mâu thuẫn về version/field/cursor, xem readiness và nêu điểm chưa freeze;

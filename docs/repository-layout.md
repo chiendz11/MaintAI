@@ -10,6 +10,11 @@ là baseline runtime1.3.2, chưa tự thay folder/image/entrypoint khi nhập do
 
 ## Code owner khác deployment
 
+RISK-POLICY-01: `processing/config/risk-policies/` là source policy/schema/catalog
+thuộc app. Đây là cấu hình có version, không là deployment hoặc service mới.
+GitOps materialize policy đã chọn vào ConfigMap; infrastructure chỉ hỗ trợ
+runtime/bootstrap. Xem [policy ownership](RISK_POLICY_OWNERSHIP.md).
+
 UI-01 ngày2026-10-20 chốt bốn UI chính, chi tiết
 [UI Architecture](UI_ARCHITECTURE.md). `frontend/` vẫn là Business UI;
 `sensor-simulator-UI/` là source root React/TypeScript cho Simulator frontend độc lập. Không
