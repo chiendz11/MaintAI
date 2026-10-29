@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator, ValidationError
 from maintai_messaging.contracts import strict_json
-
 from processing.shared.risk_engine.engine import evaluate_risk
 from processing.shared.risk_engine.policy import RiskPolicy
 
