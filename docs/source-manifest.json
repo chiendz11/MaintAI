@@ -9,44 +9,44 @@
     {
       "path": "docs/MaintAI_Functional_Overview.md",
       "source_filename": "MaintAI_Functional_Overview.md",
-      "sha256": "c24f5211b1be97b0dc412c0a0ee20e6cea78d7df25c2c2a65b98e50baf48d46c",
+      "sha256": "e2115914470ee489bd25b56f23576416a90de810af8278ba5936242dbf0acb61",
       "upstream_sha256": "c7e2a75c3db895eebcfd6973a906786f355ed67ec2eb041408e647d5bd38b4d9"
     },
     {
       "path": "docs/README.md",
       "source_filename": "README.md",
-      "sha256": "8b32b0dcac9d7a5a4ca5e1674bc7a8c8484b935480845ae0606d3e2f1384f0c5",
+      "sha256": "269c14ebd2faf4f65545457a787195276b3ff2b9cbe258f07012378707f08f95",
       "upstream_sha256": "b8f3731050d7cba47d5eecebd8ecfa7457dc4a7c427e9f408a1a22dd89c9b0d7"
     },
     {
       "path": "docs/api-contract-decisions.md",
       "source_filename": "api-contract-decisions.md",
-      "sha256": "1931ba06482e02f2dcb2247e2651b4ccbfe0ea184d80a2883b7248479c0ae417",
+      "sha256": "30758a60d64fec724ae42c14dcb261a45fbe173f5e4d643d2645b4d053302896",
       "upstream_sha256": "153aea7b6f92e25fd11e9689092711f9806c59b0204099ae807e113fa830037b"
     },
     {
       "path": "docs/history-storage-contract.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "3667999d79778ed62be9d938cec675a668793126f7900f01fb532a249f182065"
+      "sha256": "8a6fad34c0bda68c69831ef03337bf53a586f28b5eb097b70a24a5ec0a4204b5"
     },
     {
       "path": "docs/recovery-jobs-operations.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "8a54bcac037227795f67605f2bdf0638ad8e7b2801f4bb164e2c62c3b89d6bd3"
+      "sha256": "680a8a591b913e91d6ff4a4b1df3daf926c98802cbd2216be699ee0f2aedb93e"
     },
     {
       "path": "docs/implementation-readiness.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "1cc468b8a51d216b9793d750dac1325b19e41e515c4853825b8f7fa0a8c26bf4"
+      "sha256": "da355c6b93762dffaa0d20b942b199807a1664083e35882782c877e543fd8c5d"
     },
     {
       "path": "docs/repository-layout.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "7f72a3e6a2e0c90a959e05b73f7e7c8e47ad7c5210c7aeea578df9fb35825fd2"
+      "sha256": "91ef6f9cbfe74316d72b0bfc2d46df48ff38dfb75181e1f8fe96c7370f31e3ad"
     },
     {
       "path": "docs/legacy-artifact-audit.md",
@@ -60,7 +60,7 @@
       "imported_on": "2026-10-19",
       "source_document_revision": "1.4.0",
       "upstream_sha256": "dcce56143a210b1aa733483c93c73e84cd498fc4521fe03d3e25425ebf5e8c5c",
-      "sha256": "96ba162d54e1dec4dd9414774111fe72acab86a6825a670a62dd2321ae988aa1"
+      "sha256": "78fa3174256e81ec113946037eecf08688e13a1b04fef43affcd5d5c1130e5cf"
     },
     {
       "path": "docs/RUNTIME_DATAFLOW.md",
@@ -68,7 +68,7 @@
       "imported_on": "2026-10-19",
       "source_document_revision": "1.4.0",
       "upstream_sha256": "b117c5c7758832b6200488726733e51c07bd9c3e58a2b3a0b263e3e9c8cdfdae",
-      "sha256": "1f7f02c071519caf8f0a7ad1ce05f697eda07c71c1317d1269f1e1e5ab403503"
+      "sha256": "f743a2b37dfec33744b264985bd97f477caabd5b9d02d80a5b45d24a36947e23"
     },
     {
       "path": "docs/VERSIONING_AND_PROVENANCE.md",
@@ -76,7 +76,7 @@
       "imported_on": "2026-10-19",
       "source_document_revision": "1.4.0",
       "upstream_sha256": "38bbeeec5ef366877f9797508bdc8951f8df54ebe6002aed78820035d849a6ad",
-      "sha256": "44ac53e5c76578c265a36801a3c539dd4daaeea9ba4c8bbdbe5f6e7843676c9f"
+      "sha256": "ae11d1e07398420588de0dda32bc5a329882ef942f2d25e1daf2edcfc5b5fffd"
     },
     {
       "path": "docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md",
@@ -84,7 +84,7 @@
       "imported_on": "2026-10-19",
       "source_document_revision": "1.4.0",
       "upstream_sha256": "c677d5a991814c37392d2bb9cfafd2ed86535fd01eb044c4f9a6e457069f9f55",
-      "sha256": "9c387f177e71b9722b973a8eb1de322bab0ce5afe0e5572bac2b8a891e840ce5"
+      "sha256": "9384cda63bd48659923884c99707aff3a33392e230e8aacba55e6921fe78fa92"
     },
     {
       "path": "docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md",
@@ -92,7 +92,7 @@
       "imported_on": "2026-10-19",
       "source_document_revision": "1.4.0",
       "upstream_sha256": "89f141f1a8695a7ce056a99512633ba7e2edd9f2311b7bf935ae94f2ecd6ffcc",
-      "sha256": "a090951b0df5e8e3e852a505220f6173107e9428dde5b65fff31847e82c6f2e3"
+      "sha256": "32e6cb8f52db36781772111f6a7cc598f9a6abb73fa8e158391dd39e135ce5fd"
     },
     {
       "path": "docs/IMPLEMENTATION_PLAN.md",
@@ -100,14 +100,14 @@
       "imported_on": "2026-10-19",
       "source_document_revision": "1.4.0",
       "upstream_sha256": "1b3f1654df22ded81be0808c88db746abeda6ddc6ce2c500f1115172d6bb3b58",
-      "sha256": "ba7878f6c16ef2cac2be5804a76d5c9b27bec0e282557fb5ec6148861aaba5b3"
+      "sha256": "7fdc5be11255098b1197c2bb419527e52aefc9cf1b46d4a9acee7dae1e0fa896"
     },
     {
       "path": "docs/KAFKA_DEVELOPMENT_GUIDE.md",
       "source_filename": null,
       "upstream_sha256": null,
       "added_on": "2026-10-19",
-      "sha256": "1613d0004a30b19ec6253e2c7cf42df298392f35dcf649eff5206935a705b6c9"
+      "sha256": "b5eb27135191178fedfdb8c14675307a989edfa7954a2cc7ca6408e407e2fd46"
     },
     {
       "path": "docs/UI_ARCHITECTURE.md",
@@ -125,7 +125,7 @@
       "added_on": "2026-10-20",
       "decision_id": "OBS-01",
       "decision_revision": "1.0.0",
-      "sha256": "2d2fc8f9b9c81b147579258e6c3fbbe02916401da2d53655f12b29591af0d892"
+      "sha256": "8390a512f9048ac127d120c475865f1b23ed4b0da91c0b710350851c7d0bd89b"
     },
     {
       "path": "docs/MLFLOW_INTEGRATION_GUIDE.md",
@@ -148,7 +148,7 @@
       "source_filename": null,
       "upstream_sha256": null,
       "added_on": "2026-10-22",
-      "sha256": "79de532f0f8dcd612ec0ad063f9980a87138e88941fd7cbf3734127ad260df43"
+      "sha256": "cabc91826538ab303d563559a520977fc3c13a8d221e447a0eff5b83eef2353d"
     },
     {
       "path": "docs/PROCESSING_CONCURRENCY_AND_ORDERING.md",
@@ -200,19 +200,13 @@
       "path": "docs/design-basis/README.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "3bb82d3cbfbb3815d785a8ed39ed0b54c7faa5b10f8f71f285a42a5c167ad77c"
-    },
-    {
-      "path": "docs/design-basis/report/Nhóm-11_ MaintAI_Kien-truc.pdf",
-      "source_filename": null,
-      "upstream_sha256": null,
-      "sha256": "7ed3d7f83911b6376586f52e2da6ece17bf46a8c3c5680ad09cebfd08b217884"
+      "sha256": "37a2fa1d3cebcf6ae6436e2fd308dba1cb8153ef248ceff89c312203714ca837"
     },
     {
       "path": "docs/design-basis/report/report.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "757baae47fd9ee69a6565e8114c867e13d18d9c02338bdc47e1d6666931a0364"
+      "sha256": "bd716289fa033ca2428b1252888441fd48442290a11de37d6fa4893613c5c6a8"
     },
     {
       "path": "docs/design-basis/report/assets/deployment-local-cloud.dot",
@@ -259,6 +253,51 @@
       "path": "docs/M5_IMPLEMENTATION_REPORT.md",
       "sha256": "1f03f332be124ad7c674f1f925cd383cb5d2efec6373e2d9e2808bf44b9bb7c7",
       "decision_revision": "1.0.0"
+    },
+    {
+      "path": "docs/design-basis/report/Nhóm-8_MaintAI_Kien-truc.pdf",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "e69bc9ac3cc6e8ff362f070cafaff99788614e62bb8ce59a6a6273fe4645e065"
+    },
+    {
+      "path": "docs/M6_HISTORY_ARCHITECTURE_DECISION.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "added_on": "2026-10-29",
+      "decision_id": "M6-HISTORY-01",
+      "decision_revision": "1.0.0",
+      "sha256": "163578000b4829a491527a11c8f7f085c1ed47ba0bd3660ff4dc628d06848f16"
+    },
+    {
+      "path": "docs/M6_RAW_ARCHIVE_HANDOFF.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "added_on": "2026-10-29",
+      "decision_id": "M6-RAW-01",
+      "decision_revision": "1.0.0",
+      "sha256": "5321150092f8f8c45bcde95961006ff54321eee5a051df21721442e6a5982ccc"
+    },
+    {
+      "path": "docs/STORAGE_CATALOG_IMPLEMENTATION_REPORT.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "added_on": "2026-10-29",
+      "sha256": "e6ef60019dde2ede0d18101093e65d04f573cc2e56ce4d53d1a986b93b90b949"
+    },
+    {
+      "path": "storage-consumer/M6_READER_GUIDE.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "added_on": "2026-10-29",
+      "sha256": "c2c66aeb07c147c039aa0c5a2d41aecdac75c07f624cf014b339e9bdd089f963"
+    },
+    {
+      "path": "storage-consumer/local/README.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "added_on": "2026-10-29",
+      "sha256": "b9b743a2828462332e24a06a656704a7d1812a904bed51374e57f004f58a6232"
     }
   ],
   "upstream_inherited_contract_revision": "1.3.1",
@@ -350,10 +389,10 @@
     },
     {
       "id": "DESIGN-BASIS-01",
-      "revision": "1.2.2",
+      "revision": "1.2.3",
       "adopted_on": "2026-10-23",
       "document": "docs/design-basis/README.md",
-      "scope": "Self-contained academic report with an eight-page PDF and editable manuscript. The original six A4 portrait pages retain their content; two A4 landscape pages add publication-view architecture and local/cloud deployment diagrams embedded as vectors. Diagram DOT/SVG/PNG assets are versioned alongside the report; the user-renamed PDF path is preserved. Preserves the initial 100 machines x 1 reading/s and scale-ready design. No requirement, runtime, wire, SQL, default or retention change; target diagrams are not evidence of deployment or measured capacity.",
+      "scope": "Self-contained eight-page academic report renamed to Nhóm-8_MaintAI_Kien-truc.pdf, with all four member names and student IDs on the first page. First-page spacing accommodates the roster; architectural content and the other seven pages are preserved. Two A4 landscape pages retain vector architecture/deployment diagrams. Initial100 machines x1 reading/s and scale-ready design unchanged; no runtime, wire, SQL, default or retention change.",
       "requirements_source": {
         "filename": "CHỦ ĐỀ 3_Requirement.docx",
         "sha256": "349d6f3c20fd338dedc63474e6fc24eec763154ac2f139b7a3627101093105c0",

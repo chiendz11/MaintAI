@@ -44,6 +44,13 @@ Trước khi triển khai hoặc thay đổi một module:
    có keyed runner/coordinator/fenced handler/ordered relay và app DQ/inference-client/
    risk/owner persistence cùng health server/images. History/archive đầy đủ thuộc M6;
    source và local tests không chứng minh deployment hoặc provider production đã sẵn sàng.
+9. Với M6 đọc `docs/M6_HISTORY_ARCHITECTURE_DECISION.md` và
+   `docs/M6_RAW_ARCHIVE_HANDOFF.md` (quyết định29/10, ưu tiên history cũ).
+   Không thêm processing-maintenance hoặc export/archive loop vào Worker.
+   Read API có pool SELECT dữ liệu gốc và pool ghi metadata quyền hẹp; không cấp
+   write outcome/outbox. Processed_at = completed_at hiện có; raw received_at +
+   Kafka locator. M6 không processed archive/cleanup thật. Storage catalog/coverage,
+   machine API/schema/migration và platform grants vẫn cần implement, không giả ready.
 
 Với thay đổi chỉ về tài liệu/CI, đọc phần đặc tả liên quan đến thay đổi; không
 cần triển khai module hoặc chạy toàn bộ app tests chỉ vì tài liệu có checklist.
@@ -94,7 +101,8 @@ cần triển khai module hoặc chạy toàn bộ app tests chỉ vì tài li�
 - Business API và Business Consumer cùng codebase/DB owner nhưng khác Deployment.
   Ba consumer handlers telemetry/prediction/alert không phải ba microservices.
 - Business DB chỉ giữ latest telemetry/latest valid prediction/latest processing
-  và business data; raw ở S3/MinIO; Processing history hot DB + verified S3 archive.
+  và business data; raw ở S3/MinIO. M6 giữ processed history trong processing_db;
+  verified processed archive là phần hoãn sau M6. Không xóa data theo hot window cũ.
 - Không query DB xuyên owner. Business/Drift dùng Processing read API/curated S3.
 - Main Frontend chỉ gọi Business REST/SSE; Simulator UI riêng gọi Sensor Control API. PG NOTIFY/pubsub fan-out tới
   mọi API replica, REST snapshot khôi phục; không dùng Kafka group làm SSE broadcast.

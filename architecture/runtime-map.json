@@ -47,6 +47,15 @@
       "sdk_version": "0.3.0",
       "status": "SDK_and_transport_wrappers_implemented_application_callbacks_and_deployment_pending",
       "adds_runtime": false
+    },
+    {
+      "id": "M6-HISTORY-01",
+      "revision": "1.0.0",
+      "target_system_contract_revision": "1.4.0",
+      "document": "docs/M6_HISTORY_ARCHITECTURE_DECISION.md",
+      "implementation_report": "docs/implementation-readiness.md",
+      "status": "design_frozen_history_export_catalog_migrations_and_platform_pending",
+      "adds_runtime": false
     }
   ]
 }

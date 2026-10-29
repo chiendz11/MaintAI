@@ -148,3 +148,12 @@ Backend thêm `shared/alerts`, `shared/audit`, `shared/feedback`, migration0003 
 `business-consumer/src/handlers/alert`. API/SSE/Main UI giữ runtime hiện có.
 Processing hot point-read ở `shared/persistence/evidence.py`; history/archive
 list jobs còn M6. Source, test và bàn giao tại [M5 report](M5_IMPLEMENTATION_REPORT.md).
+
+## M6-HISTORY-01 — Không thêm folder runtime thứ tư cho Processing
+
+Theo [decision29/10](M6_HISTORY_ARCHITECTURE_DECISION.md), Worker chỉ realtime;
+snapshot/export/catalog-sync modules thuộc processing/read-api/ và share owner
+migrations, không thêm processing-maintenance. Read API có pool metadata quyền
+hẹp, original data read-only. Storage catalog/coverage ở storage-consumer/, contract
+[M6-RAW-01](M6_RAW_ARCHIVE_HANDOFF.md); processed archive/cleanup thật hoãn. Runtime
+metadata giữ implemented_scope cũ và ghi target riêng, không tự khẳng định M6 có code.

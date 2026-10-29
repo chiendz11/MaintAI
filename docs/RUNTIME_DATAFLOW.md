@@ -8,6 +8,12 @@
 
 # MaintAI v1.4 — Luồng dữ liệu lúc chạy và các bất biến bắt buộc
 
+**M6-HISTORY-01,29/10:** [Decision](M6_HISTORY_ARCHITECTURE_DECISION.md) ưu tiên
+history cũ: processed outcomes đọc DB, raw đọc catalog S3/MinIO; Read API ghi
+metadata snapshot/export quyền hẹp và chạy export nền. Không đưa maintenance vào
+Worker, không processed archive/cleanup thật. Catalog contract ở
+[M6-RAW-01](M6_RAW_ARCHIVE_HANDOFF.md); chưa có publisher chỉ bởi cập nhật docs.
+
 Đọc cùng [Kiến trúc Deployment](DEPLOYMENT_ARCHITECTURE.md) để hiểu ranh giới runtime, và [Quy chuẩn Versioning & Provenance](VERSIONING_AND_PROVENANCE.md) để hiểu các định danh bất biến.
 
 ## 0. Điểm vào của bốn UI — UI-01, 2026-10-20
@@ -129,8 +135,8 @@ sequenceDiagram
   U->>B: GET /machines/M-001/sensor-readings?status=INVALID
   B->>H: Query có auth và phạm vi máy/nguồn
   H->>P: Truy vấn theo index, join DQ/prediction
-  alt Raw vượt hot-retention window
-    H->>S: Tra batch qua partition/date manifest
+  alt Cần raw receipt details qua catalog
+    H->>S: Tra committed catalog generation và exact object ref
     S-->>H: Raw details hoặc PENDING_ARCHIVE
   end
   H-->>B: Trang dữ liệu + cursor + completeness
@@ -142,6 +148,14 @@ sequenceDiagram
 ```
 
 Không được quét toàn bộ S3 bucket để phục vụ mỗi truy vấn browser. Hot-history cần index phù hợp trên `machine_id`, `server_accepted_at`, `event_id`, DQ status và vị trí Kafka. Có thể giữ JSON features kích thước giới hạn trong DB trong hot window, không nhân bản raw vô hạn. Cold-history có thể dùng (a) batch manifests có partition/date pruning; (b) Athena/Trino/DuckDB/Parquet query engine nếu dung lượng đủ lớn. **Không cần tạo `history_db` chỉ vì đã có Deployment Read API riêng**.
+
+Trong M6, history kết quả sort `(processed_at,result_id)`, processed_at map
+completed_at hiện có; raw sort `(received_at,topic,partition,offset)`. Sơ đồ trên
+được hiểu là đọc raw catalog khi cần raw details, không fallback processed archive.
+Snapshot chốt membership/committed catalog generation; late commits chỉ xuất hiện
+khi refresh. Export nhỏ CSV streaming; export lớn durable job →202, runner Read API
+→ private artifact → authorized download. DB read pool vẫn SELECT-only; metadata
+pool có quyền hẹp riêng. Kafka locator/sequence ordering realtime không đổi.
 
 ## 4. Vòng đời dữ liệu và trạng thái
 
