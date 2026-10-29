@@ -83,3 +83,18 @@ và chỉ advance durable index checkpoint sau commit.
 Lượt bàn giao cũng giữ các chỉnh sửa PDF/nhóm hiện có và đồng bộ docs M6. Những
 file đó không làm thay application runtime ngoài Storage; không claim pipeline ML/
 RAG đầy đủ chỉ vì feature branch đã merge.
+
+
+## 5. Storage0.2.1 — Post-merge regression và bounded Kafka audit progress
+
+CI PR17 push/pull_request pass; run110 trên squash commit phát hiện catalog restart
+không tiến trong120s. Unit regression tái hiện reader bị reassign trước khi delayed
+fetch trả về. Bản sửa giữ assignment/buffer bounded từng active partition, chia sẻ
+watermark probes theo topic, không poll partitions rỗng và giữ pending receipts khi
+raw manifest chưa có. Tối đa128 active fetch clients, mỗi key tối đa batch limit100;
+không thêm group subscription/offset commit hoặc đổi raw durability.
+
+Thêm failure diagnostics (coverage/cached health/error classes, không raw/config
+secrets) cho integration. Local sau sửa:78 tests PASS,2 provider tests skip do Docker
+tắt. CI vẫn bắt buộc Kafka+MinIO thật; không tăng timeout hoặc bỏ required job để
+né regression. Xem PR sửa tiếp theo và CI đúng commit khi bàn giao main cuối cùng.

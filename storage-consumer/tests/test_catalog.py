@@ -4,6 +4,7 @@ import copy
 import hashlib
 import io
 import threading
+import time
 from dataclasses import replace
 from types import SimpleNamespace
 
@@ -354,3 +355,66 @@ def test_audit_manual_assignment_never_joins_or_commits(settings):
     assert audit.scan("sensor.readings", 0, 0, limit=1, stop=threading.Event()) == (0, 1, [0], 1)
     audit.close()
     assert calls[-1] == "closed"
+
+
+def test_short_poll_budget_keeps_fetch_assignment_and_pending_raw_receipts(settings):
+    """Reassigning between windows resets this delayed fetch and never delivers."""
+    clients = []
+
+    class Client:
+        def __init__(self):
+            self.polls = self.assignments = 0
+            self.closed = False
+            clients.append(self)
+
+        def get_watermark_offsets(self, *args, **kwargs):
+            return 0, 1
+
+        def assign(self, partitions):
+            self.assignments += 1
+            self.polls = 0  # Simulate cancellation of an unfinished network fetch.
+
+        def poll(self, timeout):
+            self.polls += 1
+            time.sleep(0.005)
+            return (
+                None if self.polls == 1 else SimpleNamespace(error=lambda: None, offset=lambda: 0)
+            )
+
+        def close(self):
+            self.closed = True
+
+    settings = replace(settings, catalog_poll_seconds=0.001)
+    audit = KafkaAudit(settings, None, consumer_factory=lambda config: Client())
+    stop = threading.Event()
+    assert audit.scan("sensor.readings", 0, 0, limit=1, stop=stop)[2] == []
+    assert audit.scan("sensor.readings", 0, 0, limit=1, stop=stop)[2] == [0]
+    # Manifest0 is still missing: next audit must reuse the same buffered receipt.
+    assert audit.scan("sensor.readings", 0, 0, limit=1, stop=stop)[2] == [0]
+    assert sum(c.assignments for c in clients) == 1
+    assert len(audit.buffers[("sensor.readings", 0)]) == 1
+    audit.close()
+    assert all(c.closed for c in clients)
+
+
+def test_empty_partitions_only_probe_metadata_and_never_allocate_fetch_clients(settings):
+    class Empty:
+        def get_watermark_offsets(self, *args, **kwargs):
+            return 0, 0
+
+        def assign(self, partitions):
+            pytest.fail("Empty partition should not allocate a fetch assignment")
+
+        def close(self):
+            pass
+
+    audit = KafkaAudit(settings, None, consumer_factory=lambda config: Empty())
+    for partition in range(12):
+        assert audit.scan("sensor.readings", partition, 0, limit=1, stop=threading.Event()) == (
+            0,
+            0,
+            [],
+            0,
+        )
+    assert not audit.clients and len(audit.probes) == 1
+    audit.close()

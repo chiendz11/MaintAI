@@ -24,11 +24,19 @@ class KafkaAudit:
     def __init__(self, settings, admin, *, consumer_factory=Consumer):
         self.settings, self.admin, self.consumer_factory = settings, admin, consumer_factory
         self.clients = {}
+        self.probes = {}
+        self.buffers = {}
+        self.positions = {}
+        self.bases = {}
 
     def close(self):
-        for consumer in self.clients.values():
+        for consumer in [*self.clients.values(), *self.probes.values()]:
             consumer.close()
         self.clients.clear()
+        self.probes.clear()
+        self.buffers.clear()
+        self.positions.clear()
+        self.bases.clear()
 
     def describe(self):
         metadata = self.admin.list_topics(timeout=self.settings.probe_timeout_seconds)
@@ -53,7 +61,9 @@ class KafkaAudit:
         return metadata.cluster_id, partitions
 
     def scan(self, topic, partition, start, *, limit, stop):
-        # Same reviewed raw group name, manual assignment only; no new committed group state.
+        # Watermark probes are shared per topic; fetch assignment is persistent per
+        # non-empty partition. Reassigning a client at every short poll deadline
+        # can continuously cancel an in-flight fetch and starve catalog progress.
         group = "raw-archive-v1" if topic == "sensor.readings" else "raw-rejected-archive-v1"
         config = {
             **self.settings.kafka.consumer_config(group),
@@ -63,42 +73,77 @@ class KafkaAudit:
             "auto.offset.reset": "error",
             "enable.partition.eof": True,
             "isolation.level": "read_committed",
+            "fetch.wait.max.ms": 50,
             "log_level": 0,
         }
-        if topic not in self.clients:
-            self.clients[topic] = self.consumer_factory(config)
-        consumer = self.clients[topic]
+        coordinate = (topic, partition)
         try:
-            low, high = consumer.get_watermark_offsets(
+            if topic not in self.probes:
+                self.probes[topic] = self.consumer_factory(config)
+            low, high = self.probes[topic].get_watermark_offsets(
                 TopicPartition(topic, partition),
                 timeout=self.settings.probe_timeout_seconds,
                 cached=False,
             )
-            if start > high:
+            if start >= high:
+                # The requested interval is empty. Never spend a poll budget on
+                # empty partitions or discard a fetch before it has returned.
+                self._close_partition(coordinate)
                 return low, high, [], start
-            consumer.assign([TopicPartition(topic, partition, max(start, low))])
-            records, position = [], max(start, low)
+            base = max(start, low)
+            if coordinate not in self.clients:
+                if len(self.clients) >= 128:
+                    raise ConfigurationError("Catalog active partition budget exceeded")
+                client = self.consumer_factory(config)
+                self.clients[coordinate] = client
+                self.buffers[coordinate] = []
+                self.positions[coordinate] = base
+                self.bases[coordinate] = base
+                client.assign([TopicPartition(topic, partition, base)])
+            client = self.clients[coordinate]
+            if base < self.bases[coordinate] or base > self.positions[coordinate]:
+                client.assign([TopicPartition(topic, partition, base)])
+                self.buffers[coordinate] = []
+                self.positions[coordinate] = self.bases[coordinate] = base
+            # Keep receipts whose raw manifests are pending. Their broker fetch
+            # need not be repeated; at most `limit` offsets are buffered per key.
+            pending = [o for o in self.buffers[coordinate] if o >= base]
+            self.buffers[coordinate] = pending
             deadline = time.monotonic() + self.settings.catalog_poll_seconds
-            while len(records) < limit and time.monotonic() < deadline and not stop.is_set():
-                message = consumer.poll(0.1)
+            while len(pending) < limit and time.monotonic() < deadline and not stop.is_set():
+                message = client.poll(0.1)
                 if message is None:
                     continue
                 error = message.error()
                 if error:
                     if error.code() == KafkaError._PARTITION_EOF:
-                        # EOF is read_committed visibility, not merely the high watermark.
-                        position = max(position, message.offset())
+                        self.positions[coordinate] = max(
+                            self.positions[coordinate], message.offset()
+                        )
                         break
                     raise ConfigurationError("Kafka catalog audit failed")
-                if message.offset() >= high:
+                offset = message.offset()
+                if offset >= base and offset not in pending:
+                    pending.append(offset)
+                self.positions[coordinate] = offset + 1
+                if offset >= high:
                     break
-                records.append(message.offset())
-                position = message.offset() + 1
-            return low, high, records, position
+            records = [o for o in pending if base <= o < high]
+            return low, high, records, min(high, self.positions[coordinate])
         except Exception:
-            consumer.close()
-            self.clients.pop(topic, None)
+            self._close_partition(coordinate)
+            probe = self.probes.pop(topic, None)
+            if probe is not None:
+                probe.close()
             raise
+
+    def _close_partition(self, coordinate):
+        client = self.clients.pop(coordinate, None)
+        if client is not None:
+            client.close()
+        self.buffers.pop(coordinate, None)
+        self.positions.pop(coordinate, None)
+        self.bases.pop(coordinate, None)
 
 
 class CatalogRuntime:
