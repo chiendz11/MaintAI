@@ -1,0 +1,83 @@
+{
+  "snapshot_id": "snap_fixture_1",
+  "as_of": "2026-10-18T00:00:02Z",
+  "expires_at": "2026-10-17T00:00:00Z",
+  "coverage": "COMPLETE",
+  "tiers_used": [
+    "HOT"
+  ],
+  "available_from": "2025-10-18T00:00:00Z",
+  "available_through": "2026-10-18T00:00:02Z",
+  "next_cursor": null,
+  "schema_version": "2.0.0",
+  "profile": "M6-HISTORY-01/1.0.0",
+  "collection": "PROCESSING",
+  "time_basis": "processed_at",
+  "items": [
+    {
+      "schema_version": "2.0.0",
+      "result_id": "res_fixture_1",
+      "source_event_id": "evt_fixture_1",
+      "machine_id": "M-001",
+      "source_server_accepted_at": "2026-10-18T00:00:00Z",
+      "outcome": {
+        "schema_version": "1.4.0",
+        "result_id": "res_fixture_1",
+        "event_id": "evt_fixture_1",
+        "machine_id": "M-001",
+        "stream_epoch": "fixture-run",
+        "sequence_number": 1,
+        "source_schema_version": "1.3.0",
+        "source_topic": "sensor.readings",
+        "source_partition": 0,
+        "source_offset": 1,
+        "source_server_accepted_at": "2026-10-18T00:00:00Z",
+        "occurred_at": "2026-10-18T00:00:00Z",
+        "correlation_id": "fixture",
+        "producer_git_sha": "1111111111111111111111111111111111111111",
+        "dq_ruleset_version": "fixture",
+        "dq_ruleset_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "kind": "PREDICTION_COMPLETED",
+        "validation_status": "VALID",
+        "processing_status": "COMPLETED",
+        "prediction_id": "fixture",
+        "prediction": "FAILURE",
+        "failure_probability": 0.8,
+        "model_threshold": 0.5,
+        "model_version": "fixture",
+        "preprocessor_version": "fixture",
+        "dataset_version": "fixture",
+        "dataset_manifest_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "split_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "mlflow_run_id": "fixture",
+        "model_artifact_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "preprocessor_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "feature_schema_version": "fixture",
+        "feature_schema_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "release_id": "fixture",
+        "inference_image_digest": "registry.invalid/fixture/inference@sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        "risk_decision_id": "fixture",
+        "policy_version": "fixture",
+        "policy_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "machine_state": "HIGH",
+        "risk_score": 0.5,
+        "completed_at": "2026-10-18T00:00:00Z"
+      },
+      "features_raw": {
+        "product_type": "M",
+        "air_temperature_k": 298.1,
+        "process_temperature_k": 308.6,
+        "rotational_speed_rpm": 1551,
+        "torque_nm": 42.8,
+        "tool_wear_min": 108
+      },
+      "raw_ref": null,
+      "risk_snapshot": {
+        "risk_decision_id": "fixture",
+        "machine_state": "HIGH",
+        "policy_version": "fixture"
+      },
+      "processed_at": "2026-10-18T00:00:01.123456Z"
+    }
+  ]
+}

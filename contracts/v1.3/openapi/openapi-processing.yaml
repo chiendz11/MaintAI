@@ -1,8 +1,9 @@
 openapi: 3.1.1
 info:
   title: MaintAI Processing Read API
-  version: 1.3.2
-  description: Design contract, not a running service. Document amendment1.3.2; event schemas versioned independently.
+  version: 2.0.0
+  description: Description revision2.0.0 freezes M6-HISTORY-01/1.0.0 history/export interfaces. Existing
+    M1-M5 runtime DTOs and Kafka bundle remain unchanged; M6 routes are specification only.
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 servers:
 - url: https://processing.example.invalid
@@ -15,32 +16,37 @@ paths:
     get:
       operationId: internalListProcessingHistory
       summary: List immutable outcomes across hot/archive tiers
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented.'
+      description: M6-HISTORY-01/1.0.0; design only, no M6 runtime rollout. Read API uses SELECT-only
+        source pool plus a separate metadata writer pool for snapshots/jobs. Original outcomes stay in
+        PostgreSQL; no processed archive or source cleanup in M6. UTC microseconds; every page/job/download
+        rechecks current actor and machine scope. Require both service identity and verified Business
+        delegation; intersect delegated machines with service scope and bind snapshot/job to actor. Filter
+        from inclusive/to exclusive by processing_results.completed_at, exposed as processed_at. Order
+        processed_at DESC,result_id DESC. First page materializes committed bounded membership; late commits
+        require a new snapshot. Default last1h, range<=31d, snapshot10m/100000 IDs; subsequent cursor
+        requests reuse frozen omitted time bounds. No OFFSET or archive fallback.
       x-maintai-roles:
       - BUSINESS_SERVICE
       parameters:
-      - &id003
-        name: machine_id
+      - name: machine_id
         in: path
         required: true
         schema: &id002
           type: string
           minLength: 1
-      - &id004
-        name: from
+      - name: from
         in: query
         required: false
         schema: &id001
           type: string
           format: date-time
-      - &id005
-        name: to
+        description: Inclusive Clock selected by metric collection.
+      - name: to
         in: query
         required: false
         schema: *id001
-      - &id006
-        name: limit
+        description: Exclusive Clock selected by metric collection.
+      - name: limit
         in: query
         required: false
         schema:
@@ -48,11 +54,12 @@ paths:
           minimum: 1
           maximum: 500
           default: 100
-      - &id007
-        name: cursor
+      - name: cursor
         in: query
         required: false
         schema: *id002
+        description: Opaque authenticated M6 token binding profile, collection, frozen query, actor/scope,
+          snapshot, sort/last key, key version and expiry; legacy tokens rejected.
       - name: model_version
         in: query
         required: false
@@ -66,6 +73,13 @@ paths:
           - PREDICTION_COMPLETED
           - DATA_INVALID
           - INFERENCE_UNAVAILABLE
+      - name: X-MaintAI-History-Profile
+        in: header
+        required: true
+        schema:
+          type: string
+          const: M6-HISTORY-01/1.0.0
+        description: Explicit opt-in; absent/other profile is rejected, never reinterpret a baseline cursor.
       responses:
         '400':
           description: Invalid request/cursor.
@@ -132,21 +146,29 @@ paths:
           content:
             application/json:
               schema:
-                $ref: ../schemas/runtime.schema.json#/$defs/HistoryPage
+                $ref: ../schemas/history-m6.schema.json#/$defs/HistoryPage
+              examples:
+                m6:
+                  externalValue: ../examples/m6/processing-page.json
       security:
       - BearerAuth: []
+        HistoryDelegation: []
+      x-maintai-history-profile: M6-HISTORY-01/1.0.0
   /api/v1/internal/predictions/{result_id}:
     get:
       operationId: internalGetProcessingHistory
       summary: Read one original processing outcome
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. M5 implementation available; shared deployment acceptance remains separate.'
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. M5 implementation
+        available; shared deployment acceptance remains separate.'
       x-maintai-roles:
       - BUSINESS_SERVICE
       parameters:
       - name: result_id
         in: path
         required: true
-        schema: *id002
+        schema:
+          type: string
+          minLength: 1
       responses:
         '400':
           description: Invalid request/cursor.
@@ -220,16 +242,58 @@ paths:
     get:
       operationId: internalListRawHistory
       summary: Read accepted raw history with explicit coverage
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented.'
+      description: M6-HISTORY-01/1.0.0; design only, no M6 runtime rollout. Read API uses SELECT-only
+        source pool plus a separate metadata writer pool for snapshots/jobs. Original outcomes stay in
+        PostgreSQL; no processed archive or source cleanup in M6. UTC microseconds; every page/job/download
+        rechecks current actor and machine scope. Require both service identity and verified Business
+        delegation; intersect delegated machines with service scope and bind snapshot/job to actor. Read
+        accepted timeline receipts via pinned raw catalog generation, order received_at DESC,topic DESC,partition
+        DESC,offset DESC; preserve duplicate source events at different locators. Rejected/poison missing
+        machine/time do not enter this collection. Default last1h, range<=31d, snapshot10m/100000 IDs.
+        Nullable time availability with explicit partition coverage; uncertain required coverage returns503,
+        never partial/empty success.
       x-maintai-roles:
       - BUSINESS_SERVICE
       parameters:
-      - *id003
-      - *id004
-      - *id005
-      - *id006
-      - *id007
+      - name: machine_id
+        in: path
+        required: true
+        schema: &id004
+          type: string
+          minLength: 1
+      - name: from
+        in: query
+        required: false
+        schema: &id003
+          type: string
+          format: date-time
+        description: Inclusive Clock selected by metric collection.
+      - name: to
+        in: query
+        required: false
+        schema: *id003
+        description: Exclusive Clock selected by metric collection.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 500
+          default: 100
+      - name: cursor
+        in: query
+        required: false
+        schema: *id004
+        description: Opaque authenticated M6 token binding profile, collection, frozen query, actor/scope,
+          snapshot, sort/last key, key version and expiry; legacy tokens rejected.
+      - name: X-MaintAI-History-Profile
+        in: header
+        required: true
+        schema:
+          type: string
+          const: M6-HISTORY-01/1.0.0
+        description: Explicit opt-in; absent/other profile is rejected, never reinterpret a baseline cursor.
       responses:
         '400':
           description: Invalid request/cursor.
@@ -296,21 +360,50 @@ paths:
           content:
             application/json:
               schema:
-                $ref: ../schemas/runtime.schema.json#/$defs/RawHistoryPage
+                $ref: ../schemas/history-m6.schema.json#/$defs/RawHistoryPage
+              examples:
+                m6:
+                  externalValue: ../examples/m6/raw-page-offset-coverage.json
       security:
       - BearerAuth: []
+        HistoryDelegation: []
+      x-maintai-history-profile: M6-HISTORY-01/1.0.0
   /api/v1/internal/machines/{machine_id}/timeseries:
     get:
       operationId: internalGetMachineTimeSeries
       summary: Read bounded min/max/avg/count chart buckets
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented.'
+      description: M6-HISTORY-01/1.0.0; design only, no M6 runtime rollout. Read API uses SELECT-only
+        source pool plus a separate metadata writer pool for snapshots/jobs. Original outcomes stay in
+        PostgreSQL; no processed archive or source cleanup in M6. UTC microseconds; every page/job/download
+        rechecks current actor and machine scope. Require both service identity and verified Business
+        delegation; intersect delegated machines with service scope and bind snapshot/job to actor. Numeric
+        sensor metrics use RAW/received_at; probability/risk use PROCESSING/processed_at. Bounded UTC
+        buckets [start,end), gaps null, no interpolation; probability only completed valid. Alert markers
+        are merged only by Business, never cross-owner SQL. Marker cursor is actor/query/snapshot-bound
+        and independent of bucket budget; marker lacking exact axis clock has null position_at and remains
+        in a separate list. Markers use snapshot as_of; new alerts appear on refresh. No metadata write
+        via source pool.
       x-maintai-roles:
       - BUSINESS_SERVICE
       parameters:
-      - *id003
-      - *id004
-      - *id005
+      - name: machine_id
+        in: path
+        required: true
+        schema: &id006
+          type: string
+          minLength: 1
+      - name: from
+        in: query
+        required: false
+        schema: &id005
+          type: string
+          format: date-time
+        description: Inclusive Clock selected by metric collection.
+      - name: to
+        in: query
+        required: false
+        schema: *id005
+        description: Exclusive Clock selected by metric collection.
       - name: metric
         in: query
         required: true
@@ -348,7 +441,14 @@ paths:
       - name: markers_cursor
         in: query
         required: false
-        schema: *id002
+        schema: *id006
+      - name: X-MaintAI-History-Profile
+        in: header
+        required: true
+        schema:
+          type: string
+          const: M6-HISTORY-01/1.0.0
+        description: Explicit opt-in; absent/other profile is rejected, never reinterpret a baseline cursor.
       responses:
         '400':
           description: Invalid request/cursor.
@@ -415,22 +515,45 @@ paths:
           content:
             application/json:
               schema:
-                $ref: ../schemas/runtime.schema.json#/$defs/TimeSeriesPage
+                $ref: ../schemas/history-m6.schema.json#/$defs/TimeSeriesPage
+              examples:
+                m6:
+                  externalValue: ../examples/m6/processing-chart.json
       security:
       - BearerAuth: []
+        HistoryDelegation: []
+      x-maintai-history-profile: M6-HISTORY-01/1.0.0
   /api/v1/internal/history-exports:
     post:
       operationId: internalCreateHistoryExport
       summary: Durably enqueue an authorized frozen history export
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented.'
+      description: 'M6-HISTORY-01/1.0.0; design only, no M6 runtime rollout. Read API uses SELECT-only
+        source pool plus a separate metadata writer pool for snapshots/jobs. Original outcomes stay in
+        PostgreSQL; no processed archive or source cleanup in M6. UTC microseconds; every page/job/download
+        rechecks current actor and machine scope. Require both service identity and verified Business
+        delegation; intersect delegated machines with service scope and bind snapshot/job to actor. Idempotency
+        binds actor, canonical query/format/delivery and effective frozen snapshot/scope; same key with
+        different intent409. AUTO CSV may stream only after complete preflight<=10000 rows/10 MiB/10s,
+        otherwise durable job202 before headers. PARQUET/JOB always202 after commit. Read API runner concurrency1/replica,
+        leases/fencing/recovery; no Worker loop. No object store: small PROCESSING CSV may work, artifact
+        jobs unavailable. Same streaming key reuses frozen snapshot; expired input returns410, not a new
+        query.'
       x-maintai-roles:
       - BUSINESS_SERVICE
       parameters:
       - name: Idempotency-Key
         in: header
         required: true
-        schema: *id002
+        schema:
+          type: string
+          minLength: 1
+      - name: X-MaintAI-History-Profile
+        in: header
+        required: true
+        schema:
+          type: string
+          const: M6-HISTORY-01/1.0.0
+        description: Explicit opt-in; absent/other profile is rejected, never reinterpret a baseline cursor.
       responses:
         '400':
           description: Invalid request/cursor.
@@ -497,29 +620,61 @@ paths:
           content:
             application/json:
               schema:
-                $ref: ../schemas/runtime.schema.json#/$defs/ExportJob
+                $ref: ../schemas/history-m6.schema.json#/$defs/ExportJob
+        '200':
+          description: Preflight-complete small CSV stream; failure after headers aborts stream and is
+            not reported as a successful file. UTF-8 CSV quoting and spreadsheet-text sanitization required.
+            No DB transaction held for a slow client.
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: Attachment filename generated by server, no untrusted header text.
+            X-MaintAI-History-Snapshot:
+              schema:
+                type: string
+                minLength: 1
+          content:
+            text/csv:
+              schema:
+                type: string
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: ../schemas/runtime.schema.json#/$defs/ExportRequest
+              $ref: ../schemas/history-m6.schema.json#/$defs/ExportRequest
       security:
       - BearerAuth: []
+        HistoryDelegation: []
+      x-maintai-history-profile: M6-HISTORY-01/1.0.0
   /api/v1/internal/history-exports/{job_id}:
     get:
       operationId: internalGetHistoryExport
       summary: Read persisted export state
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented.'
+      description: M6-HISTORY-01/1.0.0; design only, no M6 runtime rollout. Read API uses SELECT-only
+        source pool plus a separate metadata writer pool for snapshots/jobs. Original outcomes stay in
+        PostgreSQL; no processed archive or source cleanup in M6. UTC microseconds; every page/job/download
+        rechecks current actor and machine scope. Require both service identity and verified Business
+        delegation; intersect delegated machines with service scope and bind snapshot/job to actor. Read
+        persisted job only; does not execute or retry export. Expiry revokes download without deleting
+        source outcomes.
       x-maintai-roles:
       - BUSINESS_SERVICE
       parameters:
-      - &id008
-        name: job_id
+      - name: job_id
         in: path
         required: true
-        schema: *id002
+        schema:
+          type: string
+          minLength: 1
+      - name: X-MaintAI-History-Profile
+        in: header
+        required: true
+        schema:
+          type: string
+          const: M6-HISTORY-01/1.0.0
+        description: Explicit opt-in; absent/other profile is rejected, never reinterpret a baseline cursor.
       responses:
         '400':
           description: Invalid request/cursor.
@@ -586,19 +741,39 @@ paths:
           content:
             application/json:
               schema:
-                $ref: ../schemas/runtime.schema.json#/$defs/ExportJob
+                $ref: ../schemas/history-m6.schema.json#/$defs/ExportJob
       security:
       - BearerAuth: []
+        HistoryDelegation: []
+      x-maintai-history-profile: M6-HISTORY-01/1.0.0
   /api/v1/internal/history-exports/{job_id}/download:
     get:
       operationId: internalDownloadHistoryExport
       summary: Authorize and redirect to a short-lived private download
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented.'
+      description: M6-HISTORY-01/1.0.0; design only, no M6 runtime rollout. Read API uses SELECT-only
+        source pool plus a separate metadata writer pool for snapshots/jobs. Original outcomes stay in
+        PostgreSQL; no processed archive or source cleanup in M6. UTC microseconds; every page/job/download
+        rechecks current actor and machine scope. Require both service identity and verified Business
+        delegation; intersect delegated machines with service scope and bind snapshot/job to actor. Check
+        owner/current scope/status/TTL and exact artifact reference before303 signed URL (<=5m), or200
+        authenticated proxy. Never forward Authorization/delegation to object storage. Download target
+        must be browser-reachable; no internal-only MinIO DNS. Artifact TTL24h; before success409, expired410.
       x-maintai-roles:
       - BUSINESS_SERVICE
       parameters:
-      - *id008
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+      - name: X-MaintAI-History-Profile
+        in: header
+        required: true
+        schema:
+          type: string
+          const: M6-HISTORY-01/1.0.0
+        description: Explicit opt-in; absent/other profile is rejected, never reinterpret a baseline cursor.
       responses:
         '400':
           description: Invalid request/cursor.
@@ -668,21 +843,34 @@ paths:
               schema:
                 type: string
                 format: uri
+        '200':
+          description: Authenticated proxy of a verified completed artifact; no redirects with service/browser
+            credentials to the object store.
+          content:
+            text/csv:
+              schema:
+                type: string
+            application/vnd.apache.parquet:
+              schema:
+                type: string
+                format: binary
       security:
       - BearerAuth: []
+        HistoryDelegation: []
+      x-maintai-history-profile: M6-HISTORY-01/1.0.0
   /api/v1/internal/sensor-events/{event_id}/status:
     get:
       operationId: internalGetEventStatus
       summary: Read persisted status
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented.'
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification
+        only; runtime not implemented.'
       x-maintai-roles:
       - BUSINESS_SERVICE
       parameters:
       - name: event_id
         in: path
         required: true
-        schema: &id009
+        schema: &id007
           type: string
           minLength: 1
       responses:
@@ -758,8 +946,8 @@ paths:
     get:
       operationId: internalGetValidWindow
       summary: Read stable VALID model/dataset-matched runtime window
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented.'
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification
+        only; runtime not implemented.'
       x-maintai-roles:
       - DRIFT_SERVICE
       - BUSINESS_SERVICE
@@ -767,15 +955,15 @@ paths:
       - name: model_version
         in: query
         required: true
-        schema: *id009
+        schema: *id007
       - name: dataset_version
         in: query
         required: true
-        schema: *id009
+        schema: *id007
       - name: before
         in: query
         required: false
-        schema: *id009
+        schema: *id007
       - name: limit
         in: query
         required: false
@@ -787,13 +975,13 @@ paths:
       - name: window_start
         in: query
         required: true
-        schema: &id010
+        schema: &id008
           type: string
           format: date-time
       - name: window_end
         in: query
         required: true
-        schema: *id010
+        schema: *id008
       responses:
         '400':
           description: Invalid request/cursor.
@@ -869,5 +1057,15 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    HistoryDelegation:
+      type: apiKey
+      in: header
+      name: X-MaintAI-History-Delegation
+      description: 'Business-signed RS256 JWT, not a browser token. Verify issuer/JWKS/kid, aud processing-history,
+        service azp binding, actor/roles/machines and lifetime<=60s. Shape: history-m6.schema.json#/$defs/DelegationClaims.
+        Never trust unsigned headers.'
 x-maintai-decisions: ../../../docs/api-contract-decisions.md
 x-maintai-source: System Contracts §34 / design amendment1.3.2
+externalDocs:
+  description: M6 history architecture and migration
+  url: ../../../docs/M6_HISTORY_ARCHITECTURE_DECISION.md

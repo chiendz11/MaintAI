@@ -464,3 +464,21 @@ về union2.0.0. Kafka và entrypoint ProcessingResult/history chỉ dùng schem
 Wrapper history giữ source_event_id và so với outcome.event_id. SSE result_kind
 là field riêng, không tự đổi cùng Kafka. Fleet lấy risk gốc từ projection;
 không có probability fallback hoặc hỗ trợ đọc/backfill legacy.
+
+
+## M6-HISTORY-01 — Versioned history profile
+
+[M6 architecture](M6_HISTORY_ARCHITECTURE_DECISION.md) ưu tiên PAGE-02/history
+clock/SELECT-only/export-writer kế thừa. M6 history/export dùng profile header và
+schema riêng, OpenAPI Business/Processing description2.0.0. M5 point/status/live/
+Alert DTO không đổi; Kafka bundle/runtime.schema.json immutable giữ nguyên.
+
+Processing completed_at (API processed_at) khác raw received_at; profile/cursor
+không chuyển latest ordering từ sequence sang time. Nullable time availability
+đi cùng explicit partition coverage; no unknown cutoff fabricated. Small CSV200
+hoặc durable202 theo preflight, không tự đổi mode sau khi đã gửi headers.
+
+Internal history cần cả service token và Business-signed delegation<=60s;
+actor/scope từ token đã kiểm chữ ký, không browser headers. Source ro pool không
+được ghi; metadata rw pool và leased runner trong Read API là phạm vi quyền riêng.
+Các operation khác giữ nguyên machine semantics trước thay đổi này.

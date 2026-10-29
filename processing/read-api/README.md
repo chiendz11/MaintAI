@@ -93,3 +93,11 @@ Không cần checkout để validate và không quét S3 hoặc giả archive co
 Processing reader role cần SELECT cả bốn bảng này; chạy owner grant helper hiện
 có, không cấp write hoặc credential DB cho Business. M5 không bật cleaner. Trước
 khi cleanup ở M6 phải bảo vệ evidence của signal còn backlog và có archive lookup.
+
+## Thiết kế M6, chưa bật trong runtime
+
+[M6-HISTORY-01](../../docs/M6_HISTORY_ARCHITECTURE_DECISION.md) dùng source SELECT-only
+pool hiện có và metadata writer pool riêng trong Read API. Export runner nằm ở
+Read API, không Worker. M6 giữ outcomes DB, processed archive/source deletion
+hoãn; câu chuẩn bị cleanup ở các mục cũ áp dụng cho pha retention sau M6.
+OpenAPI2.0.0/profile mới không chứng minh runtime hiện tại phục vụ history/export.

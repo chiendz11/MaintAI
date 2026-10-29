@@ -15,32 +15,32 @@
     {
       "path": "docs/README.md",
       "source_filename": "README.md",
-      "sha256": "8b32b0dcac9d7a5a4ca5e1674bc7a8c8484b935480845ae0606d3e2f1384f0c5",
+      "sha256": "6d650ffb0061de6822be8b361720f3241b72fb4d034a045312d5df0e0eaaf937",
       "upstream_sha256": "b8f3731050d7cba47d5eecebd8ecfa7457dc4a7c427e9f408a1a22dd89c9b0d7"
     },
     {
       "path": "docs/api-contract-decisions.md",
       "source_filename": "api-contract-decisions.md",
-      "sha256": "1931ba06482e02f2dcb2247e2651b4ccbfe0ea184d80a2883b7248479c0ae417",
+      "sha256": "5ac6837571bed1532f48f51f9010ad25f7089882e97d6f5d9c7e10d295cec499",
       "upstream_sha256": "153aea7b6f92e25fd11e9689092711f9806c59b0204099ae807e113fa830037b"
     },
     {
       "path": "docs/history-storage-contract.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "3667999d79778ed62be9d938cec675a668793126f7900f01fb532a249f182065"
+      "sha256": "656cf3732f00690bedf2ce4af50f8c20fce4e9aeca448c65324cc7229380b189"
     },
     {
       "path": "docs/recovery-jobs-operations.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "8a54bcac037227795f67605f2bdf0638ad8e7b2801f4bb164e2c62c3b89d6bd3"
+      "sha256": "68af059cade73c140197201842a8170c6b8785ccd58b1f925f63cf87f28ca1ac"
     },
     {
       "path": "docs/implementation-readiness.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "1cc468b8a51d216b9793d750dac1325b19e41e515c4853825b8f7fa0a8c26bf4"
+      "sha256": "8887837dd7da9befe0177173c3a1421effe954a59309ec1025ae58d767135dbd"
     },
     {
       "path": "docs/repository-layout.md",
@@ -84,7 +84,7 @@
       "imported_on": "2026-10-19",
       "source_document_revision": "1.4.0",
       "upstream_sha256": "c677d5a991814c37392d2bb9cfafd2ed86535fd01eb044c4f9a6e457069f9f55",
-      "sha256": "9c387f177e71b9722b973a8eb1de322bab0ce5afe0e5572bac2b8a891e840ce5"
+      "sha256": "39c74ad58e04d2ad109e4563a9e24c3e1e974fc65121446803be392f2766112e"
     },
     {
       "path": "docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md",
@@ -92,7 +92,7 @@
       "imported_on": "2026-10-19",
       "source_document_revision": "1.4.0",
       "upstream_sha256": "89f141f1a8695a7ce056a99512633ba7e2edd9f2311b7bf935ae94f2ecd6ffcc",
-      "sha256": "a090951b0df5e8e3e852a505220f6173107e9428dde5b65fff31847e82c6f2e3"
+      "sha256": "74e28a319ac590c75b8295ecc7fc49af060b0d703c2f35d846e2c6646b3c2bc1"
     },
     {
       "path": "docs/IMPLEMENTATION_PLAN.md",
@@ -259,6 +259,18 @@
       "path": "docs/M5_IMPLEMENTATION_REPORT.md",
       "sha256": "1f03f332be124ad7c674f1f925cd383cb5d2efec6373e2d9e2808bf44b9bb7c7",
       "decision_revision": "1.0.0"
+    },
+    {
+      "path": "docs/M6_HISTORY_ARCHITECTURE_DECISION.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "e8d314cdc409013a46325a60732c3adcfc79a69e7ed112b47945e36ce383c626"
+    },
+    {
+      "path": "docs/M6_RAW_ARCHIVE_HANDOFF.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "03b62dfcdeeb8436ba13ddb95c7c67868605921b2ca3ba559b3cdd8df6056d01"
     }
   ],
   "upstream_inherited_contract_revision": "1.3.1",

@@ -1,4 +1,6 @@
 > **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
+
+> **M6 override29/10/2026:** [M6-HISTORY-01](M6_HISTORY_ARCHITECTURE_DECISION.md) ưu tiên phần history/snapshot/export bên dưới: Read API ghi metadata qua pool riêng, runner export trong Read API; processed archive và source cleaner hoãn sau M6. Các thuật toán archive/retention bên dưới là thiết kế tương lai, không là task M6. Brief/recovery ngoài phạm vi này giữ nguyên.
 > durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
 > có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
 > [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và

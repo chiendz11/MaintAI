@@ -1,0 +1,11 @@
+{
+  "topic": "sensor.readings",
+  "partition": 0,
+  "start_offset": 0,
+  "archived_next_offset": 2,
+  "indexed_next_offset": 2,
+  "captured_log_end_offset": null,
+  "captured_at": null,
+  "gaps": [],
+  "status": "UNKNOWN"
+}

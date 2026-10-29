@@ -63,6 +63,13 @@ freeze schema/migration trước khi đổi producer hoặc consumer. Không t�
 
 ## Quyết định dự án còn hiệu lực
 
+- **M6-HISTORY-01,29/10:** [history architecture](M6_HISTORY_ARCHITECTURE_DECISION.md),
+  [raw catalog protocol](M6_RAW_ARCHIVE_HANDOFF.md), System §44/Guide §57 ưu tiên
+  history kế thừa. Read API có source-read/metadata-write pools và export runner;
+  processed archive/xóa source hoãn sau M6. OpenAPI Business/Processing2.0.0 mô tả
+  profile mới; M5 DTO/Kafka bundle không đổi, runtime M6 chưa triển khai.
+
+
 - **OUTCOME-14-ONLY,28/10:** Kafka reader/writer và HTTP/history outcome entrypoint
   chỉ dùng1.4.0. Business giữ risk_score do Processing phát; bỏ compatibility2.0
   và không backfill probability thành risk. SDK0.3.0/bundle2.0.0 giữ SQL001/002.

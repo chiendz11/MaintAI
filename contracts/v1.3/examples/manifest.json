@@ -348,6 +348,206 @@
       "file": "http/ingestion/m1-error-504.json",
       "schema": "../schemas/runtime.schema.json#/$defs/Error",
       "valid": true
+    },
+    {
+      "file": "m6/processing-page.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/HistoryPage",
+      "valid": true
+    },
+    {
+      "file": "m6/processing-empty.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/HistoryPage",
+      "valid": true
+    },
+    {
+      "file": "m6/invalid-record.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/HistoryRecord",
+      "valid": true
+    },
+    {
+      "file": "m6/unavailable-record.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/HistoryRecord",
+      "valid": true
+    },
+    {
+      "file": "m6/raw-entry.json",
+      "schema": "../schemas/raw-catalog-m6.schema.json#/$defs/Entry",
+      "valid": true
+    },
+    {
+      "file": "m6/raw-segment-duplicate-event.json",
+      "schema": "../schemas/raw-catalog-m6.schema.json#/$defs/Segment",
+      "valid": true
+    },
+    {
+      "file": "m6/rejected-entry.json",
+      "schema": "../schemas/raw-catalog-m6.schema.json#/$defs/Entry",
+      "valid": true
+    },
+    {
+      "file": "m6/poison-entry.json",
+      "schema": "../schemas/raw-catalog-m6.schema.json#/$defs/Entry",
+      "valid": true
+    },
+    {
+      "file": "m6/catalog-generation.json",
+      "schema": "../schemas/raw-catalog-m6.schema.json#/$defs/Generation",
+      "valid": true
+    },
+    {
+      "file": "m6/catalog-pointer.json",
+      "schema": "../schemas/raw-catalog-m6.schema.json#/$defs/Pointer",
+      "valid": true
+    },
+    {
+      "file": "m6/partition-lagging.json",
+      "schema": "../schemas/raw-catalog-m6.schema.json#/$defs/PartitionCoverage",
+      "valid": true
+    },
+    {
+      "file": "m6/partition-gap.json",
+      "schema": "../schemas/raw-catalog-m6.schema.json#/$defs/PartitionCoverage",
+      "valid": true
+    },
+    {
+      "file": "m6/partition-unknown.json",
+      "schema": "../schemas/raw-catalog-m6.schema.json#/$defs/PartitionCoverage",
+      "valid": true
+    },
+    {
+      "file": "m6/raw-page-offset-coverage.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/RawHistoryPage",
+      "valid": true
+    },
+    {
+      "file": "m6/processing-chart.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/TimeSeriesPage",
+      "valid": true
+    },
+    {
+      "file": "m6/raw-chart.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/TimeSeriesPage",
+      "valid": true
+    },
+    {
+      "file": "m6/export-request.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/ExportRequest",
+      "valid": true
+    },
+    {
+      "file": "m6/export-queued.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/ExportJob",
+      "valid": true
+    },
+    {
+      "file": "m6/export-succeeded.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/ExportJob",
+      "valid": true
+    },
+    {
+      "file": "m6/delegation-claims.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/DelegationClaims",
+      "valid": true
+    },
+    {
+      "file": "m6/negative-old-page.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/HistoryPage",
+      "valid": false
+    },
+    {
+      "file": "m6/negative-processed-archive.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/HistoryPage",
+      "valid": false
+    },
+    {
+      "file": "m6/negative-missing-processed-at.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/HistoryPage",
+      "valid": false
+    },
+    {
+      "file": "m6/negative-invalid-outcome-with-risk.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/HistoryRecord",
+      "valid": false
+    },
+    {
+      "file": "m6/negative-reversed-range.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/ExportRequest",
+      "valid": false
+    },
+    {
+      "file": "m6/negative-raw-processing-filter.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/ExportRequest",
+      "valid": false
+    },
+    {
+      "file": "m6/negative-expired-snapshot.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/HistoryPage",
+      "valid": false
+    },
+    {
+      "file": "m6/negative-clock-mismatch.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/TimeSeriesPage",
+      "valid": false
+    },
+    {
+      "file": "m6/negative-job-missing-artifact.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/ExportJob",
+      "valid": false
+    },
+    {
+      "file": "m6/negative-raw-incomplete.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/RawHistoryPage",
+      "valid": false
+    },
+    {
+      "file": "m6/negative-frontier-order.json",
+      "schema": "../schemas/raw-catalog-m6.schema.json#/$defs/PartitionCoverage",
+      "valid": false
+    },
+    {
+      "file": "m6/negative-empty-gap.json",
+      "schema": "../schemas/raw-catalog-m6.schema.json#/$defs/PartitionCoverage",
+      "valid": false
+    },
+    {
+      "file": "m6/negative-complete-with-gap.json",
+      "schema": "../schemas/raw-catalog-m6.schema.json#/$defs/PartitionCoverage",
+      "valid": false
+    },
+    {
+      "file": "m6/negative-duplicate-partition.json",
+      "schema": "../schemas/raw-catalog-m6.schema.json#/$defs/Generation",
+      "valid": false
+    },
+    {
+      "file": "m6/negative-duplicate-receipt.json",
+      "schema": "../schemas/raw-catalog-m6.schema.json#/$defs/Segment",
+      "valid": false
+    },
+    {
+      "file": "m6/negative-receipt-identity.json",
+      "schema": "../schemas/raw-catalog-m6.schema.json#/$defs/Entry",
+      "valid": false
+    },
+    {
+      "file": "m6/negative-unversioned-ref.json",
+      "schema": "../schemas/raw-catalog-m6.schema.json#/$defs/Entry",
+      "valid": false
+    },
+    {
+      "file": "m6/negative-delegation-lifetime.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/DelegationClaims",
+      "valid": false
+    },
+    {
+      "file": "m6/negative-page-duplicate-partition.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/RawHistoryPage",
+      "valid": false
+    },
+    {
+      "file": "m6/negative-chart-duplicate-partition.json",
+      "schema": "../schemas/history-m6.schema.json#/$defs/TimeSeriesPage",
+      "valid": false
     }
   ]
 }

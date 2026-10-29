@@ -2935,3 +2935,29 @@ không thay schema,topic,SQL migrations,SDK defaults hoặc actual deployments.
 Chi tiết, phép tính và quy trìnhX>100: [Design basis revision1.1](design-basis/README.md),
 [Capacity §11](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).
 Smoke5 máy vẫn dùng phát triển nhỏ; source default5 không tự đổi trong lượt docs.
+
+
+# 44. M6-HISTORY-01 — History, snapshots và exports (29/10/2026)
+
+[M6 History architecture](M6_HISTORY_ARCHITECTURE_DECISION.md) và
+[Raw catalog protocol](M6_RAW_ARCHIVE_HANDOFF.md) ưu tiên các đoạn history mâu thuẫn
+trong §36, HISTORY-01, Guide và metadata kế thừa. Outcomes được giữ trong
+processing_db; processed archive/cold outcome fallback và xóa source data hoãn
+sau M6. Raw archive vẫn thuộc Storage; Kafka SDK/bundle/raw-manifest không đổi.
+
+Read API giữ processing_ro SELECT-only và có pool/credential metadata riêng cho
+snapshots/catalog index/jobs. Export leased runner nằm trong Read API, không
+Worker/Deployment mới. Không cấp quyền ghi source/outcome/risk/inbox/outbox cho
+metadata role. Owner migrations/grants tách runtime startup.
+
+Processing history sort completed_at/result_id (API processed_at); raw sort
+received_at/topic/partition/offset. UTC, from inclusive/to exclusive, snapshot10m,
+page100/max500, interactive31d/100000 IDs. Latest/SSE vẫn theo sequence. Raw time
+coverage có thể null cùng explicit partition coverage, không được bịa watermark.
+
+OpenAPI Business/Processing description2.0.0 freeze profile M6-HISTORY-01/1.0.0;
+M6 schemas riêng, M5 point-read/status/live/alerts giữ DTO hiện có. Header profile
+bắt buộc cho history/export, không diễn giải lại old cursors. Business gửi service
+token cùng JWT ủy quyền actor/scope ngắn hạn có chữ ký; chi tiết ở đặc tả M6.
+Small CSV200 phải preflight toàn bộ bounded snapshot; otherwise job202 sau commit;
+Parquet luôn job. Version/schema/design không là bằng chứng runtime đã rollout.

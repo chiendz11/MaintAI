@@ -7,8 +7,8 @@ hoặc deploy chỉ bằng các spec này.
 
 ## Versions và precedence
 
-Ingestion M1 có additive HTTP revision1.4.0 (health/metrics/errors); năm OpenAPI
-khác giữ1.3.2. Shared DTOs và Kafka bundle không tự bump theo revision này.
+Ingestion M1 có additive HTTP revision1.4.0 (health/metrics/errors). Business và
+Processing description2.0.0 freeze history profile M6; ba OpenAPI khác giữ1.3.2. Shared DTOs và Kafka bundle không tự bump theo revision này.
 
 Target docs mới là v1.4; xem [docs index](../../docs/README.md) và
 [readiness](../../docs/implementation-readiness.md). Bộ này giữ baseline1.3.2 cho
@@ -51,8 +51,18 @@ Dùng dependency lock hiện có `contracts/requirements.lock`:
 
 Validator kiểm tra schema/OpenAPI, local references, HTTP examples/defaults, SSE,
 auth boundary, fixture outcomes và lineage/threshold/citation/drift semantics.
-Mọi JSON example phải được một OpenAPI hoặc fixture manifest kiểm tra; local refs
-không được thoát khỏi bundle này. Không cần Docker/DB/network. Những
+Mọi JSON example phải được một OpenAPI hoặc fixture manifest kiểm tra; local refs nằm trong contracts/ và được kiểm offline cùng canonical Kafka refs. Không cần Docker/DB/network. Những
 invariant transaction, state transition, snapshot pins, query budgets, coverage,
 authorization enforcement và performance cần tests runtime khi implementation.
 CI job `api-contracts` chạy trực tiếp validator này; `CI / required` vẫn tổng hợp job đó.
+
+## M6-HISTORY-01/1.0.0
+
+- Schemas: [History](schemas/history-m6.schema.json), [Raw catalog](schemas/raw-catalog-m6.schema.json).
+- Fixtures: [examples/m6](examples/m6/), được đăng ký trong examples/manifest.json.
+- Target history/export bắt buộc profile header; internal routes cần service token
+  và JWT ủy quyền do Business ký. Không đổi DTO/status/evidence M5 hiện hành.
+- CSV nhỏ200 sau preflight hoặc job202 sau durable commit; schema/version không
+  tự bật metadata pool, runner hoặc Storage catalog provider.
+- Kafka bundle2.0.0/runtime.schema.json giữ nguyên; không bump version toàn bộ
+  thư mục chỉ vì revision OpenAPI của hai provider thay đổi.

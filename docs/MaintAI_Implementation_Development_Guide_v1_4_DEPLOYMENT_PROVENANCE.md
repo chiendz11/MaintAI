@@ -3639,3 +3639,28 @@ Trước rollout cần kiểm kê Kafka/outbox/projection cũ. Với môi trư�
 khởi tạo cô lập và phát readings mới; không mặc định reset một group/DB đang hoạt
 động. Với dữ liệu cần giữ, cutover phải có kế hoạch riêng. Thay đổi source không
 chứng minh đã migrate data, chạy Docker/DB, nối Alert provider hoặc nghiệm thu E2E.
+
+
+# 57. M6-HISTORY-01 — History và export trong Read API
+
+Đọc [System Contracts §44](MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md#44-m6-history-01--history-snapshots-và-exports-29102026),
+[M6 architecture](M6_HISTORY_ARCHITECTURE_DECISION.md) và [raw catalog](M6_RAW_ARCHIVE_HANDOFF.md).
+Phần này thay hướng maintenance/archive/export trong Worker của thiết kế kế thừa
+cho phạm vi M6. Không triển khai processed archive hoặc cleaner source trong M6.
+
+Triển khai owner metadata migrations và source-read/metadata-write pools riêng;
+materialize snapshot membership/pins không giữ SQL transaction trong TTL. Catalog
+sync và leased export runner nằm trong Read API, bounded concurrency1/replica,
+claim bằng SKIP LOCKED, completion fencing/CAS, network ngoài locks. Không thêm
+workload/DB/queue. SQL source role và M5 evidence vẫn chỉ đọc.
+
+Business kiểm user scope, ký delegation RS256<=60s kèm service token; Read API
+verify issuer/JWKS/aud/azp/expiry và intersect scopes, không forward browser token.
+Cursor binds profile/query/actor/scope/snapshot/clock/key version/TTL. Chưa có
+object store/catalog thì raw hoặc artifact jobs unavailable, DB outcomes/small CSV
+có thể dùng độc lập. Không fake COMPLETE hoặc empty200.
+
+UI chỉ gọi Business, phân biệt source time/processed time, buckets và markers.
+Machine schemas2.0.0 của M6 không đổi Kafka outcome1.4.0; baseline runtime.schema
+được SDK khóa giữ nguyên. MinIO versioning/catalog thật cần kiểm riêng; fixtures
+và offline validator không chứng minh pipeline hay deployment.
