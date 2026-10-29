@@ -25,13 +25,15 @@ class PostgresVectorStore:
         if not np.all(np.isfinite(values)):
             raise ValueError("Embedding chứa giá trị không hợp lệ")
         return "[" + ",".join(map(str, values.tolist())) + "]"
-    def add(self, documents, embeddings):
+    def add(self, documents, embeddings) -> int:
         if len(documents) != len(embeddings):
-            raise ValueError(
-                "Số documents và embeddings không khớp"
-            )
+            raise ValueError("Documents and embeddings count mismatch")
+
         if not documents:
-            return
+            return 0
+
+        inserted = 0
+
         with psycopg.connect(self.connection_string) as conn:
             with conn.cursor() as cursor:
                 for doc, vector in zip(documents, embeddings):
@@ -40,17 +42,22 @@ class PostgresVectorStore:
                         INSERT INTO knowledge_chunks
                             (content, embedding, metadata)
                         VALUES (%s, %s::vector, %s::jsonb)
+                        ON CONFLICT DO NOTHING
                         """,
                         (
                             doc.page_content,
                             self._vector_to_string(vector),
-                            json.dumps(
-                                doc.metadata,
-                                ensure_ascii=False
-                            )
-                        )
+                            json.dumps(doc.metadata, ensure_ascii=False),
+                        ),
                     )
-        print(f"Đã lưu {len(documents)} đoạn vào PostgreSQL")
+                    inserted += cursor.rowcount
+
+        print(
+            f"Inserted {inserted}/{len(documents)} chunks; "
+            f"skipped {len(documents) - inserted} duplicates"
+        )
+        return inserted
+
     def search(
         self,
         query_embedding,

@@ -10,7 +10,7 @@ def main():
     url = os.getenv('DATABASE_URL')
     if not url:
         raise SystemExit('DATABASE_URL is required')
-    sql = (Path(__file__).parent / 'init.sql').read_text(encoding='utf-8')
+    sql = (Path(__file__).parent / 'init.sql').read_text(encoding='utf-8-sig')
     with psycopg.connect(url) as conn:
         with conn.cursor() as cur:
             cur.execute(sql)

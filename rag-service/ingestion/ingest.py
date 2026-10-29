@@ -68,6 +68,9 @@ def ingest(
         print("Không có chunk nào được tạo.")
         return 0
 
+    for index, doc in enumerate(documents):
+        doc.metadata["chunk_index"] = index
+
     # 5. Validate metadata trước khi lưu
     required_fields = (
         "document_id",
@@ -120,7 +123,7 @@ def ingest(
         )
 
     # 7. Lưu PostgreSQL
-    store.add(documents, embeddings)
+    inserted = store.add(documents, embeddings)
 
     print(
         f"Ingest thành công {len(documents)} chunks "
@@ -128,7 +131,7 @@ def ingest(
         f"phiên bản {document_version}."
     )
 
-    return len(documents)
+    return inserted
 
 
 if __name__ == "__main__":

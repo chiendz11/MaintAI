@@ -1,31 +1,59 @@
-{
-  "descriptor_kind": "MaintAIRuntime",
-  "schema_version": "1.0.0",
-  "target_contract_revision": "1.3.2",
-  "runtime_id": "rag-service",
-  "workload_kind": "Deployment",
-  "code_owner": "knowledge",
-  "implementation_status": "skeleton",
-  "image_group": "rag-service",
-  "image_digest": null,
-  "entrypoint_status": "not_implemented_for_v1.3.2",
-  "purpose": "Retrieval/LLM/citation validation và knowledge ingestion modules ngoài critical alert path.",
-  "source_paths": [
-    "rag-service"
-  ],
-  "logical_database": "knowledge_db",
-  "kafka_subscriptions": [],
-  "kafka_publications": [],
-  "interfaces": [
-    "Business RAG client",
-    "S3 manuals",
-    "LLM/embedding provider"
-  ],
-  "boundaries": [
-    "knowledge_db có pgvector; Business chỉ giữ brief/business references, không SQL JOIN qua DB.",
-    "Ingestion/evaluation trong codebase này là module, chưa được khai báo thành deployment khác."
-  ],
-  "dockerfile": "rag-service/Dockerfile",
-  "dockerfile_status": "placeholder",
-  "implemented_contract_revision": null
+﻿{
+  "service": "maintai-rag",
+  "version": "1.4.0",
+  "runtime": {
+    "language": "python",
+    "python_version": "3.11",
+    "framework": "fastapi",
+    "entrypoint": "main:app",
+    "command": [
+      "uvicorn",
+      "main:app",
+      "--host",
+      "0.0.0.0",
+      "--port",
+      "8002"
+    ],
+    "port": 8002
+  },
+  "container": {
+    "dockerfile": "rag-service/Dockerfile",
+    "build_context": ".",
+    "image": "maintai-rag:pr14"
+  },
+  "health": {
+    "liveness": "/health/live",
+    "readiness": "/health/ready"
+  },
+  "dependencies": {
+    "database": "postgresql-pgvector",
+    "llm_provider": "ollama",
+    "embedding": "sentence-transformers"
+  },
+  "environment": {
+    "required": [
+      "DATABASE_URL",
+      "OLLAMA_BASE_URL",
+      "OLLAMA_MODEL",
+      "EMBEDDING_MODEL"
+    ],
+    "optional": {
+      "OLLAMA_TIMEOUT": "120",
+      "HF_HOME": "/opt/maintai/model-cache",
+      "SENTENCE_TRANSFORMERS_HOME": "/opt/maintai/model-cache",
+      "MODEL_LOCAL_FILES_ONLY": "true"
+    }
+  },
+  "commands": {
+    "migration": "python -m migrations.cli up",
+    "ingestion": "python -m ingestion.cli --pdf <path> --document-id <id> --version <version> --section <section>",
+    "embedding_preparation": "python -m ingestion.prepare_embedding"
+  },
+  "deployment": {
+    "platform": "kubernetes",
+    "local_cluster": "k3d",
+    "manifest_directory": "rag-service/k8s",
+    "ollama_location": "host-laptop",
+    "ollama_endpoint": "http://host.k3d.internal:11434"
+  }
 }
