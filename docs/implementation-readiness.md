@@ -29,8 +29,8 @@ tạo branch, CURRENT_STATE, migration, test/build/deploy trong đó không ph�
 | --- | --- |
 | Terminal result union | OUTCOME-14-ONLY: Kafka/HTTP/history dùng outcome1.4.0; bỏ reader2.0, cutover dữ liệu riêng |
 | Simulator UI | Frontend riêng -> Sensor; Main UI -> Business; không Business control facade |
-| History | Processing Read API thống nhất hot DB + S3; HISTORY-01 |
-| Prediction archive | Processing-owned DB batch export; verified membership trước cleanup |
+| History | M6-HISTORY-01: outcomes DB + raw S3/MinIO catalog; Read API snapshot/export |
+| Prediction archive | Hoãn sau M6; giữ original outcomes DB, không cleanup thật |
 | Chart | Numeric allowlist, min/max/avg/count, bounded points, lineage markers |
 | Brief executor | Durable business jobs + leased runner trong Consumer |
 | Drift UI bridge | Versioned S3 report manifests -> Business metadata catalog |
@@ -66,8 +66,9 @@ validate; các invariant transaction/cursor/authorization cần runtime tests ri
    -> latest projection -> REST/SSE; event-time/source ordering đúng.
 3. **Business correctness:** alert inbox/lifecycle/audit/feedback, OIDC và scoped
    authorization; RAG unavailable không chặn alert.
-4. **History/archive:** point/range APIs, DB snapshots, Parquet+manifest batch,
-   coverage verification, hot cleanup pins, query/export UI.
+4. **M6 History:** point/range/chart, bounded snapshots, durable CSV/Parquet export
+   trong Read API; raw catalog/coverage từ Storage. Processed archive hoãn, cleanup
+   source data tắt; metadata SQL/grants và provider/UI cần implement.
 5. **Jobs/Drift/control:** durable briefs/export, drift catalog bridge, Sensor
    controller fencing/state persistence và Simulator UI riêng.
 6. **Recovery/rollout:** consumer crash/rebalance, projection rebuild, schema
@@ -149,10 +150,10 @@ Báo cáo dependency/giữ-xóa:
 | --- | --- | --- |
 | Quarantine | `contracts/kafka/` có rejected1.4 HASH_ONLY; SDK auth identity/size/envelope boundary, ACK trước400/422; Storage0.1.0 có rejected runtime/probes; GitOps topic/ACL | Ingestion HTTP auth/runtime, real broker/S3 integration; không lưu unauthorized/oversized body |
 | Outcome wire | Canonical reader/writer1.4.0/kind; bỏ reader2.0.0 theo OUTCOME-14-ONLY; source/DQ/model/risk lineage schema+fixtures | Owner callbacks/provider DTOs, consumer-first rollout; chưa có cutover/deployment; baseline vẫn nguyên vẹn |
-| History cursor | System §36 ghi received_at/event_id; Plan §C/§E và Dataflow dùng accepted-time ordering; baseline có opaque snapshot cursor | Chốt canonical timestamp/cursor, stable pagination, API filters/indexes và khả năng tương thích |
-| Read API read-only | v1.4 yêu cầu role `processing_ro`; thiết kế snapshot/export cũ có durable write state | Giữ Read API SELECT-only; bố trí owner writer/maintenance cho snapshot/export trước khi implement |
-| Hot/cold/archive | Chi tiết HISTORY-01 giữ original outcomes và coverage; v1.4 cho phép optional outcome archive qua Storage | Chọn writer/membership/manifest contract tương thích; không làm mất bằng chứng gốc hoặc cleanup chưa verify |
-| Retention | HISTORY-01 có profile30d/365d; provenance v1.4 chưa chốt thời hạn cụ thể | Các con số cũ là tham khảo, owner phê duyệt theo dữ liệu/ngân sách trước khi bật cleanup |
+| History cursor | Đã chốt M6-HISTORY-01: processed_at/result_id; raw received_at/Kafka locator; snapshot cursor | Người1 version OpenAPI/schema/provider/UI/index; không âm thầm đổi before/event_id baseline |
+| Read API writer | Đã chốt: pool processing_ro cho original, pool metadata RW quyền hẹp; snapshot/export runner trong Read API | Implement owner migration/grants/lease/retry; không viết outcomes/outbox hoặc thêm processing-maintenance |
+| Raw catalog/archive | M6-RAW-01 đã chốt logical catalog/coverage; Storage0.1.0 mới có raw object/manifest | Storage0.2.0 đã có publisher/reconciliation/schema/fixtures; Người1 reader/index; processed archive hoãn |
+| Retention | M6 chốt không xóa source data; cleaner dry-run, profile30d/365d chưa bật | Chưa có processed archive thì không cleanup outcomes; policy/capacity/pins/holds cần phê duyệt sau |
 | Release/provenance | Mới có Markdown yêu cầu dataset/split/model/image/policy/document digests | Bổ sung schemas/examples/manifests, MLflow metadata, provider DTOs, migration và CI gates bằng bằng chứng thật |
 | Simulator UI | React demo/live client0.1.0, OIDC/recovery/build/descriptor riêng | Provider/browser HTTP đã test; production IdP, container build và rollout chưa verify |
 | Deployment inventory | App có14 descriptors baseline1.3.2, gồm Simulator UI; bảng v1.4 còn liệt kê MLflow platform | Phân biệt app/platform; không coi source/descriptor là deployment |
@@ -460,3 +461,35 @@ snapshots. Fleet/Detail đã có nguồn Alert thật; Main UI có Alert list/de
 [Report](M5_IMPLEMENTATION_REPORT.md) ưu tiên các mô tả inherited còn ghi hai loops,
 Frontend skeleton hoặc thiếu Alert source. Shared providers/production/load acceptance
 không tự hoàn tất. M6/M7/M8 giữ phạm vi riêng; không bật archive cleaner trong M5.
+
+## 25. M6-HISTORY-01 — Design freeze29/10/2026
+
+[M6-HISTORY-01](M6_HISTORY_ARCHITECTURE_DECISION.md) và
+[M6-RAW-01](M6_RAW_ARCHIVE_HANDOFF.md) chốt ownership, clocks/cursor, scoped writer,
+raw coverage và hai mức demo. Không thêm runtime; không processed archive/cleanup
+M6. Các dòng §1/§10 đã đồng bộ, không còn chờ quyết định SELECT-only/writer.
+
+| Deliverable | Trạng thái sau lượt docs | Người phụ trách |
+| --- | --- | --- |
+| Thiết kế M6 | Đã chốt revision1.0.0 theo yêu cầu chủ dự án | Nhóm |
+| OpenAPI/schema/cursor + history_meta grants/migration | Chưa triển khai bởi lượt docs | Người1 |
+| DB history/chart/snapshot/CSV nhỏ/durable exports | Còn triển khai sau status/hot evidence M5 | Người1 |
+| Raw object + manifest | Đã có source Storage0.1.0; không tự thay receipt protocol | Chiến/Người4 |
+| Catalog publisher/coverage/reconciliation + schema/fixtures | Storage0.2.0 có source/schema/examples/CLI/CI; xem report riêng | Chiến/Người4 |
+| MinIO local policies/secrets + metadata DB role | Platform source có MinIO; M6 grants/config chưa đồng bộ | Chiến + Người1 |
+| DB-only hoặc full M6 provider/K8s demo | Chưa chạy trong lượt docs; không cần AWS | Nhóm |
+
+Giữ nguyên source/M5 guards và baseline machine bundle. Các historical snapshots
+ở các mục trước đọc theo ngày; không dùng câu chữ legacy hot/archive để bật
+processed archive, Worker maintenance hoặc cleanup ngoài phạm vi đã chốt.
+
+
+## 26. Storage catalog0.2.0 — Source bàn giao M6
+
+[Report](STORAGE_CATALOG_IMPLEMENTATION_REPORT.md) ghi commands/tests/CI và giới hạn;
+[Reader Guide](../storage-consumer/M6_READER_GUIDE.md) là điểm bắt đầu cho Người1.
+Có raw catalog protocol1.0.0, bounded immutable generations/segments/CAS pointer,
+read-only Kafka audit, safe coverage, explicit S3 rebuild và local Compose harness.
+Không sửa Kafka bundle/SQL, không làm SQL metadata hoặc History HTTP/UI của M6.
+Platform k3d grants/image/env/policies cần đồng bộ trước full-system demo; source
+component/CI không là bằng chứng Argo đã sync hoặc app pipeline đã được deploy.

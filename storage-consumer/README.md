@@ -16,7 +16,7 @@ Dùng `maintai-messaging[s3]==0.3.0` và [Kafka bundle2.0.0](../contracts/kafka/
 accepted1.3.0, rejected1.4.0, optional outcome1.4.0. Archive giữ nguyên bytes,
 kể cả event sai/cũ; không decode legacy thành kết quả nghiệp vụ. Xem
 [OUTCOME-14-ONLY](../docs/OUTCOME_V1_4_MIGRATION.md).
-Package0.1.0, raw frame/manifest1.0.0, target docs1.4.0 là các version độc lập.
+Package0.2.0, raw frame/manifest1.0.0, target docs1.4.0 là các version độc lập.
 Không đổi wire schemas để triển khai runtime.
 
 Storage không chạy DQ/ML/risk, tạo Alert, SQL vào DB owner khác hoặc tự kích hoạt
@@ -216,3 +216,25 @@ Test tạo bucket versioned ngẫu nhiên + group prefix riêng, kiểm wire/has
 và offsets, xóa fixture bucket ở finally; không xóa topics. SDK bootstrap có thể
 tạo4 topics với12 partitions nên phải dùng broker test riêng. Không trỏ vào AWS,
 production/shared bucket. Runtime không có quyền create/delete của test harness.
+
+## M6-RAW-01 — Bàn giao của Chiến/Người4 cho History
+
+Contract đã chốt29/10 tại [M6 Raw Archive Handoff](../docs/M6_RAW_ARCHIVE_HANDOFF.md),
+[kiến trúc M6](../docs/M6_HISTORY_ARCHITECTURE_DECISION.md). Source0.2.0 đã bổ sung catalog/audit/coverage/rebuild và reader helper; source0.1.0
+giữ nguyên raw object/manifest. Xem [Reader Guide](M6_READER_GUIDE.md) và
+[local demo](local/README.md).
+Catalog cung cấp immutable generations/segments, per-partition safe frontiers,
+lag/gap states và reconciliation sau raw commit; reader không scan bucket mỗi query.
+
+Giữ raw-manifest1.0.0/microbatch1/SDK0.3.0 và deterministic Kafka receipt identity.
+Catalog là protocol riêng; không sửa frozen wire/SQL. Không cấp processing_db hoặc
+business_db credential cho Storage, không processed archive/cleanup M6. Optional
+STORAGE_ARCHIVE_OUTCOMES giữ tắt cho M6; capability cũ không là processed history.
+
+Chiến có thể cung cấp schema/fixtures trước để Người1 làm reader/UI song song.
+Full demo dùng MinIO local versioning và policies riêng, chưa cần AWS S3; vẫn phải
+upload raw/manifest/catalog lên MinIO. Nếu chưa có object store/catalog, chỉ demo
+outcomes history/CSV nhỏ từ DB, không giả raw history empty hoặc COMPLETE.
+Runtime catalog và schemas đã có source; SQL grants/Read API M6/platform k3d chưa
+được implement bởi phần Storage này. Bằng chứng kiểm tra ở
+[implementation report](../docs/STORAGE_CATALOG_IMPLEMENTATION_REPORT.md).

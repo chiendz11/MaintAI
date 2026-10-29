@@ -3,7 +3,7 @@
 | Runtime folder | Workload | Trách nhiệm |
 | --- | --- | --- |
 | [`worker/`](worker/Dockerfile) | Deployment `processing-worker` | Kafka → DQ → ML → risk; persist history/outbox. |
-| [`read-api/`](read-api/Dockerfile) | Deployment `processing-read-api` | API nội bộ cho status/history/VALID windows. |
+| [`read-api/`](read-api/Dockerfile) | Deployment `processing-read-api` | Status/history/chart; M6 snapshot/export runner và metadata writer quyền hẹp. |
 | [`outbox-relay/`](outbox-relay/Dockerfile) | Deployment `processing-outbox-relay` | Durable outbox → Kafka `inference.results` và `alert.signals`. |
 | `shared/` | Không phải deployment | data_quality, inference_client, risk_engine, events, ordering, outbox và persistence. |
 | `migrations/` | Không phải deployment | Schema `processing_db`, một owner cho cả ba runtime. |
@@ -49,3 +49,14 @@ ghi rõ explicit001/002 + activation sau drain. Initial legacy inbox cần revie
 cursor bootstrap; không xóa inbox để bật mode. [Read API](read-api/README.md) đã có
 internal status SELECT-only; history/chart/archive/export chưa triển khai;
 scheduler/coordinator không là deployment thứ tư.
+
+
+## M6-HISTORY-01 — Phạm vi đã chốt29/10
+
+[Decision](../docs/M6_HISTORY_ARCHITECTURE_DECISION.md): ba runtime giữ nguyên;
+Worker chỉ realtime, Read API sở hữu snapshot/export + bounded durable runner,
+Relay giữ outbox. Read API SELECT original data và ghi history_meta bằng pool riêng;
+không cấp write outcome/outbox. Kết quả giữ processing_db, raw dùng S3/MinIO catalog
+[M6-RAW-01](../docs/M6_RAW_ARCHIVE_HANDOFF.md). Không processed archive, Worker
+maintenance hoặc cleanup thật M6. Các đoạn source snapshot phía trên không là
+bằng chứng M6 đã triển khai; xem implemented_scope trong từng runtime descriptor.

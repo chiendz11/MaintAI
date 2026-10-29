@@ -16,8 +16,8 @@ from pathlib import Path
 
 DIRECTORY = Path(__file__).resolve().parent
 REPOSITORY = DIRECTORY.parent.parent
-REVISION = "1.2.0"
-AS_OF = "2026-10-23"
+REVISION = "1.3.0"
+AS_OF = "2026-10-29"
 DIAGRAMS = (
     ("01-use-case", "1 · Use Case", "Vai trò, chức năng và ranh giới của bốn UI."),
     (
@@ -46,6 +46,8 @@ REFERENCES = (
     "docs/UI_ARCHITECTURE.md",
     "docs/implementation-readiness.md",
     "docs/KAFKA_DEVELOPMENT_GUIDE.md",
+    "docs/M6_HISTORY_ARCHITECTURE_DECISION.md",
+    "docs/M6_RAW_ARCHIVE_HANDOFF.md",
     "docs/PROCESSING_CONCURRENCY_AND_ORDERING.md",
     "docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md",
     "architecture/runtime-map.json",

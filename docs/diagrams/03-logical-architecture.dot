@@ -17,7 +17,7 @@ digraph LogicalArchitecture {
   sensor [label="Sensor backend · CÓ CODE\nControl API + scheduler\nAI4I → state/spool → sender", fillcolor="#e2f4eb", color="#70ac92"];
   ingestion [label="Ingestion API · KHUNG\nAuth/envelope → Kafka ACK\nGateway adapter đã có trong SDK"];
   kafka [shape=box3d, fillcolor="#e7eef9", label="Kafka · platform\nsensor.readings / sensor.rejected\ninference.results / alert.signals"];
-  storage [label="Storage Consumer · CÓ CODE\nraw-archive / rejected archive\noptional outcome archive", fillcolor="#e2f4eb", color="#70ac92"];
+  storage [label="Storage Consumer · CÓ CODE\nraw-archive / rejected archive\nCatalog / coverage: source0.2.0", fillcolor="#e2f4eb", color="#70ac92"];
 
   subgraph cluster_processing {
     label="PROCESSING OWNER · CÙNG CODEBASE / IMAGE GROUP";
@@ -31,12 +31,12 @@ digraph LogicalArchitecture {
       keyed -> worker [label="1 active task / máy"];
     }
     relay [label="Outbox Relay · SDK CÓ CODE\nHead-of-key / dispatch cursor\nTopic + machine ordering\nWrapper có · image/health pending"];
-    read_api [label="Processing Read API · KHUNG\nStatus / history / chart\nVALID windows · quyền đọc"];
+    read_api [label="Processing Read API · M6 TARGET\nStatus / evidence có code\nHistory / snapshot / export"];
     pdb [shape=cylinder, fillcolor="#fff0ce", label="processing_db\nInbox + outcomes/history + outbox"];
     worker -> pdb [label="transaction"];
     pdb -> coordinator [label="durable completion", constraint=false];
     relay -> pdb [label="claim / mark outbox", dir=both];
-    read_api -> pdb [label="SELECT"];
+    read_api -> pdb [label="SELECT original / metadata RW"];
   }
   subgraph cluster_business {
     label="BUSINESS OWNER · CÙNG CODEBASE / IMAGE GROUP";
@@ -54,7 +54,7 @@ digraph LogicalArchitecture {
   llm [shape=hexagon, fillcolor="#f1edf9", label="LLM / embedding provider\nTheo cấu hình RAG"];
   drift [label="Drift Worker · CODE MỘT PHẦN\nBatch theo lịch + matching reference\nKhông tự retrain / đổi risk", fillcolor="#fff0d9", color="#c6a269"];
   ddb [shape=cylinder, fillcolor="#fff0ce", label="drift_db\nReports + checkpoints"];
-  s3 [shape=folder, fillcolor="#edf2f6", label="S3 / MinIO · logical object groups\nRaw accepted / rejected\nProcessed archive / reports\nApproved data / model / manuals"];
+  s3 [shape=folder, fillcolor="#edf2f6", label="S3 / MinIO · logical object groups\nRaw accepted / rejected\nCatalog / exports / reports\nApproved data / model / manuals"];
   training [label="Training pipeline · KHUNG\nApproved dataset → train/evaluate\nModel + preprocessing + drift reference\nImage riêng với inference"];
   mlflow [label="MLflow Server + UI · platform\nImage source: ml-service/mlflow/\nCode đóng gói có; pins chưa chốt", fillcolor="#f1edf9"];
   mdb [shape=cylinder, fillcolor="#eae5f7", label="mlflow_db\nTracking / registry metadata"];
@@ -72,11 +72,10 @@ digraph LogicalArchitecture {
   kafka -> storage [label="archive groups"];
   kafka -> consumer [label="3 Business groups"];
   relay -> kafka [label="results / alert signals\nordered dispatch từng topic/máy", constraint=false];
-  storage -> s3 [label="immutable raw + manifest"];
+  storage -> s3 [label="raw + manifest / catalog M6"];
   worker -> inference [label="HTTP, chỉ DQ VALID", dir=both];
   api -> read_api [label="HTTP status / history", dir=both];
-  read_api -> s3 [label="verified processed archive"];
-  worker -> s3 [label="processed archive / export", style=dashed];
+  read_api -> s3 [label="raw catalog read / export artifacts"];
   consumer -> rag [label="HTTP từ leased brief jobs", dir=both];
   rag -> kdb [label="owner SQL"];
   rag -> llm [label="generation / embedding", dir=both];

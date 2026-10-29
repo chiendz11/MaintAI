@@ -241,6 +241,15 @@ prediction provenance; Operator/Sensor audit vẫn phải xác định actor/API
 
 ## 9. Retention, bảo mật, phân quyền và audit
 
+**M6-HISTORY-01,29/10:** Read API giữ SELECT cho original data, được ghi metadata
+snapshot/export/catalog bằng credential quyền hẹp riêng theo
+[quyết định M6](M6_HISTORY_ARCHITECTURE_DECISION.md). M6 chưa archive processed
+outcomes hoặc xóa source data; cleaner chỉ dry-run. Raw/cold ở S3/MinIO không đồng
+nghĩa processed history đã có bản archive. Không áp dụng hot30d để xóa outcomes.
+Export ghi snapshot/query clocks/profile/schema, source refs và output checksum;
+không thay model/risk lineage gốc. Catalog/coverage theo
+[M6-RAW-01](M6_RAW_ARCHIVE_HANDOFF.md) có version riêng, không sửa raw-manifest1.0.0.
+
 | Loại dữ liệu | Nơi lưu nguồn | Chiến lược cần cấu hình |
 |---|---|---|
 | Raw/schema-rejected sensor | S3 object bất biến | Lưu theo yêu cầu audit/chi phí/quyền riêng tư, độc lập retention Kafka |
@@ -293,7 +302,7 @@ Thay đổi breaking event/API schema: cập nhật JSON Schema, migration notes
 
 **Giữ từ v1.3.1:** 5 logical DB, Processing Read API, DQ tại Worker, Business giữ latest snapshots + Alerts, Business API/Consumer tách Deployment, Kafka outbox/inbox, raw archive S3, Drift CronJob độc lập, manual RAG có version, MLflow + reference profile, không auto-retrain.
 
-**Bổ sung/chốt tại v1.4:** `processing-read-api` thành Deployment riêng có quyền read-only; Kafka quarantine `sensor.rejected` theo chính sách auth/kích thước; giữ `inference.results` và có thể archive outcome; release manifest bất biến; exact model/preprocessor/dataset/split digests gắn MLflow run; provenance tests; quy tắc History Query nóng/lạnh và restore/retention. **Các mục mới chỉ được xem là đã triển khai khi source, migration, contract và E2E tests thực tế được cập nhật.**
+**Bổ sung/chốt tại v1.4:** `processing-read-api` thành Deployment riêng; M6 đọc original data read-only, ghi metadata quyền hẹp; Kafka quarantine `sensor.rejected` theo chính sách auth/kích thước; giữ `inference.results` và có thể archive outcome; release manifest bất biến; exact model/preprocessor/dataset/split digests gắn MLflow run; provenance tests; quy tắc History Query nóng/lạnh và restore/retention. **Các mục mới chỉ được xem là đã triển khai khi source, migration, contract và E2E tests thực tế được cập nhật.**
 
 ## 14. PROC-ORDER-01 — source order, dispatch order và migration identity
 

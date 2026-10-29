@@ -8,6 +8,11 @@
 
 # MaintAI v1.4 — Kiến trúc triển khai Kubernetes theo Deployment
 
+**M6-HISTORY-01,29/10/2026:** [Quyết định M6](M6_HISTORY_ARCHITECTURE_DECISION.md)
+ưu tiên history/roles/archive cũ: ba Deployment Processing giữ nguyên; snapshot/
+export chạy trong Read API, Worker chỉ realtime. Read API SELECT dữ liệu gốc và
+ghi metadata bằng pool quyền hẹp. Không processed archive hoặc cleanup thật M6.
+
 **Trạng thái:** Đặc tả kiến trúc mục tiêu (sẵn sàng làm cơ sở triển khai), **không phải bằng chứng cluster đang chạy**. Ngày quyết định: 19/10/2026. Kế thừa MaintAI v1.3.1; cần chủ sở hữu duyệt và merge vào repo source/GitOps thật.
 
 ## 1. Phạm vi, thuật ngữ và danh sách workload
@@ -27,9 +32,9 @@
 | Simulator + Control | Deployment + internal Service | Kịch bản demo | SQLite/WAL state/spool; persistent local volume, Recreate | Ban đầu 1 replica, không phải PLC |
 | Ingestion API | Deployment + Service | HTTP RPS, ACK p95 | Kafka producer | Auth, envelope validation, accepted/rejected |
 | Processing Worker | Deployment | Kafka lag/age, keyed queue, ML/DB throughput | Ghi `processing_db`, gọi ML | Target PROC-ORDER-01: per-machine FIFO + bounded concurrency + offset coordinator |
-| Processing Read API | **Deployment + Service riêng** | History RPS/p95 | `processing_db` read-only, S3 read | History API logic, **không** cần `history_db` |
+| Processing Read API | **Deployment + Service riêng** | History RPS/p95, export backlog | SELECT dữ liệu gốc + metadata RW quyền hẹp; raw S3 read/exports write | Snapshot/export runner cùng runtime; **không** cần history_db |
 | Processing Outbox Relay | Deployment | Pending/blocked-key age | Quyền outbox có giới hạn + Kafka producer | Target ordered dispatch theo topic/máy; SDK ordered mode đã có; full runtime chưa Ready |
-| Storage Consumer | Deployment | Archive lag, S3 throughput | Kafka consume, S3 write | Accepted/rejected/outcome (tùy chọn) |
+| Storage Consumer | Deployment | Archive/catalog lag, S3 throughput | Kafka consume, S3 write | Raw accepted/rejected + catalog/coverage M6; outcome archive không bật |
 | Business Consumer | Deployment | Projection lag | Kafka + ghi `business_db` | Ba handlers, không infer ML |
 | Business API | Deployment + Service | REST RPS/SSE clients | `business_db` với quyền theo nhiệm vụ | Alert, Feedback, SSE, facades |
 | ML inference | Deployment + internal Service | Inference QPS/p95 | Model artifacts được pin | Không quyết định Alert |
@@ -131,13 +136,17 @@ flowchart LR
 
 | Database | Owner | Client và quyền đề xuất | Ranh giới |
 |---|---|---|---|
-| `processing_db` | Processing | Worker `processing_rw`, Relay quyền outbox, Read API `processing_ro` | Business/Drift không SQL trực tiếp |
+| `processing_db` | Processing | Worker processing_rw, Relay quyền outbox; Read API processing_ro + history_meta writer riêng | Metadata writer không ghi source/outcome/risk/inbox/outbox; Business/Drift không SQL trực tiếp |
 | `business_db` | Business | Consumer `business_rw`, API theo scope | Alert, lifecycle, feedback, brief, latest snapshots; **không** full raw history |
 | `drift_db` | Drift | Worker `drift_rw` | Checkpoints, drift reports |
 | `mlflow_db` | MLflow | Chỉ MLflow Server | Migration do MLflow quản lý |
 | `knowledge_db` | RAG | Service `rag_rw` | Documents, chunks, pgvector |
 
-Storage Consumer lưu **raw accepted**, schema-rejected được phép lưu và tùy chọn outcome dài hạn vào S3. `processing_db` có thể giữ sensor payload **trong hot window có giới hạn** để hỗ trợ UI. S3 là kho lưu trữ dài hạn. History Read API không được quét toàn bộ bucket cho mỗi query; phải dùng DB index, manifest chia partition/ngày hoặc query engine. **Lịch sử Alert thuộc Business**, query `business_db`, không chuyển qua Processing Read API.
+Storage Consumer lưu raw accepted/rejected cùng catalog/coverage vào S3 hoặc MinIO
+local theo [M6-RAW-01](M6_RAW_ARCHIVE_HANDOFF.md). M6 giữ processed outcomes trong
+processing_db và chưa bật xóa dữ liệu gốc hoặc processed archive. Read API chỉ
+được ghi metadata snapshot/export/catalog riêng, không có quyền sửa outcome/outbox.
+Không quét bucket mỗi query; lịch sử Alert vẫn thuộc Business.
 
 ## 4. Kafka topics, publisher và consumer
 
@@ -165,6 +174,11 @@ Giữ tên `inference.results` để tương thích v1.3.1 dù topic cũng chứ
 **Online write:** Simulator → Ingestion → Kafka → Processing (DQ/ML/Risk) → transaction `processing_db` + outbox → Kafka outcomes/signals → Business Consumer → `business_db` → Business API/SSE. Song song: Storage Consumer → S3; Business telemetry projection nhận raw sớm nhưng đánh dấu `UNVERIFIED`.
 
 **Query read:** React → Business API. Dashboard/Alert đọc `business_db`; trạng thái/lịch sử reading qua `processing-read-api` → indexed `processing_db` và S3 có giới hạn; drift reports qua adapter/API phù hợp. Không bắt Processing Worker thực hiện truy vấn HTTP.
+
+**M6 snapshot/export:** Read API tạo metadata/job bền vững bằng credential riêng,
+CSV nhỏ streaming hoặc background export có lease/retry trong cùng runtime. Không
+thêm Worker maintenance loop, service mới hoặc processed archive. Full local M6
+dùng MinIO; history outcomes/CSV nhỏ có thể demo DB-only với raw capability unavailable.
 
 **Tra cứu event cũ:** Index theo `event_id`, `machine_id` (nếu có), nguồn/tenant, schema version, `topic/partition/offset` và `server_accepted_at` UTC. Hot query trả từ DB. Cold query tra partition/ngày/manifest trước rồi đọc object S3 và gắn DQ/prediction bằng event ID. Chưa archive xong phải trả `PENDING_ARCHIVE`, không giả có dữ liệu trên S3. Schema-rejected có thể không có machine ID; phải query theo source/request/time có phân quyền.
 
@@ -217,7 +231,8 @@ Quyết định23/10/2026 tại [đặc tả concurrency/ordering](PROCESSING_CO
 System Contracts §42, Guide §53. Worker chứa poll loop, keyed FIFO/executor,
 completion coordinator và durable assignment fence. Relay thêm per-topic/key
 head-of-line cursor/lease. Không tạo thêm Scheduler/Coordinator Deployment,
-Kubernetes Service, DB, Kafka topic hoặc UI. Read API giữ read-only role.
+Kubernetes Service, DB, Kafka topic hoặc UI. M6 giữ pool original read-only và
+thêm pool metadata quyền hẹp, theo M6-HISTORY-01.
 
 Budgets Worker: số active machines, pending records/bytes kể cả done-behind-hole,
 fetch reserve, per-key cap, ML semaphore, DB pool và bounded drain. Tính tổng

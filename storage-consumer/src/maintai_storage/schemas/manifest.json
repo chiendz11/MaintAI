@@ -1,0 +1,7 @@
+{
+  "catalog_schema_version": "1.0.0",
+  "files": {
+    "schemas/catalog.json": "883b9df6751f0692c1cd29e83c3acd0e8c1f8f0c4519cb434b87b326831f55cf",
+    "examples/catalog.json": "efb03c5c39f2d1e5cb20a8713e98d3a196037fbbc82688bb7441bc26d3d857dd"
+  }
+}

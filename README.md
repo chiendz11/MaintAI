@@ -114,7 +114,7 @@ Hệ thống scale-ready: khiX>100, tính lại capacity và tối ưu latency t
 
 [System Contracts §34–43](docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md)
 và [Guide §42–55](docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md)
-bổ sung rejected archive, Read API read-only, MLflow/dataset/model/release lineage
+bổ sung rejected archive, Read API đọc original data, MLflow/dataset/model/release lineage
 và rollout/rollback. [Docs index](docs/README.md) giữ quyết định nhóm 4 người,
 Simulator UI riêng và phân cấp tài liệu. [Readiness](docs/implementation-readiness.md)
 ghi các khác biệt cần freeze và artifacts chưa có; không coi docs là runtime evidence.
@@ -137,3 +137,13 @@ Full DQ/ML/risk/history callbacks, health server, image/owner DB activation và
 rollout còn cần tích hợp. Storage/Business giữ serial default; không thêm runtime.
 
 M5 runbook, tests và file inventory: [M5 implementation report](docs/M5_IMPLEMENTATION_REPORT.md).
+
+
+## M6 đã chốt29/10 — History trực tiếp và export
+
+[Quyết định M6](docs/M6_HISTORY_ARCHITECTURE_DECISION.md) giữ ba Deployment Processing:
+Worker realtime; Read API history/snapshot/export với metadata writer quyền hẹp;
+Relay outbox. Outcomes giữ DB, raw qua catalog MinIO/S3 của Storage theo
+[handoff cho Chiến](docs/M6_RAW_ARCHIVE_HANDOFF.md). Không processed archive hoặc
+cleanup thật M6. Demo DB-only khác full raw demo dùng MinIO local; AWS không bắt
+buộc. Đây là thiết kế đã chốt, không tự thêm code/schema/grants/deployment.

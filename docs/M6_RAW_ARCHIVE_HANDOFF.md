@@ -1,0 +1,160 @@
+# M6-RAW-01 — Bàn giao Raw Archive từ Chiến/Người4 cho Người1
+
+Ngày29/10/2026; revision **1.0.0**, theo
+[M6-HISTORY-01](M6_HISTORY_ARCHITECTURE_DECISION.md). **Contract thiết kế đã chốt;
+Storage0.2.0 đã có catalog publisher/audit/rebuild, schemas/examples và reader helper;
+Read API/SQL/UI M6 và platform grants vẫn cần Người1/Chiến tích hợp.**
+Giữ nguyên raw-manifest1.0.0, Kafka bundle2.0.0, SDK0.3.0 và archive identity hiện có.
+
+## 1. Đã có gì, cần bổ sung gì
+
+Storage0.1.0 ghi exact raw bytes + key/headers vào JSONL.gz; conditional PUT,
+checksum, object VersionId, immutable manifest; commit Kafka sau object+manifest.
+Đường dẫn hiện có theo topic/partition/offset. Retry không được thay bytes tại cùng
+locator. Xem [Storage README](../storage-consumer/README.md).
+
+Storage0.2.0 bổ sung metadata cho M6 tra theo **máy + received_at**, và bằng chứng tập receipts
+đã có thể query. Object/manifest đã ghi không tự tạo catalog; Kafka committed
+offset hoặc metric lag cũng không thay coverage của catalog. Không trao quyền
+SQL processing_db/business_db cho Storage.
+
+## 2. Giao tiếp đã chọn: catalog S3/MinIO, không thêm service
+
+Storage công bố immutable catalog generations và một pointer `current.json` nhỏ.
+Read API đọc pointer, pin generation/object versions rồi sync metadata vào
+`history_meta` bằng credential giới hạn của chính Processing. History request
+query index này, không scan toàn bucket. Bounded scans/reconciliation chạy nền
+trong runtime Read API/Storage, không trong HTTP request hay Processing Worker.
+
+Layout catalog bổ sung, độc lập raw prefix hiện hành:
+
+```text
+raw-catalog/v1/current.json
+raw-catalog/v1/generations/<generation_id>.json
+raw-catalog/v1/segments/<segment_id>.json
+```
+
+Pointer tham chiếu exact generation ObjectRef. Generation là delta chứa segment refs và full coverage state của cùng snapshot;
+tập entries được tính trên chuỗi parent_ref về checkpoint/root. Reader phải sync
+hết chain trước khi gọi generation fully indexed; xem [reader guide](../storage-consumer/M6_READER_GUIDE.md). Các segments được giới hạn kích thước/record count,
+prune bằng topic/partition/received-date range. Bản ghi cùng máy có thể nằm ở nhiều
+segment; query merge theo khóa M6, không phụ thuộc thứ tự tên object. Generation reuse parent refs; mỗi segment tối đa100 entries, mỗi object tối đa2 MiB.
+Không tạo một mega JSON vô hạn; index máy/time do Read API materialize từ entries.
+
+Publisher ghi segments → verify refs → immutable generation → CAS pointer. CAS
+phải reconcile các partitions khi nhiều replicas/rebalance; không cho generation
+mới bỏ mất receipts đã publish. Parent generation/ref và start offsets cho phép
+rebuild/catch-up. Pointer chỉ là discovery, không thay generation đã pin. Các keys
+metadata không lấy trực tiếp từ text machine_id không được sanitize.
+
+## 3. Logical catalog entry đã freeze
+
+| Field | Kiểu / quy tắc |
+| --- | --- |
+| `catalog_schema_version` | `1.0.0`, protocol riêng của catalog |
+| `receipt_id` | Identity ổn định từ topic/partition/offset; cùng locator chỉ một logical receipt |
+| `topic`, `partition`, `offset` | String allowlisted, integer>=0, integer>=0; không so offset khác partition |
+| `source_event_id`, `machine_id` | String khi parse được; null cho rejected/poison thiếu trường |
+| `received_at` | UTC nguồn, null nếu không hợp lệ; không tự suy từ upload time |
+| `server_accepted_at` | UTC từ trusted ingress metadata khi có; không fabricate |
+| `source_identity`, `request_id` | Metadata được phép công bố, nullable; quarantine query được kiểm quyền |
+| `receipt_kind` | `ACCEPTED` hoặc `REJECTED`; không tự gắn DQ VALID từ raw |
+| `raw_object_ref` | bucket/key/version_id/sha256, exact ref từ manifest |
+| `raw_manifest_ref` | Exact ObjectRef của raw manifest đã verify |
+| `event_locator` | Record index trong object; hiện record0 vì microbatch1 |
+
+Raw-manifest hiện hành không có đủ machine/time fields nên publisher phải trích
+metadata có giới hạn từ frame/envelope hoặc lúc archive, giữ exact raw bytes.
+Malformed data vẫn giữ receipt entry; không cho một poison entry làm mất phần
+còn lại của catalog. Raw accepted không có received_at hợp lệ bị tách quarantine,
+không âm thầm bỏ khỏi coverage receipts hoặc ép vào machine timeline.
+
+Manifest/object refs phải kiểm checksum và version; ETag chỉ dùng concurrency CAS,
+không thay SHA-256. S3/MinIO versioning bắt buộc cho full M6 local; không dùng
+`S3_ALLOW_UNVERSIONED=true` làm bằng chứng exact-version reader đã hoạt động.
+
+## 4. Coverage theo partition và ý nghĩa COMPLETE
+
+Generation giữ `generation_id`, `published_at`, `parent_ref`, segment refs và
+`partitions[]`. Mỗi partition có:
+
+| Field | Ý nghĩa |
+| --- | --- |
+| `topic`, `partition`, `topic_id` | Scope và identity topic; generation giữ source_cluster_id để phát hiện đổi nguồn |
+| `start_offset` | Điểm bắt đầu đã xác định; không ngầm hứa dữ liệu trước đó |
+| `archived_next_offset` | Frontier đã xác minh raw+manifest bền vững; exclusive |
+| `indexed_next_offset` | Frontier đã đưa vào catalog và xác minh; <= archived frontier |
+| `captured_log_end_offset`, `captured_at` | Mốc Kafka quan sát để mô tả lag của generation; nullable khi chưa có bằng chứng |
+| `gaps` | Các ranges thiếu/retention loss/corruption đã biết, kèm reason |
+| `status` | `COMPLETE`, `LAGGING`, `GAP`, `UNKNOWN`, xét theo scope đã công bố |
+
+Frontier là **safe prefix của receipts trong log đã kiểm tra**; offset control/
+transactional hoặc offset không chứa user record không được biến thành missing
+reading chỉ vì số offset không liên tiếp. Phải phát hiện retention/truncation và
+thay đổi source log; không đổi start_offset để che mất gap. Một catalog thiếu entry
+không được tiến indexed frontier vượt receipt đó.
+
+`COMPLETE` chỉ nghĩa đầy đủ từ start_offset đến frontier đã chốt cho partition,
+không khẳng định mọi sensor đã gửi mọi dữ liệu trước một timestamp. Không dùng
+max(received_at) hoặc max(offset đã thấy) làm watermark completeness. Với12
+partitions phải giữ12 trạng thái; không lấy một partition nhanh đại diện cả hệ thống.
+
+Read API kết hợp scope query, generation, gaps và thời điểm sync để quyết định
+response. Snapshot COMPLETE là đầy đủ **trong tập receipts/cutoff công bố**, vẫn
+có thể nhận dữ liệu đến muộn khi refresh. available_from/available_through chỉ
+công bố khi có bằng chứng theo clock query; nếu không có cutoff thời gian đáng tin
+thì trả null + offset coverage, không bịa một timestamp. Strict request cần phần
+chưa verify trả503 HISTORY_UNAVAILABLE với reason PENDING_ARCHIVE/CATALOG_LAG/GAP;
+chỉ trả200 empty khi đã xác minh query thực sự rỗng trong scope snapshot.
+
+## 5. Durability và reconciliation
+
+Giữ boundary hiện tại: raw object + raw manifest bền vững trước commit Kafka.
+Catalog có thể publish trễ; lag đó phải được công bố riêng, không dùng Kafka ACK
+làm ACK rằng History đã query được. Sau crash/rebalance, reconciliation phải đọc
+lại durable manifests và khôi phục catalog entries; không phụ thuộc RAM hoặc chỉ
+đọc các Kafka records chưa commit. Nếu không thể khôi phục đầy đủ, báo UNKNOWN/GAP.
+
+Catalog generation chỉ pin data đã verify. Checkpoint/pointer mất ACK phải reconcile
+theo IDs/versions; không publish COMPLETE giả hoặc tạo duplicate receipt. Full
+rebuild catalog từ durable raw manifests phải có operator runbook và budget riêng;
+không chạy toàn bộ rebuild trong mỗi browser request.
+
+Processed outcomes không nằm trong contract này. Optional outcome wire archive của
+Storage vẫn là capability SDK cũ, **không bật trong M6** và không thay DB history.
+
+## 6. Bàn giao tối thiểu để Người1 bắt đầu
+
+Chiến bàn giao [schema/examples](../storage-consumer/M6_READER_GUIDE.md) và runtime
+Storage0.2.0 trong PR bàn giao: một generation có timestamps trùng, duplicate event khác locator,
+feature-invalid, rejected thiếu máy, catalog lag, gap và checksum mismatch. Fixture
+phải ghi rõ dữ liệu giả; Người1 viết reader/facade/UI theo contract, không cần đợi AWS.
+
+Môi trường local dùng MinIO đã có source cấu hình ở MaintAI-gitops/local/platform.
+Chiến xác minh bucket/versioning, endpoint từ Pod, credentials Secrets và policies;
+source manifests không chứng minh MinIO hoặc Storage đã được deploy. Cần quyền:
+
+| Identity | Quyền |
+| --- | --- |
+| Storage | Consume hai raw groups; PUT/GET raw+manifest+catalog theo allowlist; không SQL owner khác |
+| Read API | GET/LIST raw/catalog; GET/PUT prefix private exports; không sửa raw/catalog |
+| Browser | Business auth; không có S3 credentials hoặc quyền list bucket |
+
+GitOps/infrastructure cần migration/grants metadata riêng cho Read API và Secrets/
+IAM/policies tương ứng. Những cấu hình cũ chỉ có processing_ro phải được cập nhật
+khi bật M6; không bật app với owner credential để bỏ qua bước phân quyền.
+
+## 7. Điều kiện demo và nghiệm thu
+
+- Chưa có AWS: dùng MinIO local; vẫn có upload raw và verify manifest/catalog.
+- Chưa có object store/catalog: demo history outcomes từ DB và CSV nhỏ; raw routes
+  báo unavailable. Không gọi đây là full M6 hoặc fake empty history.
+- Chứng minh restart sau raw commit/trước catalog publish phục hồi được index.
+- Chứng minh stale publisher/CAS retry không làm lùi coverage hoặc mất partition.
+- Reader không duplicate/missing khi timestamp trùng, catalog lag hoặc pin generation.
+- Object/version/checksum hỏng, scope sai, source retention loss trả lỗi rõ ràng.
+- Nhóm chưa duyệt retention: không bật cleaner/lifecycle xóa raw/outcomes.
+
+Source Storage0.2.0, schema/examples/checksums, CLI và CI đã được bổ sung; xem
+[implementation report](STORAGE_CATALOG_IMPLEMENTATION_REPORT.md) để biết bằng chứng
+đã chạy và giới hạn. SQL grants/Read API M6/platform rollout chưa được thực hiện.
