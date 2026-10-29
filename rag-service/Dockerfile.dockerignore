@@ -10,4 +10,6 @@
 **/.vscode
 **/*.zip
 **/*.pdf
+# Only the reviewed, checksummed knowledge-demo manifest PDF belongs in this image.
+!rag-service/documents/pdffile.pdf
 **/evaluation/report.json

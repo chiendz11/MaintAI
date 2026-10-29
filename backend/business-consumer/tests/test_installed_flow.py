@@ -12,6 +12,7 @@ from functools import partial
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from types import SimpleNamespace
+from urllib.parse import quote
 from uuid import uuid4
 
 import httpx
@@ -389,9 +390,22 @@ def test_installed_status_live_consumer_two_db_roles_and_sigterm(business_databa
                     break
                 time.sleep(0.1)
             else:
+                print("Alert response:", alert_page.status_code, alert_page.text[:2000])
                 for name in containers:
                     print("=====", name, "=====")
+                    print(docker("inspect", "--format", "{{json .State}}", name))
                     print(docker("logs", "--tail", "150", name))
+                evidence_headers = {
+                    "Authorization": "Bearer " + token("processing-internal", "BUSINESS_SERVICE")
+                }
+                for path in (
+                    "/api/v1/internal/sensor-events/"
+                    + quote(request["event_id"], safe="")
+                    + "/status",
+                    "/api/v1/internal/predictions/" + quote(completed.json()["result_id"], safe=""),
+                ):
+                    probe = http.get(read_url + path, headers=evidence_headers)
+                    print("Evidence probe:", probe.status_code, probe.text[:2000])
                 pytest.fail("Installed Alert Consumer did not materialize its evidence")
             for resource in ("", "/M-001"):
                 assert (
