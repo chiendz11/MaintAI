@@ -79,19 +79,21 @@ Business DB chỉ chứa latest projections và business data, không full raw h
   [drift worker](drift-worker/README.md) để dùng implementation hiện có.
 - [messaging/](messaging/README.md) có Kafka ACK/consumer, owner-local inbox/outbox,
   relay và raw S3 adapter; [Kafka guide](docs/KAFKA_DEVELOPMENT_GUIDE.md) hướng dẫn
-  4 người tích hợp. Nghiệp vụ/entrypoint của Processing/Business,
-  ML/RAG/Business Frontend và SSE/history vẫn cần implement; Sensor Control đã có.
+  4 người tích hợp. Processing/Business M1–M5 đã có local implementation/tests: DQ/ML client/risk,
+  projections, SSE, Alert lifecycle/audit/feedback và Main UI. ML/RAG providers thật,
+  full history/archive/export và Copilot còn thuộc các pha sau.
 - [Simulator UI](sensor-simulator-UI/README.md) có React/TypeScript, demo5 máy, live
   Control API client, OIDC, command recovery và checks riêng. Sensor Control API
   đã implement; browser chạy với provider thật + fixture Ingestion; chưa deploy UI.
-- Cả14 app runtime folders có Dockerfile:9 placeholders; Sensor, Ingestion, Drift,
-  Simulator UI và Storage có source. MLflow thêm platform image descriptor/Dockerfile riêng với
+- Cả14 app runtime folders có Dockerfile; ML inference/training và RAG còn3
+  placeholders. Các runtime đã có source không tự đồng nghĩa đã deploy. MLflow thêm platform image descriptor/Dockerfile riêng với
   base/version pins còn unset, chưa build/publish.
 - [OpenAPI/schemas/examples](contracts/README.md) hiện tập trung tại
-  [v1.3/](contracts/v1.3/README.md): sáu OpenAPI cùng schema/examples tự chứa,
-  baseline union2.0.0. [Kafka bundle](contracts/kafka/README.md) bổ sung writer1.4,
-  quarantine và reader legacy; HTTP/provider/release migrations chưa hoàn tất. Xem
-  [migration notes](docs/repository-layout.md).
+  [v1.3/](contracts/v1.3/README.md): sáu OpenAPI; outcome/history entrypoints dùng
+  chung schema outcome1.4.0 từ [Kafka bundle2.0.0](contracts/kafka/README.md).
+  SDK0.3.0 chỉ đọc/ghi outcome1.4, giữ risk gốc từ Processing; không reader hoặc
+  backfill legacy. Xem [OUTCOME-14-ONLY](docs/OUTCOME_V1_4_MIGRATION.md).
+  Các HTTP/provider/release migrations khác chưa hoàn tất.
 
 CI structure kiểm tra10 source-owner folders và messaging; API validation kiểm tra
 đặc tả1.3.2, Kafka SDK có unit/contract và real broker/DB integration jobs,
@@ -133,3 +135,5 @@ xong khi500 chưa durable vẫn không cho commit502. Head Outbox retry giữ su
 [báo cáo triển khai/cách dùng](docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md).
 Full DQ/ML/risk/history callbacks, health server, image/owner DB activation và
 rollout còn cần tích hợp. Storage/Business giữ serial default; không thêm runtime.
+
+M5 runbook, tests và file inventory: [M5 implementation report](docs/M5_IMPLEMENTATION_REPORT.md).

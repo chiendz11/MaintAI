@@ -44,7 +44,7 @@
       "target_system_contract_revision": "1.4.0",
       "document": "docs/PROCESSING_CONCURRENCY_AND_ORDERING.md",
       "implementation_report": "docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md",
-      "sdk_version": "0.2.0",
+      "sdk_version": "0.3.0",
       "status": "SDK_and_transport_wrappers_implemented_application_callbacks_and_deployment_pending",
       "adds_runtime": false
     }

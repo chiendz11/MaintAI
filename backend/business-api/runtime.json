@@ -5,10 +5,10 @@
   "runtime_id": "business-api",
   "workload_kind": "Deployment",
   "code_owner": "business-backend",
-  "implementation_status": "implemented_registry_only",
+  "implementation_status": "implemented_m5_alert_actions_feedback_and_realtime_local_fixture",
   "image_group": "business-backend",
   "image_digest": null,
-  "entrypoint_status": "implemented_m2r_registry_only",
+  "entrypoint_status": "implemented_rest_sse",
   "purpose": "Business REST/SSE, RBAC, machine/alert/feedback/brief actions, Processing history facade, enqueue/poll jobs; no Simulator Control facade.",
   "source_paths": [
     "backend/business-api/src",
@@ -19,11 +19,12 @@
   "kafka_subscriptions": [],
   "kafka_publications": [],
   "interfaces": [
-    "Frontend REST/SSE",
-    "Processing read API",
-    "Business durable job state",
-    "Published drift report S3 objects",
-    "PG LISTEN/NOTIFY"
+    "Scoped Fleet/MachineDetail REST (requires Alert read source)",
+    "Three-axis live REST",
+    "Processing event status HTTP facade",
+    "Health/metrics HTTP",
+    "Authenticated fetch SSE with PostgreSQL LISTEN/NOTIFY fan-out",
+    "Alert list/detail/lifecycle/feedback REST and Alert SSE"
   ],
   "boundaries": [
     "Không consume Kafka trực tiếp để broadcast SSE; mỗi API replica nhận notification và đọc latest projections.",
@@ -33,5 +34,14 @@
   "dockerfile": "backend/business-api/Dockerfile",
   "dockerfile_status": "implemented",
   "implemented_contract_revision": "1.3.2",
-  "implemented_scope": "M2.R registry migration/provision and scoped GET machine only; projections/list/alerts/SSE/history and shared environment acceptance remain unimplemented/unvalidated."
+  "implemented_scope": "Scoped Fleet/Detail with real Alert source, three-axis live/status, authenticated SSE, Alert list/detail/actions/audit/feedback. History/export/Copilot/drift and shared deployment acceptance remain separate.",
+  "planned_interfaces": [
+    "Business durable job state",
+    "Published drift report S3 objects"
+  ],
+  "outcome_contract": {
+    "read_version": "1.4.0",
+    "legacy_reader": false,
+    "document": "docs/OUTCOME_V1_4_MIGRATION.md"
+  }
 }

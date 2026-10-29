@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import math
 import threading
 import time
 from dataclasses import dataclass
@@ -20,6 +21,7 @@ class RegistryFailure(Exception):
 class Identity:
     subject: str
     machines: frozenset[str]
+    expires_at: float | None = None
 
     def authorize(self, machine_id):
         if machine_id not in self.machines:
@@ -112,7 +114,7 @@ class IdentityVerifier:
         except RegistryFailure:
             return False
 
-    def verify(self, authorization):
+    def verify(self, authorization, *, allowed_roles=None):
         if not authorization or len(authorization) > 16384:
             raise RegistryFailure(401, "UNAUTHORIZED")
         parts = authorization.split()
@@ -137,18 +139,23 @@ class IdentityVerifier:
                 options={"require": ["exp", "iss", "aud", "sub"]},
             )
             subject = claims["sub"]
+            expiry = claims["exp"]
+            if type(expiry) not in (int, float) or not math.isfinite(expiry):
+                raise RegistryFailure(401, "UNAUTHORIZED")
             if not isinstance(subject, str) or not 1 <= len(subject) <= 256:
                 raise RegistryFailure(401, "UNAUTHORIZED")
-        except (jwt.PyJWTError, ValueError, TypeError, KeyError):
+        except (jwt.PyJWTError, ValueError, TypeError, KeyError, OverflowError):
             raise RegistryFailure(401, "UNAUTHORIZED") from None
         roles, machines = claims.get(self.roles_claim), claims.get(self.machines_claim)
         if (
             not isinstance(roles, list)
             or not all(isinstance(r, str) for r in roles)
-            or not set(roles).intersection({"VIEWER", "TECHNICIAN", "ADMIN"})
+            or not set(roles).intersection(
+                {"VIEWER", "TECHNICIAN", "ADMIN"} if allowed_roles is None else allowed_roles
+            )
             or not isinstance(machines, list)
             or not machines
             or not all(isinstance(m, str) and m and m != "*" and "\x00" not in m for m in machines)
         ):
             raise RegistryFailure(403, "FORBIDDEN")
-        return Identity(subject, frozenset(machines))
+        return Identity(subject, frozenset(machines), float(expiry))

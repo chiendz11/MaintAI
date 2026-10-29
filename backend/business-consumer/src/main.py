@@ -1,0 +1,60 @@
+"""Two serial SDK groups; Alert Signals remain disabled until their handler exists."""
+
+import argparse
+import sys
+
+
+def make_handlers(
+    connection_factory,
+    settings,
+    *,
+    metrics=None,
+    notification_channel=None,
+    evidence=None,
+    alert_channel=None,
+):
+    from backend.shared.alerts.notifications import ALERT_CHANNEL
+    from backend.shared.alerts.repository import AlertRepository
+    from backend.shared.notifications import DEFAULT_CHANNEL, Notifier
+    from maintai_messaging.contracts import default_contracts
+
+    from .handlers.alert import build_handler as alert
+    from .handlers.prediction import build_handler as prediction
+    from .handlers.telemetry import build_handler as telemetry
+
+    profiles = default_contracts().topology["profiles"]
+    handlers = {
+        role: builder(
+            connection_factory,
+            settings.group_prefix + profiles[role]["group_id"],
+            metrics=metrics,
+            notify=Notifier(notification_channel or DEFAULT_CHANNEL),
+        )
+        for role, builder in (("business-live", telemetry), ("business-prediction", prediction))
+    }
+    handlers["business-alert"] = alert(
+        connection_factory,
+        settings.group_prefix + profiles["business-alert"]["group_id"],
+        evidence=evidence,
+        metrics=metrics,
+        repository=AlertRepository(connection_factory, channel=alert_channel or ALERT_CHANNEL),
+    )
+    return handlers
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Business telemetry/prediction Consumer")
+    parser.parse_args(argv)
+    try:
+        from .config import Settings
+        from .runtime import serve
+
+        serve(Settings.from_env())
+        return 0
+    except Exception as exc:
+        print(f"Business Consumer failed: {type(exc).__name__}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

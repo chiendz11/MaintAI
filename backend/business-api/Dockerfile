@@ -1,11 +1,16 @@
-# Build context: repository root. Business Consumer remains an unimplemented runtime.
+# Build context: repository root. Shared Business package; separate runtime entrypoints.
 ARG PYTHON_IMAGE=python:3.12-slim-bookworm@sha256:6a0e06f5ba0b373d051aabd3fffb9b873f27f9a2a3a14bcbe37dee6f0e3bbc70
 FROM ${PYTHON_IMAGE} AS builder
 WORKDIR /build
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1
 RUN python -m pip install build==1.6.1 setuptools==84.0.0 wheel==0.48.0
+COPY messaging/ /build/messaging/
+COPY contracts/ /build/contracts/
+RUN python -m build --wheel --no-isolation messaging --outdir /wheels
 COPY backend/requirements.lock /build/backend/requirements.lock
-RUN python -m pip wheel -r backend/requirements.lock --wheel-dir /wheels
+# The internal SDK is built from this checkout, never resolved from a public index.
+RUN python -c "from pathlib import Path; p=Path('backend/requirements.lock'); Path('/tmp/deps.lock').write_text('\n'.join(l for l in p.read_text().splitlines() if not l.startswith('maintai-messaging=='))+'\n')" \
+    && python -m pip wheel -r /tmp/deps.lock --wheel-dir /wheels
 COPY backend/ /build/backend/
 RUN python -m build --wheel --no-isolation backend --outdir /wheels
 

@@ -39,3 +39,22 @@ def test_invalid_or_unreviewed_configuration_is_rejected(changes):
     env = {**environment(), **changes}
     with pytest.raises(ValueError):
         Settings.from_env(env)
+
+
+def test_status_dependency_requires_paired_origin_and_credential_file(tmp_path):
+    token_file = tmp_path / "service-token"
+    env = {
+        **environment(),
+        "BUSINESS_PROCESSING_READ_URL": "http://127.0.0.1:8004",
+        "BUSINESS_PROCESSING_TOKEN_FILE": str(token_file),
+    }
+    config = Settings.from_env(env)
+    assert config.processing_read_url == "http://127.0.0.1:8004"
+    assert config.processing_token_file == str(token_file)
+    for changes in (
+        {"BUSINESS_PROCESSING_READ_URL": ""},
+        {"BUSINESS_PROCESSING_TOKEN_FILE": ""},
+        {"BUSINESS_PROCESSING_READ_URL": "http://unreviewed.invalid:8004"},
+    ):
+        with pytest.raises(ValueError):
+            Settings.from_env({**env, **changes})
