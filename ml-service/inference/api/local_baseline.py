@@ -60,6 +60,10 @@ class PredictionRequest(StrictBody):
 
 @asynccontextmanager
 async def lifespan(app):
+    # Mỗi lần khởi động phải kiểm tra và load lại từ đầu.
+    STATE["pipeline"] = None
+    STATE["metadata"] = None
+
     if os.environ.get("MAINTAI_LOCAL_ONLY") != "1":
         raise RuntimeError(
             "Local prototype requires MAINTAI_LOCAL_ONLY=1"
@@ -103,6 +107,39 @@ async def lifespan(app):
         if list(pipeline.classes_) != [0, 1]:
             raise ValueError("Unexpected model classes")
 
+        # Kiểm tra toàn bộ preprocessing + model có chạy được.
+        # Đây là probe khởi động, không dùng để đánh giá accuracy.
+        probe = pd.DataFrame(
+            [{
+                "product_type": "M",
+                "air_temperature_k": 298.1,
+                "process_temperature_k": 308.6,
+                "rotational_speed_rpm": 1551,
+                "torque_nm": 42.8,
+                "tool_wear_min": 108,
+            }],
+            columns=FEATURES,
+        )
+
+        probabilities = pipeline.predict_proba(probe)
+
+        if getattr(probabilities, "shape", None) != (1, 2):
+            raise ValueError("Unexpected predict_proba output shape")
+
+        values = [float(value) for value in probabilities[0]]
+
+        if any(
+            not math.isfinite(value) or not 0 <= value <= 1
+            for value in values
+        ):
+            raise ValueError("Startup probe returned invalid probability")
+
+        if not math.isclose(
+            sum(values), 1.0, rel_tol=0.0, abs_tol=1e-6
+        ):
+            raise ValueError("Startup probabilities do not sum to one")
+
+        # Chỉ công bố ready sau khi tất cả kiểm tra thành công.
         STATE["pipeline"] = pipeline
         STATE["metadata"] = metadata
         LOGGER.info("Local baseline loaded: %s", metadata["model_version"])
@@ -168,13 +205,40 @@ async def validation_error(request: Request, exc: RequestValidationError):
         False,
     )
 
+@app.get("/health/live")
+def health_live():
+    """Process đang sống và có thể phản hồi HTTP."""
+    return {
+        "status": "UP",
+        "service": "ml-inference",
+        "version": "0.1.0",
+    }
+
+
+@app.get("/health/ready")
+def health_ready():
+    """Chỉ nhận dự đoán khi model đã qua kiểm tra khởi động."""
+    model_loaded = (
+        STATE["pipeline"] is not None
+        and STATE["metadata"] is not None
+    )
+
+    return JSONResponse(
+        status_code=200 if model_loaded else 503,
+        content={
+            "status": "UP" if model_loaded else "DOWN",
+            "checks": {
+                "model_loaded": model_loaded,
+            },
+        },
+    )
 
 @app.post("/api/v1/predict")
 def predict(body: PredictionRequest, request: Request):
     pipeline = STATE["pipeline"]
     metadata = STATE["metadata"]
 
-    if pipeline is None:
+    if pipeline is None or metadata is None:
         return error_response(
             request, 503, "MODEL_NOT_READY",
             "Model artifact is not ready", True,
