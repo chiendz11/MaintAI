@@ -50,8 +50,11 @@ jobs:
 
       - name: Verify packaged knowledge manifest and PDF without external services
         run: |
-          docker run --rm --network none --entrypoint python maintai-rag:ci \
-            -c 'from ingestion.prepare_demo import read_manifest; read_manifest("knowledge-demo.json"); print("Packaged knowledge manifest verified")'
+          docker run --rm --network none --user 10001:10001 --read-only \
+            --tmpfs /tmp:rw,mode=1777 \
+            --tmpfs /opt/maintai/model-cache:rw,uid=10001,gid=10001,mode=0770 \
+            --entrypoint python maintai-rag:ci \
+            -c 'from sentence_transformers import SentenceTransformer; from ingestion.prepare_demo import read_manifest; read_manifest("knowledge-demo.json"); print("Nonroot embedding import and packaged knowledge manifest verified")'
 
       - name: Container HTTP smoke test
         run: |
