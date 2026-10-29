@@ -30,6 +30,7 @@ class Embedder:
 
         self.model = SentenceTransformer(
             model_name(),
+            revision=os.getenv("EMBEDDING_REVISION") or None,
             cache_folder=os.getenv("SENTENCE_TRANSFORMERS_HOME") or os.getenv("HF_HOME"),
             local_files_only=os.getenv("MODEL_LOCAL_FILES_ONLY", "false").lower() == "true",
         )

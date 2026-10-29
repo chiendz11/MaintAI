@@ -41,7 +41,8 @@
       "SENTENCE_TRANSFORMERS_HOME": "/opt/maintai/model-cache",
       "MODEL_LOCAL_FILES_ONLY": "true",
       "GROQ_TIMEOUT_SECONDS": "60",
-      "GROQ_MAX_COMPLETION_TOKENS": "2048"
+      "GROQ_MAX_COMPLETION_TOKENS": "2048",
+      "EMBEDDING_REVISION": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42"
     },
     "required_any_of": [
       [
@@ -53,7 +54,8 @@
   "commands": {
     "migration": "python -m migrations.cli up",
     "ingestion": "python -m ingestion.cli --pdf <path> --document-id <id> --version <version> --section <section>",
-    "embedding_preparation": "python -m ingestion.prepare_embedding"
+    "embedding_preparation": "python -m ingestion.prepare_embedding",
+    "demo_preparation": "python -m ingestion.prepare_demo"
   },
   "deployment": {
     "platform": "kubernetes",

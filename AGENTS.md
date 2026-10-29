@@ -154,3 +154,8 @@ Khi sửa keyed/ordered code, chạy Kafka unit + processing/tests, PostgreSQL o
 và real Kafka integration khi có local services. Commands/opt-in env trong report.
 Storage regression cần chạy khi SDK pin/default runner đổi. CI giữ kafka-ci và
 kafka-integration trong required; không tuyên bố Docker/K8s/load PASS từ unit tests.
+
+Local demo provenance: đọc `docs/LOCAL_DEMO_PREPARATION.md`. Marker
+`not-recorded:local-demo` không là MLflow run hoặc production approval. Không
+suy OCI manifest digest từ Docker config ID; dataset manifest tái dựng phải ghi
+rõ nguồn local. Knowledge Job/PVC không tự hoàn tất Business Copilot M7.

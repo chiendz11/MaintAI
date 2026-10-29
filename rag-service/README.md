@@ -89,3 +89,12 @@ Tham khảo: [Groq Chat API](https://console.groq.com/docs/api-reference),
 [JSON mode](https://console.groq.com/docs/structured-outputs),
 [models](https://console.groq.com/docs/models).
 README_PR14.md là tài liệu lịch sử của deployment Ollama cũ.
+
+## Chuẩn bị demo có version
+
+Embedding revision được khóa trong `embedding-lock.json`; `knowledge-demo.json`
+khóa PDF/version/checksum. Job owner chạy `python -m ingestion.prepare_demo`
+để migrate, cache embedding, ingest và kiểm retrieval; chạy lại không thêm
+chunks trùng. Job không gọi Groq. Chi tiết tại
+[LOCAL-DEMO-01](../docs/LOCAL_DEMO_PREPARATION.md). Image cài PyTorch CPU trước
+requirements runtime để không tải CUDA không dùng trong demo laptop.

@@ -17,6 +17,10 @@ defaults:
     shell: bash
 
 jobs:
+  rag-ci:
+    name: RAG provider and image
+    uses: ./.github/workflows/rag-ci.yml
+
   structure:
     name: Repository structure
     runs-on: ubuntu-latest
@@ -847,6 +851,7 @@ jobs:
     name: CI / required
     if: ${{ always() }}
     needs:
+      - rag-ci
       - structure
       - api-contracts
       - repo-metadata

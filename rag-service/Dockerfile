@@ -4,7 +4,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 HF_HOME=/opt/maintai/model-cach
 WORKDIR /app
 RUN groupadd -r maintai && useradd -r -g maintai -d /app maintai && mkdir -p /opt/maintai/model-cache /tmp/maintai && chown -R maintai:maintai /opt/maintai /tmp/maintai /app
 COPY rag-service/requirements-runtime.lock /app/requirements-runtime.lock
-RUN pip install --no-cache-dir -r requirements-runtime.lock
+COPY rag-service/requirements-torch-cpu.lock /app/requirements-torch-cpu.lock
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu -r requirements-torch-cpu.lock \
+    && pip install --no-cache-dir -r requirements-runtime.lock
 COPY rag-service/ /app/
 RUN chown -R maintai:maintai /app
 USER maintai

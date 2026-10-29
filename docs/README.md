@@ -207,3 +207,5 @@ full-system readiness hoặc nghiệm thu shared OIDC/TLS/ACL/deployment.
 
 M5 có implementation local và tests; xem [M5 report](M5_IMPLEMENTATION_REPORT.md) cho source
 hiện hành. Các snapshot inventory cũ không chứng minh tất cả provider/deployment đã hoàn tất.
+
+- [Chuẩn bị demo local: model identity và knowledge](LOCAL_DEMO_PREPARATION.md).
