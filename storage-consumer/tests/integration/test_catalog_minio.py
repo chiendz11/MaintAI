@@ -74,15 +74,24 @@ def test_real_catalog_restart_rebuild_and_installed_container(monkeypatch):
             if predicate():
                 return
             time.sleep(0.1)
-        pytest.fail("Local catalog fixture did not complete before deadline")
+        current, _ = CatalogStore(client, settings.bucket).current()
+        diagnostic = {
+            "errors": [type(error).__name__ for error in errors],
+            "coverage": current[1]["partitions"] if current else None,
+            "runtime_health": [runtime.state.snapshot(runtime.settings) for runtime in running],
+        }
+        pytest.fail("Local catalog fixture deadline: " + json.dumps(diagnostic, sort_keys=True))
 
     # Stage1: raw offsets may commit without any catalog existing yet.
     stop = threading.Event()
     errors = []
+    running = []
 
     def serve(config):
         try:
-            assert Runtime(config).run(stop) == 0
+            runtime = Runtime(config)
+            running.append(runtime)
+            assert runtime.run(stop) == 0
         except Exception as exc:
             errors.append(exc)
 

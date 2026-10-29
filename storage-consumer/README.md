@@ -16,7 +16,7 @@ Dùng `maintai-messaging[s3]==0.3.0` và [Kafka bundle2.0.0](../contracts/kafka/
 accepted1.3.0, rejected1.4.0, optional outcome1.4.0. Archive giữ nguyên bytes,
 kể cả event sai/cũ; không decode legacy thành kết quả nghiệp vụ. Xem
 [OUTCOME-14-ONLY](../docs/OUTCOME_V1_4_MIGRATION.md).
-Package0.2.0, raw frame/manifest1.0.0, target docs1.4.0 là các version độc lập.
+Package0.2.1, raw frame/manifest1.0.0, target docs1.4.0 là các version độc lập.
 Không đổi wire schemas để triển khai runtime.
 
 Storage không chạy DQ/ML/risk, tạo Alert, SQL vào DB owner khác hoặc tự kích hoạt

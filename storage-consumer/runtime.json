@@ -47,7 +47,7 @@
   "dockerfile": "storage-consumer/Dockerfile",
   "dockerfile_status": "implemented_ci_build_pending",
   "implemented_contract_revision": "1.4.0",
-  "application_version": "0.2.0",
+  "application_version": "0.2.1",
   "kafka_contract_bundle_version": "2.0.0",
   "archive_schema_version": "1.0.0",
   "kafka_sdk_version": "0.3.0",
