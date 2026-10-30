@@ -721,6 +721,7 @@ jobs:
       MAINTAI_M6_INTEGRATION: '1'
       MAINTAI_M2_DB_PORT: '35432'
       MAINTAI_M2_KAFKA_PORT: '39092'
+      KAFKA_TEST_BOOTSTRAP_SERVERS: 127.0.0.1:39092
       MAINTAI_M5_CONTAINER_TEST: '1'
       MAINTAI_M3_DATABASE_URL: postgresql://maintai_test:maintai_test@127.0.0.1:35432/maintai_processing_test
     steps:

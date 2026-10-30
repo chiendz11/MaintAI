@@ -12,10 +12,34 @@ from maintai_storage.runtime import Runtime
 from maintai_storage.settings import Settings
 
 
+def prepare_topics(bootstrap):
+    """Provision canonical test topics and await leaders without changing offsets."""
+    from importlib import import_module
+
+    from confluent_kafka.admin import AdminClient
+    from maintai_messaging.admin import create_local_topics
+    from maintai_messaging.config import KafkaSettings
+    from maintai_messaging.contracts import default_contracts
+
+    ReadyTopicAdmin = import_module("processing.worker.tests.test_pipeline").ReadyTopicAdmin
+
+    settings = KafkaSettings(
+        local_mode=True, security_protocol="PLAINTEXT", bootstrap_servers=bootstrap
+    )
+    contracts = default_contracts()
+    create_local_topics(
+        settings,
+        contracts=contracts,
+        client=ReadyTopicAdmin(AdminClient(settings.client_config()), contracts.topology["topics"]),
+    )
+
+
 class StorageProvider:
     """Run installed Storage consumer/audit/publisher; never publish a test catalog."""
 
     def __init__(self, bootstrap):
+        prepare_topics(bootstrap)
+
         from processing.shared.history_meta.storage import Objects
 
         self.client = boto3.client(

@@ -79,7 +79,7 @@ CI bật M6 trong Processing integration và Main UI; ba job Processing checks,
 Processing integration và Main UI build wheel Storage nội bộ trước khi cài lock; GitHub CI chỉ có
 kết quả sau khi commit được đẩy lên. Không suy trạng thái remote từ local tests.
 
-## Kết quả kiểm tra local với SDK0.3.1
+## Kết quả local tại checkpoint tích hợp Storage với SDK0.3.1
 
 | Nhóm kiểm tra | Kết quả |
 | --- | --- |
@@ -111,3 +111,35 @@ Catalog generations, snapshot headers và idempotency descriptors được giữ
 toàn traceability; storage compaction/retention dài hạn cần policy riêng. Chưa có
 bằng chứng sizing/HA/soak/load100; các budgets là giới hạn của profile hiện tại.
 Keys/rotation, TLS/OIDC, IAM và rollout shared được cấu hình ngoài app repository.
+
+## Đóng gói và bootstrap trên môi trường CI sạch
+
+Processing source distribution chứa hai schema M6 lấy từ nguồn chuẩn trong
+repository. Metadata của archive tham chiếu bản schema bên trong archive; checkout
+và đường dẫn cài đặt schema của wheel giữ nguyên. Kiểm tra đóng gói gồm wheel trực
+tiếp, wheel dựng từ sdist khi không còn canonical checkout bên cạnh, và tạo lại
+sdist từ source release đã giải nén.
+
+Harness Storage tạo canonical test topics bằng SDK và chờ đầy đủ metadata/leader
+trước khi tạo bucket hoặc khởi động runtime. Không reset offsets/groups hoặc nới
+readiness. Job Processing khai báo `KAFKA_TEST_BOOTSTRAP_SERVERS` khớp cổng Compose
+39092; cổng local mặc định của Compose M6 vẫn40092 khi không override.
+
+Bản sửa trên baseline `8cf8de3` được kiểm chứng local bằng hai môi trường trống
+độc lập: browser chạy trước mọi suite khác; project sau đó được tạo lại cho
+Processing. Biến môi trường được đọc từ job tương ứng trong workflow.
+
+| Kiểm tra bản sửa | Kết quả local |
+| --- | --- |
+| Build cô lập theo `python -m build processing` | sdist và wheel đạt trên Python3.12 |
+| Đóng gói/installed smoke | 3 trường hợp đạt; schema bytes khớp canonical |
+| Processing/Business với env CI và broker/DB mới | 549 passed, không skip |
+| Browser trên broker/DB mới với env frontend-ci | 12 passed |
+| Kafka unit/transport | 86 passed, có overlap với Processing tests |
+| Môi trường chỉ cài dependencies SDK | Installed contract validator và Worker/Relay `--help` đạt ngoài checkout |
+| Images Processing | Worker, Relay và Read API build được |
+
+HTTP contracts, immutable Kafka inputs, lint/format và dependency checks đạt.
+Python3.11 và GitHub Actions của commit sửa cần được xác nhận khi commit được push;
+kết quả local không thay thế trạng thái remote. Source runtime/schema nghiệp vụ,
+wire protocol, migration và deployment manifests không đổi trong bản sửa này.

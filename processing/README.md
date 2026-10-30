@@ -58,3 +58,15 @@ internal status/point-read và M6 history/chart/raw/export. Source pool SELECT-o
 metadata/job/catalog pools dùng credential riêng trong cùng Read API; xem
 [cấu hình M6](read-api/HISTORY.md). Outcomes giữ DB, không bật processed archive
 hoặc source cleaner; scheduler/coordinator không là deployment thứ tư.
+
+## Đóng gói source distribution
+
+Chạy `python -m build processing` tại gốc repository trong môi trường đã cài
+công cụ build. Hai schema M6 lấy từ nguồn chuẩn `contracts/v1.3/schemas/`.
+Command sdist sao chép chúng vào `contracts/v1.3/schemas/` bên trong archive và
+đổi đường dẫn data-files trong bản metadata của archive. Không tạo bản sao schema
+được quản lý bằng Git trong thư mục Processing hoặc sửa metadata checkout.
+
+Source distribution tự chứa đủ đầu vào để build wheel ở ngoài repository.
+Wheel tiếp tục cài schema vào `share/maintai-processing/contracts`; đường dẫn
+runtime và biến `PROCESSING_SCHEMA_DIRECTORY` giữ nguyên.

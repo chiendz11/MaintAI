@@ -131,7 +131,6 @@ def test_real_storage_runtime_feeds_processing_raw_history(migrated_database):
     import os
     import time
 
-    from maintai_messaging.admin import create_local_topics
     from maintai_messaging.config import KafkaSettings
     from maintai_messaging.producer import KafkaPublisher
     from processing.tests.storage_provider import StorageProvider
@@ -140,7 +139,6 @@ def test_real_storage_runtime_feeds_processing_raw_history(migrated_database):
     settings = KafkaSettings(
         bootstrap_servers=bootstrap, security_protocol="PLAINTEXT", local_mode=True
     )
-    create_local_topics(settings)
     provider = StorageProvider(bootstrap)
     try:
         with KafkaPublisher(settings, "ingestion") as publisher:
