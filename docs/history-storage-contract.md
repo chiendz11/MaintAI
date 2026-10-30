@@ -8,24 +8,22 @@ archive/coverage/export còn cần, áp dụng khi không trái System Contracts
 và [quyết định dự án](README.md). Cursor, retention và writer cho snapshot/export
 phải đối chiếu các khác biệt trong [readiness](implementation-readiness.md).
 
-## 1. Ba tầng dữ liệu và profile khởi đầu
+## 1. Dữ liệu và retention M6
 
-| Dữ liệu | Nơi giữ | Profile thiết kế, cấu hình được |
+| Dữ liệu | Nơi giữ | Quyết định M6 |
 | --- | --- | --- |
-| Latest UI + alerts/audit/feedback | business_db | Latest theo máy; business retention riêng, không bị hot-history cleanup |
-| Processing terminal outcomes | processing_db | Hot 30 ngày theo thời điểm hoàn tất; không xóa pending/retrying |
-| Raw accepted envelopes | S3 raw | 365 ngày, không coi raw là kết quả inference gốc |
-| Terminal processing archive | S3 processed | 365 ngày, daily export; lag target <=24h |
-| History query snapshot | Processing temporary state/artifact | TTL 10 phút, pin dữ liệu được tham chiếu |
-| Export artifact | Private S3 exports | TTL 24h; download authorization mỗi lần, URL ký tối đa 5 phút |
+| Latest UI + alerts/audit/feedback | business_db | Giữ ownership hiện có; không full raw history |
+| Terminal processing outcomes | processing_db | Giữ original outcomes; không archive S3 hoặc cleanup thật |
+| Raw accepted/rejected receipts | S3/MinIO raw | Storage giữ object/manifest + catalog/coverage riêng |
+| Snapshot/catalog index/export jobs | processing_db history_meta | Read API ghi metadata quyền hẹp, pool riêng |
+| History query snapshot | Metadata + immutable membership/refs | TTL10 phút; không giữ SQL transaction dài |
+| Export artifact | Private exports S3/MinIO | TTL tải24h; URL ký<=5 phút, kiểm quyền lại |
 
-Đây là profile baseline1.3.2 để tham khảo; v1.4 chưa phê duyệt thời hạn retention
-cụ thể theo yêu cầu dữ liệu/ngân sách. Không coi các con số là policy production
-đã chốt hoặc số liệu dung lượng/độ trễ đã đo.
-DB có thể giữ lâu hơn 30 ngày khi archive lỗi hoặc còn pin; tuyệt đối không xóa
-chỉ vì đủ tuổi. S3 lifecycle chỉ được expire batch sau hạn và khi không còn pin
-hoặc evidence hold. Không xóa artifact model/preprocessor/policy đang được history
-tham chiếu mà chưa có chính sách giữ version tương ứng.
+Profile30d hot/365d raw/processed là ý tưởng retention tương lai chưa được bật.
+M6 giữ retention_enabled=false, cleaner_dry_run=true; chưa có processed archive
+thì không được xóa outcomes vì đủ tuổi. Hết snapshot/job TTL không xóa source
+history, evidence hoặc artifact model/policy còn được tham chiếu. Demo DB-only
+không cần object store; full raw history/export job dùng MinIO local, không cần AWS.
 
 ## 2. Logical processing record
 
@@ -35,57 +33,39 @@ validation issues hoặc failure code, completed prediction/probability/threshol
 model/preprocessor/dataset/policy versions, risk snapshot và raw reference.
 Features đầy đủ hoặc reference phải cho phép lấy đúng nguồn gốc; raw reference
 gồm object version/checksum và event locator, không chỉ một URL có thể bị đổi.
-Archive giữ original outcomes, không tính lại bằng model mới để thay lịch sử.
-Invalid/failed outcomes cũng được archive, ML fields null như terminal schema.
+History giữ original outcomes, không tính lại bằng model mới để thay lịch sử.
+Raw ref có thể null/PENDING_ARCHIVE khi chưa có object/catalog; không bịa URL/version.
+Invalid/failed outcomes cũng được giữ trong DB; ML fields null đúng terminal schema.
+Processed archive là phần sau M6, không phải trạng thái đã có.
 
 Business lưu một `alert_evidence_snapshot` bất biến khi tạo alert: source event,
 result/prediction IDs, six input features nếu VALID, probability, risk, versions,
 timestamps. Đây là bằng chứng nghiệp vụ có giới hạn theo alert, không phải full
 raw history. Alert còn mở/hold không mất evidence khi hot rows bị cleanup.
 
-## 3. Archive writer đã chọn
+## 3. Writer snapshot/export đã chọn cho M6
 
-MVP chọn **Processing-owned batch export từ processing_db**, không thêm topic
-prediction archive và không giả định `inference.results` chứa mọi cột history.
-Storage Consumer giữ nhiệm vụ raw archive. Processing Worker có maintenance loop
-riêng, cùng DB owner, không giữ consumer polling thread trong lúc export S3.
+Read API sở hữu snapshot/export và metadata catalog mirror; không chuyển việc này
+vào Processing Worker hoặc thêm processing-maintenance. Read API dùng processing_ro
+cho original data với read-only guard, và credential giới hạn trên history_meta
+cho snapshots/members/jobs/catalog entries. Không có quyền ghi source/outcome/risk/
+inbox/outbox, không DDL hoặc cross-owner SQL. Owner migration/grants do Người1.
 
-1. Sau terminal commit, maintenance chọn unassigned immutable records theo batch
-   có giới hạn, gán duy nhất archive_batch_id và immutable membership trong DB.
-2. Claim batch bằng lease/fencing; đọc tập thành viên đã đóng. Result đến muộn
-   vào batch tiếp theo; không dùng timestamp watermark để bỏ qua late commits.
-3. Ghi Parquet part files theo schema_version/event_date; target <=128 MiB/file.
-   Immutable keys gồm batch_id + part number, không ghi một object mỗi record.
-4. Đọc/kiểm tra object version, SHA-256, row count, membership digest và ID coverage.
-5. Publish immutable committed manifest sau khi mọi part đã có và kiểm tra đủ.
-6. Ghi VERIFIED + manifest reference trong DB với lease fencing token. Nếu mất
-   ACK sau publish, retry tìm manifest/batch ID rồi reconcile, không tạo batch mới.
-7. Cleaner chỉ xử lý thành viên VERIFIED đủ tuổi và không pin/hold. Xóa theo
-   manifest membership; chỉ drop partition khi partition đã đóng, mọi row đủ
-   điều kiện và không còn writer/transaction có thể thêm row vào partition ấy.
+Export runner bền vững chạy cùng runtime Read API với concurrency/pool/quota riêng;
+POST chỉ trả202 sau job commit. Hai API replicas claim bằng lease/fencing; crash
+phục hồi từ DB, không từ request-local tasks. Full rules ở M6-HISTORY-01 §4–5.
 
-States: PLANNED -> UPLOADING -> VERIFIED -> CLEANED; lỗi retry giữ nguyên batch ID.
-Lease hết hạn được reclaim với fencing token tăng; stale runner không được cập
-nhật VERIFIED/CLEANED. Upload parts nhưng chưa manifest chỉ là orphan chưa đọc.
-Orphan cleanup sau grace period phải kiểm tra batch/lease và manifest references.
+## 4. Raw catalog và phần archive hoãn
 
-## 4. Layout và manifest
+Storage Consumer giữ raw object/manifest protocol hiện có, bổ sung immutable
+catalog generations/segments + per-partition coverage theo M6-RAW-01. Read API
+sync metadata và query index, không scan bucket trong mỗi HTTP request. Catalog
+lag riêng với raw commit; published offset/timestamp không tự chứng minh COMPLETE.
 
-```text
-raw-sensor/schema=1.3.0/topic=.../partition=.../offsets=...jsonl.gz
-processed/schema=1.0.0/event_date=YYYY-MM-DD/batch=<id>/part-000.parquet
-processed-manifests/committed/YYYY-MM-DD/<batch_id>.json
-history-exports/<job_id>/<artifact_id>.parquet
-```
-
-Manifest schema 1.0.0 có `batch_id`, `created_at`, `record_schema_version`,
-`row_count`, `membership_sha256`, `min/max_source_server_accepted_at`,
-`min/max_occurred_at`, immutable `members_index` reference và `objects[]`.
-Mỗi reference có bucket/key/version_id/sha256/size_bytes; ETag không thay SHA-256.
-Members index liệt kê result IDs và event locators; phục vụ coverage, delete và
-point lookup. Catalog generation là tập manifest đã commit bất biến, không chỉ
-`latest.json`. Catalog publishing dùng compare-and-set generation; readers có thể
-pin generation cũ trong TTL. S3 paths/publication dates không thay event time.
+M6 chưa upload original processed outcomes xuống S3, chưa có processed cold lookup
+hoặc VERIFIED/CLEANED batch state. Nếu làm sau M6 phải có quyết định version mới,
+writer/membership/checksum/lease/pins/recovery và retention approval trước cleanup.
+Không dùng optional outcome wire archive của Storage làm bản thay thế DB history.
 
 ## 5. API history public và internal
 
@@ -99,26 +79,26 @@ browser làm service credential và không SQL cross-owner.
 | GET /predictions/{result_id} | /predictions/{result_id} | HistoryRecord |
 | GET /machines/{machine_id}/sensor-readings | /machines/{machine_id}/sensor-readings | SensorHistoryPage, gồm raw features + processing link khi có |
 | GET /machines/{machine_id}/timeseries | /machines/{machine_id}/timeseries | TimeSeriesPage |
-| POST /history-exports | /history-exports | 202 ExportJob sau durable commit |
+| POST /history-exports | /history-exports | CSV nhỏ HTTP streaming hoặc202 ExportJob sau durable commit |
 | GET /history-exports/{job_id} | /history-exports/{job_id} | ExportJob, không tự chạy job |
 | GET /history-exports/{job_id}/download | /history-exports/{job_id}/download | 303 private signed URL sau authorization |
 
 History query: `from`, `to` RFC3339 UTC (inclusive/exclusive), default last 1h,
 `limit` default100/max500, `cursor`, optional result_kind/model_version. Sorting
-descending `(source_server_accepted_at,result_id)`, ổn định kể cả cùng timestamp.
+descending `(processed_at,result_id)`, processed_at map completed_at hiện có; ổn định khi timestamp trùng.
 `prediction` history trả tất cả terminal outcomes; tên endpoint không ngầm lọc
 chỉ VALID. `result_kind` cho phép UI lọc completed predictions khi cần.
 Sensor history là receipt history, có receipt_id ổn định từ topic/partition/offset;
-sort descending `(server_accepted_at,receipt_id)`, giữ duplicate/conflict deliveries
+sort descending `(received_at,topic,partition,offset)`, giữ duplicate/conflict deliveries
 để audit, khác canonical processing history sort theo result_id.
-Sensor history lấy accepted raw archive và hot raw references; không biến raw
+Sensor history lấy raw archive/catalog theo receipt; không biến raw
 chưa Processing thành VALID. Raw và processing snapshots có lineage riêng.
 
 First page tạo `snapshot_id`, `as_of`, catalog_generation và bounded immutable
-hot membership. Response có `items`, `next_cursor`, `snapshot_id`, `as_of`,
-`expires_at`, `coverage` (COMPLETE), `tiers_used` (HOT/ARCHIVE), available_from/available_through.
-Snapshot pin hot rows và manifests; chuyển tầng trong TTL không làm mất bản ghi.
-Hot membership được materialize tối đa100000 IDs/snapshot; budget lớn hơn trả
+DB membership. Response có `items`, `next_cursor`, `snapshot_id`, `as_of`,
+`expires_at`, `coverage` (COMPLETE), `tiers_used` (HOT cho outcomes; ARCHIVE cho raw), available_from/available_through.
+Snapshot pin committed rows/catalog generation/raw versions; source không cleanup trong M6.
+DB membership được materialize tối đa100000 IDs/snapshot; budget lớn hơn trả
 422 QUERY_TOO_LARGE kèm gợi ý giảm range hoặc tạo history export. Range tương tác
 tối đa31 ngày; export tối đa365 ngày trong retention. Không giữ SQL transaction
 mở suốt 10 phút để giữ snapshot. Late results sau snapshot chỉ xuất hiện khi refresh.
@@ -129,13 +109,15 @@ không nhận bucket/key tùy ý từ client. Mỗi page vẫn kiểm tra quyề
 Request vượt dữ liệu đã expire trả410 HISTORY_EXPIRED với available_from;
 range đảo/field sai422; resource thật sự không tồn tại404.
 
-Raw history snapshot chỉ cover đến durable raw archive/hot watermark; unarchived
-accepted events vẫn có thể chỉ xuất hiện trong live snapshot. available_through
-phải phản ánh cutoff, strict request vượt coverage503 thay vì200 thiếu dữ liệu.
+Raw snapshot công bố catalog generation + safe offset coverage từng partition.
+Không suy time cutoff từ max(received_at); available_through nullable nếu chưa có
+bằng chứng theo clock query. Strict request vượt scope đã verify trả503 với reason
+PENDING_ARCHIVE/CATALOG_LAG/GAP, không200 thiếu dữ liệu. Late receipts xuất hiện
+khi refresh. Xem M6-RAW-01 về frontier/log gaps và source-time completeness.
 
 Nếu một tầng cần đọc không sẵn sàng, trả503 HISTORY_UNAVAILABLE, không trả200
 danh sách thiếu như đủ dữ liệu. Empty200 chỉ khi coverage COMPLETE và không có
-record. Point lookup ưu tiên hot, sau đó members index/archive; chưa materialize
+record. Point lookup outcome đọc processing_db trong M6, raw details đọc catalog/ref; chưa materialize
 processing status trả404 EVENT_NOT_MATERIALIZED, khác expired/not found.
 
 ## 6. Chart aggregation
@@ -151,15 +133,15 @@ không sample trả null values, không nội suy. Nếu explicit resolution vư
 max_points ->422; auto chọn resolution đủ budget. Response giữ unit, source
 metric, snapshot/as_of, coverage và markers cursor riêng để không cắt mất alerts.
 UI overlay alert/evidence đúng source time, phân biệt chart bucket và event gốc.
-Không dùng chart aggregates làm input ML/Drift. Long cold query vượt thời gian
+Không dùng chart aggregates làm input ML/Drift. Raw object query vượt thời gian
 interactive trả503 QUERY_TIMEOUT hoặc yêu cầu export, không chạy vô hạn trong API.
 
 ## 7. Export và retention recovery
 
 Export job: QUEUED -> RUNNING -> SUCCEEDED / FAILED / EXPIRED. Idempotency-Key
 ràng buộc actor + canonical query, cùng key khác query ->409. Frozen query scope,
-manifest generation, snapshot và authorized machines được lưu khi accept.
-Nếu cần hơn100000 hot IDs, worker tạo snapshot/export theo chunk với durable
+raw catalog generation khi dùng raw, snapshot và authorized machines được lưu khi accept.
+Nếu cần hơn100000 DB IDs, export runner của Read API tạo snapshot theo chunk với durable
 membership và pins; nó có pool riêng, không chiếm pool dashboard. Không bỏ giới
 hạn bằng cách chạy query khổng lồ trong HTTP handler.
 
@@ -167,18 +149,19 @@ Download trước success ->409 EXPORT_NOT_READY; sau artifact TTL ->410;
 không có quyền ->403; job không tồn tại404. Quyền phải được kiểm tra lại lúc
 download, không chỉ lúc tạo. Export không resolve alert hoặc kích hoạt training.
 
-DB cleanup và S3 expiry là hai bước riêng; backup DB không phải archive query.
-Nếu cleaner crash, membership + status cho phép tiếp tục. Nếu manifest bị thiếu
-hoặc checksum sai sau verification, quarantine batch, ngừng cleanup liên quan,
-phát metric/incident và phục hồi từ DB/backup trước khi đánh dấu COMPLETE.
+M6 không chạy source-data cleanup; cleaner chỉ dry-run trong Read API codebase.
+Không có processed archive VERIFIED thì không xóa outcomes. Raw object/catalog hỏng
+phải báo lỗi/UNKNOWN, dừng công bố COMPLETE; giữ DB history và evidence. Dọn export
+artifact riêng chỉ theo TTL/pins/policy, không dùng rule đó cho raw hoặc outcomes.
 
 ## 8. Acceptance cần có khi implement
 
-- Crossing hot/archive boundary: không duplicate/missing, stable cursor và pin.
-- Late terminal commit vào batch tiếp theo, không bị timestamp watermark bỏ qua.
-- Upload crash/lease expiry/retry: một logical batch, không premature deletion.
+- DB outcome pages và raw catalog pages có timestamp trùng: không duplicate/missing.
+- Late terminal commit không lọt snapshot cũ; refresh mới thấy kết quả đó.
+- Export upload/crash/lease/retry: một canonical job output, không partial success.
+- SQL tests chứng minh metadata writer không sửa outcome/inbox/outbox; Worker không export.
 - Archive unavailable: explicit503; expired history410; empty complete200.
-- Invalid/failed outcomes giữ null ML; evidence alert còn truy cập sau hot cleanup.
+- Invalid/failed giữ null ML; evidence alert/source data không bị cleanup M6.
 - Query/exports re-check role/machine scope; cursor không dùng sang user khác.
 - Chart spike còn trong max; gaps null; không đổi prediction/alert từ aggregates.
 
@@ -195,8 +178,9 @@ source sequence/locator và completed_at riêng, không dùng completion order l
 source order hoặc thay history pagination cursor đã freeze. History vẫn giữ
 mọi logical outcome; unique identity ngăn duplicate receipt tạo bản ghi logic mới.
 
-Offset coordinator chỉ advance safe completed prefix sau DB durability; processed
-archive/retention vẫn cần verified membership riêng. Frontier chưa tiến không
+Offset coordinator chỉ advance safe completed prefix sau DB durability;
+raw catalog/coverage vẫn cần verified membership riêng; processed archive hoãn.
+Frontier chưa tiến không
 chứng minh các outcomes sau hole chưa có trong DB. Raw Storage giữ từng receipt
 và runner/microbatch hiện hành; không đổi batching hoặc bỏ archive theo UI
-coalescing. Ordered outbox không thay snapshot/manifest/watermark rules của HISTORY-01.
+coalescing. Ordered outbox không thay snapshot/catalog/coverage rules của M6-HISTORY-01.

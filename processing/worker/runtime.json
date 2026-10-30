@@ -9,12 +9,13 @@
   "image_group": "processing",
   "image_digest": null,
   "entrypoint_status": "implemented_m2_local_fixture_with_ordering_opt_in",
-  "purpose": "Consume sensor.readings -> feature/registry validation -> ML/risk -> owner history/outbox; archive/export jobs remain planned.",
+  "purpose": "Consume sensor.readings -> validation -> ML/risk -> durable owner outcome/outbox. M6 Worker stays realtime-only; no export/archive maintenance.",
   "source_paths": [
     "processing/worker/src",
     "processing/shared",
     "processing/migrations",
-    "processing/src"
+    "processing/src",
+    "processing/config/risk-policies"
   ],
   "logical_database": "processing_db",
   "kafka_subscriptions": [
@@ -37,23 +38,23 @@
     "Executable worker is explicit local-fixture only until reviewed serving identity and registry service access are available.",
     "Target PROC-ORDER-01/1.0.0: same machine FIFO, different machines concurrent; commit safe completed prefix per partition.",
     "Baseline inventory1.3.2 is preserved; Kafka outcome reader/writer1.4.0 are independently versioned.",
-    "Ordering requires explicit owner migration/activation after drain; no automatic legacy cursor bootstrap."
+    "Ordering requires explicit owner migration/activation after drain; no automatic legacy cursor bootstrap.",
+    "M6-HISTORY-01: snapshot/export belongs to Read API; no processing-maintenance deployment or Worker maintenance loop."
   ],
   "dockerfile": "processing/worker/Dockerfile",
   "dockerfile_status": "implemented",
   "implemented_contract_revision": "1.4.0",
-  "planned_background_tasks": [
-    "processing-archive",
-    "history-export",
-    "verified-retention-cleanup"
-  ],
+  "planned_background_tasks": [],
   "implemented_scope": "Owner DQ/registry/ML/risk/history with SDK0.2 keyed processing and ordered relay opt-in, validated locally with fixture ML/identity/policy; shared/provider/load/deployment acceptance remains pending.",
   "transport_implementation": {
     "package": "maintai-processing",
     "version": "0.1.0",
-    "sdk_version": "0.3.0",
+    "sdk_version": "0.3.1",
     "kafka_bundle_version": "2.0.0",
     "decision": "PROC-ORDER-01/1.0.0",
     "document": "docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md"
-  }
+  },
+  "deferred_capabilities": [
+    "Processed archive and real retention cleanup after M6 require a new decision."
+  ]
 }

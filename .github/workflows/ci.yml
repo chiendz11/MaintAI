@@ -17,6 +17,10 @@ defaults:
     shell: bash
 
 jobs:
+  rag-ci:
+    name: RAG provider and image
+    uses: ./.github/workflows/rag-ci.yml
+
   structure:
     name: Repository structure
     runs-on: ubuntu-latest
@@ -467,7 +471,7 @@ jobs:
         run: |
           python -m pip install build==1.6.1 setuptools==84.0.0 wheel==0.48.0
           python -m build messaging --wheel --outdir /tmp/m1-wheels
-          python -m pip install --no-deps /tmp/m1-wheels/maintai_messaging-0.3.0-py3-none-any.whl
+          python -m pip install --no-deps /tmp/m1-wheels/maintai_messaging-0.3.1-py3-none-any.whl
           python -m pip install --find-links /tmp/m1-wheels -r ingestion-api/requirements-dev.lock
           python -m pip install --no-deps --no-build-isolation -e ./ingestion-api
       - name: Lint, unit, contract and installed artifacts
@@ -500,7 +504,7 @@ jobs:
         run: |
           python -m pip install build==1.6.1 setuptools==84.0.0 wheel==0.48.0
           python -m build messaging --wheel --outdir /tmp/m1-wheels
-          python -m pip install --no-deps /tmp/m1-wheels/maintai_messaging-0.3.0-py3-none-any.whl
+          python -m pip install --no-deps /tmp/m1-wheels/maintai_messaging-0.3.1-py3-none-any.whl
           python -m pip install --find-links /tmp/m1-wheels -r ingestion-api/requirements-dev.lock
           python -m pip install --no-deps --no-build-isolation -e ./ingestion-api
       - name: Start isolated broker
@@ -550,6 +554,9 @@ jobs:
       - name: Archive, retry, replay, health and credential-isolation tests without AWS
         run: python -m pytest storage-consumer/tests
 
+      - name: Validate frozen M6 catalog schemas and packaged examples without AWS
+        run: maintai-storage validate-catalog
+
       - name: Build SDK and Storage distributions
         run: |
           python -m build --no-isolation messaging
@@ -561,6 +568,7 @@ jobs:
           "$RUNNER_TEMP/storage-wheel/bin/python" -m pip install -r storage-consumer/requirements.lock
           "$RUNNER_TEMP/storage-wheel/bin/python" -m pip install --no-deps messaging/dist/*.whl storage-consumer/dist/*.whl
           cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/storage-wheel/bin/maintai-storage" validate-catalog
           KAFKA_LOCAL_MODE=true KAFKA_SECURITY_PROTOCOL=PLAINTEXT S3_RAW_BUCKET=fixture-bucket \
             "$RUNNER_TEMP/storage-wheel/bin/maintai-storage" verify-config
 
@@ -584,6 +592,62 @@ jobs:
           docker run --rm --network none --read-only --tmpfs /tmp \
             -e KAFKA_LOCAL_MODE=true -e KAFKA_SECURITY_PROTOCOL=PLAINTEXT \
             -e S3_RAW_BUCKET=fixture-bucket maintai-storage:ci verify-config
+
+  storage-catalog-integration:
+    name: Storage catalog Kafka and MinIO recovery
+    needs: storage-ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      MAINTAI_STORAGE_INTEGRATION: '1'
+      STORAGE_TEST_KAFKA_BOOTSTRAP: 127.0.0.1:19092
+      STORAGE_TEST_S3_ENDPOINT: http://127.0.0.1:19000
+      STORAGE_TEST_S3_ACCESS_KEY: storage-local-fixture
+      STORAGE_TEST_S3_SECRET_KEY: storage-local-fixture-password
+      STORAGE_TEST_IMAGE: maintai-storage-catalog:local
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: storage-consumer/requirements-dev.lock
+
+      - name: Install locked provider test harness
+        run: |
+          python -m pip install -r storage-consumer/requirements-dev.lock setuptools==84.0.0 wheel==0.48.0
+          python -m pip install --no-deps --no-build-isolation -e ./messaging -e ./storage-consumer
+
+      - name: Build pinned Storage and source-pinned MinIO fixture
+        run: docker compose -p maintai-storage-catalog-ci -f storage-consumer/local/compose.yaml build
+
+      - name: Start isolated Kafka MinIO bootstrap and Storage runtime
+        run: docker compose -p maintai-storage-catalog-ci -f storage-consumer/local/compose.yaml up -d --wait --wait-timeout 180
+
+      - name: Verify raw durability catalog recovery exact versions duplicate receipts and installed image
+        run: python -m pytest storage-consumer/tests/integration --junitxml=artifacts/storage-catalog-integration.xml
+
+      - name: Dump isolated fixture logs on failure
+        if: ${{ failure() }}
+        run: docker compose -p maintai-storage-catalog-ci -f storage-consumer/local/compose.yaml logs --tail=100
+
+      - name: Retain integration results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: storage-catalog-integration
+          path: artifacts/storage-catalog-integration.xml
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Remove only this job's isolated fixture resources
+        if: ${{ always() }}
+        run: docker compose -p maintai-storage-catalog-ci -f storage-consumer/local/compose.yaml down --volumes
 
   mlflow-source-ci:
     name: MLflow image source and release handoff
@@ -626,7 +690,8 @@ jobs:
         run: |
           python -m pip install build==1.6.1 setuptools==84.0.0 wheel==0.48.0
           python -m build messaging --wheel --outdir /tmp/m2-wheels
-          python -m pip install --no-deps /tmp/m2-wheels/maintai_messaging-0.3.0-py3-none-any.whl
+          python -m build --no-isolation storage-consumer --wheel --outdir /tmp/m2-wheels
+          python -m pip install --no-deps /tmp/m2-wheels/maintai_messaging-0.3.1-py3-none-any.whl
           python -m pip install --find-links /tmp/m2-wheels -r processing/requirements-dev.lock -r backend/requirements-dev.lock
           python -m pip install --no-deps --no-build-isolation -e ./processing -e ./backend
       - name: Verify source and installed wheel
@@ -669,7 +734,8 @@ jobs:
         run: |
           python -m pip install build==1.6.1 setuptools==84.0.0 wheel==0.48.0
           python -m build messaging --wheel --outdir /tmp/m2-wheels
-          python -m pip install --no-deps /tmp/m2-wheels/maintai_messaging-0.3.0-py3-none-any.whl
+          python -m build --no-isolation storage-consumer --wheel --outdir /tmp/m2-wheels
+          python -m pip install --no-deps /tmp/m2-wheels/maintai_messaging-0.3.1-py3-none-any.whl
           python -m pip install --find-links /tmp/m2-wheels -r processing/requirements-dev.lock -r backend/requirements-dev.lock -r ingestion-api/requirements-dev.lock
           python -m pip install --no-deps --no-build-isolation -e ./processing -e ./backend -e ./ingestion-api
       - name: Start isolated M2 integration dependencies
@@ -683,6 +749,14 @@ jobs:
           docker build -f backend/business-consumer/Dockerfile -t maintai-business-consumer:m3-local .
       - name: Verify migrations permissions transactions replay and pipeline
         run: python -m pytest --import-mode=importlib processing/worker/tests processing/outbox-relay/tests processing/read-api/tests processing/tests backend/business-api/tests backend/business-consumer/tests -m integration
+      - name: Dump container logs on failure
+        if: ${{ failure() }}
+        run: |
+          docker ps -a
+          for c in $(docker ps -aq); do
+            echo "===== $(docker inspect --format '{{.Name}}' "$c") ====="
+            docker logs --tail 150 "$c" 2>&1
+          done
       - name: Stop isolated M2 dependencies
         if: ${{ always() }}
         run: docker compose -p maintai-m6-ci -f processing/read-api/tests/compose.yaml down --volumes
@@ -716,7 +790,8 @@ jobs:
         run: |
           python -m pip install build==1.6.1 setuptools==84.0.0 wheel==0.48.0
           python -m build --no-isolation messaging --wheel --outdir /tmp/m4-wheels
-          python -m pip install --no-deps /tmp/m4-wheels/maintai_messaging-0.3.0-py3-none-any.whl
+          python -m build --no-isolation storage-consumer --wheel --outdir /tmp/m4-wheels
+          python -m pip install --no-deps /tmp/m4-wheels/maintai_messaging-0.3.1-py3-none-any.whl
           python -m pip install --find-links /tmp/m4-wheels -r processing/requirements-dev.lock -r backend/requirements-dev.lock -r ingestion-api/requirements-dev.lock
           python -m pip install --no-deps --no-build-isolation -e ./processing -e ./backend -e ./ingestion-api
       - name: Check fixture source and install locked frontend
@@ -785,6 +860,7 @@ jobs:
     name: CI / required
     if: ${{ always() }}
     needs:
+      - rag-ci
       - structure
       - api-contracts
       - repo-metadata
@@ -798,6 +874,7 @@ jobs:
       - simulator-ui-container
       - storage-ci
       - storage-container
+      - storage-catalog-integration
       - mlflow-source-ci
       - component-ci
       - ingestion-ci

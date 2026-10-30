@@ -1,9 +1,15 @@
 # Processing — một owner, ba runtime folders
 
+**RISK-POLICY-01:** Source policy/schema/catalog ở
+[`config/risk-policies/`](config/risk-policies/README.md). GitOps chọn version/hash
+và tạo ConfigMap read-only cho Worker; infrastructure không sở hữu nội dung
+policy. Xem [quyết định30/10](../docs/RISK_POLICY_OWNERSHIP.md). Policy demo dùng
+ngưỡng tham khảo, không có production calibration hoặc guarantee tạo Alert.
+
 | Runtime folder | Workload | Trách nhiệm |
 | --- | --- | --- |
 | [`worker/`](worker/Dockerfile) | Deployment `processing-worker` | Kafka → DQ → ML → risk; persist history/outbox. |
-| [`read-api/`](read-api/Dockerfile) | Deployment `processing-read-api` | API nội bộ cho status/history/VALID windows. |
+| [`read-api/`](read-api/Dockerfile) | Deployment `processing-read-api` | Status/history/chart; M6 snapshot/export runner và metadata writer quyền hẹp. |
 | [`outbox-relay/`](outbox-relay/Dockerfile) | Deployment `processing-outbox-relay` | Durable outbox → Kafka `inference.results` và `alert.signals`. |
 | `shared/` | Không phải deployment | data_quality, inference_client, risk_engine, events, ordering, outbox và persistence. |
 | `migrations/` | Không phải deployment | Schema `processing_db`, một owner cho cả ba runtime. |
@@ -29,7 +35,7 @@ Writer và reader chỉ outcome1.4.0; không tương thích legacy2.0.0. Xem
 
 ## PROC-ORDER-01 — transport source đã có, app còn cần tích hợp
 
-Package ở processing/src/maintai_processing/ dùng SDK0.3.0 và bundle2.0.0.
+Package ở processing/src/maintai_processing/ dùng SDK0.3.1 và bundle2.0.0.
 Worker/Relay có app entrypoints và images; metadata/image source không tự chứng
 minh activation hoặc triển khai shared.
 

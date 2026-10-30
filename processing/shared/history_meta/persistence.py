@@ -10,6 +10,10 @@ TABLES = (
     "export_jobs",
     "raw_catalog_entries",
     "raw_catalog_sync_state",
+    "native_catalog_heads",
+    "native_catalog_imports",
+    "native_catalog_visited",
+    "native_catalog_receipts",
 )
 
 

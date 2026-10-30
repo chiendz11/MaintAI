@@ -1,14 +1,17 @@
-"""Read/index the Storage-owned protocol; never publish or rewrite raw objects."""
+"""Native Storage catalog reads with a durable Processing-owned delta index."""
 
 import base64
 import gzip
 import io
-import tempfile
 from datetime import UTC, datetime
 
-from maintai_messaging.contracts import canonical_json, default_contracts, strict_json
+from jsonschema import ValidationError
+from maintai_messaging.contracts import default_contracts, strict_json
+from maintai_messaging.errors import ConfigurationError, IdentityConflict
+from maintai_storage.catalog import MAX_FRAME_BYTES, CatalogReader, CatalogStore
 from psycopg import sql
 
+from .native_catalog import NativeIndex
 from .security import HistoryError, digest
 from .snapshots import timestamp
 
@@ -17,165 +20,36 @@ class Catalog:
     def __init__(self, metadata, objects, schemas, *, processing_link=None):
         self.meta, self.objects, self.schemas = metadata, objects, schemas
         self.processing_link = processing_link
+        self.store = None
+        self.index = None
+        if objects is not None and hasattr(objects, "client"):
+            self.store = CatalogStore(objects.client, objects.raw_bucket)
+            self.reader = CatalogReader(self.store)
+            source_key = digest(
+                {
+                    "bucket": objects.raw_bucket,
+                    "prefix": self.store.prefix,
+                    "raw_prefix": self.store.raw_prefix,
+                }
+            )
+            self.index = NativeIndex(metadata, self.store, self.reader, source_key)
 
     def sync(self):
-        if self.objects is None or self.meta is None:
+        if self.index is None or self.meta is None:
             raise HistoryError(503, "HISTORY_UNAVAILABLE")
-        pointer = self.schemas.validate("Pointer", strict_json(self.objects.pointer()))
-        generation = self.schemas.validate(
-            "Generation", strict_json(self.objects.read(pointer["generation_ref"]))
-        )
-        if pointer["generation_id"] != generation["generation_id"]:
-            raise HistoryError(503, "HISTORY_UNAVAILABLE")
-        partitions = {}
-        for partition in generation["partitions"]:
-            key = (partition["topic"], partition["partition"])
-            if (
-                key in partitions
-                or not partition["start_offset"]
-                <= partition["indexed_next_offset"]
-                <= partition["archived_next_offset"]
-                or (partition["status"] == "COMPLETE" and partition["gaps"])
-            ):
-                raise HistoryError(503, "HISTORY_UNAVAILABLE")
-            partitions[key] = partition
-        identifier = generation["generation_id"]
-        # Download and validate before holding the publication transaction/lock.
-        with tempfile.SpooledTemporaryFile(max_size=1024 * 1024) as staged:
-            total, total_bytes = 0, 0
-            for reference in generation["segments"]:
-                partition = partitions.get((reference["topic"], reference["partition"]))
-                if partition is None:
-                    raise HistoryError(503, "HISTORY_UNAVAILABLE")
-                segment = self.schemas.validate(
-                    "Segment", strict_json(self.objects.read(reference["object_ref"]))
-                )
-                if (
-                    segment["segment_id"] != reference["segment_id"]
-                    or len(segment["entries"]) != reference["entry_count"]
-                ):
-                    raise HistoryError(503, "HISTORY_UNAVAILABLE")
-                for entry in segment["entries"]:
-                    expected = f"{entry['topic']}:{entry['partition']}:{entry['offset']}"
-                    if (
-                        (entry["topic"], entry["partition"])
-                        != (reference["topic"], reference["partition"])
-                        or entry["receipt_id"] != expected
-                        or not partition["start_offset"]
-                        <= entry["offset"]
-                        < partition["indexed_next_offset"]
-                    ):
-                        raise HistoryError(503, "HISTORY_UNAVAILABLE")
-                    raw = canonical_json(entry) + b"\n"
-                    total += 1
-                    total_bytes += len(raw)
-                    if total > 1000000 or total_bytes > 512 * 1024 * 1024:
-                        raise HistoryError(503, "QUERY_TOO_LARGE")
-                    staged.write(raw)
-            staged.seek(0)
-            with self.meta.factory() as connection, connection.transaction():
-                connection.execute(
-                    "SELECT pg_advisory_xact_lock(hashtext(%s))", (self.meta.schema + ":catalog",)
-                )
-                existing = connection.execute(
-                    sql.SQL("SELECT * FROM {} WHERE generation_id=%s").format(
-                        self.meta.table("raw_catalog_sync_state")
-                    ),
-                    (identifier,),
-                ).fetchone()
-                if existing is not None:
-                    if (
-                        digest(strict_json(bytes(existing["manifest"]))) != digest(generation)
-                        or existing["state"] != "ACTIVE"
-                    ):
-                        raise HistoryError(503, "HISTORY_UNAVAILABLE")
-                    return identifier
-                active = connection.execute(
-                    sql.SQL("SELECT manifest FROM {} WHERE state='ACTIVE'").format(
-                        self.meta.table("raw_catalog_sync_state")
-                    )
-                ).fetchone()
-                if active:
-                    previous = strict_json(bytes(active["manifest"]))
-                    if timestamp(generation["published_at"]) <= timestamp(previous["published_at"]):
-                        raise HistoryError(503, "HISTORY_UNAVAILABLE")
-                    for old in previous["partitions"]:
-                        new = partitions.get((old["topic"], old["partition"]))
-                        if (
-                            new is None
-                            or old["start_offset"] != new["start_offset"]
-                            or new["indexed_next_offset"] < old["indexed_next_offset"]
-                        ):
-                            raise HistoryError(503, "HISTORY_UNAVAILABLE")
-                connection.execute(
-                    sql.SQL(
-                        "INSERT INTO {}(generation_id,manifest,state) VALUES(%s,%s,'BUILDING')"
-                    ).format(self.meta.table("raw_catalog_sync_state")),
-                    (identifier, canonical_json(generation)),
-                )
-                for raw in staged:
-                    entry = strict_json(raw)
-                    machine = entry["machine_id"]
-                    if machine is not None and "\x00" in machine:
-                        machine = None
-                    connection.execute(
-                        sql.SQL("""INSERT INTO {}(generation_id,receipt_id,
-                        machine_id,received_at,topic,partition,source_offset,payload)
-                        VALUES(%s,%s,%s,%s,%s,%s,%s,%s)""").format(
-                            self.meta.table("raw_catalog_entries")
-                        ),
-                        (
-                            identifier,
-                            entry["receipt_id"],
-                            machine,
-                            None
-                            if entry["received_at"] is None
-                            else timestamp(entry["received_at"]),
-                            entry["topic"],
-                            entry["partition"],
-                            entry["offset"],
-                            canonical_json(entry),
-                        ),
-                    )
-                if (
-                    active
-                    and connection.execute(
-                        sql.SQL(
-                            "SELECT 1 FROM {} old_entry LEFT JOIN {} new_entry "
-                            "ON new_entry.generation_id=%s "
-                            "AND new_entry.receipt_id=old_entry.receipt_id "
-                            "WHERE old_entry.generation_id=%s "
-                            "AND old_entry.payload IS DISTINCT FROM new_entry.payload LIMIT 1"
-                        ).format(
-                            self.meta.table("raw_catalog_entries"),
-                            self.meta.table("raw_catalog_entries"),
-                        ),
-                        (identifier, previous["generation_id"]),
-                    ).fetchone()
-                ):
-                    raise HistoryError(503, "HISTORY_UNAVAILABLE")
-                connection.execute(
-                    sql.SQL("UPDATE {} SET state='RETIRED' WHERE state='ACTIVE'").format(
-                        self.meta.table("raw_catalog_sync_state")
-                    )
-                )
-                connection.execute(
-                    sql.SQL("UPDATE {} SET state='ACTIVE' WHERE generation_id=%s").format(
-                        self.meta.table("raw_catalog_sync_state")
-                    ),
-                    (identifier,),
-                )
-        return identifier
+        try:
+            return self.index.sync()
+        except (ConfigurationError, IdentityConflict, ValidationError, ValueError):
+            raise HistoryError(503, "HISTORY_UNAVAILABLE") from None
+        except HistoryError:
+            raise
+        except Exception:
+            raise HistoryError(503, "HISTORY_UNAVAILABLE") from None
 
     def coverage(self, query):
-        if self.meta is None or self.objects is None:
+        if self.index is None or self.meta is None:
             raise HistoryError(503, "HISTORY_UNAVAILABLE")
-        with self.meta.factory() as connection:
-            row = connection.execute(
-                sql.SQL(
-                    "SELECT generation_id,manifest,created_at FROM {} WHERE state='ACTIVE'"
-                ).format(self.meta.table("raw_catalog_sync_state"))
-            ).fetchone()
+        row = self.index.active()
         if row is None:
             raise HistoryError(503, "HISTORY_UNAVAILABLE")
         manifest = strict_json(bytes(row["manifest"]))
@@ -191,19 +65,36 @@ class Catalog:
             raise HistoryError(503, "HISTORY_UNAVAILABLE")
         return {
             "catalog_generation": row["generation_id"],
-            "partition_coverage": partitions,
+            "partition_coverage": [
+                {k: v for k, v in p.items() if k != "topic_id"} for p in partitions
+            ],
             "available_from": None,
             "available_through": None,
         }
 
     def records(self, query):
+        if self.index is None:
+            raise HistoryError(503, "HISTORY_UNAVAILABLE")
+        with self.meta.factory() as connection:
+            generation = connection.execute(
+                sql.SQL(
+                    "SELECT import_sequence FROM {} WHERE source_key=%s "
+                    "AND generation_id=%s AND state='READY'"
+                ).format(self.meta.table("native_catalog_imports")),
+                (self.index.key, query["catalog_generation"]),
+            ).fetchone()
+        if generation is None:
+            raise HistoryError(503, "HISTORY_UNAVAILABLE")
         last = None
         while True:
             statement = sql.SQL("""SELECT payload,received_at,topic,partition,source_offset FROM {}
-                WHERE generation_id=%s AND machine_id=ANY(%s) AND received_at>=%s AND received_at<%s
-                AND topic='sensor.readings'""").format(self.meta.table("raw_catalog_entries"))
+                WHERE source_key=%s AND first_sequence<=%s AND machine_id=ANY(%s)
+                AND received_at>=%s AND received_at<%s AND topic='sensor.readings'""").format(
+                self.meta.table("native_catalog_receipts")
+            )
             params = [
-                query["catalog_generation"],
+                self.index.key,
+                generation["import_sequence"],
                 query.get("machine_ids", [query.get("machine_id")]),
                 query["from"],
                 query["to"],
@@ -221,36 +112,27 @@ class Catalog:
             if not rows:
                 return
             for row in rows:
-                # No DB transaction/connection is held during exact object reads.
                 yield self.receipt(strict_json(bytes(row["payload"])))
             row = rows[-1]
             last = [row["received_at"], row["topic"], row["partition"], row["source_offset"]]
 
     def receipt(self, entry):
-        manifest = strict_json(self.objects.read(entry["raw_manifest_ref"]))
-        default_contracts().validator("archive/raw-manifest.schema.json").validate(manifest)
-        if any(
-            manifest[key] != entry[source]
-            for key, source in (
-                ("topic", "topic"),
-                ("partition", "partition"),
-                ("first_offset", "offset"),
-                ("last_offset", "offset"),
-            )
-        ):
-            raise HistoryError(503, "HISTORY_UNAVAILABLE")
-        reference = entry["raw_object_ref"]
-        if manifest["object"] != {
-            k: reference[k] for k in ("bucket", "key", "version_id", "sha256")
-        }:
-            raise HistoryError(503, "HISTORY_UNAVAILABLE")
-        with gzip.GzipFile(fileobj=io.BytesIO(self.objects.read(reference))) as stream:
-            raw = stream.read(2097153)
-        if len(raw) > 2097152:
-            raise HistoryError(503, "HISTORY_UNAVAILABLE")
-        frame = strict_json(raw)
-        if any(frame[k] != entry[k] for k in ("topic", "partition", "offset")):
-            raise HistoryError(503, "HISTORY_UNAVAILABLE")
+        try:
+            packed = self.reader.raw(entry)
+            with gzip.GzipFile(fileobj=io.BytesIO(packed)) as stream:
+                raw = stream.read(MAX_FRAME_BYTES + 1)
+            if len(raw) > MAX_FRAME_BYTES:
+                raise ValueError("Raw frame size exceeded")
+            frame = strict_json(raw)
+            if any(frame[k] != entry[k] for k in ("topic", "partition", "offset")):
+                raise ValueError("Raw locator differs from catalog")
+            return self._decoded(entry, frame)
+        except HistoryError:
+            raise
+        except Exception:
+            raise HistoryError(503, "HISTORY_UNAVAILABLE") from None
+
+    def _decoded(self, entry, frame):
         event = default_contracts().decode(
             "sensor.readings", base64.b64decode(frame["value_base64"], validate=True)
         )

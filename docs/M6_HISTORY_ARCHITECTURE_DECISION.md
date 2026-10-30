@@ -166,7 +166,7 @@ MinIO/S3 thì history DB vẫn chạy, còn export cần object artifact phải 
 Contract chi tiết tại [M6 Raw Archive Handoff](M6_RAW_ARCHIVE_HANDOFF.md). Storage owner cung
 cấp catalog generation bất biến, raw object refs/checksum và coverage theo từng
 Kafka partition. Processing/Business owner có thể dùng fixture đúng contract để phát triển reader/UI
-trong lúc Storage owner bổ sung publisher/reconciliation ở Storage; fixture không thay
+với publisher/reconciliation đã có trong Storage0.2.1; fixture không thay
 bằng chứng provider thật.
 
 M6 không bật `STORAGE_ARCHIVE_OUTCOMES`; raw accepted/rejected vẫn theo SDK0.3.0,

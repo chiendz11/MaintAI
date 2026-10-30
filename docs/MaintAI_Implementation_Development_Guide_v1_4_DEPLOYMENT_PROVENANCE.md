@@ -653,7 +653,7 @@ thresholds:
   watch: 0.40
   high: 0.65
   critical: 0.85
-alert_on:
+create_alert_for:
   - HIGH
   - CRITICAL
 ```
@@ -3188,7 +3188,7 @@ Các mô tả module trong v1.3.1 phía trên vẫn được sử dụng, **tr�
 
 ## 42.1. Danh sách Deployments/runtimes cần triển khai đúng
 
-Bổ sung rõ `processing-read-api` là **Kubernetes Deployment độc lập** với `processing-worker`, được expose bằng internal ClusterIP Service và dùng PostgreSQL credential `processing_ro` (read-only). `processing-outbox-relay` là runtime riêng có thể khởi động lại và tăng replica tùy backlog, nhưng phải bảo đảm không publish trùng side effects. `business-api` và `business-consumer` giữ hai Deployments cùng Business codebase. **Không tạo `history_db` thứ sáu** và không bắt buộc History Service riêng trong MVP. Simulator Control chỉ dành demo; training là Job chạy theo yêu cầu, drift là CronJob. Kafka/Postgres/MinIO chạy in-cluster demo hoặc bên ngoài; không mặc định có HA.
+Bổ sung rõ `processing-read-api` là **Kubernetes Deployment độc lập** với `processing-worker`, được expose bằng internal ClusterIP Service; M6 dùng processing_ro SELECT original data và pool metadata writer quyền hẹp riêng theo §57. `processing-outbox-relay` là runtime riêng có thể khởi động lại và tăng replica tùy backlog, nhưng phải bảo đảm không publish trùng side effects. `business-api` và `business-consumer` giữ hai Deployments cùng Business codebase. **Không tạo `history_db` thứ sáu** và không bắt buộc History Service riêng trong MVP. Simulator Control chỉ dành demo; training là Job chạy theo yêu cầu, drift là CronJob. Kafka/Postgres/MinIO chạy in-cluster demo hoặc bên ngoài; không mặc định có HA.
 
 ## 42.2. Truy vết từ repository đến image và Deployment
 
@@ -3267,7 +3267,12 @@ thay legacy và không tự migrate dữ liệu cũ. Đọc §56 trước cutove
 
 Storage Consumer tạo object key xác định từ `topic/partition/offset` và checksum. Batch manifest phải có `record_count`, offset range, schema version, object path và hash. Chỉ commit Kafka offset sau khi object và manifest đã được ghi bền vững. Có thể archive outcome bằng consumer group riêng.
 
-`processing-read-api` đọc indexed hot history từ `processing_db`; với cold S3 phải tra object bằng partition/date/manifest trước, không quét toàn bucket mỗi UI request. Business API là facade duy nhất cho Frontend. Alert History vẫn ở `business_db`, không truy vấn từ Processing. Read API dùng role read-only; Business không cross-DB SQL. Filter INVALID cần versioned query contracts/cursor. Khi schema-rejected thiếu machine ID, lọc theo source/request/time sau auth.
+`processing-read-api` M6 đọc outcomes từ processing_db, raw qua catalog/manifest
+S3/MinIO; không processed cold archive hoặc bucket scan mỗi request. Business là
+facade; Alert vẫn ở business_db. Read API ghi snapshot/export/catalog metadata bằng
+pool quyền hẹp, original data vẫn SELECT-only. Worker không chạy maintenance/export.
+History sort/cursor/permissions theo §57 và M6-HISTORY-01; OpenAPI/schema cần migrate.
+Quarantine thiếu máy/time có auth/source/request scope riêng, không bịa fields.
 
 # 45. v1.4 — Quy trình CI/CD, phát hành và rollback
 
@@ -3664,3 +3669,21 @@ UI chỉ gọi Business, phân biệt source time/processed time, buckets và ma
 Machine schemas2.0.0 của M6 không đổi Kafka outcome1.4.0; baseline runtime.schema
 được SDK khóa giữ nguyên. MinIO versioning/catalog thật cần kiểm riêng; fixtures
 và offline validator không chứng minh pipeline hay deployment.
+
+# 58. RISK-POLICY-01 — Versioned policy trong app và ConfigMap local
+
+1. Dev Processing thay đổi policy trong `processing/config/risk-policies/`, dùng
+   version mới nếu đổi ngưỡng hoặc create_alert_for; cập nhật catalog và tests.
+2. Review policy/schema và commit app; app source lock cùng selector GitOps phải
+   trỏ đúng commit thật và có raw/canonical hashes khớp.
+3. Khi prepare apps, infrastructure truyền app checkout tới GitOps bằng
+   `--app-root`. GitOps chỉ đọc source đã xác minh; không tự chọn latest.
+4. Generator tạo ConfigMap có content hash, mount read-only tại `/local/config`,
+   cấp `PROCESSING_RISK_POLICY_FILE=/local/config/risk-policy.json`. Không thêm
+   policy file vào `local/.local/data/fixtures` hoặc profile Worker `files`.
+5. Review GitOps diff, push, Argo sync và rollout Worker; không có hot reload.
+
+Dùng field `create_alert_for` của Contract/parser, không dùng alias `alert_on`.
+Ví dụ kế thừa §10 đã đồng bộ tên field này. Schema/profile production và Kafka không thay đổi. Policy
+demo0.40/0.65/0.85 chưa calibration. Model identity vẫn cần file/checksum riêng.
+Hướng dẫn chi tiết: [Risk policy ownership](RISK_POLICY_OWNERSHIP.md).

@@ -51,6 +51,13 @@ Machine `state` vẫn giữ `NORMAL/WATCH/HIGH/CRITICAL/INVALID/UNKNOWN`. `PENDI
 
 ## PAGE-02 — Sensor history và keyset cursor
 
+**M6-HISTORY-01 đã chốt29/10:** Đoạn PAGE-02 bên dưới chỉ mô tả wire baseline.
+Target M6 raw sort received_at + Kafka receipt locator, outcome sort processed_at
+(completed_at) + result_id; opaque cursor gắn snapshot/scope theo
+[decision](M6_HISTORY_ARCHITECTURE_DECISION.md). Không âm thầm dùng cursor cũ với
+clock/collection mới; PR M6 phải version/đồng bộ OpenAPI/schema/providers/UI trước
+khi enable. Baseline1.3.2 hiện có chưa đổi trong lượt docs này.
+
 `GET /api/v1/machines/{machine_id}/sensor-readings` trả `items`, `next_before`,
 `next_before_event_id`; mặc định 100, tối đa 500 bản ghi. Order:
 `received_at DESC, event_id DESC`. Cặp cursor trỏ tới bản ghi cuối trang; trang

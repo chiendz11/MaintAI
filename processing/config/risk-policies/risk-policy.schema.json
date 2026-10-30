@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:maintai:processing:risk-policy:1.0.0",
+  "title": "Processing risk policy configuration",
+  "description": "Processing additionally checks watch < high < critical. This schema does not approve or calibrate threshold values.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["policy_version", "thresholds", "create_alert_for"],
+  "properties": {
+    "policy_version": {"type": "string", "minLength": 1, "pattern": "\\S"},
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["watch", "high", "critical"],
+      "properties": {
+        "watch": {"type": "number", "minimum": 0, "maximum": 1},
+        "high": {"type": "number", "minimum": 0, "maximum": 1},
+        "critical": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "create_alert_for": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"enum": ["WATCH", "HIGH", "CRITICAL"]}
+    }
+  }
+}

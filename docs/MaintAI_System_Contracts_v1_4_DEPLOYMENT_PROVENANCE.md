@@ -2742,11 +2742,28 @@ Mỗi outcome giữ `result_id`, `schema_version`, source `event_id`, `sequence_
 
 # 36. v1.4 — Hợp đồng Processing Read API và History
 
-`processing-read-api` là **Deployment Kubernetes riêng**, không phải microservice/database mới. Service đọc `processing_db` bằng quyền read-only; cung cấp event status, lịch sử reading VALID/INVALID, prediction/risk history và raw detail từ S3 qua hot-index/cold-manifest lookup có giới hạn. `business-api` là API duy nhất cho Main UI và thực hiện auth-scope khi proxy History; Simulator UI riêng chỉ gọi Sensor Control API. Lịch sử Alert/lifecycle/feedback vẫn đọc từ `business_db` qua Business API.
+**M6-HISTORY-01,29/10/2026, ưu tiên mô tả history cũ:** `processing-read-api` vẫn
+là Deployment riêng, cùng Processing owner/DB. Đọc original outcomes bằng
+processing_ro; được ghi metadata snapshot/export/catalog bằng pool/role quyền hẹp
+riêng. Không cấp quyền sửa source/outcome/risk/inbox/outbox. Snapshot/export runner
+thuộc Read API; Worker chỉ realtime; không thêm processing-maintenance. M6 giữ
+processed history trong DB, raw ở S3/MinIO; chưa processed archive hoặc cleanup thật.
+Business vẫn là public facade duy nhất; Alert/lifecycle/feedback thuộc business_db.
 
-Giữ `GET /api/v1/machines/{machine_id}/sensor-readings` và cursor giảm dần `(received_at,event_id)` đã thống nhất. Các filter v1.4 dự kiến `quality_status`, `from`, `to` **chỉ triển khai sau khi** bổ sung OpenAPI schema và index phù hợp. Endpoint `GET /api/v1/machines/{machine_id}/predictions` cho tab riêng **mới chỉ đề xuất, không có sẵn trong inherited contract**; cần change control. Schema-rejected thiếu machine ID chỉ cho truy vấn có quyền (ví dụ admin) theo `source_identity`, `request_id`, thời gian; phải audit lượt đọc. Khi archive chưa xong hoặc không rõ phải báo `PENDING_ARCHIVE`/UNKNOWN đúng thực tế; Kafka ACK không chứng minh S3 đã có object.
+Target M6 giữ public sensor-readings route, raw receipts sort
+`(received_at,topic,partition,offset)`; outcome history sort `(processed_at,result_id)`
+với processed_at map processing_results.completed_at. Opaque cursor gắn snapshot,
+query/scope và clock; không dùng event_id thay receipt locator hoặc completion time
+để cập nhật latest. Baseline before/before_event_id không âm thầm đổi semantics.
+Predictions/history/chart/export và filter from/to cần OpenAPI/schema/index/UI đồng
+bộ trong PR M6 trước enable. Quarantine thiếu machine/time cần scope riêng, không
+fabricate fields. Raw chưa archive/catalog lag phải báo thật; Kafka ACK không
+chứng minh History đã query được. Đặc tả tại §44 và M6-HISTORY-01.
 
-Quyền `processing_ro` chỉ SELECT phạm vi được duyệt; Worker `processing_rw` ghi, Relay chỉ cập nhật outbox. Business/Drift không SQL trực tiếp tới `processing_db`. Mỗi DB có Alembic ownership riêng, còn `mlflow_db` do MLflow quản lý. Dùng chung một PostgreSQL instance vẫn có hạn chế cách ly CPU/I/O.
+Role processing_ro vẫn chỉ SELECT; Read API M6 có thêm role metadata riêng,
+không gỡ read-only guard của pool đọc. Owner migration cấp quyền; Worker/Relay
+giữ quyền cũ. Business/Drift không SQL processing_db. Mỗi DB có Alembic owner;
+dùng chung PostgreSQL vẫn chung CPU/I/O. Source M5 chưa có các grants/metadata M6.
 
 # 37. v1.4 — Hợp đồng quản lý phiên bản và provenance
 
@@ -2961,3 +2978,19 @@ bắt buộc cho history/export, không diễn giải lại old cursors. Busines
 token cùng JWT ủy quyền actor/scope ngắn hạn có chữ ký; chi tiết ở đặc tả M6.
 Small CSV200 phải preflight toàn bộ bounded snapshot; otherwise job202 sau commit;
 Parquet luôn job. Version/schema/design không là bằng chứng runtime đã rollout.
+
+# 45. RISK-POLICY-01 — Source policy thuộc app, cấp qua GitOps
+
+Quyết định30/10/2026: app owner Processing quản lý policy JSON, schema1.0.0 và
+catalog ở `processing/config/risk-policies/`. GitOps giữ selector app Git SHA +
+policy path/version/raw SHA/canonical SHA; lấy đúng committed source để tạo
+ConfigMap read-only tại `/local/config/risk-policy.json`. Infrastructure không
+cấp một bản policy chỉnh tay trong private fixtures. Worker vẫn dùng
+`PROCESSING_RISK_POLICY_FILE`, đọc lúc khởi động và ghi canonical policy hash
+vào outcome; không đổi Kafka wire hoặc RiskPolicy DTO.
+
+Policy `demo-risk-v1` dùng ngưỡng tham khảo §9.2, manifest ghi demo/chưa calibration;
+không bảo đảm scenario Critical tạo alert. ConfigMap content hash thay Pod
+reference khi đổi policy. Model identity và receipts vẫn là gate riêng. Flow
+local được triển khai; production cutover phải review riêng, không sửa schema
+production đã freeze. Xem [quyết định đầy đủ](RISK_POLICY_OWNERSHIP.md).

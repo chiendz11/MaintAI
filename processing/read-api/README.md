@@ -96,10 +96,10 @@ có, không cấp write hoặc credential DB cho Business. M5 không bật clean
 khi có cleanup nguồn ở giai đoạn sau phải bảo vệ evidence của signal còn backlog
 và có archive lookup. M6 chỉ giải phóng metadata hết hạn, không xóa outcomes.
 
-## Thiết kế M6, chưa bật trong runtime
+## M6 History và export
 
 [M6-HISTORY-01](../../docs/M6_HISTORY_ARCHITECTURE_DECISION.md) dùng source SELECT-only
 pool hiện có và metadata writer pool riêng trong Read API. Export runner nằm ở
 Read API, không Worker. M6 giữ outcomes DB, processed archive/source deletion
 hoãn; câu chuẩn bị cleanup ở các mục cũ áp dụng cho pha retention sau M6.
-OpenAPI2.0.0/profile mới không chứng minh runtime hiện tại phục vụ history/export.
+Runtime có history/export opt-in; xem [cấu hình](HISTORY.md) và [báo cáo M6](../../docs/M6_IMPLEMENTATION_REPORT.md).

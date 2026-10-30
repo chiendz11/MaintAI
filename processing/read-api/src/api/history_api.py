@@ -35,12 +35,12 @@ class HistoryRuntime:
         def loop(operation, interval):
             while not self.stop.is_set():
                 try:
-                    operation()
+                    result = operation()
                 except Exception:
                     # Durable job state and the previous verified generation survive.
                     self.stop.wait(min(interval, 10))
                 else:
-                    self.stop.wait(interval)
+                    self.stop.wait(1 if interval == 60 and result is None else interval)
 
         operations = [("history-exports", execute_jobs, 1)]
         if self.history.catalog is not None:

@@ -3,14 +3,14 @@
 Runtime thực hiện profile `M6-HISTORY-01/1.0.0` theo
 [quyết định kiến trúc](M6_HISTORY_ARCHITECTURE_DECISION.md) và
 [protocol raw catalog](M6_RAW_ARCHIVE_HANDOFF.md). M5 status/point-read, DTO Alert/live,
-Kafka SDK0.3.0 và bundle2.0.0 giữ nguyên. HistoryRecord2.0.0 chỉ dùng cho collection/
+Kafka SDK0.3.1 giữ wire outcome1.4.0 và bundle2.0.0. HistoryRecord2.0.0 chỉ dùng cho collection/
 export M6; không bổ sung processed_at vào evidence HistoryRecord1.0.0.
 
 ## Thành phần
 
 | Thành phần | Source | Hành vi |
 | --- | --- | --- |
-| Processing metadata | `processing/migrations/versions/0003_history.py`, `processing/shared/history_meta/` | Snapshot membership, export intent/lease, catalog generation/index trong owner DB |
+| Processing metadata | `processing/migrations/versions/0003_history.py`, `0004_native_catalog.py`, `processing/shared/history_meta/` | Snapshot membership, export intent/lease, catalog generation/index trong owner DB |
 | Read API | `processing/read-api/src/api/history_*.py` | Source SELECT-only, metadata credential riêng; range/raw/chart, CSV nhỏ, durable jobs và metadata expiry |
 | Business facade | `backend/business-api/src/api/history*.py`, `backend/business-api/src/processing_client/` | Auth/scope, delegation RS256, bounded HTTP, export proxy; không SQL xuyên owner |
 | Business markers | `backend/migrations/versions/0004_history_markers.py`, `backend/shared/persistence/history_markers.py` | Freeze composite chart/Alert markers, cursor ký dùng chung giữa API replicas |
@@ -21,10 +21,19 @@ History Processing sort `(completed_at,result_id)`; raw sort
 Snapshot freeze có giới hạn, không giữ source transaction10 phút. Cursor ràng buộc
 actor/scope/query/profile/snapshot. Late commits chỉ xuất hiện khi refresh.
 
-Catalog sync kiểm exact versions/checksums, generation/frontier không lùi và
-preservation của receipts đã publish. Generation mới bỏ receipt hoặc thay payload/
-refs bị từ chối; active generation cũ được giữ. Coverage yêu cầu đủ đúng12 partition
-IDs, không gap/lag/unknown. Không suy temporal watermark từ max source timestamp.
+Catalog sync dùng helper `maintai-storage-consumer==0.2.1` và schema provider native.
+Generation là delta; index tích lũy receipts qua exact parent refs, có checkpoint
+segment và visited set bền vững. Không copy toàn bộ index mỗi generation hoặc công
+bố BUILDING là collection đầy đủ. Duplicate cùng bytes được giữ một logical receipt;
+cùng locator khác payload/refs bị từ chối. Source cluster/topic identity và start
+prefix không được tự reset. Native ObjectRef không có size_bytes; DTO export giữ
+size_bytes và public HTTP profile hiện hành.
+
+Lease/fencing bảo vệ checkpoint và activation. Observation trước network gắn với
+head fence; phản hồi S3 cũ không được block generation mới. Source index dùng import
+sequence để giữ view của generation đã pin. Coverage yêu cầu đúng12 partition IDs,
+không gap/lag/unknown và head published_at còn trong120s. COMPLETE chỉ là offset
+prefix đã công bố, không là temporal watermark. Kafka offset không cần liên tiếp.
 
 CSV được preflight trước headers; Parquet luôn qua durable job. SQL lease/fencing,
 heartbeat và conditional immutable uploads cho phép runner khác tiếp tục sau lease
@@ -47,32 +56,44 @@ publishers. Local source/unit tests và browser harness kiểm chứng:
 - Source/meta SQL roles riêng, owner hoặc extra source/inbox/outbox/column grants bị từ chối.
 - JWT service/delegation, cursor signatures, actor/scope/query mismatch và hết TTL.
 - Membership với timestamp trùng/late commit, đủ terminal outcomes và omitted filters khi export lại snapshot.
-- Raw receipt versions/checksums, duplicate event khác locator, generation mất/thay receipt và đủ đúng partition IDs.
+- Native delta receipts, exact versions/checksums, duplicate/conflict, chuỗi hơn100generation, restart/checkpoint và đủ đúng partition IDs.
 - CSV injection protection, job input holds, lease reclaim sau lỗi giả lập ngay sau S3 ACK và artifact reconciliation.
 - Composite markers qua hai repository instances, nullable source clock, browser PKCE → HTTP Ingestion → Kafka → Worker/Relay → Business → history/raw/chart/CSV/Parquet download.
 - JSON/BigInt decoding trên browser, mobile layout, source timestamps và giữ nguyên luồng live M4/Alert M5.
 
-Issuer, ML/provenance, registry/policy và catalog publisher trong browser harness
-là fixtures rõ ràng; HTTP, broker, SQL và S3-compatible storage là dịch vụ test
-thật. `frontend/tests/provider/history_archive.py` không là implementation Storage
-publisher. Full provider integration cần catalog publisher/reconciliation theo
-handoff cùng credentials/grants thực tế. Các image được build/import-check local
-không chứng minh đã chạy M6 trên shared Kubernetes hoặc production.
+Browser harness chạy Storage consumer, read-only Kafka audit và catalog publisher
+thật từ package0.2.1, cùng HTTP/Kafka/PostgreSQL/MinIO test thật. Helper tại
+`processing/tests/storage_provider.py` chỉ quản lý runtime test, chờ coverage và
+dọn bucket riêng; không tự tạo raw receipts hoặc catalog. Unit/object tests vẫn có
+fixtures metadata có chủ đích để kiểm các trường hợp lỗi và restart.
 
-CI bật M6 trong hai jobs Processing integration và Main UI; GitHub CI chỉ có
+Issuer, ML/provenance và registry/policy trong browser vẫn là fixtures. Nghiệm thu
+local Storage không chứng minh ML production, shared OIDC/TLS/IAM, k3d hoặc rollout
+toàn hệ thống đã hoàn thành. Các image Processing được build lại có wheel Storage
+nội bộ; installed Read API test dùng hai SQL roles thật.
+
+Baseline kiểm chứng gồm main commit `575c8b4` và implementation M6 trong working tree;
+commit SDK patch không đổi wire/schema Kafka hoặc SQL001/002.
+
+CI bật M6 trong Processing integration và Main UI; ba job Processing checks,
+Processing integration và Main UI build wheel Storage nội bộ trước khi cài lock; GitHub CI chỉ có
 kết quả sau khi commit được đẩy lên. Không suy trạng thái remote từ local tests.
 
-## Kết quả kiểm tra local
+## Kết quả kiểm tra local với SDK0.3.1
 
 | Nhóm kiểm tra | Kết quả |
 | --- | --- |
-| Processing/Business: unit, contract, DB/Kafka/MinIO integration và container | 511 passed, không skip |
+| Processing/Business: unit, contract, DB/Kafka/MinIO integration và container | 546 passed trong lượt đầy đủ, không skip |
+| Kafka SDK/transport unit | 86 passed; có overlap với Processing tests |
+| Kafka/PostgreSQL integration | 25 passed |
+| Storage unit | 78 passed,2integration deselected trong lượt unit riêng |
+| Ingestion toàn bộ tests | 149 passed;1deprecation warning của Starlette TestClient |
 | Frontend unit | 30 passed |
 | Browser M4/M5/M6 | 12 passed |
 | HTTP contracts | 6 OpenAPIs, 104 positive/negative cases đạt |
 | Kafka bundle2.0.0 | 30 immutable inputs giữ nguyên |
-| Cấu trúc/tài liệu | 41 document hashes, 612 links/anchors, 14 app + 1 platform descriptors đạt |
-| Images | Worker, Relay, Read API, Business API/Consumer và Main UI build được; Read API M6/CSV chạy với hai SQL roles thật; Parquet writer/managed reader trong image giữ JSON integer lớn |
+| Cấu trúc/tài liệu | 47 document hashes, 664 links/anchors, 14 app + 1 platform descriptors đạt |
+| Packaging/images | Sáu image Processing/Business/Ingestion build lại với SDK0.3.1 và reader Storage0.2.1; installed Read API M6/CSV chạy với hai SQL roles thật; wheels Processing/Storage/SDK import và validate catalog ngoài checkout |
 
 Các nhóm có thể chứa checks trùng phạm vi; không cộng thành số chức năng độc lập.
 Regression chart có100001 alert cũ ngoài range: range ngắn vẫn đọc được. SQL lọc

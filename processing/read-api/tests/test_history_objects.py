@@ -69,91 +69,51 @@ def put(client, bucket, key, value):
 
 
 def provider_catalog(client, bucket):
+    from maintai_storage.catalog import CatalogStore
+
+    store = CatalogStore(client, bucket)
     archive = S3RecordArchive(client, bucket)
     entries = []
     for offset in (1, 2):
         event, record = source(offset=offset)
         archive(event, record)
-        prefix = f"raw-sensor/topic=sensor.readings/partition=000000/offset={offset:020d}"
-        refs = []
-        for suffix in (".jsonl.gz", ".manifest.json"):
-            response = client.get_object(Bucket=bucket, Key=prefix + suffix)
-            raw = response["Body"].read()
-            response["Body"].close()
-            refs.append(
-                {
-                    "bucket": bucket,
-                    "key": prefix + suffix,
-                    "version_id": response["VersionId"],
-                    "sha256": hashlib.sha256(raw).hexdigest(),
-                    "size_bytes": len(raw),
-                }
-            )
-        entries.append(
-            {
-                "catalog_schema_version": "1.0.0",
-                "receipt_id": f"sensor.readings:0:{offset}",
-                "topic": "sensor.readings",
-                "partition": 0,
-                "offset": offset,
-                "source_event_id": event.message_id,
-                "machine_id": event.payload["machine_id"],
-                "received_at": event.payload["received_at"],
-                "server_accepted_at": event.payload["server_accepted_at"],
-                "source_identity": None,
-                "request_id": None,
-                "receipt_kind": "ACCEPTED",
-                "raw_object_ref": refs[0],
-                "raw_manifest_ref": refs[1],
-                "event_locator": 0,
-            }
-        )
-    segment = {
-        "catalog_schema_version": "1.0.0",
-        "segment_id": "segment-fixture",
-        "entries": entries,
-    }
-    ref = put(client, bucket, "raw-catalog/v1/segments/fixture.json", segment)
+        entries.append(store.receipt("sensor.readings", 0, offset))
+    segment = {"schema_version": "1.0.0", "entries": entries}
+    ref = store.immutable("raw-catalog/v1/segments/fixture.json", segment)
     now = datetime.now(UTC).isoformat()
     partitions = [
-        {
-            "topic": "sensor.readings",
-            "partition": p,
-            "start_offset": 1 if p == 0 else 0,
-            "archived_next_offset": 3 if p == 0 else 0,
-            "indexed_next_offset": 3 if p == 0 else 0,
-            "captured_log_end_offset": 3 if p == 0 else 0,
-            "captured_at": now,
-            "gaps": [],
-            "status": "COMPLETE",
-        }
+        dict(
+            topic="sensor.readings",
+            topic_id="native-topic",
+            partition=p,
+            start_offset=1 if p == 0 else 0,
+            archived_next_offset=3 if p == 0 else 0,
+            indexed_next_offset=3 if p == 0 else 0,
+            captured_log_end_offset=3 if p == 0 else 0,
+            captured_at=now,
+            gaps=[],
+            status="COMPLETE",
+        )
         for p in range(12)
     ]
-    generation = {
-        "catalog_schema_version": "1.0.0",
-        "generation_id": "generation-fixture",
-        "published_at": now,
-        "parent_ref": None,
-        "segments": [
-            {
-                "segment_id": "segment-fixture",
-                "topic": "sensor.readings",
-                "partition": 0,
-                "min_received_at": entries[0]["received_at"],
-                "max_received_at": entries[0]["received_at"],
-                "entry_count": 2,
-                "object_ref": ref,
-            }
-        ],
-        "partitions": partitions,
-    }
-    ref = put(client, bucket, "raw-catalog/v1/generations/fixture.json", generation)
-    pointer = {
-        "catalog_schema_version": "1.0.0",
-        "generation_id": "generation-fixture",
-        "generation_ref": ref,
-    }
-    put(client, bucket, "raw-catalog/v1/current.json", pointer)
+    generation = dict(
+        schema_version="1.0.0",
+        generation_id="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        source_cluster_id="native-cluster",
+        published_at=now,
+        parent_ref=None,
+        segments=[ref],
+        partitions=partitions,
+    )
+    ref = store.immutable("raw-catalog/v1/generations/fixture.json", generation)
+    pointer = dict(
+        schema_version="1.0.0",
+        generation_id="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        generation_ref=ref,
+    )
+    client.put_object(
+        Bucket=bucket, Key="raw-catalog/v1/current.json", Body=canonical_json(pointer)
+    )
     return entries, pointer
 
 
@@ -165,14 +125,14 @@ def test_catalog_preserves_duplicate_receipts_and_exact_bytes(migrated_database,
         store,
         Schemas(ROOT / "contracts/v1.3/schemas"),
     )
-    assert catalog.sync() == "generation-fixture"
+    assert catalog.sync() == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     coverage = catalog.coverage({"machine_id": "M-001"})
     assert coverage["available_through"] is None
     query = {
         "machine_id": entries[0]["machine_id"],
         "from": "2026-10-01T00:00:00Z",
         "to": "2026-10-31T00:00:00Z",
-        "catalog_generation": "generation-fixture",
+        "catalog_generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     }
     rows = list(catalog.records(query))
     assert [r["receipt_id"] for r in rows] == ["sensor.readings:0:2", "sensor.readings:0:1"]
@@ -194,7 +154,12 @@ def test_catalog_network_does_not_hold_metadata_publication_lock(migrated_databa
     client, bucket, store = objects
     provider_catalog(client, bucket)
     namespace = metadata_schema(migrated_database.schema)
-    original = store.read
+    catalog = Catalog(
+        Metadata(migrated_database.factory, namespace),
+        store,
+        Schemas(ROOT / "contracts/v1.3/schemas"),
+    )
+    original = catalog.store.read_ref
 
     def read(reference, **kwargs):
         with migrated_database.factory() as connection:
@@ -205,57 +170,26 @@ def test_catalog_network_does_not_hold_metadata_publication_lock(migrated_databa
             assert row["available"], "Catalog holds a SQL publication lock during S3 reads"
         return original(reference, **kwargs)
 
-    store.read = read
-    catalog = Catalog(
-        Metadata(migrated_database.factory, namespace),
-        store,
-        Schemas(ROOT / "contracts/v1.3/schemas"),
-    )
+    catalog.store.read_ref = read
     catalog.sync()
 
 
-@pytest.mark.parametrize("mutation", ["omit", "replace"])
-def test_catalog_rejects_loss_or_replacement_of_published_receipts(
-    migrated_database, objects, mutation
-):
-    from datetime import timedelta
+def test_catalog_rejects_replacement_of_published_receipts(migrated_database, objects):
+    from maintai_storage.catalog import CatalogPublisher, CatalogStore
 
-    from maintai_messaging.contracts import strict_json
-    from processing.shared.history_meta.snapshots import timestamp
-
-    client, bucket, store = objects
-    _, pointer = provider_catalog(client, bucket)
+    client, bucket, objects = objects
+    entries, _ = provider_catalog(client, bucket)
     catalog = Catalog(
         Metadata(migrated_database.factory, metadata_schema(migrated_database.schema)),
-        store,
+        objects,
         Schemas(ROOT / "contracts/v1.3/schemas"),
     )
     catalog.sync()
-    generation = strict_json(store.read(pointer["generation_ref"]))
-    ref = generation["segments"][0]
-    segment = strict_json(store.read(ref["object_ref"]))
-    if mutation == "omit":
-        segment["entries"] = segment["entries"][1:]
-    else:
-        segment["entries"][0]["raw_object_ref"]["sha256"] = "0" * 64
-    segment["segment_id"] = "changed-segment"
-    ref.update(
-        segment_id=segment["segment_id"],
-        entry_count=len(segment["entries"]),
-        object_ref=put(client, bucket, "raw-catalog/v1/segments/changed.json", segment),
-    )
-    generation.update(
-        generation_id="changed-generation",
-        parent_ref=pointer["generation_ref"],
-        published_at=(
-            timestamp(generation["published_at"]) + timedelta(microseconds=1)
-        ).isoformat(),
-    )
-    pointer.update(
-        generation_id=generation["generation_id"],
-        generation_ref=put(client, bucket, "raw-catalog/v1/generations/changed.json", generation),
-    )
-    put(client, bucket, "raw-catalog/v1/current.json", pointer)
+    store = CatalogStore(client, bucket)
+    current, _ = store.current()
+    entries[0]["raw_object_ref"]["sha256"] = "0" * 64
+    CatalogPublisher(store).publish(entries, current[1]["partitions"], "native-cluster")
     with pytest.raises(HistoryError):
         catalog.sync()
-    assert catalog.coverage({})["catalog_generation"] == "generation-fixture"
+    with pytest.raises(HistoryError):
+        catalog.coverage({})

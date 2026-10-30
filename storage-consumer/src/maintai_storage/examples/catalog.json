@@ -1,0 +1,166 @@
+{
+  "Entry": {
+    "catalog_schema_version": "1.0.0",
+    "receipt_id": "sensor.readings:0:0",
+    "topic": "sensor.readings",
+    "partition": 0,
+    "offset": 0,
+    "source_event_id": "fixture-event",
+    "machine_id": "M-001",
+    "received_at": "2026-10-29T10:00:00Z",
+    "server_accepted_at": "2026-10-29T10:00:00Z",
+    "source_identity": null,
+    "request_id": null,
+    "receipt_kind": "ACCEPTED",
+    "raw_object_ref": {
+      "bucket": "fixture-bucket",
+      "key": "raw-sensor/topic=sensor.readings/partition=000000/offset=00000000000000000000.jsonl.gz",
+      "version_id": "fixture-version",
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "raw_manifest_ref": {
+      "bucket": "fixture-bucket",
+      "key": "raw-sensor/topic=sensor.readings/partition=000000/offset=00000000000000000000.manifest.json",
+      "version_id": "fixture-version",
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "event_locator": 0
+  },
+  "Coverage": {
+    "topic": "sensor.readings",
+    "partition": 0,
+    "topic_id": "fixture-topic",
+    "start_offset": 0,
+    "archived_next_offset": 2,
+    "indexed_next_offset": 2,
+    "captured_log_end_offset": 2,
+    "captured_at": "2026-10-29T10:01:00Z",
+    "gaps": [],
+    "status": "COMPLETE"
+  },
+  "Segment": {
+    "schema_version": "1.0.0",
+    "entries": [
+      {
+        "catalog_schema_version": "1.0.0",
+        "receipt_id": "sensor.readings:0:0",
+        "topic": "sensor.readings",
+        "partition": 0,
+        "offset": 0,
+        "source_event_id": "fixture-event",
+        "machine_id": "M-001",
+        "received_at": "2026-10-29T10:00:00Z",
+        "server_accepted_at": "2026-10-29T10:00:00Z",
+        "source_identity": null,
+        "request_id": null,
+        "receipt_kind": "ACCEPTED",
+        "raw_object_ref": {
+          "bucket": "fixture-bucket",
+          "key": "raw-sensor/topic=sensor.readings/partition=000000/offset=00000000000000000000.jsonl.gz",
+          "version_id": "fixture-version",
+          "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+        },
+        "raw_manifest_ref": {
+          "bucket": "fixture-bucket",
+          "key": "raw-sensor/topic=sensor.readings/partition=000000/offset=00000000000000000000.manifest.json",
+          "version_id": "fixture-version",
+          "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+        },
+        "event_locator": 0
+      },
+      {
+        "catalog_schema_version": "1.0.0",
+        "receipt_id": "sensor.readings:0:1",
+        "topic": "sensor.readings",
+        "partition": 0,
+        "offset": 1,
+        "source_event_id": "fixture-event",
+        "machine_id": "M-001",
+        "received_at": "2026-10-29T10:00:00Z",
+        "server_accepted_at": "2026-10-29T10:00:00Z",
+        "source_identity": null,
+        "request_id": null,
+        "receipt_kind": "ACCEPTED",
+        "raw_object_ref": {
+          "bucket": "fixture-bucket",
+          "key": "raw-sensor/topic=sensor.readings/partition=000000/offset=00000000000000000001.jsonl.gz",
+          "version_id": "fixture-version",
+          "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+        },
+        "raw_manifest_ref": {
+          "bucket": "fixture-bucket",
+          "key": "raw-sensor/topic=sensor.readings/partition=000000/offset=00000000000000000001.manifest.json",
+          "version_id": "fixture-version",
+          "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+        },
+        "event_locator": 0
+      },
+      {
+        "catalog_schema_version": "1.0.0",
+        "receipt_id": "sensor.rejected:0:0",
+        "topic": "sensor.rejected",
+        "partition": 0,
+        "offset": 0,
+        "source_event_id": null,
+        "machine_id": null,
+        "received_at": null,
+        "server_accepted_at": null,
+        "source_identity": "fixture-sensor",
+        "request_id": "fixture-request",
+        "receipt_kind": "REJECTED",
+        "raw_object_ref": {
+          "bucket": "fixture-bucket",
+          "key": "raw-sensor/topic=sensor.rejected/partition=000000/offset=00000000000000000000.jsonl.gz",
+          "version_id": "fixture-version",
+          "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+        },
+        "raw_manifest_ref": {
+          "bucket": "fixture-bucket",
+          "key": "raw-sensor/topic=sensor.rejected/partition=000000/offset=00000000000000000000.manifest.json",
+          "version_id": "fixture-version",
+          "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+        },
+        "event_locator": 0
+      }
+    ]
+  },
+  "Generation": {
+    "schema_version": "1.0.0",
+    "generation_id": "9053b306b3dadc1907afe0dd6587f20554ac120e64570e09b005a19c91fe3e05",
+    "published_at": "2026-10-29T10:01:00Z",
+    "source_cluster_id": "fixture-cluster",
+    "parent_ref": null,
+    "segments": [
+      {
+        "bucket": "fixture-bucket",
+        "key": "raw-catalog/v1/segments/fixture.json",
+        "version_id": "fixture-version",
+        "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+      }
+    ],
+    "partitions": [
+      {
+        "topic": "sensor.readings",
+        "partition": 0,
+        "topic_id": "fixture-topic",
+        "start_offset": 0,
+        "archived_next_offset": 2,
+        "indexed_next_offset": 2,
+        "captured_log_end_offset": 2,
+        "captured_at": "2026-10-29T10:01:00Z",
+        "gaps": [],
+        "status": "COMPLETE"
+      }
+    ]
+  },
+  "Pointer": {
+    "schema_version": "1.0.0",
+    "generation_id": "9053b306b3dadc1907afe0dd6587f20554ac120e64570e09b005a19c91fe3e05",
+    "generation_ref": {
+      "bucket": "fixture-bucket",
+      "key": "raw-catalog/v1/generations/9053b306b3dadc1907afe0dd6587f20554ac120e64570e09b005a19c91fe3e05.json",
+      "version_id": "fixture-version",
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+    }
+  }
+}

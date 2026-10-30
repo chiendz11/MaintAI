@@ -136,5 +136,31 @@ Phải kiểm tra quyền khởi động/dừng dịch vụ trước khi chạy 
 
 OBS-01 xuất `maintai_history_queries_total{source,outcome}` và
 `maintai_history_query_duration_seconds{source}` sau response; labels không chứa
-machine/event/query/cursor. Source deployments, TLS/OIDC/IAM và catalog publisher
-thật cần kiểm chứng trên môi trường tích hợp riêng.
+machine/event/query/cursor. Source deployments và TLS/OIDC/IAM cần kiểm chứng riêng trên môi trường shared;
+local harness sử dụng Storage consumer/audit/publisher thật.
+
+## Catalog provider native
+
+Reader dùng `maintai-storage-consumer==0.2.1`, `CatalogStore` và `CatalogReader`.
+Provider schema trong package Storage tách khỏi DTO HTTP/export. Native ObjectRef
+không có size_bytes; không tự thêm giá trị để phù hợp với DTO export.
+
+Chạy owner migration `processing_0004_catalog` trước khi bật reader và cấp lại
+metadata grants bằng helper hiện có. Migration bổ sung native_catalog_heads,
+native_catalog_imports, native_catalog_visited và native_catalog_receipts trong
+history_meta; không đổi0003 hoặc ghi source/outcome/inbox/outbox. Các snapshot/job
+đã materialize vẫn giữ membership và TTL/holds hiện hành. Index fixture cũ không
+được gán cluster/topic identity giả; reader native xây index riêng từ provider.
+
+Sync duyệt delta parent_ref về committed ancestor/root, tối đa100generation và
+100segment mỗi lượt, kiểm thời gian10s giữa các object. Checkpoint được commit ở
+ranh giới segment; mỗi segment tối đa100entries/2MiB theo provider. BUILDING chưa
+được đọc như full collection. Pending tiếp tục sau1s; idle60s, lỗi retry10s.
+Lease30s được gia hạn ở mỗi transaction checkpoint; completion kiểm owner/fence.
+S3 reads không giữ SQL transaction/lock. Receipt bất biến được lưu một lần; mỗi
+active generation pin import sequence để index mới không thay đổi view cũ.
+
+Cluster/topic/start-offset thay đổi, receipt xung đột hoặc chain không tới ancestor
+làm raw history unavailable; không tự reset nguồn. COMPLETE chỉ là offset prefix,
+không là event-time watermark; không yêu cầu số Kafka offset liên tiếp. Dữ liệu
+snapshot cũ đã materialize không bị thay đổi bởi một generation mới.

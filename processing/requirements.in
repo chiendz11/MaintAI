@@ -1,4 +1,4 @@
-maintai-messaging[postgres,observability]==0.3.0
+maintai-messaging[postgres,observability]==0.3.1
 jsonschema>=4.23,<5
 httpx>=0.28,<1
 pydantic>=2.10,<3
@@ -15,3 +15,4 @@ PyJWT[crypto]>=2.10,<3
 # M6 raw reader and durable export
 boto3==1.43.114
 pyarrow==26.0.0
+maintai-storage-consumer==0.2.1

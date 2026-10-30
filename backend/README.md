@@ -62,7 +62,7 @@ Chi tiết storage, clocks và limits tại
 ## PROC-ORDER-01 — Business giữ projections/lifecycle độc lập
 
 [Decision §8](../docs/PROCESSING_CONCURRENCY_AND_ORDERING.md) áp keyed execution
-ở Processing; Business giữ serial role loops/inbox SDK0.3.0. Registry, projection
+ở Processing; Business giữ serial role loops/inbox SDK0.3.1. Registry, projection
 storage/callbacks, Consumer, live HTTP và status facade đã có. Fleet/MachineDetail
 đọc projections; thông tin Alert cần nguồn đọc cùng Business DB. M5 đã nối Alert reader thật vào runtime; chưa có Alert được trả count0/list rỗng
 từ truy vấn Business DB.

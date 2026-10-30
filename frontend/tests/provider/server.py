@@ -290,9 +290,9 @@ def serve_fixture():
             "backend.business-consumer.tests.test_kafka_runtime"
         ).prepare_new_test_groups(kafka, include_processing=True)
         if m6:
-            from history_archive import ArchiveFixture
+            from history_archive import StorageProvider
 
-            archive_fixture = ArchiveFixture(kafka.bootstrap_servers)
+            archive_fixture = StorageProvider(kafka.bootstrap_servers)
             archive_fixture.publish()
             os.environ["AWS_ACCESS_KEY_ID"] = "maintai_m6_test"
             os.environ["AWS_SECRET_ACCESS_KEY"] = "maintai_m6_test_only"

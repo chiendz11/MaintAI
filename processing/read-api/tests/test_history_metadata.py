@@ -84,13 +84,9 @@ def test_metadata_migration_does_not_grant_source_writes(migrated_database):
             connection.execute(sql.SQL("SET LOCAL ROLE {}").format(sql.Identifier(role)))
             meta = Metadata(lambda: None, schema)
             meta.check_permissions(connection, source_schema=db.schema)
-            for table in (
-                "snapshots",
-                "snapshot_members",
-                "export_jobs",
-                "raw_catalog_entries",
-                "raw_catalog_sync_state",
-            ):
+            from processing.shared.history_meta.persistence import TABLES
+
+            for table in TABLES:
                 connection.execute(
                     sql.SQL("SELECT * FROM {}.{} LIMIT 0").format(
                         sql.Identifier(schema), sql.Identifier(table)
@@ -121,5 +117,5 @@ def test_metadata_source_records_are_not_automatically_deleted(migrated_database
         assert connection.execute("SELECT count(*) AS n FROM sensor_events").fetchone()["n"] == 0
         assert (
             connection.execute("SELECT version_num FROM alembic_version").fetchone()["version_num"]
-            == "processing_0003_history"
+            == "processing_0004_catalog"
         )

@@ -31,7 +31,7 @@ Trước khi triển khai hoặc thay đổi một module:
    và migration trước khi thay producer/consumer. Sensor tests dùng SensorRequest/IngestAck/Control DTO hiện hành; generated features
    vẫn kiểm allowlist sáu trường. Không phục hồi wire synchronous v1.1.
 6. Với Kafka, đọc `docs/KAFKA_DEVELOPMENT_GUIDE.md`, `contracts/kafka/README.md`
-   và `messaging/`. SDK0.3.0 + bundle2.0.0 chỉ đọc/ghi outcome1.4.0 (`kind`);
+   và `messaging/`. SDK0.3.1 + bundle2.0.0 chỉ đọc/ghi outcome1.4.0 (`kind`);
    đọc `docs/OUTCOME_V1_4_MIGRATION.md` (OUTCOME-14-ONLY). Không reader legacy2.0,
    không suy risk từ probability hoặc backfill legacy. Business giữ risk gốc;
    event cũ bị từ chối trước callback/commit. SHA lock và SQL immutable theo
@@ -44,11 +44,24 @@ Trước khi triển khai hoặc thay đổi một module:
    có keyed runner/coordinator/fenced handler/ordered relay và app DQ/inference-client/
    risk/owner persistence cùng health server/images. History/archive đầy đủ thuộc M6;
    source và local tests không chứng minh deployment hoặc provider production đã sẵn sàng.
+9. Với M6 đọc `docs/M6_HISTORY_ARCHITECTURE_DECISION.md` và
+   `docs/M6_RAW_ARCHIVE_HANDOFF.md` (quyết định29/10, ưu tiên history cũ).
+   Không thêm processing-maintenance hoặc export/archive loop vào Worker.
+   Read API có pool SELECT dữ liệu gốc và pool ghi metadata quyền hẹp; không cấp
+   write outcome/outbox. Processed_at = completed_at hiện có; raw received_at +
+   Kafka locator. M6 không processed archive/cleanup thật. Storage catalog/coverage,
+   machine API/schema/migration và platform grants vẫn cần implement, không giả ready.
 
 Với thay đổi chỉ về tài liệu/CI, đọc phần đặc tả liên quan đến thay đổi; không
 cần triển khai module hoặc chạy toàn bộ app tests chỉ vì tài liệu có checklist.
 
 ## Xử lý khác biệt
+
+- RISK-POLICY-01: đọc `docs/RISK_POLICY_OWNERSHIP.md` trước khi đổi policy.
+  Source JSON/schema/catalog ở `processing/config/risk-policies/`; GitOps chọn
+  app commit + version/raw SHA/canonical SHA và tạo ConfigMap. Không thêm bản
+  policy chỉnh tay trong infrastructure private data hoặc override env path.
+  Policy demo chưa calibration; model identity/receipts là gate riêng.
 
 - System Contracts là nguồn chuẩn cho payload, enums, API, DB/artifact và failure
   semantics. Nếu ví dụ trong Guide khác contract, dùng contract. Khi các nguồn v1.4
@@ -94,7 +107,8 @@ cần triển khai module hoặc chạy toàn bộ app tests chỉ vì tài li�
 - Business API và Business Consumer cùng codebase/DB owner nhưng khác Deployment.
   Ba consumer handlers telemetry/prediction/alert không phải ba microservices.
 - Business DB chỉ giữ latest telemetry/latest valid prediction/latest processing
-  và business data; raw ở S3/MinIO; Processing history hot DB + verified S3 archive.
+  và business data; raw ở S3/MinIO. M6 giữ processed history trong processing_db;
+  verified processed archive là phần hoãn sau M6. Không xóa data theo hot window cũ.
 - Không query DB xuyên owner. Business/Drift dùng Processing read API/curated S3.
 - Main Frontend chỉ gọi Business REST/SSE; Simulator UI riêng gọi Sensor Control API. PG NOTIFY/pubsub fan-out tới
   mọi API replica, REST snapshot khôi phục; không dùng Kafka group làm SSE broadcast.
@@ -140,3 +154,10 @@ Khi sửa keyed/ordered code, chạy Kafka unit + processing/tests, PostgreSQL o
 và real Kafka integration khi có local services. Commands/opt-in env trong report.
 Storage regression cần chạy khi SDK pin/default runner đổi. CI giữ kafka-ci và
 kafka-integration trong required; không tuyên bố Docker/K8s/load PASS từ unit tests.
+
+Local demo provenance: đọc `docs/LOCAL_DEMO_PREPARATION.md`. Marker
+`not-recorded:local-demo` không là MLflow run hoặc production approval. Không
+suy OCI manifest digest từ Docker config ID; dataset manifest tái dựng phải ghi
+rõ nguồn local. Knowledge Job/PVC không tự hoàn tất Business Copilot M7.
+
+SDK0.3.1: serial ConsumerRunner prefetch tối đa64 records, một handler; pause/resume theo ngưỡng64/32. Không khôi phục pause-all sau mỗi record; queued records chưa durable không được commit.

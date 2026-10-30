@@ -39,9 +39,9 @@ digraph DataFlow {
   bdb [shape=cylinder, fillcolor="#e2edfb", label="7 · business_db\nInbox + CAS per-machine sequence\nLatest projections / alerts / feedback\nDurable brief jobs / report catalog"];
   api [label="8 · Business API\nAuthorized REST snapshot / SSE\nFan-out qua PG LISTEN/NOTIFY"];
   ui [shape=tab, label="9 · Business UI\nMerge riêng telemetry / prediction / status\nSequence guard + reconnect snapshot"];
-  raw [shape=folder, fillcolor="#edf2f6", label="S3 raw / rejected archive\nExact bytes → JSONL.gz + manifest\nHiện microbatch = 1 record"];
-  processed [shape=folder, fillcolor="#edf2f6", label="S3 processed archive\nVerified manifests / history tiers\nProcessing owner writer / maintenance"];
-  read_api [label="Processing Read API\nStatus / hot+cold history / chart\nVALID model-matched windows"];
+  raw [shape=folder, fillcolor="#edf2f6", label="S3 / MinIO raw + catalog\nRaw manifest microbatch1 có code\nCatalog / coverage: source0.2.0"];
+  exports [shape=folder, fillcolor="#edf2f6", label="Private export artifacts\nCSV nhỏ streaming / job lớn\nRead API owner · M6 target"];
+  read_api [label="Processing Read API\nDB outcomes / raw catalog\nSnapshot / export runner · M6 target"];
   rag [label="RAG / LLM\nRetrieve approved knowledge\nBrief + checklist + citations"];
   jobs [label="Business background job loops\nCùng Business Consumer runtime\nLease brief job / sync drift catalog"];
   knowledge [shape=cylinder, fillcolor="#eae5f7", label="knowledge_db + manuals\nRAG-owned knowledge / pgvector"];
@@ -76,11 +76,11 @@ digraph DataFlow {
   api -> ui [label="REST snapshot / named SSE"];
   ui -> api [label="query / alert actions / brief request", constraint=false];
   storage -> raw [label="object + manifest verified\nrồi commit archive offset"];
-  results -> storage [label="optional outcome-archive-v1\nMặc định tắt", style=dashed, constraint=false];
-  pdb -> processed [label="owner archive/export + verify", style=dashed];
+  results -> storage [label="optional outcome-archive-v1\nTắt trong M6", style=dashed, constraint=false];
   api -> read_api [label="internal HTTP query"];
-  read_api -> pdb [label="indexed SELECT", constraint=false];
-  read_api -> processed [label="verified archive query"];
+  read_api -> pdb [label="SELECT original / metadata RW", constraint=false];
+  read_api -> raw [label="catalog / exact raw refs"];
+  read_api -> exports [label="durable export job / authorized download"];
   api -> bdb [label="alert actions / enqueue brief job", constraint=false];
   bdb -> jobs [label="claim durable brief job", style=dashed];
   jobs -> rag [label="HTTP request / grounded result", dir=both];

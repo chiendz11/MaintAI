@@ -1,0 +1,6 @@
+# Thư viện trực tiếp phục vụ EDA.
+numpy
+pandas
+matplotlib
+scikit-learn
+joblib
