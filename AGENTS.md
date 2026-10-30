@@ -31,7 +31,7 @@ Trước khi triển khai hoặc thay đổi một module:
    và migration trước khi thay producer/consumer. Sensor tests dùng SensorRequest/IngestAck/Control DTO hiện hành; generated features
    vẫn kiểm allowlist sáu trường. Không phục hồi wire synchronous v1.1.
 6. Với Kafka, đọc `docs/KAFKA_DEVELOPMENT_GUIDE.md`, `contracts/kafka/README.md`
-   và `messaging/`. SDK0.3.0 + bundle2.0.0 chỉ đọc/ghi outcome1.4.0 (`kind`);
+   và `messaging/`. SDK0.3.1 + bundle2.0.0 chỉ đọc/ghi outcome1.4.0 (`kind`);
    đọc `docs/OUTCOME_V1_4_MIGRATION.md` (OUTCOME-14-ONLY). Không reader legacy2.0,
    không suy risk từ probability hoặc backfill legacy. Business giữ risk gốc;
    event cũ bị từ chối trước callback/commit. SHA lock và SQL immutable theo
@@ -159,3 +159,5 @@ Local demo provenance: đọc `docs/LOCAL_DEMO_PREPARATION.md`. Marker
 `not-recorded:local-demo` không là MLflow run hoặc production approval. Không
 suy OCI manifest digest từ Docker config ID; dataset manifest tái dựng phải ghi
 rõ nguồn local. Knowledge Job/PVC không tự hoàn tất Business Copilot M7.
+
+SDK0.3.1: serial ConsumerRunner prefetch tối đa64 records, một handler; pause/resume theo ngưỡng64/32. Không khôi phục pause-all sau mỗi record; queued records chưa durable không được commit.
