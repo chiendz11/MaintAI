@@ -192,6 +192,44 @@ def test_real_broker_ack_inbox_and_commit_roundtrip(owner_db, contracts, example
     assert count(owner_db, "maintai_kafka_inbox") >= 1
 
 
+def test_serial_runner_drains_multi_partition_backlog_without_per_record_global_pause(
+    owner_db, contracts, example, local_settings
+):
+    """Real broker and DB regression for the starvation seen in the local demo."""
+    create_local_topics(local_settings, contracts=contracts)
+    wanted = set()
+    with KafkaPublisher(local_settings, "ingestion", contracts=contracts) as publisher:
+        for index in range(40):
+            payload = example("sensor-reading")
+            payload["machine_id"] = f"M-{index % 4 + 1:03}"
+            payload["event_id"] = "evt_prefetch_" + uuid.uuid4().hex
+            wanted.add(payload["event_id"])
+            publisher.publish("sensor.readings", payload)
+    stop, observed = threading.Event(), set()
+
+    def persist(connection, event, _record, _outbox):
+        connection.execute(
+            "INSERT INTO effects VALUES (%s,1) ON CONFLICT DO NOTHING", (event.message_id,)
+        )
+        if event.message_id in wanted:
+            observed.add(event.message_id)
+        if observed == wanted:
+            stop.set()
+
+    role = "business-live"
+    group = local_settings.group_prefix + contracts.topology["profiles"][role]["group_id"]
+    handler = TransactionalHandler(owner_db, group, persist, contracts=contracts)
+    runner = ConsumerRunner(local_settings, role, handler, contracts=contracts)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(runner.run, stop)
+        try:
+            future.result(timeout=20)
+        finally:
+            stop.set()
+    assert observed == wanted
+    assert count(owner_db, "effects") >= len(wanted)
+
+
 def test_real_outbox_relay_to_business_group(owner_db, contracts, example, local_settings):
     create_local_topics(local_settings, contracts=contracts)
     payload = example("invalid")

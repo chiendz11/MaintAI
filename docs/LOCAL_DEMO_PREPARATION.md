@@ -65,3 +65,23 @@ RAG unit/provider/manifest tests và image smoke được gọi từ MaintAI CI 
 trong `CI / required`. Fixture tests không gọi Groq hoặc tải model thật. Phải ghi
 riêng evidence build image, real embedding/pgvector ingestion/repeat/retrieval,
 actual Groq generation và E2E UI; không dùng một mức để thay mức còn lại.
+
+## Serial consumer prefetch
+
+SDK0.3.1 sửa đường đọc mặc định của Business/Storage: một handler chạy tại một
+thời điểm, tối đa64 records đã lấy từ Kafka gồm cả record đang xử lý. Consumer
+chỉ pause khi đạt giới hạn và resume khi còn tối đa32 records. Không pause toàn
+bộ partition sau từng reading; cách cũ gây backlog và phục vụ các máy không đều
+trong demo liên tục. Đây là bounded prefetch, không thêm handler song song hoặc
+đổi quy tắc ordering/offset. Poll, assignment và commit vẫn thuộc poll thread.
+
+Record chỉ được commit sau DurableReceipt đúng identity và assignment generation
+còn hợp lệ. Shutdown/handler failure/commit failure không commit các record chỉ
+mới nằm trong buffer. Khi restart, chúng được Kafka gửi lại và inbox/archive
+chịu trách nhiệm idempotency. Bundle2.0.0, wire outcome1.4.0 và SQL001/002 giữ
+nguyên; các package consumer và CI wheel paths được pin đồng bộ SDK0.3.1.
+
+Local chọn KAFKA_POLL_INTERVAL_SECONDS=0.01 cho Business/Storage sau khi kiểm
+luồng thực. Thay đổi này không là benchmark100 máy hay bằng chứng production HA.
+Bằng chứng triển khai, ảnh UI và kết quả kịch bản được ghi riêng trong repo
+infrastructure; không xem unit tests hoặc image build là pipeline đã chạy.

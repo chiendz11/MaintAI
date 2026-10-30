@@ -117,7 +117,7 @@ class ConsumerClient:
         self.poll_count += 1
         if not self._assignment and self.poll_count == 1:
             self.callbacks["on_assign"](self, [TopicPartition(self.topics[0], 0)])
-        if self.paused:
+        if self.paused or not self.messages:
             if self.during_wait:
                 self.during_wait(self)
             time.sleep(0.001)

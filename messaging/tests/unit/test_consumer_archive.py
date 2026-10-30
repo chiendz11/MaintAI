@@ -91,7 +91,67 @@ def test_polling_continues_while_handler_is_running(settings, contracts, example
 
     runner = ConsumerRunner(settings, "processing", slow, contracts=contracts, client=client)
     runner.run(max_records=1)
-    assert client.poll_count >= 4 and client.pauses and len(client.commits) == 1
+    assert client.poll_count >= 4 and not client.pauses and len(client.commits) == 1
+
+
+def test_serial_prefetch_is_bounded_and_never_runs_handlers_in_parallel(
+    settings, contracts, example
+):
+    gate = threading.Event()
+    consumed = []
+    samples = []
+    total = 16
+
+    def backpressure(client):
+        samples.append(total - len(client.messages) - len(client.commits))
+        if client.paused:
+            gate.set()
+
+    client = ConsumerClient(
+        [message(example, offset=i) for i in range(total)], during_wait=backpressure
+    )
+
+    def durable(_event, record):
+        assert len(client.commits) == len(consumed)
+        if not consumed:
+            assert gate.wait(2)
+        consumed.append(record.offset)
+        return DurableReceipt.for_record(record)
+
+    runner = ConsumerRunner(
+        settings, "processing", durable, contracts=contracts, client=client, max_buffered_records=4
+    )
+    assert runner.run(max_records=total) == total
+    assert samples and max(samples) == 4
+    assert consumed == list(range(total))
+    assert [p.offset for p in client.commits] == list(range(1, total + 1))
+
+
+def test_shutdown_does_not_commit_prefetched_but_unprocessed_records(settings, contracts, example):
+    stop = threading.Event()
+    gate = threading.Event()
+    client = ConsumerClient(
+        [message(example, offset=i) for i in range(8)],
+        during_wait=lambda _: gate.set(),
+    )
+
+    def durable(_event, record):
+        assert gate.wait(2)
+        stop.set()
+        return DurableReceipt.for_record(record)
+
+    runner = ConsumerRunner(
+        settings, "processing", durable, contracts=contracts, client=client, max_buffered_records=4
+    )
+    assert runner.run(stop) == 1
+    assert [p.offset for p in client.commits] == [1]
+    assert len(client.messages) == 4
+
+
+@pytest.mark.parametrize("limit", [0, 1, 1025, True, 2.5])
+def test_invalid_serial_buffer_limits_fail_before_connecting(settings, limit):
+    with pytest.raises(ConfigurationError):
+        ConsumerRunner(settings, "business-live", lambda *_: None, max_buffered_records=limit)
 
 
 def test_lost_assignment_during_work_cannot_commit_stale_offset(settings, contracts, example):
