@@ -193,8 +193,9 @@ localhost của host cho Pod. Export signed URL phải truy cập được từ 
 
 ## 8. Retention và phần hoãn sau M6
 
-`retention_enabled=false`, `cleaner_dry_run=true` là trạng thái thiết kế mặc định;
-đây chưa phải biến đã được runtime hiện tại đọc. M6 không xóa processing outcomes,
+Runtime tham chiếu đọc `PROCESSING_RETENTION_ENABLED=false` và
+`PROCESSING_CLEANER_DRY_RUN=true`; các giá trị bật source deletion bị từ chối.
+Xem [cấu hình runtime](../processing/read-api/HISTORY.md). M6 không xóa processing outcomes,
 raw evidence hay model/policy artifacts; không chạy processed archive trong Worker.
 Dry-run nằm cùng codebase Read API, chỉ báo candidates, pins/holds và lý do chặn.
 Hết snapshot TTL chỉ giải phóng metadata/pins, không xóa source data. Export TTL

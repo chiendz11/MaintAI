@@ -32,6 +32,33 @@ Kafka loops và transactional inbox dùng
 > [readiness](../docs/implementation-readiness.md). Runtime metadata hiện có vẫn
 > baseline1.3.2; source chưa tự migrate theo việc nhập tài liệu.
 
+## M6 — History facade
+
+`BUSINESS_HISTORY_ENABLED=true` bật history/export facade. Giữ cấu hình Processing
+origin/service token hiện có, rồi khai báo `BUSINESS_HISTORY_SIGNING_KEY_FILE`,
+`BUSINESS_HISTORY_SIGNING_KEY_ID`, `BUSINESS_HISTORY_DELEGATION_ISSUER`,
+`BUSINESS_HISTORY_SERVICE_SUBJECT` và `BUSINESS_HISTORY_CURSOR_KEY_FILE`.
+Private key RS256 tối thiểu2048 bits; cursor file chứa `active` và map `keys`
+base64 tối thiểu32 bytes/key. Khóa cursor độc lập khóa ký JWT. Issuer và service
+subject phải khớp trust cấu hình ở Processing; shared profile yêu cầu HTTPS.
+
+Business ký delegation từ principal đã xác thực, không forward browser token
+hoặc inbound delegation. HTTP facade có body/time budgets và không tự retry POST
+export không rõ kết quả. List/raw/chart và export/job/download dùng profile
+`M6-HISTORY-01/1.0.0`; point-read prediction vẫn giữ HistoryRecord1.0.0.
+
+Migration `business_0004_history_markers` thêm metadata composite chart/markers;
+owner grant helper cấp API role CRUD đúng bảng này. Không cấp DB credential
+Processing cho Business. API replicas dùng chung cursor keys và metadata để giữ
+marker membership/order/TTL. Alert snapshot lọc theo `as_of`; thiếu exact clock
+nguồn thì marker có `position_at=null`, không dùng Alert created_at làm vị trí trục.
+Với marker chưa có clock nguồn, created_at chỉ chọn entry danh sách trong range.
+
+`BUSINESS_HISTORY_SCHEMA_DIRECTORY` có thể chỉ tới canonical schema directory
+trong tests; wheel đã đóng gói hai schema M6 để runtime không cần checkout.
+Chi tiết storage, clocks và limits tại
+[Processing History](../processing/read-api/HISTORY.md).
+
 ## PROC-ORDER-01 — Business giữ projections/lifecycle độc lập
 
 [Decision §8](../docs/PROCESSING_CONCURRENCY_AND_ORDERING.md) áp keyed execution
@@ -121,8 +148,8 @@ phải nối thẳng PostgreSQL hoặc session pooling, không transaction-pooli
 SSE dùng ba event types theo schema hiện có; INVALID/FAILED giữ valid prediction
 lịch sử. Metrics OBS-01 có maintai_sse_connections và maintai_sse_resync_total;
 HTTP metrics đo handshake, không toàn thời lượng stream. SQL/role ownership giữ
-nguyên; Alert source/lifecycle được bổ sung ở M5 bên dưới. Full history và
-deployment manifests thuộc pha/repo khác.
+nguyên; Alert source/lifecycle được bổ sung ở M5 bên dưới. M6 history được mô tả
+ở mục facade; deployment manifests thuộc repository triển khai riêng.
 
 
 ## M5 — Alert lifecycle, evidence, audit và feedback

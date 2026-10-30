@@ -149,9 +149,9 @@ Báo cáo dependency/giữ-xóa:
 | --- | --- | --- |
 | Quarantine | `contracts/kafka/` có rejected1.4 HASH_ONLY; SDK auth identity/size/envelope boundary, ACK trước400/422; Storage0.1.0 có rejected runtime/probes; GitOps topic/ACL | Ingestion HTTP auth/runtime, real broker/S3 integration; không lưu unauthorized/oversized body |
 | Outcome wire | Canonical reader/writer1.4.0/kind; bỏ reader2.0.0 theo OUTCOME-14-ONLY; source/DQ/model/risk lineage schema+fixtures | Owner callbacks/provider DTOs, consumer-first rollout; chưa có cutover/deployment; baseline vẫn nguyên vẹn |
-| History cursor | M6-HISTORY-01: processed_at/result_id; raw received_at/topic/partition/offset; profile mới | Machine schemas/OpenAPI2.0.0 đã có; runtime pagination/snapshot/compatibility còn phải triển khai |
-| Read API pools | M6 giữ processing_ro SELECT-only và thêm metadata writer pool trong cùng Read API | Migrations/grants/two-pool runtime và leased export runner chưa triển khai; Worker không làm maintenance |
-| History/archive | M6 giữ outcomes DB; raw qua Storage catalog/partition coverage | Schema/fixtures catalog đã có; Storage publisher, reader/index và MinIO integration còn thiếu; processed archive/source cleanup hoãn |
+| History cursor | M6-HISTORY-01: processed_at/result_id; raw received_at/topic/partition/offset; profile mới | Có runtime snapshots/cursors; xem M6 report. Shared rollout và provider acceptance kiểm riêng |
+| Read API pools | Source SELECT-only và metadata writer riêng trong cùng Read API | Có migration/grants/preflight/pools và leased export runner; Worker không chạy maintenance |
+| History/archive | Outcomes DB; raw qua catalog/partition coverage | Reader/index và MinIO fixture integration đã có; Storage publisher thật còn là đầu vào tích hợp. Không processed archive/source cleanup M6 |
 | Retention | HISTORY-01 có profile30d/365d; provenance v1.4 chưa chốt thời hạn cụ thể | Các con số cũ là tham khảo, owner phê duyệt theo dữ liệu/ngân sách trước khi bật cleanup |
 | Release/provenance | Mới có Markdown yêu cầu dataset/split/model/image/policy/document digests | Bổ sung schemas/examples/manifests, MLflow metadata, provider DTOs, migration và CI gates bằng bằng chứng thật |
 | Simulator UI | React demo/live client0.1.0, OIDC/recovery/build/descriptor riêng | Provider/browser HTTP đã test; production IdP, container build và rollout chưa verify |
@@ -470,8 +470,9 @@ riêng; chỉ revision mô tả Business/Processing tăng2.0.0, không nâng đ�
 Kafka hoặc provider khác. JWT delegation cần keys/issuer/JWKS và tests chữ ký/scope
 ở runtime. JSON fixture không chứng minh credential đã được cấp.
 
-Đã có pure chart aggregation trong Processing; chưa history/snapshot/export/UI M6,
-SQL metadata grants, catalog publisher/reconciliation hoặc platform rollout.
-Full local acceptance cần DB/Kafka/MinIO thật và Storage catalog; không cần AWS.
+Source đã có history/snapshot/chart/export, SQL metadata grants, Business facade và
+UI M6; xem [báo cáo implementation](M6_IMPLEMENTATION_REPORT.md). Local harness dùng
+DB/Kafka/MinIO thật với catalog publisher fixture. Storage publisher/reconciliation
+thật và platform rollout cần kiểm riêng; không cần AWS để chạy local.
 Các bảng inventory cũ không thay checkpoint source này. Source cleaner/processed
 archive không thuộc acceptance M6 mới; chỉ retention dry-run, giữ source data.

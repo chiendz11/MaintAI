@@ -51,6 +51,31 @@ ISSUER = "http://127.0.0.1:18033"
 UI = "http://127.0.0.1:4173"
 
 
+def browser_history(factory, token_file, signing_key, issuer):
+    from api.history import HistoryFacade
+    from api.history_charts import CompositeCharts
+    from business_processing_client.delegation import DelegationSigner
+    from business_processing_client.history import ProcessingHistoryClient
+    from business_processing_client.history_schemas import HistorySchemas
+
+    from backend.shared.persistence.history_markers import MarkerSnapshots
+
+    client = ProcessingHistoryClient(
+        httpx.AsyncClient(trust_env=False, follow_redirects=False),
+        base_url="http://127.0.0.1:18036",
+        token_file=token_file,
+        signer=DelegationSigner(
+            signing_key, kid="m6-fixture", issuer=issuer + "/business", service_subject="m4-browser"
+        ),
+    )
+    schemas = HistorySchemas(ROOT / "contracts/v1.3/schemas")
+    # Both replicas receive the same fixture key; production keys are explicit config.
+    snapshots = MarkerSnapshots(
+        factory, {"fixture": hashlib.sha256(str(token_file).encode()).digest()}, active="fixture"
+    )
+    return HistoryFacade(client, schemas, markers=CompositeCharts(client, schemas, snapshots))
+
+
 def serve_fixture():
     dsn = os.environ.get("MAINTAI_M3_DATABASE_URL", "")
     if os.environ.get("MAINTAI_M4_INTEGRATION") != "1" or urlparse(dsn).hostname not in {
@@ -59,6 +84,7 @@ def serve_fixture():
     }:
         raise RuntimeError("Explicit M4 local database test opt-in required")
     suffix = uuid4().hex
+    m6 = os.environ.get("MAINTAI_M6_INTEGRATION") == "1"
     databases = {
         owner: "m4_browser_" + owner + "_" + suffix for owner in ("business", "processing")
     }
@@ -70,10 +96,13 @@ def serve_fixture():
         name: "m4_" + name + "_" + suffix
         for name in ("reader", "consumer", "api", "processing_reader")
     }
+    if m6:
+        roles["processing_metadata"] = "m6_metadata_" + suffix
     password = uuid4().hex
     channel = "m4_" + suffix
     alert_channel = "m5_alert_" + suffix
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    delegation_key = rsa.generate_private_key(public_exponent=65537, key_size=2048) if m6 else None
     jwks = {
         "keys": [
             {
@@ -94,10 +123,27 @@ def serve_fixture():
     receipts = {}
     scenarios = {}
     worker = None
+    archive_fixture = None
     servers, threads, hubs = [], [], []
     lock = threading.Lock()
     sequence = 2**80
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+
+    @app.get("/history-jwks")
+    def history_jwks():
+        if delegation_key is None:
+            raise HTTPException(503, "M6 fixture not enabled")
+        return {
+            "keys": [
+                {
+                    **json.loads(jwt.algorithms.RSAAlgorithm.to_jwk(delegation_key.public_key())),
+                    "kid": "m6-fixture",
+                    "alg": "RS256",
+                    "use": "sig",
+                }
+            ]
+        }
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[UI],
@@ -243,6 +289,13 @@ def serve_fixture():
         importlib.import_module(
             "backend.business-consumer.tests.test_kafka_runtime"
         ).prepare_new_test_groups(kafka, include_processing=True)
+        if m6:
+            from history_archive import ArchiveFixture
+
+            archive_fixture = ArchiveFixture(kafka.bootstrap_servers)
+            archive_fixture.publish()
+            os.environ["AWS_ACCESS_KEY_ID"] = "maintai_m6_test"
+            os.environ["AWS_SECRET_ACCESS_KEY"] = "maintai_m6_test_only"
         with tempfile.TemporaryDirectory(prefix="maintai-m4-browser-") as temporary:
             from processing_read_api.app import create_app as read_app
             from processing_read_api.auth import IdentityVerifier as ReadVerifier
@@ -273,6 +326,48 @@ def serve_fixture():
                 row_factory=psycopg.rows.dict_row,
                 options="-c default_transaction_read_only=on -c statement_timeout=3000",
             )
+            history_runtime = None
+            if m6:
+                from types import SimpleNamespace
+
+                from processing_read_api.history_config import HistorySettings
+                from processing_read_api.history_runtime import build
+
+                from processing.shared.history_meta.persistence import grant_metadata
+                from processing.shared.history_meta.pool import Connections
+
+                cursor_file = Path(temporary) / "processing-history-cursors.json"
+                cursor_file.write_text(
+                    json.dumps(
+                        {
+                            "active": "fixture",
+                            "keys": {"fixture": base64.b64encode(os.urandom(32)).decode()},
+                        }
+                    )
+                )
+                metadata_dsn = (
+                    make_url(dsns["processing"])
+                    .set(username=roles["processing_metadata"], password=password)
+                    .render_as_string(hide_password=False)
+                )
+                with processing_factory() as connection:
+                    grant_metadata(connection, role=roles["processing_metadata"])
+                os.environ["PROCESSING_SCHEMA_DIRECTORY"] = str(ROOT / "contracts/v1.3/schemas")
+                history_runtime = build(
+                    SimpleNamespace(
+                        history=HistorySettings(
+                            metadata_dsn,
+                            ISSUER + "/business",
+                            ISSUER + "/history-jwks",
+                            str(cursor_file),
+                            raw_bucket=archive_fixture.raw_bucket,
+                            export_bucket=archive_fixture.export_bucket,
+                            s3_endpoint="http://127.0.0.1:39000",
+                            s3_region="us-east-1",
+                        )
+                    ),
+                    Connections(read_dsn, readonly=True),
+                )
             processing_server = uvicorn.Server(
                 uvicorn.Config(
                     read_app(
@@ -284,6 +379,7 @@ def serve_fixture():
                             machines_claim="machines",
                             fetch_jwks=lambda: jwks,
                         ),
+                        history_runtime=history_runtime,
                     ),
                     host="127.0.0.1",
                     port=18036,
@@ -363,7 +459,16 @@ def serve_fixture():
                     fetch_jwks=jwks_fetcher(ISSUER + "/jwks"),
                 )
                 business = create_app(
-                    registry, verifier, projections=projections, notifications=hub, alerts=alerts
+                    registry,
+                    verifier,
+                    projections=projections,
+                    notifications=hub,
+                    alerts=alerts,
+                    history=browser_history(
+                        registry.connection_factory, service_token, delegation_key, ISSUER
+                    )
+                    if m6
+                    else None,
                 )
                 server = uvicorn.Server(
                     uvicorn.Config(
@@ -438,12 +543,15 @@ def serve_fixture():
                     )
                     if ack.status_code != 202:
                         raise RuntimeError("HTTP Ingestion did not ACK")
-                    receipts.pop(payload["event_id"])
+                    receipt = receipts.pop(payload["event_id"])
                     deadline = time.monotonic() + 15
                     while StatusRepository(processing_factory).get(payload["event_id"]) is None:
                         if worker.failed or time.monotonic() >= deadline:
                             raise RuntimeError("Kafka Worker did not commit: " + str(worker.failed))
                         time.sleep(0.05)
+                    if archive_fixture is not None:
+                        archive_fixture.archive(*receipt)
+                        history_runtime.history.catalog.sync()
                     return {
                         "event_id": payload["event_id"],
                         "sequence_number": str(number),
@@ -476,6 +584,8 @@ def serve_fixture():
             server.should_exit = True
         for thread in threads:
             thread.join(timeout=6)
+        if archive_fixture is not None:
+            archive_fixture.close()
         if consumer is not None:
             consumer.terminate()
             try:

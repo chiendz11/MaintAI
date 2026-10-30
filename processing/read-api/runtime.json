@@ -5,11 +5,11 @@
   "runtime_id": "processing-read-api",
   "workload_kind": "Deployment",
   "code_owner": "processing",
-  "implementation_status": "partial_status_and_hot_evidence",
+  "implementation_status": "implemented_m6_local_fixture",
   "image_group": "processing",
   "image_digest": null,
-  "entrypoint_status": "implemented_status_and_hot_point_read",
-  "purpose": "Internal status/history/point/chart/export APIs; route hot DB + verified S3 archive, stable snapshots and VALID windows.",
+  "entrypoint_status": "implemented_m6_history_and_export_runtime",
+  "purpose": "Internal status/point-read plus M6 hot outcomes/raw catalog history, charts and exports; separate metadata credentials in the same Read API.",
   "source_paths": [
     "processing/read-api/src",
     "processing/shared"
@@ -20,7 +20,8 @@
   "interfaces": [
     "Internal event status HTTP API",
     "Health/metrics HTTP",
-    "GET /api/v1/internal/predictions/{result_id}"
+    "GET /api/v1/internal/predictions/{result_id}",
+    "M6-HISTORY-01 internal history/raw/chart/export HTTP APIs"
   ],
   "boundaries": [
     "Cùng owner/migrations với Processing Worker; đây không phải một logical DB khác.",
@@ -29,9 +30,9 @@
   "dockerfile": "processing/read-api/Dockerfile",
   "dockerfile_status": "implemented",
   "implemented_contract_revision": "1.3.2",
-  "implemented_scope": "SELECT-only status and result_id hot HistoryRecord evidence; checksum/source/model/risk verification, BUSINESS_SERVICE scope, probes and metrics. Full history/chart/archive/export remain M6.",
+  "implemented_scope": "M5 status/point DTO preserved; M6-HISTORY-01 snapshots/cursors, raw catalog reader, charts, CSV/Parquet leased jobs, metadata expiry and retention dry-run. Local fixture integration; no processed archive or source deletion.",
   "planned_interfaces": [
-    "Processed archive catalog/S3",
-    "Internal history/chart/export HTTP APIs"
+    "Processed outcome archive after M6",
+    "Curated VALID windows for later consumers"
   ]
 }

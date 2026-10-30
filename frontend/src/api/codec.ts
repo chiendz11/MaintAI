@@ -28,7 +28,7 @@ export class NumericToken {
   constructor(readonly source: string) {}
 }
 type RecordValue = Record<string, unknown>;
-function object(value: unknown): value is RecordValue {
+export function object(value: unknown): value is RecordValue {
   return (
     value !== null &&
     typeof value === "object" &&
@@ -43,7 +43,7 @@ export function sourceContextSupported(): boolean {
   });
   return supported;
 }
-function tokens(text: string): unknown {
+export function tokens(text: string): unknown {
   if (new TextEncoder().encode(text).byteLength > MAX_BODY)
     throw new Error("Response exceeds decoding budget");
   if (!sourceContextSupported())
@@ -56,7 +56,7 @@ function tokens(text: string): unknown {
     return new NumericToken(context.source);
   });
 }
-function plain(value: unknown): unknown {
+export function plain(value: unknown): unknown {
   if (value instanceof NumericToken) return Number(value.source);
   if (Array.isArray(value)) return value.map(plain);
   if (object(value))
@@ -65,7 +65,7 @@ function plain(value: unknown): unknown {
     );
   return value;
 }
-function integer(value: unknown): bigint {
+export function integer(value: unknown, allowZero = false): bigint {
   if (!(value instanceof NumericToken))
     throw new Error("Sequence must be an integer");
   const match = /^(\d+)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/.exec(value.source);
@@ -88,7 +88,8 @@ function integer(value: unknown): bigint {
     digits = digits.slice(0, digits.length - places) || "0";
   }
   const result = BigInt(digits) * (scale > 0 ? 10n ** BigInt(scale) : 1n);
-  if (result <= 0n) throw new Error("Sequence must be positive");
+  if (result < 0n || (!allowZero && result === 0n))
+    throw new Error("Sequence must be positive");
   return result;
 }
 function axis(value: unknown): unknown {

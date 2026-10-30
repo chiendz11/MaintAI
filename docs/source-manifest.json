@@ -3,7 +3,7 @@
   "target_contract_revision": "1.4.0",
   "upstream_target_contract_revision": "1.4.0",
   "imported_on": "2026-10-17",
-  "amended_on": "2026-10-29",
+  "amended_on": "2026-10-30",
   "hash_semantics": "documents contains active paths with current sha256; upstream_sha256 preserves supplied/imported bytes; retired_documents preserves old checksums without active files",
   "documents": [
     {
@@ -15,7 +15,7 @@
     {
       "path": "docs/README.md",
       "source_filename": "README.md",
-      "sha256": "6d650ffb0061de6822be8b361720f3241b72fb4d034a045312d5df0e0eaaf937",
+      "sha256": "8881f040c043d1c8ea8b2b1ccbfeeabbea5baf76d03644ed746be8dc1eecb71d",
       "upstream_sha256": "b8f3731050d7cba47d5eecebd8ecfa7457dc4a7c427e9f408a1a22dd89c9b0d7"
     },
     {
@@ -40,7 +40,7 @@
       "path": "docs/implementation-readiness.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "8887837dd7da9befe0177173c3a1421effe954a59309ec1025ae58d767135dbd"
+      "sha256": "450ce2c7b126579275842a31be24bf749440873f4b90a10251131c86efd88df0"
     },
     {
       "path": "docs/repository-layout.md",
@@ -264,13 +264,18 @@
       "path": "docs/M6_HISTORY_ARCHITECTURE_DECISION.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "e8d314cdc409013a46325a60732c3adcfc79a69e7ed112b47945e36ce383c626"
+      "sha256": "c842f8f4d3f57afb8af117030dec282661f10bc769dfe3a08bce4c67bf3600ba"
     },
     {
       "path": "docs/M6_RAW_ARCHIVE_HANDOFF.md",
       "source_filename": null,
       "upstream_sha256": null,
       "sha256": "03b62dfcdeeb8436ba13ddb95c7c67868605921b2ca3ba559b3cdd8df6056d01"
+    },
+    {
+      "path": "docs/M6_IMPLEMENTATION_REPORT.md",
+      "sha256": "97d84e9444ae617039d6ad2440a86a90ee4c407569806fa1dce4d43d6225d08d",
+      "decision_revision": "1.0.0"
     }
   ],
   "upstream_inherited_contract_revision": "1.3.1",

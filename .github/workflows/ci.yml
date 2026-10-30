@@ -653,6 +653,9 @@ jobs:
       MAINTAI_M4_INTEGRATION: '1'
       MAINTAI_M4_CONTAINER_TEST: '1'
       MAINTAI_M5_INTEGRATION: '1'
+      MAINTAI_M6_INTEGRATION: '1'
+      MAINTAI_M2_DB_PORT: '35432'
+      MAINTAI_M2_KAFKA_PORT: '39092'
       MAINTAI_M5_CONTAINER_TEST: '1'
       MAINTAI_M3_DATABASE_URL: postgresql://maintai_test:maintai_test@127.0.0.1:35432/maintai_processing_test
     steps:
@@ -670,7 +673,7 @@ jobs:
           python -m pip install --find-links /tmp/m2-wheels -r processing/requirements-dev.lock -r backend/requirements-dev.lock -r ingestion-api/requirements-dev.lock
           python -m pip install --no-deps --no-build-isolation -e ./processing -e ./backend -e ./ingestion-api
       - name: Start isolated M2 integration dependencies
-        run: docker compose -f processing/worker/tests/compose.yaml up -d --wait
+        run: docker compose -p maintai-m6-ci -f processing/read-api/tests/compose.yaml up -d --build --wait --wait-timeout 180
       - name: Build installed runtime images
         run: |
           docker build -f processing/worker/Dockerfile -t maintai-processing-worker:m2-local .
@@ -682,7 +685,7 @@ jobs:
         run: python -m pytest --import-mode=importlib processing/worker/tests processing/outbox-relay/tests processing/read-api/tests processing/tests backend/business-api/tests backend/business-consumer/tests -m integration
       - name: Stop isolated M2 dependencies
         if: ${{ always() }}
-        run: docker compose -f processing/worker/tests/compose.yaml down
+        run: docker compose -p maintai-m6-ci -f processing/read-api/tests/compose.yaml down --volumes
 
   frontend-ci:
     name: Main UI and realtime integration (test ML and issuer)
@@ -692,6 +695,9 @@ jobs:
     env:
       MAINTAI_M4_INTEGRATION: '1'
       MAINTAI_M5_INTEGRATION: '1'
+      MAINTAI_M6_INTEGRATION: '1'
+      MAINTAI_M2_DB_PORT: '35432'
+      MAINTAI_M2_KAFKA_PORT: '39092'
       MAINTAI_M3_DATABASE_URL: postgresql://maintai_test:maintai_test@127.0.0.1:35432/maintai_processing_test
       KAFKA_TEST_BOOTSTRAP_SERVERS: 127.0.0.1:39092
     steps:
@@ -724,7 +730,7 @@ jobs:
           npm test --prefix frontend
           npm run build --prefix frontend
       - name: Start isolated browser integration dependencies
-        run: docker compose -p maintai-m4-ci -f processing/worker/tests/compose.yaml up -d --wait
+        run: docker compose -p maintai-m6-ui-ci -f processing/read-api/tests/compose.yaml up -d --build --wait --wait-timeout 180
       - name: Browser PKCE real Kafka and two-owner database integration
         run: |
           cd frontend
@@ -737,7 +743,7 @@ jobs:
           python3 .github/scripts/container_smoke.py ui --image maintai-frontend:m4-local
       - name: Stop isolated browser dependencies
         if: ${{ always() }}
-        run: docker compose -p maintai-m4-ci -f processing/worker/tests/compose.yaml down
+        run: docker compose -p maintai-m6-ui-ci -f processing/read-api/tests/compose.yaml down --volumes
 
   component-ci:
     name: Component CI (${{ matrix.component }})

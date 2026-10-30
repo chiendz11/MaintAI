@@ -60,5 +60,5 @@ def test_upgrade_populated_m4_is_additive_and_repeatable(business_database):
         ):
             assert connection.execute(f"SELECT count(*) AS n FROM {table}").fetchone()["n"] == 0
         assert connection.execute("SELECT version_num FROM alembic_version").fetchone() == {
-            "version_num": "business_0003_alerts"
+            "version_num": "business_0004_history_markers"
         }

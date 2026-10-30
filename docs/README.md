@@ -37,6 +37,7 @@ hoặc tuyên bố throughput đã benchmark. Xem [quy trình scale](design-basi
 | [Repository layout](repository-layout.md) | Folder/runtime đang có và phần vẫn skeleton |
 | [OUTCOME-14-ONLY](OUTCOME_V1_4_MIGRATION.md) | Outcome1.4 duy nhất, risk gốc từ Processing, bỏ reader2.0, SDK0.3/bundle2.0 và runbook cutover |
 | [M5 implementation](M5_IMPLEMENTATION_REPORT.md) | Alert lifecycle/evidence/audit/feedback, hot point-read, notification/UI, role grants và kiểm chứng local |
+| [M6 implementation](M6_IMPLEMENTATION_REPORT.md) | History/raw snapshots, charts, CSV/Parquet jobs, Business facade/UI và giới hạn kiểm chứng local |
 | [API decisions](api-contract-decisions.md) | Chi tiết HTTP của baseline máy đọc được1.3.2; chờ migration v1.4 |
 | [History/storage detail](history-storage-contract.md) | Thiết kế archive/chart/export chi tiết kế thừa; chỉ áp dụng khi không trái v1.4 |
 | [Recovery/jobs detail](recovery-jobs-operations.md) | Durable jobs, Drift catalog, replay/rolling; giữ các phần không bị v1.4 thay thế |

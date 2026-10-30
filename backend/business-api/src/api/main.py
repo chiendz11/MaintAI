@@ -17,6 +17,7 @@ from psycopg.rows import dict_row
 from .app import create_app
 from .auth import IdentityVerifier, jwks_fetcher
 from .config import Settings
+from .history_config import build as build_history
 
 
 def main(argv=None):
@@ -58,6 +59,9 @@ def main(argv=None):
                 status_client=status_client,
                 projections=projections,
                 alerts=alerts,
+                history=build_history(settings, repository.connection_factory)
+                if settings.history
+                else None,
                 notifications=NotificationHub(
                     projections,
                     dsn=settings.database_url,

@@ -59,6 +59,14 @@ def owner_database():
         yield database
     finally:
         with connect(dsn) as connection:
+            # M6 metadata is a separate namespace of this isolated test owner.
+            from processing.shared.history_meta.persistence import metadata_schema
+
+            connection.execute(
+                sql.SQL("DROP SCHEMA IF EXISTS {} CASCADE").format(
+                    sql.Identifier(metadata_schema(database.schema))
+                )
+            )
             connection.execute(
                 sql.SQL("DROP SCHEMA {} CASCADE").format(sql.Identifier(database.schema))
             )

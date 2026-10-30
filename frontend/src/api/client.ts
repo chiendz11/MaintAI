@@ -22,6 +22,8 @@ import type {
   MachineDetail,
   MachinePage,
 } from "../types/live";
+import type { HistoryApi } from "../types/history";
+import { HistoryClient } from "./history-client";
 
 export class ApiError extends Error {
   constructor(
@@ -41,6 +43,7 @@ export class ApiError extends Error {
   }
 }
 export interface MachineApi {
+  readonly history?: HistoryApi;
   live(machine: string, signal: AbortSignal): Promise<LiveSnapshot>;
   detail(machine: string, signal: AbortSignal): Promise<MachineDetail>;
   fleet(
@@ -81,13 +84,21 @@ export async function boundedText(response: Response): Promise<string> {
   }
 }
 export class BusinessApi implements MachineApi, AlertApi {
+  readonly history = new HistoryClient((path, signal, body, headers) =>
+    this.response(path, signal, body, headers),
+  );
   constructor(
     readonly base: string,
     readonly token: () => Promise<string>,
     readonly request: typeof fetch = globalThis.fetch.bind(globalThis),
     readonly unauthorized: () => void = () => {},
   ) {}
-  private async response(path: string, signal: AbortSignal, body?: unknown) {
+  private async response(
+    path: string,
+    signal: AbortSignal,
+    body?: unknown,
+    headers: Record<string, string> = {},
+  ) {
     let token: string;
     try {
       token = await this.token();
@@ -106,6 +117,7 @@ export class BusinessApi implements MachineApi, AlertApi {
       body: body === undefined ? undefined : JSON.stringify(body),
       redirect: "error",
       headers: {
+        ...headers,
         Authorization: "Bearer " + token,
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
         Accept: path.startsWith("/events/")

@@ -22,6 +22,7 @@ class Identity:
     subject: str
     machines: frozenset[str]
     expires_at: float | None = None
+    roles: frozenset[str] = frozenset()
 
     def authorize(self, machine_id):
         if machine_id not in self.machines:
@@ -158,4 +159,4 @@ class IdentityVerifier:
             or not all(isinstance(m, str) and m and m != "*" and "\x00" not in m for m in machines)
         ):
             raise RegistryFailure(403, "FORBIDDEN")
-        return Identity(subject, frozenset(machines), float(expiry))
+        return Identity(subject, frozenset(machines), float(expiry), frozenset(roles))

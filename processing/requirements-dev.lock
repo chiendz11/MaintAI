@@ -340,3 +340,11 @@ webcolors==25.10.0
     #   -c processing/requirements-dev.lock
     #   -c processing/requirements.lock
     #   jsonschema
+
+# M6 object storage / Parquet; S3 pins match the existing Storage lock.
+boto3==1.43.114
+botocore==1.43.114
+jmespath==1.1.0
+s3transfer==0.19.2
+urllib3==2.8.0
+pyarrow==26.0.0
