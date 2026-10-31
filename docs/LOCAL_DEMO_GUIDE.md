@@ -91,22 +91,60 @@ Kiểm tra file cấu hình private `local/.local/settings.json` đảm bảo đ
 
 ---
 
-## 3. Khởi tạo k3d Cluster và Bootstrap Argo CD
+## 3. Khởi tạo Hạ tầng bằng Terraform (Khuyến nghị)
 
-### Bước 3.1 — Khởi động Cụm và Nạp Công cụ Nền tảng
+Chúng ta có thể khởi tạo và quản lý toàn bộ hạ tầng demo local (`k3d`, `Argo CD`, `MinIO`, `PostgreSQL`, `Kafka`, `Keycloak`) hoàn toàn bằng **Terraform code** tại thư mục [`terraform/local`](file:///home/chienqt/Dev/newBTL/Maint-infrastructure/terraform/local/):
+
+```bash
+cd /home/chienqt/Dev/newBTL/Maint-infrastructure/terraform/local
+
+# 1. Khởi tạo Terraform provider (null, local)
+terraform init
+
+# 2. Khởi tạo và kích hoạt toàn bộ cụm hạ tầng bằng Terraform:
+terraform apply -auto-approve
+```
+
+*(Hoặc sử dụng Makefile từ thư mục gốc `Maint-infrastructure`: `make tf-init && make tf-apply`)*
+
+### Terraform sẽ tự động thực thi các tài nguyên sau:
+1. **`null_resource.init`**: Cấu hình môi trường private, TLS certs tự ký và credentials.
+2. **`null_resource.k3d_cluster`**: Khởi tạo cụm k3d `maintai-local` với đúng cấu hình cổng NodePort (18080, 18081, 18490, 13000, 19001, 18443).
+3. **`null_resource.platform_bootstrap`**: Nạp công cụ nền tảng và bootstrap Argo CD vào cụm.
+4. **`null_resource.provisioning`**: Chép dataset AI4I, sinh Model Identity và khởi tạo 5 máy ảo.
+5. **`null_resource.argocd_sync`**: Ra lệnh cho Argo CD kích hoạt PreSync Database Migrations và kéo images GHCR về chạy.
+
+Khi chạy xong, Terraform sẽ in ra toàn bộ bảng URL truy cập trực tiếp trên màn hình:
+```text
+Apply complete! Resources: 5 added, 0 changed, 0 destroyed.
+
+Outputs:
+argocd_ui_url    = "https://127.0.0.1:18443"
+business_ui_url  = "http://127.0.0.1:18080"
+cluster_name     = "maintai-local"
+grafana_url      = "http://127.0.0.1:13000"
+keycloak_url     = "https://127.0.0.1:18490"
+minio_url        = "http://127.0.0.1:19001"
+simulator_ui_url = "http://127.0.0.1:18081"
+```
+
+---
+
+## 4. (Tùy chọn) Khởi tạo Thủ công từng bước bằng Python CLI
+
+Nếu bạn muốn chạy từng bước độc lập thay vì chạy một lệnh Terraform apply duy nhất:
+
+### Bước 4.1 — Khởi động Cụm và Nạp Công cụ Nền tảng
 ```bash
 cd /home/chienqt/Dev/newBTL/Maint-infrastructure
 
-# 1. Khởi động cụm k3d local (tạo mạng, storage local-path, nodeports):
 .venv/bin/python -m localdev up
-
-# 2. Build và nạp công cụ platform local (MinIO, MinIO Client, dev-tools bridge):
 .venv/bin/python -m localdev build-platform
 .venv/bin/python -m localdev import-images --component minio --component mc --component dev-tools
 .venv/bin/python -m localdev prepare platform
 ```
 
-### Bước 3.2 — Push Platform Receipts (nếu có thay đổi)
+### Bước 4.2 — Push Platform Receipts (nếu có thay đổi)
 ```bash
 cd /home/chienqt/Dev/newBTL/MaintAI-gitops
 
@@ -117,45 +155,13 @@ if [ -n "$(git status --porcelain environments/local/platform)" ]; then
 fi
 ```
 
-### Bước 3.3 — Cài đặt Argo CD và Kiểm tra Sẵn sàng Platform
+### Bước 4.3 — Cài đặt Argo CD và Kích hoạt Hệ thống
 ```bash
 cd /home/chienqt/Dev/newBTL/Maint-infrastructure
 
-# Cài đặt Argo CD vào cụm k3d
 .venv/bin/python -m localdev bootstrap-argocd
-.venv/bin/python -m localdev status
-```
-
-Kiểm tra trạng thái các Pods hạ tầng:
-```bash
-export KUBECONFIG="$PWD/local/.local/kubeconfig"
-kubectl --context k3d-maintai-local -n maintai-local get pods
-```
-Chờ cho **Kafka, PostgreSQL, MinIO, Keycloak** đều chuyển sang trạng thái `Running` / `Ready`, sau đó chạy kiểm tra thông mạng Kafka:
-```bash
-.venv/bin/python -m localdev smoke-kafka
-```
-
----
-
-## 4. Chuẩn bị Dữ liệu, Model AI và Kích hoạt Hệ thống
-
-Các workload ML và Sensor yêu cầu bộ dataset AI4I và model baseline đã qua kiểm định:
-
-```bash
-cd /home/chienqt/Dev/newBTL/Maint-infrastructure
-
-# 1. Chép dataset AI4I 2020 vào thư mục runtime:
-mkdir -p local/.local/data/datasets
-cp ../MaintAI/sensor/data/ai4i2020.csv local/.local/data/datasets/ai4i2020.csv
-
-# 2. Sinh chứng nhận Model Identity hợp lệ:
 .venv/bin/python -m localdev model-identity
-
-# 3. Khởi tạo thông tin 5 máy (M-001 đến M-005) vào Business Database:
 .venv/bin/python -m localdev provision
-
-# 4. Kích hoạt cơ chế xử lý dữ liệu theo thứ tự (PROC-ORDER-01):
 .venv/bin/python -m localdev activate-ordering --legacy-writers-drained
 ```
 
@@ -257,10 +263,18 @@ cd /home/chienqt/Dev/newBTL/Maint-infrastructure
 .venv/bin/python -m localdev forward argocd
 ```
 
-Xóa toàn bộ cụm làm lại từ đầu (chỉ khi muốn reset hoàn toàn):
-```bash
-.venv/bin/python -m localdev delete --confirm-delete-cluster
-```
+### Hủy toàn bộ cụm làm lại từ đầu (Clean Reset):
+- **Bằng Terraform:**
+  ```bash
+  cd /home/chienqt/Dev/newBTL/Maint-infrastructure/terraform/local
+  terraform destroy -auto-approve
+  # Hoặc: make -C ../.. tf-destroy
+  ```
+- **Bằng Python CLI:**
+  ```bash
+  cd /home/chienqt/Dev/newBTL/Maint-infrastructure
+  .venv/bin/python -m localdev delete --confirm-delete-cluster
+  ```
 
 ---
 
