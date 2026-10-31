@@ -1,0 +1,205 @@
+name: Build, Publish and Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: 'Branch to update in GitOps repo'
+        required: true
+        default: 'demo/local-k3d'
+      services:
+        description: 'Services to build (comma-separated or "all")'
+        required: true
+        default: 'all'
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - 'processing/**'
+      - 'frontend/**'
+      - 'ingestion-api/**'
+      - 'sensor/**'
+      - 'sensor-simulator-UI/**'
+      - 'storage-consumer/**'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-and-publish:
+    name: Build & Publish ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: frontend
+            context: .
+            dockerfile: frontend/Dockerfile
+            image: maintai-frontend
+            build_args: ""
+          - name: simulator-ui
+            context: sensor-simulator-UI
+            dockerfile: sensor-simulator-UI/Dockerfile
+            image: maintai-simulator-ui
+            build_args: |
+              NODE_IMAGE=node:24-bookworm-slim@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5
+              NGINX_IMAGE=nginxinc/nginx-unprivileged:stable-alpine@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03
+          - name: ingestion-api
+            context: .
+            dockerfile: ingestion-api/Dockerfile
+            image: maintai-ingestion-api
+            build_args: ""
+          - name: sensor
+            context: sensor
+            dockerfile: sensor/Dockerfile
+            image: maintai-sensor
+            build_args: ""
+          - name: business-api
+            context: .
+            dockerfile: backend/business-api/Dockerfile
+            image: maintai-business-api
+            build_args: ""
+          - name: business-consumer
+            context: .
+            dockerfile: backend/business-consumer/Dockerfile
+            image: maintai-business-consumer
+            build_args: ""
+          - name: processing-worker
+            context: .
+            dockerfile: processing/worker/Dockerfile
+            image: maintai-processing-worker
+            build_args: ""
+          - name: processing-read-api
+            context: .
+            dockerfile: processing/read-api/Dockerfile
+            image: maintai-processing-read-api
+            build_args: ""
+          - name: processing-outbox-relay
+            context: .
+            dockerfile: processing/outbox-relay/Dockerfile
+            image: maintai-processing-outbox-relay
+            build_args: ""
+          - name: storage-consumer
+            context: .
+            dockerfile: storage-consumer/Dockerfile
+            image: maintai-storage-consumer
+            build_args: ""
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check if service selected
+        id: check_select
+        run: |
+          SERVICES="${{ github.event.inputs.services || 'all' }}"
+          if [ "$SERVICES" = "all" ] || echo ",$SERVICES," | grep -q ",${{ matrix.name }},"; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.check_select.outputs.should_build == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: steps.check_select.outputs.should_build == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push container image
+        if: steps.check_select.outputs.should_build == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          build-args: ${{ matrix.build_args }}
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:sha-${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  update-gitops:
+    name: Update GitOps manifests and locks
+    needs: [build-and-publish]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout MaintAI
+        uses: actions/checkout@v4
+        with:
+          path: MaintAI
+
+      - name: Checkout MaintAI-gitops
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/MaintAI-gitops
+          token: ${{ secrets.GITOPS_SYNC_TOKEN }}
+          path: MaintAI-gitops
+          ref: ${{ github.event.inputs.target_branch || 'demo/local-k3d' }}
+
+      - name: Checkout Maint-infrastructure
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/Maint-infrastructure
+          token: ${{ secrets.GITOPS_SYNC_TOKEN }}
+          path: Maint-infrastructure
+          ref: ${{ github.event.inputs.target_branch || 'demo/local-k3d' }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Update image tags in GitOps
+        run: |
+          python3 MaintAI/.github/scripts/update_gitops_images.py \
+            --gitops-dir MaintAI-gitops \
+            --registry "ghcr.io/${{ github.repository_owner }}" \
+            --tag "sha-${{ github.sha }}"
+
+      - name: Synchronize platform source locks
+        run: |
+          python3 MaintAI/.github/scripts/sync_platform_locks.py \
+            --app-dir MaintAI \
+            --gitops-dir MaintAI-gitops \
+            --infra-dir Maint-infrastructure
+
+      - name: Commit and push GitOps changes
+        run: |
+          cd MaintAI-gitops
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .
+            git commit -m "chore(gitops): promote app images to sha-${{ github.sha }}"
+            git push origin HEAD:${{ github.event.inputs.target_branch || 'demo/local-k3d' }}
+            echo "GitOps repository updated with new image tags and locks."
+          else
+            echo "No changes in GitOps repository."
+          fi
+
+      - name: Commit and push Infrastructure lock changes
+        run: |
+          cd Maint-infrastructure
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .
+            git commit -m "chore(infra): sync app-source.lock.json for sha-${{ github.sha }}"
+            git push origin HEAD:${{ github.event.inputs.target_branch || 'demo/local-k3d' }}
+            echo "Infrastructure repository updated with new locks."
+          else
+            echo "No changes in Infrastructure repository."
+          fi
