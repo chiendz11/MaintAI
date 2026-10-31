@@ -2953,28 +2953,31 @@ Chi tiết, phép tính và quy trìnhX>100: [Design basis revision1.1](design-b
 [Capacity §11](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).
 Smoke5 máy vẫn dùng phát triển nhỏ; source default5 không tự đổi trong lượt docs.
 
-# 44. M6-HISTORY-01 — Ba Deployment, Read API sở hữu snapshot/export
 
-**Quyết định29/10/2026, revision1.0.0:**
-[M6-HISTORY-01](M6_HISTORY_ARCHITECTURE_DECISION.md) là đặc tả chuẩn M6,
-[M6-RAW-01](M6_RAW_ARCHIVE_HANDOFF.md) là contract Storage → History. Mục này ưu tiên
-SELECT-only toàn runtime, Worker maintenance, accepted-time history pagination và
-processed archive/retention của các chương kế thừa khi mâu thuẫn.
+# 44. M6-HISTORY-01 — History, snapshots và exports (29/10/2026)
 
-1. Giữ Worker/Read API/Relay; không processing-maintenance. Worker chỉ realtime;
-   Read API chạy bounded durable snapshot/export jobs trong cùng deployment.
-2. Outcome history sort processed_at/result_id, processed_at map completed_at;
-   raw sort received_at/Kafka locator. Latest vẫn source sequence, không timestamp.
-3. Pool original processing_ro vẫn read-only; thêm pool metadata quyền hẹp, không
-   ghi source/outcomes/risk/inbox/outbox. Owner migrations/grants là prerequisite.
-4. M6 không processed S3 archive, không bật source-data cleanup. Cleaner chỉ dry-run.
-5. Raw reader dùng immutable catalog generation và coverage từng partition; Kafka
-   ACK/raw commit không có nghĩa catalog đã complete. Không bucket scan mỗi query.
-6. CSV nhỏ có preflight streaming, CSV/Parquet lớn dùng202 job và retry/lease/fencing.
-   Business facade kiểm scope; download kiểm quyền lại; UI vẫn xem history trực tiếp.
-7. Local DB-only demo khác full M6 dùng MinIO; AWS S3 không bắt buộc. Không giả raw
-   history empty/COMPLETE khi provider chưa sẵn sàng. Không tự thay wire schemas,
-   migrations/SQL SDK, implementation status hoặc platform config bởi quyết định docs.
+[M6 History architecture](M6_HISTORY_ARCHITECTURE_DECISION.md) và
+[Raw catalog protocol](M6_RAW_ARCHIVE_HANDOFF.md) ưu tiên các đoạn history mâu thuẫn
+trong §36, HISTORY-01, Guide và metadata kế thừa. Outcomes được giữ trong
+processing_db; processed archive/cold outcome fallback và xóa source data hoãn
+sau M6. Raw archive vẫn thuộc Storage; Kafka SDK/bundle/raw-manifest không đổi.
+
+Read API giữ processing_ro SELECT-only và có pool/credential metadata riêng cho
+snapshots/catalog index/jobs. Export leased runner nằm trong Read API, không
+Worker/Deployment mới. Không cấp quyền ghi source/outcome/risk/inbox/outbox cho
+metadata role. Owner migrations/grants tách runtime startup.
+
+Processing history sort completed_at/result_id (API processed_at); raw sort
+received_at/topic/partition/offset. UTC, from inclusive/to exclusive, snapshot10m,
+page100/max500, interactive31d/100000 IDs. Latest/SSE vẫn theo sequence. Raw time
+coverage có thể null cùng explicit partition coverage, không được bịa watermark.
+
+OpenAPI Business/Processing description2.0.0 freeze profile M6-HISTORY-01/1.0.0;
+M6 schemas riêng, M5 point-read/status/live/alerts giữ DTO hiện có. Header profile
+bắt buộc cho history/export, không diễn giải lại old cursors. Business gửi service
+token cùng JWT ủy quyền actor/scope ngắn hạn có chữ ký; chi tiết ở đặc tả M6.
+Small CSV200 phải preflight toàn bộ bounded snapshot; otherwise job202 sau commit;
+Parquet luôn job. Version/schema/design không là bằng chứng runtime đã rollout.
 
 # 45. RISK-POLICY-01 — Source policy thuộc app, cấp qua GitOps
 

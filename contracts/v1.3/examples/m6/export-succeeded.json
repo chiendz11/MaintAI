@@ -1,0 +1,22 @@
+{
+  "job_id": "job_fixture_1",
+  "status": "SUCCEEDED",
+  "created_at": "2026-10-18T00:00:00Z",
+  "updated_at": "2026-10-18T00:00:00Z",
+  "attempts": 0,
+  "error_code": null,
+  "status_url": "/api/v1/history-exports/job_fixture_1",
+  "artifact_ref": {
+    "bucket": "maintai-contract-fixture",
+    "key": "history-exports/job_fixture_1/artifact.csv",
+    "version_id": "fixture-version",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "size_bytes": 128
+  },
+  "expires_at": "2026-10-19T00:00:00Z",
+  "download_url": "/api/v1/history-exports/job_fixture_1/download",
+  "profile": "M6-HISTORY-01/1.0.0",
+  "snapshot_id": "snap_fixture_1",
+  "resource": "PROCESSING",
+  "time_basis": "processed_at"
+}

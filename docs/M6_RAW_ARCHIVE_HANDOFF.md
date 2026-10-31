@@ -1,10 +1,9 @@
-# M6-RAW-01 — Bàn giao Raw Archive từ Chiến/Người4 cho Người1
+# M6-RAW-01 — Protocol raw archive catalog
 
 Ngày29/10/2026; revision **1.0.0**, theo
-[M6-HISTORY-01](M6_HISTORY_ARCHITECTURE_DECISION.md). **Contract thiết kế đã chốt;
-Storage0.2.0 đã có catalog publisher/audit/rebuild, schemas/examples và reader helper;
-Read API/SQL/UI M6 và platform grants vẫn cần Người1/Chiến tích hợp.**
-Giữ nguyên raw-manifest1.0.0, Kafka bundle2.0.0, SDK0.3.0 và archive identity hiện có.
+[M6-HISTORY-01](M6_HISTORY_ARCHITECTURE_DECISION.md). Protocol provider có schema và helper đóng gói trong `maintai-storage-consumer==0.2.1`;
+HTTP DTO M6 và export có schema riêng trong `contracts/v1.3`.
+Giữ nguyên raw-manifest1.0.0, Kafka bundle2.0.0, SDK0.3.x và archive identity hiện có.
 
 ## 1. Đã có gì, cần bổ sung gì
 
@@ -13,7 +12,7 @@ checksum, object VersionId, immutable manifest; commit Kafka sau object+manifest
 Đường dẫn hiện có theo topic/partition/offset. Retry không được thay bytes tại cùng
 locator. Xem [Storage README](../storage-consumer/README.md).
 
-Storage0.2.0 bổ sung metadata cho M6 tra theo **máy + received_at**, và bằng chứng tập receipts
+M6 cần thêm lớp metadata tra theo **máy + received_at**, và bằng chứng tập receipts
 đã có thể query. Object/manifest đã ghi không tự tạo catalog; Kafka committed
 offset hoặc metric lag cũng không thay coverage của catalog. Không trao quyền
 SQL processing_db/business_db cho Storage.
@@ -34,12 +33,17 @@ raw-catalog/v1/generations/<generation_id>.json
 raw-catalog/v1/segments/<segment_id>.json
 ```
 
-Pointer tham chiếu exact generation ObjectRef. Generation là delta chứa segment refs và full coverage state của cùng snapshot;
-tập entries được tính trên chuỗi parent_ref về checkpoint/root. Reader phải sync
-hết chain trước khi gọi generation fully indexed; xem [reader guide](../storage-consumer/M6_READER_GUIDE.md). Các segments được giới hạn kích thước/record count,
-prune bằng topic/partition/received-date range. Bản ghi cùng máy có thể nằm ở nhiều
-segment; query merge theo khóa M6, không phụ thuộc thứ tự tên object. Generation reuse parent refs; mỗi segment tối đa100 entries, mỗi object tối đa2 MiB.
-Không tạo một mega JSON vô hạn; index máy/time do Read API materialize từ entries.
+Pointer dùng `schema_version`, `generation_id` và exact `generation_ref`.
+Generation dùng `schema_version`, `source_cluster_id`, `parent_ref`, `segments`
+và full partition coverage. `segments` là danh sách ObjectRef trực tiếp; segment
+chứa `schema_version` và `entries`, tối đa100 entries và2 MiB mỗi document.
+
+Generation là **delta**, không chứa lại toàn bộ lịch sử. Reader duyệt newest-first
+qua exact `parent_ref` đến checkpoint đã commit hoặc root; lưu checkpoint để tiếp
+tục sau restart và không công bố dữ liệu nhập dở là đầy đủ. Metadata index query
+theo máy/time; không quét bucket mỗi HTTP request. Xem
+[reader guide](../storage-consumer/M6_READER_GUIDE.md) và
+[schema provider](../storage-consumer/src/maintai_storage/schemas/catalog.json).
 
 Publisher ghi segments → verify refs → immutable generation → CAS pointer. CAS
 phải reconcile các partitions khi nhiều replicas/rebalance; không cho generation
@@ -123,15 +127,14 @@ không chạy toàn bộ rebuild trong mỗi browser request.
 Processed outcomes không nằm trong contract này. Optional outcome wire archive của
 Storage vẫn là capability SDK cũ, **không bật trong M6** và không thay DB history.
 
-## 6. Bàn giao tối thiểu để Người1 bắt đầu
+## 6. Schema, fixtures và quyền truy cập
 
-Chiến bàn giao [schema/examples](../storage-consumer/M6_READER_GUIDE.md) và runtime
-Storage0.2.0 trong PR bàn giao: một generation có timestamps trùng, duplicate event khác locator,
+Package Storage cung cấp schema/examples và helper đọc exact-version: một generation có timestamps trùng, duplicate event khác locator,
 feature-invalid, rejected thiếu máy, catalog lag, gap và checksum mismatch. Fixture
-phải ghi rõ dữ liệu giả; Người1 viết reader/facade/UI theo contract, không cần đợi AWS.
+phải ghi rõ dữ liệu giả; Processing/Business owner viết reader/facade/UI theo contract, không cần đợi AWS.
 
 Môi trường local dùng MinIO đã có source cấu hình ở MaintAI-gitops/local/platform.
-Chiến xác minh bucket/versioning, endpoint từ Pod, credentials Secrets và policies;
+Storage owner xác minh bucket/versioning, endpoint từ Pod, credentials Secrets và policies;
 source manifests không chứng minh MinIO hoặc Storage đã được deploy. Cần quyền:
 
 | Identity | Quyền |
@@ -155,6 +158,20 @@ khi bật M6; không bật app với owner credential để bỏ qua bước ph�
 - Object/version/checksum hỏng, scope sai, source retention loss trả lỗi rõ ràng.
 - Nhóm chưa duyệt retention: không bật cleaner/lifecycle xóa raw/outcomes.
 
-Source Storage0.2.0, schema/examples/checksums, CLI và CI đã được bổ sung; xem
-[implementation report](STORAGE_CATALOG_IMPLEMENTATION_REPORT.md) để biết bằng chứng
-đã chạy và giới hạn. SQL grants/Read API M6/platform rollout chưa được thực hiện.
+Storage0.2.1 có catalog publisher và schema đóng gói; các fixtures offline không thay bằng chứng
+SQL grants hoặc platform rollout mới. Các mục nghiệm thu là việc phải thực hiện,
+kết quả đã chạy được ghi riêng trong [báo cáo M6](M6_IMPLEMENTATION_REPORT.md).
+
+## 8. Machine schemas và coverage response
+
+Các định nghĩa provider fixture cũ trong [raw-catalog-m6.schema.json](../contracts/v1.3/schemas/raw-catalog-m6.schema.json) chỉ phục vụ compatibility/offline fixtures; PartitionCoverage được HTTP M6 sử dụng. Native provider được validate bằng schema đóng gói của Storage, không thay raw-manifest1.0.0. Pointer chứa generation_id/generation_ref; generation chứa parent_ref, segment refs và partitions. Schema provider trong package Storage là nguồn chuẩn cho pointer/generation/segment/entry. ObjectRef provider chỉ có bucket/key/version_id/sha256, không có size_bytes. Segment giữ entries với identity `topic:partition:offset`. Export ObjectRef trong HTTP DTO vẫn bắt buộc size_bytes; không dùng schema export để validate provider.
+
+Raw pages/chart dùng [history-m6.schema.json](../contracts/v1.3/schemas/history-m6.schema.json): available_from/available_through được null khi không có bằng chứng theo clock nguồn; partition_coverage và catalog_generation giữ cutoff đã pin. Chỉ trả COMPLETE khi mọi partition cần cho scope query đã verify, không có gap trong phần query yêu cầu. Offset coverage không chứng minh completeness của mọi readings trước một thời gian nguồn; late receipts xuất hiện khi refresh.
+
+Các fixtures trong [examples/m6](../contracts/v1.3/examples/m6/) là metadata giả để validate offline, không là objects đã upload hoặc bằng chứng Storage publisher đã chạy. Coverage frontier ordering, duplicate locator/partition và gaps được kiểm trong validator; exact object versions, checksum thực và CAS/reconciliation cần integration runtime.
+
+Raw page/chart partition_coverage không lặp topic/partition; response membership
+được giới hạn bởi generation/snapshot đã pin. Không suy thiếu receipts từ khoảng
+cách số offset (control records có thể tạo offset trống). Fixtures generation
+fixture giữ hai receipts cùng event/time ở offset0/1; raw page không phân trang
+phải trả cả hai, giảm dần offset, chart samplecount phải khớp tập đó.

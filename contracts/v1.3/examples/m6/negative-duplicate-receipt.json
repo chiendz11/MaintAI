@@ -1,0 +1,93 @@
+{
+  "catalog_schema_version": "1.0.0",
+  "segment_id": "segment-fixture",
+  "entries": [
+    {
+      "catalog_schema_version": "1.0.0",
+      "receipt_id": "sensor.readings:0:0",
+      "topic": "sensor.readings",
+      "partition": 0,
+      "offset": 0,
+      "source_event_id": "evt_fixture_1",
+      "machine_id": "M-001",
+      "received_at": "2026-10-18T00:00:00Z",
+      "server_accepted_at": "2026-10-18T00:00:00.100000Z",
+      "source_identity": "sensor-fixture",
+      "request_id": "req-fixture",
+      "receipt_kind": "ACCEPTED",
+      "raw_object_ref": {
+        "bucket": "maintai-contract-fixture",
+        "key": "raw-sensor/topic=sensor.readings/partition=000000/offset=00000000000000000000.jsonl.gz",
+        "version_id": "fixture-version",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "size_bytes": 128
+      },
+      "raw_manifest_ref": {
+        "bucket": "maintai-contract-fixture",
+        "key": "raw-sensor/topic=sensor.readings/partition=000000/offset=00000000000000000000.manifest.json",
+        "version_id": "fixture-version",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "size_bytes": 128
+      },
+      "event_locator": 0
+    },
+    {
+      "catalog_schema_version": "1.0.0",
+      "receipt_id": "sensor.readings:0:1",
+      "topic": "sensor.readings",
+      "partition": 0,
+      "offset": 1,
+      "source_event_id": "evt_fixture_1",
+      "machine_id": "M-001",
+      "received_at": "2026-10-18T00:00:00Z",
+      "server_accepted_at": "2026-10-18T00:00:00.100000Z",
+      "source_identity": "sensor-fixture",
+      "request_id": "req-fixture",
+      "receipt_kind": "ACCEPTED",
+      "raw_object_ref": {
+        "bucket": "maintai-contract-fixture",
+        "key": "raw-sensor/topic=sensor.readings/partition=000000/offset=00000000000000000001.jsonl.gz",
+        "version_id": "fixture-version",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "size_bytes": 128
+      },
+      "raw_manifest_ref": {
+        "bucket": "maintai-contract-fixture",
+        "key": "raw-sensor/topic=sensor.readings/partition=000000/offset=00000000000000000001.manifest.json",
+        "version_id": "fixture-version",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "size_bytes": 128
+      },
+      "event_locator": 0
+    },
+    {
+      "catalog_schema_version": "1.0.0",
+      "receipt_id": "sensor.readings:0:0",
+      "topic": "sensor.readings",
+      "partition": 0,
+      "offset": 0,
+      "source_event_id": "evt_fixture_1",
+      "machine_id": "M-001",
+      "received_at": "2026-10-18T00:00:00Z",
+      "server_accepted_at": "2026-10-18T00:00:00.100000Z",
+      "source_identity": "sensor-fixture",
+      "request_id": "req-fixture",
+      "receipt_kind": "ACCEPTED",
+      "raw_object_ref": {
+        "bucket": "maintai-contract-fixture",
+        "key": "raw-sensor/topic=sensor.readings/partition=000000/offset=00000000000000000000.jsonl.gz",
+        "version_id": "fixture-version",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "size_bytes": 128
+      },
+      "raw_manifest_ref": {
+        "bucket": "maintai-contract-fixture",
+        "key": "raw-sensor/topic=sensor.readings/partition=000000/offset=00000000000000000000.manifest.json",
+        "version_id": "fixture-version",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "size_bytes": 128
+      },
+      "event_locator": 0
+    }
+  ]
+}

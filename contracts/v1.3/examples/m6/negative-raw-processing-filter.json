@@ -1,0 +1,12 @@
+{
+  "profile": "M6-HISTORY-01/1.0.0",
+  "machine_ids": [
+    "M-001"
+  ],
+  "from": "2026-10-18T00:00:00Z",
+  "to": "2026-10-18T01:00:00Z",
+  "format": "CSV",
+  "resource": "RAW",
+  "delivery": "AUTO",
+  "result_kind": "DATA_INVALID"
+}

@@ -1,0 +1,17 @@
+{
+  "topic": "sensor.readings",
+  "partition": 0,
+  "start_offset": 0,
+  "archived_next_offset": 2,
+  "indexed_next_offset": 2,
+  "captured_log_end_offset": 2,
+  "captured_at": "2026-10-18T00:00:02Z",
+  "gaps": [
+    {
+      "from_offset": 0,
+      "to_offset": 1,
+      "reason": "RETENTION_LOSS"
+    }
+  ],
+  "status": "COMPLETE"
+}

@@ -3645,36 +3645,30 @@ khởi tạo cô lập và phát readings mới; không mặc định reset mộ
 động. Với dữ liệu cần giữ, cutover phải có kế hoạch riêng. Thay đổi source không
 chứng minh đã migrate data, chạy Docker/DB, nối Alert provider hoặc nghiệm thu E2E.
 
-# 57. M6-HISTORY-01 — Triển khai History/Export trong Read API
 
-Quyết định29/10/2026 tại [M6 architecture](M6_HISTORY_ARCHITECTURE_DECISION.md)
-và [Storage handoff cho Chiến](M6_RAW_ARCHIVE_HANDOFF.md) ưu tiên lời văn cũ về
-maintenance/processed archive/role/history clocks. Ba Deployment Processing giữ
-nguyên. Quyết định đã chốt, code/schema/migration/platform M6 vẫn cần triển khai.
+# 57. M6-HISTORY-01 — History và export trong Read API
 
-1. Người1 version OpenAPI/history cursor với processed_at=completed_at/result_id,
-   raw received_at/topic/partition/offset; giữ status/evidence M5 và latest guards.
-2. Owner migration tạo history_meta tables/grants, indexes và immutable snapshot
-   membership. Pool read processing_ro giữ read-only; pool metadata chỉ DML trong
-   phạm vi được duyệt. Test âm chứng minh không sửa original outcome/outbox.
-3. Implement raw catalog reader/sync trong Read API, ghi metadata mirror quyền hẹp;
-   pin generations, verify object versions/checksums và offset coverage. Chiến giữ
-   publisher/reconciliation trong Storage, không nhận DB credential Processing.
-4. Implement history/chart JSON trước; user không cần CSV để xem history. CSV nhỏ
-   preflight/streaming có budget; CSV/Parquet lớn dùng durable job202 + lease/retry,
-   pool riêng, startup recovery, shutdown/drain, idempotency và authorized download.
-5. Không thêm export/archive loop Worker hoặc processing-maintenance. Không bật
-   optional outcomes archive Storage, processed cold lookup hoặc cleanup source data.
-6. Demo outcomes DB/CSV nhỏ không cần object store; demo full raw/job artifacts dùng
-   MinIO versioned buckets, app credentials và URL browser truy cập được. Không cần
-   AWS S3; source k3d/Argo manifests không là evidence cluster đã chạy.
-7. Acceptance: timestamp trùng, late commits, snapshot TTL, scope đổi, wrong cursor,
-   job crash/retry/concurrent API replicas, catalog lag/gap/rebuild, raw missing/hash
-   mismatch, SQL rights và M1–M5 regressions. Báo tách fixtures/local-provider/K8s.
+Đọc [System Contracts §44](MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md#44-m6-history-01--history-snapshots-và-exports-29102026),
+[M6 architecture](M6_HISTORY_ARCHITECTURE_DECISION.md) và [raw catalog](M6_RAW_ARCHIVE_HANDOFF.md).
+Phần này thay hướng maintenance/archive/export trong Worker của thiết kế kế thừa
+cho phạm vi M6. Không triển khai processed archive hoặc cleaner source trong M6.
 
-Chiến/Người4 cập nhật platform Secrets/grants/S3 policies trong hai repo tương ứng
-khi implementation được bật; không dùng owner role để né giới hạn. Reference schema
-và runtime metadata phải giữ planned/partial cho tới khi các bước có bằng chứng.
+Triển khai owner metadata migrations và source-read/metadata-write pools riêng;
+materialize snapshot membership/pins không giữ SQL transaction trong TTL. Catalog
+sync và leased export runner nằm trong Read API, bounded concurrency1/replica,
+claim bằng SKIP LOCKED, completion fencing/CAS, network ngoài locks. Không thêm
+workload/DB/queue. SQL source role và M5 evidence vẫn chỉ đọc.
+
+Business kiểm user scope, ký delegation RS256<=60s kèm service token; Read API
+verify issuer/JWKS/aud/azp/expiry và intersect scopes, không forward browser token.
+Cursor binds profile/query/actor/scope/snapshot/clock/key version/TTL. Chưa có
+object store/catalog thì raw hoặc artifact jobs unavailable, DB outcomes/small CSV
+có thể dùng độc lập. Không fake COMPLETE hoặc empty200.
+
+UI chỉ gọi Business, phân biệt source time/processed time, buckets và markers.
+Machine schemas2.0.0 của M6 không đổi Kafka outcome1.4.0; baseline runtime.schema
+được SDK khóa giữ nguyên. MinIO versioning/catalog thật cần kiểm riêng; fixtures
+và offline validator không chứng minh pipeline hay deployment.
 
 # 58. RISK-POLICY-01 — Versioned policy trong app và ConfigMap local
 

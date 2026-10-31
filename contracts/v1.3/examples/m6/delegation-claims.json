@@ -1,0 +1,16 @@
+{
+  "iss": "https://business-signing.example.invalid",
+  "aud": "processing-history",
+  "sub": "technician-fixture",
+  "azp": "business-api-fixture",
+  "iat": 1792281600,
+  "nbf": 1792281600,
+  "exp": 1792281660,
+  "jti": "delegation-fixture",
+  "roles": [
+    "TECHNICIAN"
+  ],
+  "machines": [
+    "M-001"
+  ]
+}

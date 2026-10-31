@@ -21,8 +21,8 @@ commit sau durable side effects; retry cần stable IDs/inbox/outbox.
 
 Các module DQ/inference client/risk được chuyển từ backend skeleton cũ sang đây.
 Shared [messaging SDK](../messaging/README.md) có durable Kafka consumer,
-inbox/outbox SQL, OutcomeFactory và relay. Người1 tích hợp callback DQ/ML/risk,
-history SQL và owner migrations; Read API và app entrypoints/probes vẫn skeleton.
+inbox/outbox SQL, OutcomeFactory và relay. Source hiện có callbacks DQ/ML/risk,
+history SQL, owner migrations, app entrypoints/probes và Read API.
 Writer và reader chỉ outcome1.4.0; không tương thích legacy2.0.0. Xem
 [hướng dẫn nhóm §5](../docs/KAFKA_DEVELOPMENT_GUIDE.md) và
 [runtime map](../architecture/README.md).
@@ -35,15 +35,16 @@ Writer và reader chỉ outcome1.4.0; không tương thích legacy2.0.0. Xem
 
 ## PROC-ORDER-01 — transport source đã có, app còn cần tích hợp
 
-Package transport0.1.0 ở processing/src/maintai_processing/ dùng SDK0.3.0 và
-bundle2.0.0. Dockerfile Worker/Relay vẫn placeholder; full app chưa implement.
+Package ở processing/src/maintai_processing/ dùng SDK0.3.1 và bundle2.0.0.
+Worker/Relay có app entrypoints và images; metadata/image source không tự chứng
+minh activation hoặc triển khai shared.
 
-| Phần | Source đã có | Owner còn làm |
+| Phần | Source | Giới hạn vận hành |
 | --- | --- | --- |
-| worker.py / handlers.py | Wrapper + factory đọc prepare/persist callbacks, đúng owner DB/group | Real DQ/ML/risk/history callbacks, health server và image |
+| worker.py / handlers.py | Prepare/persist DQ/ML/risk/history, đúng owner DB/group | Provider credentials, release và load cần kiểm riêng |
 | SDK keyed.py | Bounded FIFO từng máy, fair scheduling, safe offset ledger, drain/cancel | Chốt pool/budgets, load/rolling evidence |
 | SDK ordering.py | Durable assignment/source cursor và atomic inbox/history callback/outbox | Migration/activation owner DB thật |
-| outbox_relay.py | Wrapper cho ordered head-of-key relay | Metrics/probes/image/GitOps activation review |
+| outbox_relay.py | Ordered head-of-key relay, metrics/probes và image | GitOps activation và sizing cần kiểm riêng |
 
 Prepare chạy ngoài SQL với deadline/cancellation context. Persist nhận cùng
 connection ghi history/risk/outbox; phải enqueue đúng một terminal result.
@@ -53,16 +54,19 @@ conflict fail closed. Offset coordinator không commit vượt lower-offset hole
 [Runbook/commands/tests](../docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md)
 ghi rõ explicit001/002 + activation sau drain. Initial legacy inbox cần reviewed
 cursor bootstrap; không xóa inbox để bật mode. [Read API](read-api/README.md) đã có
-internal status SELECT-only; history/chart/archive/export chưa triển khai;
-scheduler/coordinator không là deployment thứ tư.
+internal status/point-read và M6 history/chart/raw/export. Source pool SELECT-only,
+metadata/job/catalog pools dùng credential riêng trong cùng Read API; xem
+[cấu hình M6](read-api/HISTORY.md). Outcomes giữ DB, không bật processed archive
+hoặc source cleaner; scheduler/coordinator không là deployment thứ tư.
 
+## Đóng gói source distribution
 
-## M6-HISTORY-01 — Phạm vi đã chốt29/10
+Chạy `python -m build processing` tại gốc repository trong môi trường đã cài
+công cụ build. Hai schema M6 lấy từ nguồn chuẩn `contracts/v1.3/schemas/`.
+Command sdist sao chép chúng vào `contracts/v1.3/schemas/` bên trong archive và
+đổi đường dẫn data-files trong bản metadata của archive. Không tạo bản sao schema
+được quản lý bằng Git trong thư mục Processing hoặc sửa metadata checkout.
 
-[Decision](../docs/M6_HISTORY_ARCHITECTURE_DECISION.md): ba runtime giữ nguyên;
-Worker chỉ realtime, Read API sở hữu snapshot/export + bounded durable runner,
-Relay giữ outbox. Read API SELECT original data và ghi history_meta bằng pool riêng;
-không cấp write outcome/outbox. Kết quả giữ processing_db, raw dùng S3/MinIO catalog
-[M6-RAW-01](../docs/M6_RAW_ARCHIVE_HANDOFF.md). Không processed archive, Worker
-maintenance hoặc cleanup thật M6. Các đoạn source snapshot phía trên không là
-bằng chứng M6 đã triển khai; xem implemented_scope trong từng runtime descriptor.
+Source distribution tự chứa đủ đầu vào để build wheel ở ngoài repository.
+Wheel tiếp tục cài schema vào `share/maintai-processing/contracts`; đường dẫn
+runtime và biến `PROCESSING_SCHEMA_DIRECTORY` giữ nguyên.

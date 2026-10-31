@@ -1,16 +1,12 @@
 # M6-HISTORY-01 — Chốt kiến trúc xem lịch sử, snapshot và export
 
-Ngày quyết định: **29/10/2026**. Revision **1.0.0**. Chủ dự án chốt theo phương án
-được cung cấp trong cuộc trao đổi. Đây là **quyết định thiết kế đã duyệt**, chưa
-phải báo cáo implementation hoặc bằng chứng chạy pipeline.
+Ngày quyết định: **29/10/2026**. Revision **1.0.0**. Đặc tả mô tả thiết kế M6; không là báo cáo implementation hoặc bằng chứng chạy pipeline.
 
 Quyết định này thay các điều khoản history mâu thuẫn trong System Contracts §36,
 HISTORY-01, Guide và metadata kế thừa: Read API không còn SELECT-only với mọi bảng;
 Worker không chạy export/archive; processed archive và xóa dữ liệu thật được hoãn.
-System Contracts §44 và Guide §57 dẫn tới quyết định này. Kafka outcome vẫn1.4.0;
-HTTP baseline1.3.2 và các migrations đang có chưa tự đổi theo việc cập nhật docs. Storage catalog0.2.0 có source riêng;
-xem [implementation report](STORAGE_CATALOG_IMPLEMENTATION_REPORT.md), không suy
-ra History API/UI M6 đã hoàn tất.
+System Contracts §44 và Guide §57 dẫn tới đặc tả này. Kafka outcome vẫn1.4.0;
+HTTP baseline1.3.2 và các migrations đang có chưa tự đổi theo việc cập nhật docs.
 
 ## 1. Phạm vi và ba Deployment của Processing
 
@@ -19,8 +15,8 @@ ra History API/UI M6 đã hoàn tất.
 | Processing Worker | Consume → DQ → ML → risk → durable outcome/outbox | Snapshot, export, processed archive, cleaner |
 | Processing Read API | Status/evidence/history/chart; đọc raw qua catalog; tạo snapshot và export | Sửa source events, outcomes, risk, inbox hoặc outbox |
 | Outbox Relay | Publish outcomes/signals theo ordered outbox hiện có | Query history hoặc export |
-| Storage Consumer — Chiến/Người4 | Raw receipts → S3/MinIO; catalog và coverage | Ghi processing_db/business_db; archive processed history M6 |
-| Business API — Người1 | Auth, machine scope, facade History/Export cho Main UI | SQL processing_db hoặc để browser đọc bucket trực tiếp |
+| Storage Consumer | Raw receipts → S3/MinIO; catalog và coverage | Ghi processing_db/business_db; archive processed history M6 |
+| Business API | Auth, machine scope, facade History/Export cho Main UI | SQL processing_db hoặc để browser đọc bucket trực tiếp |
 
 Giữ Worker, Read API, Relay là **ba Deployment** hiện có của Processing. Không tạo
 `processing-maintenance`, queue Kafka mới hoặc database thứ sáu cho M6. Background
@@ -151,16 +147,26 @@ có deadline. Không dùng tác vụ in-memory của HTTP framework làm durable
 không giữ lock/transaction DB khi đọc object hoặc upload. Orphan artifacts chỉ
 được dọn có kiểm tra refs; download trước success409, artifact hết TTL410.
 
+Job đã accept phải có immutable membership và pins/holds thuộc riêng job, tách TTL
+snapshot tương tác10 phút. Trong transaction accept, copy hoặc chuyển reference
+sang job-owned hold trước202; không giữ nguồn input chỉ bằng cursor của client.
+Hold tồn tại khi QUEUED/RUNNING/retry/reconcile, kể cả lease reclaim; metadata TTL
+cleaner không được xóa membership/catalog generation/object refs đang bị hold.
+Chỉ giải phóng sau terminal state đã commit và không còn in-flight runner có thể
+sử dụng input; artifact download lifetime độc lập input holds. HTTP cursor hết
+hạn vẫn410, không được hồi sinh snapshot client dưới cùng Idempotency-Key; retry
+cùng job dùng membership riêng đã accept.
+
 Export range tối đa365 ngày **trong phạm vi dữ liệu thực còn giữ**; không hứa đã có
 365 ngày data. TTL artifact24h. Async budget30 phút là profile thiết kế. Chưa có
 MinIO/S3 thì history DB vẫn chạy, còn export cần object artifact phải báo unavailable.
 
-## 6. Storage handoff cho Chiến — Người4
+## 6. Protocol raw archive của Storage
 
-Contract chi tiết tại [M6 Raw Archive Handoff](M6_RAW_ARCHIVE_HANDOFF.md). Chiến cung
+Contract chi tiết tại [M6 Raw Archive Handoff](M6_RAW_ARCHIVE_HANDOFF.md). Storage owner cung
 cấp catalog generation bất biến, raw object refs/checksum và coverage theo từng
-Kafka partition. Người1 có thể dùng fixture đúng contract để phát triển reader/UI
-với publisher/reconciliation Storage0.2.0 đã có source; fixture không thay
+Kafka partition. Processing/Business owner có thể dùng fixture đúng contract để phát triển reader/UI
+với publisher/reconciliation đã có trong Storage0.2.1; fixture không thay
 bằng chứng provider thật.
 
 M6 không bật `STORAGE_ARCHIVE_OUTCOMES`; raw accepted/rejected vẫn theo SDK0.3.0,
@@ -187,8 +193,9 @@ localhost của host cho Pod. Export signed URL phải truy cập được từ 
 
 ## 8. Retention và phần hoãn sau M6
 
-`retention_enabled=false`, `cleaner_dry_run=true` là trạng thái thiết kế mặc định;
-đây chưa phải biến đã được runtime hiện tại đọc. M6 không xóa processing outcomes,
+Runtime tham chiếu đọc `PROCESSING_RETENTION_ENABLED=false` và
+`PROCESSING_CLEANER_DRY_RUN=true`; các giá trị bật source deletion bị từ chối.
+Xem [cấu hình runtime](../processing/read-api/HISTORY.md). M6 không xóa processing outcomes,
 raw evidence hay model/policy artifacts; không chạy processed archive trong Worker.
 Dry-run nằm cùng codebase Read API, chỉ báo candidates, pins/holds và lý do chặn.
 Hết snapshot TTL chỉ giải phóng metadata/pins, không xóa source data. Export TTL
@@ -200,17 +207,33 @@ alert/signal backlog, backups, audit và model lineage trước một quyết đ
 mới. Việc hoãn cleanup đồng nghĩa DB/disk có thể tăng; demo theo dõi dung lượng,
 không hứa lưu vô hạn hoặc production-ready.
 
-## 9. Trình tự bàn giao và acceptance
+## 9. Trình tự triển khai và acceptance
 
-1. Người1 freeze OpenAPI/schema/cursor + owner migration/grants M6 theo quyết định
+1. Processing/Business owner freeze OpenAPI/schema/cursor + owner migration/grants M6 theo quyết định
    này; machine baseline hiện hành không bị đổi chỉ bởi docs.
-2. Chiến bàn giao fixtures/catalog/coverage, layout và local access theo handoff;
+2. Storage owner bàn giao fixtures/catalog/coverage, layout và local access theo handoff;
    triển khai Storage catalog publisher/reconciliation, không sửa receipt archive.
-3. Người1 triển khai range/history/snapshot/chart/export trong Read API + facade/UI;
+3. Processing/Business owner triển khai range/history/snapshot/chart/export trong Read API + facade/UI;
    không đưa loop export vào Processing Worker.
-4. Hai người nối provider thật trên MinIO local: duplicate receipts, missing object,
+4. Nối provider thật trên MinIO local: duplicate receipts, missing object,
    checksum mismatch, catalog lag/gap, wrong scope và browser download URL.
 5. Kiểm chứng timestamp trùng, late commit, hết snapshot, job restart/retry/two replicas,
    quyền SQL bị chặn, 200-empty/503-unavailable, giữ nguyên kết quả/live M1–M5.
 6. Chỉ đánh dấu full M6 sau DB/Kafka/MinIO/provider integration; fixture tests và
    docs validation phải được báo tách biệt. Không cần AWS cho acceptance local.
+
+## 10. Profile HTTP, tương thích và ủy quyền
+
+M6 history/export dùng `X-MaintAI-History-Profile: M6-HISTORY-01/1.0.0`. OpenAPI Business/Processing có description revision2.0.0 do thay shape/clock history; URL `/api/v1` giữ nguyên. Đây là revision thiết kế, không tuyên bố các runtime đang phục vụ version2.0. Schema M6 tách tại [history-m6.schema.json](../contracts/v1.3/schemas/history-m6.schema.json); runtime.schema.json và Kafka bundle2.0.0 giữ nguyên.
+
+M5 point-read/status và các DTO Alert/live không đổi. HistoryRecord1.0.0 của evidence M5 vẫn dùng endpoint point-read hiện có. Collection/export M6 dùng HistoryRecord2.0.0 thêm processed_at từ DB completed_at và giữ original outcome. Pages mang profile/schema_version/collection/time_basis; old cursors không được diễn giải lại. Client/provider phải rollout profile cùng nhau; thiếu hoặc sai profile trả400, M6 chưa bật không được giả trả snapshot thành công.
+
+POST history-exports nhận delivery AUTO hoặc JOB; AUTO CSV có thể trả200 text/csv sau preflight, còn vượt budget hoặc PARQUET trả202 ExportJob. Job/stream có actor-bound idempotency descriptor; cùng key dùng lại frozen snapshot. Snapshot streaming đã hết TTL trả410; không tự tạo snapshot mới dưới cùng key. Download có thể trả303 signed URL hoặc200 authenticated proxy theo OpenAPI. HTTP clients không chuyển tiếp Authorization/delegation khi theo URL object storage.
+
+Business ký JWT ủy quyền ngắn hạn RS256 trong header X-MaintAI-History-Delegation, kèm Authorization service token. Read API kiểm configured issuer/JWKS/kid, audience processing-history, azp bằng subject của service token; sub là actor gốc, roles/machines là scope đã được Business xác thực. Intersect với service machine scope và quyền hiện tại. Claims gồm iss/aud/sub/azp/iat/nbf/exp/jti/roles/machines; lifetime tối đa60s, clock leeway tối đa5s. Keys/issuer là cấu hình bắt buộc, không có secret/default issuer demo trong shared profile. JWT/cursor dùng trust/key management riêng; không log token. jti là trace identity, không thay job idempotency.
+
+Browser không cung cấp delegation đáng tin cậy: Business phải bỏ header ủy quyền từ browser và tạo token mới từ principal đã xác thực. Không forward browser token; không dùng actor header không chữ ký. M5 evidence client không cần delegation mới vì endpoint/semantics M5 không đổi. Test JSON claims chỉ xác nhận shape/lifetime, không chứng minh chữ ký hoặc auth runtime.
+
+Timeseries numeric sensor features lấy RAW/received_at; risk/probability lấy PROCESSING/processed_at. Buckets dùng UTC grid, cắt first/last theo range. M6 markers có position_at theo clock trục, source_received_at/source_server_accepted_at/processed_at giữ riêng. Không có exact axis timestamp thì position_at=null, marker vẫn hiện trong danh sách riêng; không thay clock hoặc bỏ marker ngầm. Business lọc Alert theo snapshot as_of, giữ membership/order của marker pagination trong metadata của Business; Processing chỉ giữ prediction markers, không có Business DB credential. Cursor markers của Business ràng buộc actor/query/composite snapshot/TTL và không được forward như Processing cursor.
+
+Quarantine/rejected không có machine/time hợp lệ được giữ trong catalog và ngoài machine timeline. M6 không tự thêm endpoint quarantine/admin hoặc mở rộng scope người xem; truy vấn quarantine cần contract riêng.

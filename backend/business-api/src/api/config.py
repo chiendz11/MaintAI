@@ -7,6 +7,8 @@ from urllib.parse import urlparse
 
 from business_sse.hub import SSESettings
 
+from .history_config import HistorySettings
+
 
 def loopback(host):
     try:
@@ -28,6 +30,7 @@ class Settings:
     processing_read_url: str | None = None
     processing_token_file: str | None = field(default=None, repr=False)
     sse: SSESettings = field(default_factory=SSESettings)
+    history: HistorySettings | None = None
 
     @classmethod
     def from_env(cls, env=None):
@@ -101,4 +104,5 @@ class Settings:
             processing_url or None,
             processing_token or None,
             SSESettings.from_env(env),
+            HistorySettings.from_env(env, processing_url=processing_url, local=local),
         )

@@ -11,7 +11,7 @@ dependencies = [
   "jsonschema>=4.23,<5", "maintai-messaging[postgres,observability]==0.3.1",
   "httpx>=0.28,<1", "pydantic>=2.10,<3", "alembic>=1.14,<2",
   "fastapi>=0.115,<1", "uvicorn>=0.30,<1", "prometheus-client>=0.21,<1",
-  "PyJWT[crypto]>=2.10,<3",
+  "PyJWT[crypto]>=2.10,<3", "boto3==1.43.114", "pyarrow==26.0.0", "maintai-storage-consumer==0.2.1",
 ]
 
 [project.scripts]
@@ -26,10 +26,13 @@ packages = [
   "processing", "processing.shared", "processing.shared.data_quality",
   "processing.shared.risk_engine", "processing.shared.inference_client",
   "processing.shared.persistence", "processing.shared.events", "processing.shared.ordering",
-  "processing.shared.outbox", "processing.migrations", "processing.migrations.versions",
+  "processing.shared.outbox", "processing.shared.history_meta", "processing.migrations", "processing.migrations.versions",
   "consumer", "relay", "maintai_processing", "processing_read_api",
 ]
 package-dir = {processing = ".", consumer = "worker/src/consumer", relay = "outbox-relay/src/relay", maintai_processing = "src/maintai_processing", processing_read_api = "read-api/src/api"}
+
+[tool.setuptools.data-files]
+"share/maintai-processing/contracts" = ["../contracts/v1.3/schemas/history-m6.schema.json", "../contracts/v1.3/schemas/raw-catalog-m6.schema.json"]
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib -q"

@@ -17,7 +17,7 @@ phải được percent-encode.
   string hoặc token trong lỗi.
 - `X-Correlation-ID` được giữ xuyên hop; `X-Request-ID` nhận diện request.
 
-Repository chỉ thực hiện SELECT. Kết nối runtime bật
+Repository nguồn chỉ thực hiện SELECT. Kết nối nguồn bật
 `default_transaction_read_only=on`; DB role vẫn phải được cấp SELECT riêng bằng
 owner migration/grant operations. Runtime không tạo schema hoặc tự migrate.
 
@@ -69,8 +69,9 @@ Processing, bật theo hướng dẫn tests trong component.
 
 ## Giới hạn
 
-Runtime M5 phục vụ status và hot point-read theo result_id; history danh sách,
-chart/archive/export chưa được triển khai.
+Status và hot point-read giữ DTO M5. M6 bổ sung lịch sử Processing/raw, snapshot,
+chart và export theo profile riêng; xem [tham chiếu M6](HISTORY.md).
+Archive kết quả Processing và xóa dữ liệu nguồn không thuộc M6.
 Business status facade và service credentials được cấu hình riêng. Installed
 HTTP/probes/role permissions/SIGTERM được kiểm trong test hai DB của Business;
 shared OIDC/TLS, provider production và deployment vẫn cần nghiệm thu riêng.
@@ -92,20 +93,13 @@ Không cần checkout để validate và không quét S3 hoặc giả archive co
 
 Processing reader role cần SELECT cả bốn bảng này; chạy owner grant helper hiện
 có, không cấp write hoặc credential DB cho Business. M5 không bật cleaner. Trước
-khi cleanup ở M6 phải bảo vệ evidence của signal còn backlog và có archive lookup.
+khi có cleanup nguồn ở giai đoạn sau phải bảo vệ evidence của signal còn backlog
+và có archive lookup. M6 chỉ giải phóng metadata hết hạn, không xóa outcomes.
 
-## Target M6 — History, snapshot và export đã chốt29/10
+## M6 History và export
 
-[M6-HISTORY-01](../../docs/M6_HISTORY_ARCHITECTURE_DECISION.md) thay yêu cầu
-SELECT-only toàn runtime cho **target M6**: repository original vẫn dùng pool
-PROCESSING_READ_DATABASE_URL với read-only guard; một pool metadata credential
-riêng được owner migration cấp DML trên history_meta. Không gỡ guard pool hiện
-có hoặc cấp write source/outcome/risk/inbox/outbox. Source M5 mô tả ở trên chưa đổi.
-
-Snapshot/export/catalog sync thuộc runtime này, không đưa sang Worker hoặc thêm
-processing-maintenance. Outcome history chỉ DB, sort processed_at=completed_at +
-result_id; raw received_at + Kafka locator, lookup theo
-[M6-RAW-01](../../docs/M6_RAW_ARCHIVE_HANDOFF.md). CSV nhỏ streaming; CSV/Parquet
-lớn durable jobs + bounded runner/lease/fencing/restart. DB-only demo không cần S3;
-full raw/archive artifact demo cần MinIO local, không cần AWS. Chưa processed
-archive/cleanup thật. OpenAPI/schema/grants/runtime export/catalog còn phải implement.
+[M6-HISTORY-01](../../docs/M6_HISTORY_ARCHITECTURE_DECISION.md) dùng source SELECT-only
+pool hiện có và metadata writer pool riêng trong Read API. Export runner nằm ở
+Read API, không Worker. M6 giữ outcomes DB, processed archive/source deletion
+hoãn; câu chuẩn bị cleanup ở các mục cũ áp dụng cho pha retention sau M6.
+Runtime có history/export opt-in; xem [cấu hình](HISTORY.md) và [báo cáo M6](../../docs/M6_IMPLEMENTATION_REPORT.md).

@@ -1,0 +1,17 @@
+{
+  "snapshot_id": "snap_fixture_1",
+  "as_of": "2026-10-18T00:00:02Z",
+  "expires_at": "2026-10-18T00:10:00Z",
+  "coverage": "COMPLETE",
+  "tiers_used": [
+    "HOT"
+  ],
+  "available_from": null,
+  "available_through": null,
+  "next_cursor": null,
+  "schema_version": "2.0.0",
+  "profile": "M6-HISTORY-01/1.0.0",
+  "collection": "PROCESSING",
+  "time_basis": "processed_at",
+  "items": []
+}

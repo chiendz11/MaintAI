@@ -15,32 +15,32 @@
     {
       "path": "docs/README.md",
       "source_filename": "README.md",
-      "sha256": "cdee0a3a848eac1f00149f343c10a354481f0f49190a2570a1d767bea47c9f3f",
+      "sha256": "25cc76b1dd4c567090d860e8243ad63a18f271c959e60f232a9da47dad3e1209",
       "upstream_sha256": "b8f3731050d7cba47d5eecebd8ecfa7457dc4a7c427e9f408a1a22dd89c9b0d7"
     },
     {
       "path": "docs/api-contract-decisions.md",
       "source_filename": "api-contract-decisions.md",
-      "sha256": "30758a60d64fec724ae42c14dcb261a45fbe173f5e4d643d2645b4d053302896",
+      "sha256": "95bea57b5c7208244f441a732329c171f0b2a3b1415297f43c8197fae113f487",
       "upstream_sha256": "153aea7b6f92e25fd11e9689092711f9806c59b0204099ae807e113fa830037b"
     },
     {
       "path": "docs/history-storage-contract.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "8a6fad34c0bda68c69831ef03337bf53a586f28b5eb097b70a24a5ec0a4204b5"
+      "sha256": "e5c6a38fb42e19a0155ac6c425b6ed6cde23ed423d71a61c25d94c938b403bc5"
     },
     {
       "path": "docs/recovery-jobs-operations.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "680a8a591b913e91d6ff4a4b1df3daf926c98802cbd2216be699ee0f2aedb93e"
+      "sha256": "b49841f4c6f4089a11236164a1dac2e6aebaa48e397dffff37697628d356cd1f"
     },
     {
       "path": "docs/implementation-readiness.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "da355c6b93762dffaa0d20b942b199807a1664083e35882782c877e543fd8c5d"
+      "sha256": "0597a9bc7669e2cf629eb2c37a83fe2bf469d4554bf7c05649a6ae25540ce9dd"
     },
     {
       "path": "docs/repository-layout.md",
@@ -84,7 +84,7 @@
       "imported_on": "2026-10-19",
       "source_document_revision": "1.4.0",
       "upstream_sha256": "c677d5a991814c37392d2bb9cfafd2ed86535fd01eb044c4f9a6e457069f9f55",
-      "sha256": "fd1a97b11e2b2f08b50670813bdb6fcf107073f33d561e2c85265b8a8a6bc600"
+      "sha256": "fcd26203be27539970c9cc9000bf7a37c64e92c7b640064bcdab191c4cc04e6e"
     },
     {
       "path": "docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md",
@@ -92,7 +92,7 @@
       "imported_on": "2026-10-19",
       "source_document_revision": "1.4.0",
       "upstream_sha256": "89f141f1a8695a7ce056a99512633ba7e2edd9f2311b7bf935ae94f2ecd6ffcc",
-      "sha256": "6d272892145247829a08f047f640ad397475f8fe1786bf36f78ed076b74eaaf4"
+      "sha256": "6b5f10f7170499f8fc2d51e68753f55a5a4304fa7798672d422b6ed4e2703b27"
     },
     {
       "path": "docs/IMPLEMENTATION_PLAN.md",
@@ -255,28 +255,27 @@
       "decision_revision": "1.0.0"
     },
     {
-      "path": "docs/design-basis/report/Nhóm-8_MaintAI_Kien-truc.pdf",
-      "source_filename": null,
-      "upstream_sha256": null,
-      "sha256": "e69bc9ac3cc6e8ff362f070cafaff99788614e62bb8ce59a6a6273fe4645e065"
-    },
-    {
       "path": "docs/M6_HISTORY_ARCHITECTURE_DECISION.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "added_on": "2026-10-29",
-      "decision_id": "M6-HISTORY-01",
-      "decision_revision": "1.0.0",
-      "sha256": "163578000b4829a491527a11c8f7f085c1ed47ba0bd3660ff4dc628d06848f16"
+      "sha256": "5d5ba51f6e5b5456a9a8c30b8071f9ab003d27bbf43019f2412b0c0651b28787"
     },
     {
       "path": "docs/M6_RAW_ARCHIVE_HANDOFF.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "added_on": "2026-10-29",
-      "decision_id": "M6-RAW-01",
-      "decision_revision": "1.0.0",
-      "sha256": "5321150092f8f8c45bcde95961006ff54321eee5a051df21721442e6a5982ccc"
+      "sha256": "270380d59756c157d4270325f9b59e516770e124305c0120159f69ae339888de"
+    },
+    {
+      "path": "docs/M6_IMPLEMENTATION_REPORT.md",
+      "sha256": "81b120f9dff2ccf3d788b42662803206197d0a348922579d8162c04b987f8eac",
+      "decision_revision": "1.0.0"
+    },
+    {
+      "path": "docs/design-basis/report/Nhóm-8_MaintAI_Kien-truc.pdf",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "sha256": "e69bc9ac3cc6e8ff362f070cafaff99788614e62bb8ce59a6a6273fe4645e065"
     },
     {
       "path": "docs/STORAGE_CATALOG_IMPLEMENTATION_REPORT.md",

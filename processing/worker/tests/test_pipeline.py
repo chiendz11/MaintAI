@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import os
 import socket
 import threading
 import time
@@ -164,7 +165,7 @@ def test_http_to_terminal_outcomes_and_alert_signal_with_real_broker(
     kafka = KafkaSettings(
         local_mode=True,
         security_protocol="PLAINTEXT",
-        bootstrap_servers="127.0.0.1:39092",
+        bootstrap_servers=os.environ.get("KAFKA_TEST_BOOTSTRAP_SERVERS", "127.0.0.1:39092"),
         group_prefix=prefix,
         delivery_timeout_ms=3000,
         producer_git_sha="1" * 40,

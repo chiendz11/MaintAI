@@ -37,8 +37,9 @@ hoặc tuyên bố throughput đã benchmark. Xem [quy trình scale](design-basi
 | [Repository layout](repository-layout.md) | Folder/runtime đang có và phần vẫn skeleton |
 | [OUTCOME-14-ONLY](OUTCOME_V1_4_MIGRATION.md) | Outcome1.4 duy nhất, risk gốc từ Processing, bỏ reader2.0, SDK0.3/bundle2.0 và runbook cutover |
 | [M5 implementation](M5_IMPLEMENTATION_REPORT.md) | Alert lifecycle/evidence/audit/feedback, hot point-read, notification/UI, role grants và kiểm chứng local |
+| [M6 implementation](M6_IMPLEMENTATION_REPORT.md) | History/raw snapshots, charts, CSV/Parquet jobs, Business facade/UI và giới hạn kiểm chứng local |
 | [M6-HISTORY-01 — Quyết định M6](M6_HISTORY_ARCHITECTURE_DECISION.md) | Ba Deployment Processing; Read API ghi metadata giới hạn, snapshot/export trong Read API; processed history chỉ DB, không cleanup thật |
-| [M6-RAW-01 — Storage handoff cho Chiến](M6_RAW_ARCHIVE_HANDOFF.md) | Catalog generation/receipt lookup, coverage từng partition, MinIO local, quyền và acceptance; provider Storage0.2.0 có source |
+| [M6-RAW-01 — Storage catalog](M6_RAW_ARCHIVE_HANDOFF.md) | Catalog generation/receipt lookup, coverage từng partition, MinIO local, quyền và acceptance; provider Storage0.2.1 có source |
 | [Storage catalog0.2.0 report](STORAGE_CATALOG_IMPLEMENTATION_REPORT.md) | Source/CI, failure-recovery evidence, local fixture harness và giới hạn k3d/M6 |
 | [M6 Reader Guide](../storage-consumer/M6_READER_GUIDE.md) | Packaged schemas/examples, delta-chain sync, coverage và cách Người1 tích hợp |
 | [API decisions](api-contract-decisions.md) | Chi tiết HTTP của baseline máy đọc được1.3.2; chờ migration v1.4 |
@@ -79,14 +80,12 @@ freeze schema/migration trước khi đổi producer hoặc consumer. Không t�
   policy chỉnh tay trong private data. Policy demo chưa calibration, workloads
   không tự bật. [Quyết định và migration](RISK_POLICY_OWNERSHIP.md).
 
-- **M6-HISTORY-01,29/10:** Giữ ba Deployment Processing. Worker chỉ realtime;
-  Read API sở hữu history/snapshot/export và runner nền bền vững, dùng pool SELECT
-  cho dữ liệu gốc + pool ghi metadata riêng. Kết quả sort processed_at/result_id,
-  raw sort received_at/Kafka locator; không đổi latest sequence guard. Chưa archive
-  processed outcomes hoặc xóa dữ liệu thật; không thêm processing-maintenance.
-  [Decision](M6_HISTORY_ARCHITECTURE_DECISION.md), [handoff Chiến/Người4](M6_RAW_ARCHIVE_HANDOFF.md).
-  Demo DB-only khác full M6 với MinIO local; không cần AWS S3. Đây là design freeze,
-  không khẳng định History OpenAPI/migration đã implement; Storage publisher0.2.0 có report riêng.
+- **M6-HISTORY-01,29/10:** [history architecture](M6_HISTORY_ARCHITECTURE_DECISION.md),
+  [raw catalog protocol](M6_RAW_ARCHIVE_HANDOFF.md), System §44/Guide §57 ưu tiên
+  history kế thừa. Read API có source-read/metadata-write pools và export runner;
+  processed archive/xóa source hoãn sau M6. OpenAPI Business/Processing2.0.0 mô tả
+  profile mới; M5 DTO/Kafka bundle không đổi, implementation M6 xem báo cáo riêng.
+
 
 - **OUTCOME-14-ONLY,28/10:** Kafka reader/writer và HTTP/history outcome entrypoint
   chỉ dùng1.4.0. Business giữ risk_score do Processing phát; bỏ compatibility2.0

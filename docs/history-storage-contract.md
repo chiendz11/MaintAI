@@ -1,10 +1,12 @@
 # HISTORY-01 — Lịch sử DB/S3, archive và retention
 
-Quyết định M6 chốt ngày29/10/2026: đọc
-[M6-HISTORY-01](M6_HISTORY_ARCHITECTURE_DECISION.md) và
-[M6-RAW-01](M6_RAW_ARCHIVE_HANDOFF.md). Tài liệu này đã đồng bộ phạm vi M6;
-processed archive là phần hoãn, không phải prerequisite của history DB.
-Đây là đặc tả, không khẳng định history/export/catalog đã được implement.
+> **M6 override29/10/2026:** [M6-HISTORY-01](M6_HISTORY_ARCHITECTURE_DECISION.md) ưu tiên phần history/snapshot/export bên dưới: Read API ghi metadata qua pool riêng, runner export trong Read API; processed archive và source cleaner hoãn sau M6. Các thuật toán archive/retention bên dưới là thiết kế tương lai, không là task M6. Brief/recovery ngoài phạm vi này giữ nguyên.
+
+Chi tiết thiết kế kế thừa1.3.2, rà soát khi nhập target1.4 ngày2026-10-19.
+Processing sở hữu logical processing history; Business chỉ facade. Giữ thuật toán
+archive/coverage/export còn cần, áp dụng khi không trái System Contracts v1.4 §36
+và [quyết định dự án](README.md). Cursor, retention và writer cho snapshot/export
+phải đối chiếu các khác biệt trong [readiness](implementation-readiness.md).
 
 ## 1. Dữ liệu và retention M6
 

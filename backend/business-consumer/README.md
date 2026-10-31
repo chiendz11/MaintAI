@@ -38,7 +38,7 @@ không bị ghi đè thành PENDING. INVALID/FAILED không xóa prediction hợp
 Source cùng sequence nhưng khác event/epoch hoặc terminal có nội dung mâu thuẫn
 là conflict, kể cả khi các bảng latest đã chuyển sang event khác.
 
-SDK0.3.0 chỉ decode outcome1.4.0. Metadata giữ `risk_score` do Processing
+SDK0.3.1 chỉ decode outcome1.4.0. Metadata giữ `risk_score` do Processing
 phát; COMPLETED thiếu risk bị từ chối trước callback, không lấy probability
 thay thế. Outcome2.0 không còn được nhận. Xem
 [OUTCOME-14-ONLY](../../docs/OUTCOME_V1_4_MIGRATION.md) để chuẩn bị cutover và

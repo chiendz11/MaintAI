@@ -19,6 +19,9 @@ maintai-business-provision = "backend.shared.persistence.provision:main"
 packages = ["backend", "backend.shared", "backend.shared.persistence", "backend.shared.projections", "backend.shared.notifications", "backend.shared.inbox", "backend.shared.alerts", "backend.shared.audit", "backend.shared.feedback", "backend.shared.ordering", "backend.migrations", "backend.migrations.versions", "api", "business_consumer", "business_consumer.handlers", "business_consumer.handlers.telemetry", "business_consumer.handlers.prediction", "business_consumer.handlers.alert", "business_processing_client", "business_sse"]
 package-dir = {backend = ".", api = "business-api/src/api", business_consumer = "business-consumer/src", business_processing_client = "business-api/src/processing_client", business_sse = "business-api/src/sse"}
 
+[tool.setuptools.data-files]
+"share/maintai-business/contracts" = ["../contracts/v1.3/schemas/history-m6.schema.json", "../contracts/v1.3/schemas/raw-catalog-m6.schema.json"]
+
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib -q"
 testpaths = ["business-api/tests", "business-consumer/tests"]
