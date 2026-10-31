@@ -1,0 +1,122 @@
+name: Sync Platform Locks
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'contracts/**'
+      - 'backend/**'
+      - 'processing/**'
+      - 'frontend/**'
+      - 'sensor/**'
+      - 'sensor-simulator-UI/**'
+      - 'storage-consumer/**'
+      - 'ml-service/**'
+      - 'rag-service/**'
+      - 'drift-worker/**'
+      - 'messaging/**'
+      - 'ingestion-api/**'
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: 'Branch to update in platform repos'
+        required: true
+        default: 'demo/local-k3d'
+
+jobs:
+  sync-locks:
+    name: Sync Source Locks to Platform Repos
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout MaintAI
+        uses: actions/checkout@v4
+        with:
+          path: MaintAI
+
+      - name: Determine Target Branch
+        id: branch
+        run: |
+          TARGET="${{ github.event.inputs.target_branch || 'demo/local-k3d' }}"
+          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+
+      - name: Generate GitHub App Token or Use PAT
+        id: get-token
+        uses: actions/create-github-app-token@v1
+        continue-on-error: true
+        with:
+          app-id: ${{ secrets.GITOPS_APP_ID }}
+          private-key: ${{ secrets.GITOPS_APP_PRIVATE_KEY }}
+          owner: chiendz11
+
+      - name: Resolve Effective Auth Token
+        id: auth
+        run: |
+          if [ -n "${{ steps.get-token.outputs.token }}" ]; then
+            echo "auth_mode=github-app" >> "$GITHUB_OUTPUT"
+            echo "token=${{ steps.get-token.outputs.token }}" >> "$GITHUB_OUTPUT"
+          elif [ -n "${{ secrets.GITOPS_SYNC_TOKEN }}" ]; then
+            echo "auth_mode=pat" >> "$GITHUB_OUTPUT"
+            echo "token=${{ secrets.GITOPS_SYNC_TOKEN }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Neither GITOPS_APP_ID/GITOPS_APP_PRIVATE_KEY nor GITOPS_SYNC_TOKEN is configured in secrets."
+            exit 1
+          fi
+
+      - name: Checkout MaintAI-gitops
+        uses: actions/checkout@v4
+        with:
+          repository: chiendz11/MaintAI-gitops
+          ref: ${{ steps.branch.outputs.target }}
+          path: MaintAI-gitops
+          token: ${{ steps.auth.outputs.token }}
+
+      - name: Checkout Maint-infrastructure
+        uses: actions/checkout@v4
+        with:
+          repository: chiendz11/Maint-infrastructure
+          ref: ${{ steps.branch.outputs.target }}
+          path: Maint-infrastructure
+          token: ${{ steps.auth.outputs.token }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Synchronize Lock Manifests and Hashes
+        run: |
+          python3 MaintAI/.github/scripts/sync_platform_locks.py \
+            --app-dir MaintAI \
+            --gitops-dir MaintAI-gitops \
+            --infra-dir Maint-infrastructure
+
+      - name: Commit and Push to MaintAI-gitops
+        run: |
+          cd MaintAI-gitops
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet; then
+            SHORT_SHA=$(git -C ../MaintAI rev-parse --short HEAD)
+            git commit -am "chore(provenance): sync app locks to ${SHORT_SHA} [skip ci]"
+            git push origin ${{ steps.branch.outputs.target }}
+            echo "✓ Pushed updated locks to MaintAI-gitops (${{ steps.branch.outputs.target }})"
+          else
+            echo "No lock changes detected in MaintAI-gitops."
+          fi
+
+      - name: Commit and Push to Maint-infrastructure
+        run: |
+          cd Maint-infrastructure
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet; then
+            SHORT_SHA=$(git -C ../MaintAI rev-parse --short HEAD)
+            git commit -am "chore(provenance): sync app locks to ${SHORT_SHA} [skip ci]"
+            git push origin ${{ steps.branch.outputs.target }}
+            echo "✓ Pushed updated locks to Maint-infrastructure (${{ steps.branch.outputs.target }})"
+          else
+            echo "No lock changes detected in Maint-infrastructure."
+          fi
+
