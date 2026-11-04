@@ -2,6 +2,7 @@
 
 import asyncio
 import hashlib
+import json
 import logging
 import os
 import time
@@ -80,7 +81,16 @@ def snapshot_events(snapshot):
 
 
 class NotificationHub:
-    def __init__(self, repository, *, dsn, settings=None, metrics=None, alert_repository=None):
+    def __init__(
+        self,
+        repository,
+        *,
+        dsn,
+        settings=None,
+        metrics=None,
+        alert_repository=None,
+        m7_factory=None,
+    ):
         self.repository, self.dsn = repository, dsn
         self.settings, self.metrics = settings or SSESettings(), metrics
         self.ready = False
@@ -90,6 +100,8 @@ class NotificationHub:
         self.connection = None
         self.alert_repository = alert_repository
         self.alert_hints = deque()
+        self.m7_factory = m7_factory
+        self.m7_hints = deque()
 
     def _metric(self, name, *args):
         if self.metrics is not None:
@@ -132,6 +144,7 @@ class NotificationHub:
             self.unsubscribe(subscription)
         self.dirty.clear()
         self.alert_hints.clear()
+        self.m7_hints.clear()
         self._metric("sse_resync", reason)
 
     def invalidate(self, key):
@@ -269,6 +282,69 @@ class NotificationHub:
                 subscription.pending += len(frame)
                 self.pending_bytes += len(frame)
 
+    def invalidate_m7(self, payload):
+        key, identifier = parse_alert_hint(payload)
+        if len(self.m7_hints) >= 128:
+            self.disconnect_all("GAP")
+            return
+        self.m7_hints.append((key, identifier))
+
+    async def flush_m7(self):
+        from backend.shared.copilot.schemas import valid
+
+        for _ in range(32):
+            if not self.m7_hints or self.m7_factory is None:
+                break
+            key, identifier = self.m7_hints.popleft()
+            targets = [
+                s
+                for s in self.subscriptions
+                if not s.closed and (key == "0" * 64 or key in s.machines)
+            ]
+            if not targets:
+                continue
+
+            def load(identifier=identifier):
+                with self.m7_factory() as connection:
+                    return connection.execute(
+                        "SELECT event FROM business_m7_notifications WHERE notification_id=%s",
+                        (identifier,),
+                    ).fetchone()
+
+            try:
+                row = await asyncio.wait_for(asyncio.to_thread(load), 3)
+                value = json.loads(bytes(row["event"])) if row else None
+                if value is None or not valid("runtime", value, "SSEEvent"):
+                    raise ValueError("Invalid M7 notification")
+                actual = machine_key(value["machine_id"]) if value["machine_id"] else "0" * 64
+                if actual != key:
+                    raise ValueError("M7 notification scope differs")
+                frame = (
+                    b"event: "
+                    + value["type"].encode()
+                    + b"\nid: "
+                    + identifier.encode()
+                    + b"\ndata: "
+                    + canonical_json(value)
+                    + b"\n\n"
+                )
+            except (psycopg.Error, ValueError, TimeoutError):
+                self.disconnect_all("OTHER")
+                return
+            for subscription in targets:
+                if (
+                    subscription.expires_at <= time.time()
+                    or subscription.queue.full()
+                    or subscription.pending + len(frame) > self.settings.connection_bytes
+                    or self.pending_bytes + len(frame) > self.settings.total_bytes
+                ):
+                    self.unsubscribe(subscription)
+                    self._metric("sse_resync", "GAP")
+                    continue
+                subscription.queue.put_nowait(frame)
+                subscription.pending += len(frame)
+                self.pending_bytes += len(frame)
+
     async def _listen(self):
         delay = 1
         while not self.stopping.is_set():
@@ -284,11 +360,15 @@ class NotificationHub:
                         await connection.execute(
                             sql.SQL("LISTEN {}").format(sql.Identifier(self.settings.alert_channel))
                         )
+                    if self.m7_factory is not None:
+                        await connection.execute("LISTEN maintai_business_m7_v1")
                     self.ready, delay = True, 1
                     while not self.stopping.is_set():
                         async for notification in connection.notifies(timeout=1):
                             try:
-                                if notification.channel == self.settings.alert_channel:
+                                if notification.channel == "maintai_business_m7_v1":
+                                    self.invalidate_m7(notification.payload)
+                                elif notification.channel == self.settings.alert_channel:
                                     self.invalidate_alert(notification.payload)
                                 else:
                                     self.invalidate(parse_hint(notification.payload))
@@ -310,6 +390,7 @@ class NotificationHub:
         while not self.stopping.is_set():
             await self.flush()
             await self.flush_alerts()
+            await self.flush_m7()
             try:
                 await asyncio.wait_for(self.stopping.wait(), 0.05)
             except TimeoutError:

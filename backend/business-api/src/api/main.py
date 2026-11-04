@@ -52,6 +52,15 @@ def main(argv=None):
         projections = ProjectionRepository(
             repository.connection_factory, alert_reader=alerts.active
         )
+        from backend.shared.copilot.repository import BriefRepository
+        from backend.shared.monitoring.runtime import catalog
+
+        briefs = BriefRepository(repository.connection_factory) if settings.m7 else None
+        if settings.m7:
+            with repository.connection_factory() as connection:
+                connection.execute("SELECT job_id FROM brief_jobs LIMIT 0")
+                connection.execute("SELECT singleton FROM drift_catalog_state LIMIT 0")
+        monitoring = catalog(settings.m7, repository.connection_factory) if settings.m7 else None
         uvicorn.run(
             create_app(
                 repository,
@@ -59,6 +68,8 @@ def main(argv=None):
                 status_client=status_client,
                 projections=projections,
                 alerts=alerts,
+                briefs=briefs,
+                monitoring=monitoring,
                 history=build_history(settings, repository.connection_factory)
                 if settings.history
                 else None,
@@ -67,6 +78,7 @@ def main(argv=None):
                     dsn=settings.database_url,
                     settings=settings.sse,
                     alert_repository=alerts,
+                    m7_factory=repository.connection_factory if settings.m7 else None,
                 ),
             ),
             host=settings.host,

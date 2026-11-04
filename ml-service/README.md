@@ -25,13 +25,13 @@ Training bundle phát hành qua GitOps PR, không promote chỉ vì raw S3 uploa
 drift hoặc feedback. MLflow Server sở hữu mlflow_db, trainer chỉ gọi MLflow API.
 
 Đọc System Contracts v1.4 §7–8/34–41 và Guide §15–16/43/49. Machine-readable HTTP
-bundle hiện baseline1.3.2, xem [migration status](../docs/repository-layout.md).
+bundle hiện baseline1.3.2, xem [migration status](../docs/architecture/repository-layout.md).
 MLflow image được publish bởi workflow MaintAI `maintai-publish.yml`; GitOps chỉ
 nhận signed digest qua PR. ML review client/server compatibility; Platform/MLOps
 vận hành service, credentials, DB/S3 và release. Không fork MLflow hoặc viết lại UI.
 
 
 > **Thiết kế v1.4:** Xem [docs index](../docs/README.md),
-> [Guide v1.4](../docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md) và
-> [readiness](../docs/implementation-readiness.md). Runtime metadata hiện có vẫn
+> [Guide v1.4](../docs/subsystems/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md) và
+> [readiness](../docs/architecture/implementation-readiness.md). Runtime metadata hiện có vẫn
 > baseline1.3.2; source chưa tự migrate theo việc nhập tài liệu.

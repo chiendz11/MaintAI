@@ -10,8 +10,8 @@ servers:
   description: Illustrative only; configure environment routing.
 externalDocs:
   description: M6 history architecture and migration
-  url: ../../../docs/M6_HISTORY_ARCHITECTURE_DECISION.md
-x-maintai-decisions: ../../../docs/api-contract-decisions.md
+  url: ../../../docs/reports/M6_HISTORY_ARCHITECTURE_DECISION.md
+x-maintai-decisions: ../../../docs/architecture/api-contract-decisions.md
 tags:
 - name: Sensor
   description: Simulator ingestion and idempotency

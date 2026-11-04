@@ -41,7 +41,7 @@ là conflict, kể cả khi các bảng latest đã chuyển sang event khác.
 SDK0.3.1 chỉ decode outcome1.4.0. Metadata giữ `risk_score` do Processing
 phát; COMPLETED thiếu risk bị từ chối trước callback, không lấy probability
 thay thế. Outcome2.0 không còn được nhận. Xem
-[OUTCOME-14-ONLY](../../docs/OUTCOME_V1_4_MIGRATION.md) để chuẩn bị cutover và
+[OUTCOME-14-ONLY](../../docs/subsystems/OUTCOME_V1_4_MIGRATION.md) để chuẩn bị cutover và
 phân biệt kiểm tra schema với việc xử lý dữ liệu cũ trong môi trường.
 
 `ProjectionRepository.live(machine_id)` đọc ba trục trong một SQL statement và
@@ -63,7 +63,7 @@ duplicates, late conflict, concurrency, raw preservation, DTO schema và grants.
 ## Runtime và observability
 
 `BUSINESS_DATABASE_URL` là connection của Consumer role. Kafka dùng cấu hình SDK
-trong [hướng dẫn Kafka](../../docs/KAFKA_DEVELOPMENT_GUIDE.md). Shared profile dùng
+trong [hướng dẫn Kafka](../../docs/subsystems/KAFKA_DEVELOPMENT_GUIDE.md). Shared profile dùng
 SASL/TLS và canonical groups; `KAFKA_GROUP_PREFIX` chỉ dành cho local test.
 `BUSINESS_CONSUMER_PROFILE=local-test` yêu cầu DB/bind loopback và Kafka local mode.
 Management HTTP mặc định `0.0.0.0:8083`, đổi bằng `BUSINESS_CONSUMER_HOST` và
@@ -102,7 +102,7 @@ mất thông báo, không cần thêm raw history hoặc đổi Kafka group.
 ## Handler Alert M5
 
 Xem [Business runbook](../README.md#m5--alert-lifecycle-evidence-audit-và-feedback)
-và [report](../../docs/M5_IMPLEMENTATION_REPORT.md). Migration0003 là owner
+và [report](../../docs/reports/M5_IMPLEMENTATION_REPORT.md). Migration0003 là owner
 operation trước startup; không chạy migration trong Consumer. Credential evidence
 dùng `BUSINESS_PROCESSING_READ_URL` / `BUSINESS_PROCESSING_TOKEN_FILE` riêng.
 `BUSINESS_ALERT_NOTIFY_CHANNEL` phải khớp API và khác channel telemetry M4.
@@ -115,3 +115,10 @@ receipt; sai evidence rollback và ghi chẩn đoán conflict qua transaction ri
 Snapshot/audit/feedback giữ bytes JSON để không làm mất ghi chú có escaped NUL.
 M5 không bật cleanup Processing hoặc xóa notification rows; retention/cleanup và
 archive lookup cần thiết kế M6 trước khi vận hành dài hạn.
+
+## Jobs và catalog M7
+
+Consumer có hai workers brief với lease/fencing và các loop recent/full Drift
+catalog độc lập. Xem [M7](../../docs/reports/M7_IMPLEMENTATION_REPORT.md) cho cấu hình,
+owner grants, retry budgets, metrics và giới hạn provider fixtures. Không tự tạo
+brief khi có Alert mới; generation chỉ theo yêu cầu đã persist bởi Business API.

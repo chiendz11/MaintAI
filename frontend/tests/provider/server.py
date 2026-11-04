@@ -85,6 +85,9 @@ def serve_fixture():
         raise RuntimeError("Explicit M4 local database test opt-in required")
     suffix = uuid4().hex
     m6 = os.environ.get("MAINTAI_M6_INTEGRATION") == "1"
+    m7 = os.environ.get("MAINTAI_M7_INTEGRATION") == "1"
+    if m7 and not m6:
+        raise RuntimeError("M7 browser tests require M6 real object storage")
     databases = {
         owner: "m4_browser_" + owner + "_" + suffix for owner in ("business", "processing")
     }
@@ -391,6 +394,11 @@ def serve_fixture():
             processing_thread.start()
             service_token = Path(temporary) / "processing-token"
             service_token.write_text(signed("processing-internal", role="BUSINESS_SERVICE"))
+            m7_env = {}
+            if m7:
+                from copilot import prepare
+
+                m7_env = prepare(app, archive_fixture, Path(temporary))
             log_path = Path(temporary) / "consumer.log"
             with log_path.open("wb") as log:
                 consumer = subprocess.Popen(
@@ -399,6 +407,7 @@ def serve_fixture():
                     stderr=log,
                     env={
                         **os.environ,
+                        **m7_env,
                         "BUSINESS_DATABASE_URL": consumer_dsn,
                         "BUSINESS_CONSUMER_PROFILE": "local-test",
                         "BUSINESS_CONSUMER_HOST": "127.0.0.1",
@@ -445,11 +454,14 @@ def serve_fixture():
                     registry.connection_factory,
                     alert_reader=None if alerts is None else alerts.active,
                 )
+                from backend.shared.copilot.repository import BriefRepository
+
                 hub = NotificationHub(
                     projections,
                     dsn=reader_dsn,
                     settings=SSESettings(channel=channel, alert_channel=alert_channel),
                     alert_repository=alerts,
+                    m7_factory=registry.connection_factory if m7 else None,
                 )
                 verifier = IdentityVerifier(
                     issuer=ISSUER,
@@ -458,12 +470,18 @@ def serve_fixture():
                     machines_claim="machines",
                     fetch_jwks=jwks_fetcher(ISSUER + "/jwks"),
                 )
+                from copilot import monitoring
+
                 business = create_app(
                     registry,
                     verifier,
                     projections=projections,
                     notifications=hub,
                     alerts=alerts,
+                    briefs=BriefRepository(registry.connection_factory) if m7 else None,
+                    monitoring=monitoring(registry.connection_factory, archive_fixture, m7_env)
+                    if m7
+                    else None,
                     history=browser_history(
                         registry.connection_factory, service_token, delegation_key, ISSUER
                     )

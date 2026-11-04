@@ -3,7 +3,7 @@
 Ứng dụng React/TypeScript độc lập với Business UI và Sensor backend. Source,
 package/lockfile, runtime config, build và Dockerfile riêng. UI `0.1.0` dùng năm
 operations của [Simulator OpenAPI baseline1.3.2](../contracts/v1.3/openapi/openapi-simulator.yaml),
-theo [UI Architecture](../docs/UI_ARCHITECTURE.md). Không sửa HTTP wire schema.
+theo [UI Architecture](../docs/architecture/UI_ARCHITECTURE.md). Không sửa HTTP wire schema.
 
 ## Chạy ngay giao diện demo
 

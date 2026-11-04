@@ -98,8 +98,8 @@ và có archive lookup. M6 chỉ giải phóng metadata hết hạn, không xóa
 
 ## M6 History và export
 
-[M6-HISTORY-01](../../docs/M6_HISTORY_ARCHITECTURE_DECISION.md) dùng source SELECT-only
+[M6-HISTORY-01](../../docs/reports/M6_HISTORY_ARCHITECTURE_DECISION.md) dùng source SELECT-only
 pool hiện có và metadata writer pool riêng trong Read API. Export runner nằm ở
 Read API, không Worker. M6 giữ outcomes DB, processed archive/source deletion
 hoãn; câu chuẩn bị cleanup ở các mục cũ áp dụng cho pha retention sau M6.
-Runtime có history/export opt-in; xem [cấu hình](HISTORY.md) và [báo cáo M6](../../docs/M6_IMPLEMENTATION_REPORT.md).
+Runtime có history/export opt-in; xem [cấu hình](HISTORY.md) và [báo cáo M6](../../docs/reports/M6_IMPLEMENTATION_REPORT.md).

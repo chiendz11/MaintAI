@@ -77,5 +77,5 @@ metadata schema, chart, cursor pagination hoặc CSV export; đó là phần Ng�
 Người1 fetch/pull main sau PR bàn giao; dùng schema/examples để làm fixtures trước.
 Khi tích hợp thật, chạy [local harness](local/README.md) hoặc MinIO k3d do Chiến cấu
 hình. History outcomes DB và CSV nhỏ không cần object store; full raw/catalog phải
-upload vào MinIO local. Xem [M6 architecture](../docs/M6_HISTORY_ARCHITECTURE_DECISION.md)
-và [handoff contract](../docs/M6_RAW_ARCHIVE_HANDOFF.md).
+upload vào MinIO local. Xem [M6 architecture](../docs/reports/M6_HISTORY_ARCHITECTURE_DECISION.md)
+và [handoff contract](../docs/reports/M6_RAW_ARCHIVE_HANDOFF.md).

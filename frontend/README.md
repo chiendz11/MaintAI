@@ -160,8 +160,8 @@ Copilot hoặc Drift screens còn thuộc M6/M7; shared OIDC/TLS/ACL/ingress/pro
 thật cần nghiệm thu riêng. Tests hoặc
 screenshot không chứng minh throughput100máy, production rollout hoặc toàn hệ thống hoàn tất.
 
-Thiết kế: [Frontend guide](../docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md),
-[UI Architecture](../docs/UI_ARCHITECTURE.md), [Business SSE](../backend/README.md).
+Thiết kế: [Frontend guide](../docs/subsystems/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md),
+[UI Architecture](../docs/architecture/UI_ARCHITECTURE.md), [Business SSE](../backend/README.md).
 
 ## M5 — Cảnh báo và xử lý lỗi mạng
 
@@ -186,3 +186,11 @@ Browser M5 bật MAINTAI_M4_INTEGRATION=1 và MAINTAI_M5_INTEGRATION=1, dùng HT
 Ingestion thật, Kafka Worker/Relay và hai API replicas; ML/policy/registry/OIDC
 là fixtures. MAINTAI_TEST_PYTHON chọn interpreter của harness khi chạy local.
 Các job CI Người1 đã cài Ingestion và bật flags M5; không tự publish image hoặc deploy.
+
+## Copilot và Monitoring
+
+Alert Detail có Copilot cho TECHNICIAN/ADMIN yêu cầu brief theo intent, đọc job và
+citations. Trang `/monitoring` đọc summary/catalog/report qua Business API. Cả hai
+phần nhận SSE invalidation và khôi phục bằng REST; không gọi RAG/S3 trực tiếp.
+Xem [M7](../docs/reports/M7_IMPLEMENTATION_REPORT.md) cho failure semantics và giới hạn
+provider. Demo mode chưa cung cấp Copilot/Monitoring fixtures qua DemoApi.

@@ -17,7 +17,15 @@ const schema = (name) =>
   );
 const ajv = new Ajv2020({ strict: false, code: { source: true } });
 addFormats(ajv);
-for (const name of ["common", "business", "prediction", "features"])
+for (const name of [
+  "common",
+  "business",
+  "prediction",
+  "features",
+  "maintenance-brief",
+  "monitoring",
+  "drift-report",
+])
   ajv.addSchema(schema(name), base + name + ".schema.json");
 const runtime = schema("runtime");
 ajv.addSchema(
@@ -36,6 +44,18 @@ ajv.addSchema(runtime, base + "runtime.schema.json");
 for (const name of ["history-m6", "raw-catalog-m6"])
   ajv.addSchema(schema(name), base + name + ".schema.json");
 const validators = {
+  copilotValidator: {
+    $ref: base + "business.schema.json#/$defs/CopilotResult",
+  },
+  briefAcceptedValidator: {
+    $ref: base + "runtime.schema.json#/$defs/BriefAccepted",
+  },
+  briefJobValidator: { $ref: base + "runtime.schema.json#/$defs/BriefJob" },
+  monitoringValidator: { $ref: base + "monitoring.schema.json#/$defs/Summary" },
+  driftListValidator: {
+    $ref: base + "runtime.schema.json#/$defs/DriftReportList",
+  },
+  driftReportValidator: { $ref: base + "drift-report.schema.json" },
   historyPageValidator: {
     $ref: base + "history-m6.schema.json#/$defs/HistoryPage",
   },

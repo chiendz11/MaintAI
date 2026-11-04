@@ -138,5 +138,5 @@ Tests mock Docker/AWS/Cosign/GitHub, kiểm pin/owner/schema, publish ordering,
 reused/unsigned artifact và token scope. Không chạy chúng như integration proof.
 CI source job nằm trong `CI / required`. Base chưa pin nên không có required image
 build giả xanh; image build/smoke thật nằm ở manual publisher sau khi pins sẵn sàng.
-Theo dõi trạng thái chung tại [MLFLOW-01](../../docs/MLFLOW_INTEGRATION_GUIDE.md)
-và [readiness](../../docs/implementation-readiness.md).
+Theo dõi trạng thái chung tại [MLFLOW-01](../../docs/subsystems/MLFLOW_INTEGRATION_GUIDE.md)
+và [readiness](../../docs/architecture/implementation-readiness.md).

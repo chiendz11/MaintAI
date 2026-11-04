@@ -261,3 +261,18 @@ webcolors==25.10.0
     #   -c backend/requirements.lock
     #   -c processing/requirements.lock
     #   jsonschema
+
+boto3==1.43.114
+    # via boto3 (M7; existing repository pin)
+
+botocore==1.43.114
+    # via boto3 (M7; existing repository pin)
+
+jmespath==1.1.0
+    # via boto3 (M7; existing repository pin)
+
+s3transfer==0.19.2
+    # via boto3 (M7; existing repository pin)
+
+urllib3==2.8.0
+    # via boto3 (M7; existing repository pin)

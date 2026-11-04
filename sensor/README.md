@@ -5,9 +5,9 @@ Sensor Control API và metrics. Simulator frontend ở `../sensor-simulator-UI/`
 image/release riêng. Sensor không chạy inference, không tạo/resolve Alert và
 không chứa MLflow Server/client.
 
-Triển khai theo [System Contracts v1.4](../docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md)
-§31–34/40–41, [UI-01](../docs/UI_ARCHITECTURE.md) và
-[OBS-01](../docs/OBSERVABILITY_IMPLEMENTATION.md). HTTP description baseline1.3.2,
+Triển khai theo [System Contracts v1.4](../docs/architecture/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md)
+§31–34/40–41, [UI-01](../docs/architecture/UI_ARCHITECTURE.md) và
+[OBS-01](../docs/subsystems/OBSERVABILITY_IMPLEMENTATION.md). HTTP description baseline1.3.2,
 reading wire1.3.0; package0.3.0 là version độc lập. Không đổi frozen OpenAPI/schema.
 
 ## Cài đặt
