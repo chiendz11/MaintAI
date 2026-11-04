@@ -1,3 +1,4 @@
+import { M7Client } from "./m7-client";
 import type {
   AlertApi,
   AlertAction,
@@ -84,6 +85,9 @@ export async function boundedText(response: Response): Promise<string> {
   }
 }
 export class BusinessApi implements MachineApi, AlertApi {
+  readonly copilot = new M7Client((path, signal, body, headers) =>
+    this.response(path, signal, body, headers),
+  );
   readonly history = new HistoryClient((path, signal, body, headers) =>
     this.response(path, signal, body, headers),
   );
@@ -236,7 +240,16 @@ export class BusinessApi implements MachineApi, AlertApi {
       );
       ready();
       for await (const value of decodeEvents(body)) {
-        if (value.type === "alert.created" || value.type === "alert.updated") {
+        if (
+          [
+            "alert.created",
+            "alert.updated",
+            "brief.ready",
+            "brief.updated",
+            "drift.updated",
+            "service.degraded",
+          ].includes(value.type)
+        ) {
           invalidateAlerts();
           continue;
         }
@@ -333,9 +346,19 @@ export class BusinessApi implements MachineApi, AlertApi {
         }),
         { signal: combined },
       );
-      for await (const value of decodeEvents(body))
+      for await (const value of decodeEvents(body)) {
         if (value.type === "alert.created" || value.type === "alert.updated")
           event(value as AlertEvent);
+        else if (
+          [
+            "brief.ready",
+            "brief.updated",
+            "drift.updated",
+            "service.degraded",
+          ].includes(value.type)
+        )
+          invalidateAlerts();
+      }
     } finally {
       clearTimeout(timer!);
       idle.abort();

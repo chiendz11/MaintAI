@@ -5,6 +5,7 @@ import os
 from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
+from backend.shared.copilot.config import M7Settings
 from business_sse.hub import SSESettings
 
 from .history_config import HistorySettings
@@ -31,6 +32,7 @@ class Settings:
     processing_token_file: str | None = field(default=None, repr=False)
     sse: SSESettings = field(default_factory=SSESettings)
     history: HistorySettings | None = None
+    m7: M7Settings | None = None
 
     @classmethod
     def from_env(cls, env=None):
@@ -105,4 +107,5 @@ class Settings:
             processing_token or None,
             SSESettings.from_env(env),
             HistorySettings.from_env(env, processing_url=processing_url, local=local),
+            M7Settings.from_env(env, local=local),
         )

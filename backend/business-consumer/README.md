@@ -115,3 +115,10 @@ receipt; sai evidence rollback và ghi chẩn đoán conflict qua transaction ri
 Snapshot/audit/feedback giữ bytes JSON để không làm mất ghi chú có escaped NUL.
 M5 không bật cleanup Processing hoặc xóa notification rows; retention/cleanup và
 archive lookup cần thiết kế M6 trước khi vận hành dài hạn.
+
+## Jobs và catalog M7
+
+Consumer có hai workers brief với lease/fencing và các loop recent/full Drift
+catalog độc lập. Xem [M7](../../docs/reports/M7_IMPLEMENTATION_REPORT.md) cho cấu hình,
+owner grants, retry budgets, metrics và giới hạn provider fixtures. Không tự tạo
+brief khi có Alert mới; generation chỉ theo yêu cầu đã persist bởi Business API.
