@@ -276,3 +276,6 @@ s3transfer==0.19.2
 
 urllib3==2.8.0
     # via boto3 (M7; existing repository pin)
+
+maintai-storage-consumer==0.2.1
+    # via Business M8 original raw catalog reader

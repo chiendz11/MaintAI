@@ -65,20 +65,29 @@ def browser_history(factory, token_file, signing_key, issuer):
         base_url="http://127.0.0.1:18036",
         token_file=token_file,
         signer=DelegationSigner(
-            signing_key, kid="m6-fixture", issuer=issuer + "/business", service_subject="m4-browser"
+            signing_key,
+            kid="m6-fixture",
+            issuer=issuer + "/business",
+            service_subject="m4-browser",
         ),
     )
     schemas = HistorySchemas(ROOT / "contracts/v1.3/schemas")
     # Both replicas receive the same fixture key; production keys are explicit config.
     snapshots = MarkerSnapshots(
-        factory, {"fixture": hashlib.sha256(str(token_file).encode()).digest()}, active="fixture"
+        factory,
+        {"fixture": hashlib.sha256(str(token_file).encode()).digest()},
+        active="fixture",
     )
-    return HistoryFacade(client, schemas, markers=CompositeCharts(client, schemas, snapshots))
+    return HistoryFacade(
+        client, schemas, markers=CompositeCharts(client, schemas, snapshots)
+    )
 
 
 def serve_fixture():
     dsn = os.environ.get("MAINTAI_M3_DATABASE_URL", "")
-    if os.environ.get("MAINTAI_M4_INTEGRATION") != "1" or urlparse(dsn).hostname not in {
+    if os.environ.get("MAINTAI_M4_INTEGRATION") != "1" or urlparse(
+        dsn
+    ).hostname not in {
         "localhost",
         "127.0.0.1",
     }:
@@ -86,10 +95,14 @@ def serve_fixture():
     suffix = uuid4().hex
     m6 = os.environ.get("MAINTAI_M6_INTEGRATION") == "1"
     m7 = os.environ.get("MAINTAI_M7_INTEGRATION") == "1"
+    m8 = os.environ.get("MAINTAI_M8_INTEGRATION") == "1"
+    if m8 and not m6:
+        raise RuntimeError("M8 browser tests require Storage integration")
     if m7 and not m6:
         raise RuntimeError("M7 browser tests require M6 real object storage")
     databases = {
-        owner: "m4_browser_" + owner + "_" + suffix for owner in ("business", "processing")
+        owner: "m4_browser_" + owner + "_" + suffix
+        for owner in ("business", "processing")
     }
     dsns = {
         owner: make_url(dsn).set(database=name).render_as_string(hide_password=False)
@@ -99,13 +112,17 @@ def serve_fixture():
         name: "m4_" + name + "_" + suffix
         for name in ("reader", "consumer", "api", "processing_reader")
     }
+    if m8:
+        roles["rebuilder"] = "m8_rebuilder_" + suffix
     if m6:
         roles["processing_metadata"] = "m6_metadata_" + suffix
     password = uuid4().hex
     channel = "m4_" + suffix
     alert_channel = "m5_alert_" + suffix
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    delegation_key = rsa.generate_private_key(public_exponent=65537, key_size=2048) if m6 else None
+    delegation_key = (
+        rsa.generate_private_key(public_exponent=65537, key_size=2048) if m6 else None
+    )
     jwks = {
         "keys": [
             {
@@ -139,7 +156,9 @@ def serve_fixture():
         return {
             "keys": [
                 {
-                    **json.loads(jwt.algorithms.RSAAlgorithm.to_jwk(delegation_key.public_key())),
+                    **json.loads(
+                        jwt.algorithms.RSAAlgorithm.to_jwk(delegation_key.public_key())
+                    ),
                     "kid": "m6-fixture",
                     "alg": "RS256",
                     "use": "sig",
@@ -169,7 +188,9 @@ def serve_fixture():
         }
         if nonce is not None:
             payload["nonce"] = nonce
-        return jwt.encode(payload, key, algorithm="RS256", headers={"kid": "browser-fixture"})
+        return jwt.encode(
+            payload, key, algorithm="RS256", headers={"kid": "browser-fixture"}
+        )
 
     @app.get("/.well-known/openid-configuration")
     def discovery():
@@ -193,25 +214,33 @@ def serve_fixture():
     def authorize(request: Request):
         query = dict(request.query_params)
         if (
-            query.get("client_id") not in {"business-ui-fixture", "business-ui-fixture-viewer"}
+            query.get("client_id")
+            not in {"business-ui-fixture", "business-ui-fixture-viewer"}
             or query.get("redirect_uri") != UI + "/auth/callback"
             or query.get("response_type") != "code"
             or query.get("code_challenge_method") != "S256"
             or not query.get("code_challenge")
             or not query.get("state")
         ):
-            raise HTTPException(400, "Fixture requires exact public client, redirect and PKCE")
+            raise HTTPException(
+                400, "Fixture requires exact public client, redirect and PKCE"
+            )
         code = uuid4().hex
         codes[code] = query
         return RedirectResponse(
-            query["redirect_uri"] + "?" + urlencode({"code": code, "state": query["state"]})
+            query["redirect_uri"]
+            + "?"
+            + urlencode({"code": code, "state": query["state"]})
         )
 
     @app.post("/token")
     async def token(request: Request):
         if int(request.headers.get("Content-Length", "0")) > 16384:
             raise HTTPException(400, "Oversized fixture token request")
-        values = {key: value[0] for key, value in parse_qs((await request.body()).decode()).items()}
+        values = {
+            key: value[0]
+            for key, value in parse_qs((await request.body()).decode()).items()
+        }
         code = codes.pop(values.get("code"), None)
         challenge = (
             base64.urlsafe_b64encode(
@@ -230,7 +259,8 @@ def serve_fixture():
             raise HTTPException(400, "Invalid fixture PKCE exchange")
         return {
             "access_token": signed(
-                "business-test", role="VIEWER" if code["client_id"].endswith("-viewer") else None
+                "business-test",
+                role="VIEWER" if code["client_id"].endswith("-viewer") else None,
             ),
             "token_type": "Bearer",
             "expires_in": 300,
@@ -244,14 +274,19 @@ def serve_fixture():
 
     @app.get("/health/ready")
     def ready():
-        if not all(server.started and hub.ready for server, hub in zip(servers, hubs, strict=True)):
+        if not all(
+            server.started and hub.ready
+            for server, hub in zip(servers, hubs, strict=True)
+        ):
             raise HTTPException(503, "API listeners starting")
         return {"ready": True}
 
     try:
         with psycopg.connect(dsn, autocommit=True) as admin:
             for name in databases.values():
-                admin.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(name)))
+                admin.execute(
+                    sql.SQL("CREATE DATABASE {}").format(sql.Identifier(name))
+                )
             for role in roles.values():
                 admin.execute(
                     sql.SQL("CREATE ROLE {} LOGIN PASSWORD {}").format(
@@ -266,11 +301,16 @@ def serve_fixture():
             [{"machine_id": "M-001", "display_name": "Browser fixture machine"}]
         )
         with business_factory() as connection:
+            if m8:
+                from backend.shared.projections.generations import bootstrap
+
+                bootstrap(connection, writers_drained=True)
             grant_business_permissions(
                 connection,
                 reader_role=roles["reader"],
                 consumer_role=roles["consumer"],
                 api_role=roles["api"],
+                rebuild_role=roles.get("rebuilder"),
             )
         reader_dsn = (
             make_url(dsns["business"])
@@ -285,7 +325,9 @@ def serve_fixture():
         kafka = KafkaSettings(
             local_mode=True,
             security_protocol="PLAINTEXT",
-            bootstrap_servers=os.environ.get("KAFKA_TEST_BOOTSTRAP_SERVERS", "127.0.0.1:39092"),
+            bootstrap_servers=os.environ.get(
+                "KAFKA_TEST_BOOTSTRAP_SERVERS", "127.0.0.1:39092"
+            ),
             group_prefix="m3-flow-" + suffix + "-",
         )
         # Existing helper only initializes new UUID local groups; never resets live groups.
@@ -344,7 +386,9 @@ def serve_fixture():
                     json.dumps(
                         {
                             "active": "fixture",
-                            "keys": {"fixture": base64.b64encode(os.urandom(32)).decode()},
+                            "keys": {
+                                "fixture": base64.b64encode(os.urandom(32)).decode()
+                            },
                         }
                     )
                 )
@@ -355,7 +399,9 @@ def serve_fixture():
                 )
                 with processing_factory() as connection:
                     grant_metadata(connection, role=roles["processing_metadata"])
-                os.environ["PROCESSING_SCHEMA_DIRECTORY"] = str(ROOT / "contracts/v1.3/schemas")
+                os.environ["PROCESSING_SCHEMA_DIRECTORY"] = str(
+                    ROOT / "contracts/v1.3/schemas"
+                )
                 history_runtime = build(
                     SimpleNamespace(
                         history=HistorySettings(
@@ -390,15 +436,35 @@ def serve_fixture():
                     log_level="error",
                 )
             )
-            processing_thread = threading.Thread(target=processing_server.run, daemon=True)
+            processing_thread = threading.Thread(
+                target=processing_server.run, daemon=True
+            )
             processing_thread.start()
             service_token = Path(temporary) / "processing-token"
-            service_token.write_text(signed("processing-internal", role="BUSINESS_SERVICE"))
+            service_token.write_text(
+                signed("processing-internal", role="BUSINESS_SERVICE")
+            )
             m7_env = {}
             if m7:
                 from copilot import prepare
 
                 m7_env = prepare(app, archive_fixture, Path(temporary))
+            if m8:
+                from rebuild import prepare as prepare_rebuild
+
+                prepare_rebuild(app, business_factory, kafka, archive_fixture)
+                m7_env.update(
+                    {
+                        "BUSINESS_PROJECTION_GENERATIONS_ENABLED": "true",
+                        "BUSINESS_REBUILD_ENABLED": "true",
+                        "BUSINESS_REBUILD_DATABASE_URL": make_url(dsns["business"])
+                        .set(username=roles["rebuilder"], password=password)
+                        .render_as_string(hide_password=False),
+                        "BUSINESS_REBUILD_RAW_BUCKET": archive_fixture.raw_bucket,
+                        "BUSINESS_REBUILD_S3_REGION": "us-east-1",
+                        "BUSINESS_REBUILD_S3_ENDPOINT": "http://127.0.0.1:39000",
+                    }
+                )
             log_path = Path(temporary) / "consumer.log"
             with log_path.open("wb") as log:
                 consumer = subprocess.Popen(
@@ -453,6 +519,7 @@ def serve_fixture():
                 projections = ProjectionRepository(
                     registry.connection_factory,
                     alert_reader=None if alerts is None else alerts.active,
+                    generations=m8,
                 )
                 from backend.shared.copilot.repository import BriefRepository
 
@@ -461,7 +528,7 @@ def serve_fixture():
                     dsn=reader_dsn,
                     settings=SSESettings(channel=channel, alert_channel=alert_channel),
                     alert_repository=alerts,
-                    m7_factory=registry.connection_factory if m7 else None,
+                    m7_factory=registry.connection_factory if m7 or m8 else None,
                 )
                 verifier = IdentityVerifier(
                     issuer=ISSUER,
@@ -479,11 +546,16 @@ def serve_fixture():
                     notifications=hub,
                     alerts=alerts,
                     briefs=BriefRepository(registry.connection_factory) if m7 else None,
-                    monitoring=monitoring(registry.connection_factory, archive_fixture, m7_env)
+                    monitoring=monitoring(
+                        registry.connection_factory, archive_fixture, m7_env
+                    )
                     if m7
                     else None,
                     history=browser_history(
-                        registry.connection_factory, service_token, delegation_key, ISSUER
+                        registry.connection_factory,
+                        service_token,
+                        delegation_key,
+                        ISSUER,
                     )
                     if m6
                     else None,
@@ -537,7 +609,9 @@ def serve_fixture():
                     number = sequence
                     kind = value.get("kind", "completed")
                     payload = json.loads(
-                        (ROOT / "contracts/kafka/examples/sensor-request.json").read_text()
+                        (
+                            ROOT / "contracts/kafka/examples/sensor-request.json"
+                        ).read_text()
                     )
                     payload.update(
                         event_id="browser-" + uuid4().hex,
@@ -554,7 +628,8 @@ def serve_fixture():
                         content=canonical_json(payload),
                         headers={
                             "Content-Type": "application/json",
-                            "Authorization": "Bearer " + signed("ingestion", role="SENSOR_SERVICE"),
+                            "Authorization": "Bearer "
+                            + signed("ingestion", role="SENSOR_SERVICE"),
                         },
                         timeout=5,
                         trust_env=False,
@@ -563,9 +638,14 @@ def serve_fixture():
                         raise RuntimeError("HTTP Ingestion did not ACK")
                     receipt = receipts.pop(payload["event_id"])
                     deadline = time.monotonic() + 15
-                    while StatusRepository(processing_factory).get(payload["event_id"]) is None:
+                    while (
+                        StatusRepository(processing_factory).get(payload["event_id"])
+                        is None
+                    ):
                         if worker.failed or time.monotonic() >= deadline:
-                            raise RuntimeError("Kafka Worker did not commit: " + str(worker.failed))
+                            raise RuntimeError(
+                                "Kafka Worker did not commit: " + str(worker.failed)
+                            )
                         time.sleep(0.05)
                     if archive_fixture is not None:
                         archive_fixture.archive(*receipt)
@@ -586,7 +666,9 @@ def serve_fixture():
                         ).result(timeout=3)
                 return {"restarting": True}
 
-            uvicorn.run(app, host="127.0.0.1", port=18033, access_log=False, log_level="error")
+            uvicorn.run(
+                app, host="127.0.0.1", port=18033, access_log=False, log_level="error"
+            )
     finally:
         if worker is not None:
             worker.close()
@@ -614,10 +696,14 @@ def serve_fixture():
         with psycopg.connect(dsn, autocommit=True) as admin:
             for name in databases.values():
                 admin.execute(
-                    sql.SQL("DROP DATABASE IF EXISTS {} WITH (FORCE)").format(sql.Identifier(name))
+                    sql.SQL("DROP DATABASE IF EXISTS {} WITH (FORCE)").format(
+                        sql.Identifier(name)
+                    )
                 )
             for role in roles.values():
-                admin.execute(sql.SQL("DROP ROLE IF EXISTS {}").format(sql.Identifier(role)))
+                admin.execute(
+                    sql.SQL("DROP ROLE IF EXISTS {}").format(sql.Identifier(role))
+                )
 
 
 if __name__ == "__main__":

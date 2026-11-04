@@ -240,6 +240,10 @@ export class BusinessApi implements MachineApi, AlertApi {
       );
       ready();
       for await (const value of decodeEvents(body)) {
+        if (value.type === "projection.resync") {
+          invalidateAlerts();
+          throw new ApiError(503, "PROJECTION_RESYNC", true);
+        }
         if (
           [
             "alert.created",
@@ -347,6 +351,10 @@ export class BusinessApi implements MachineApi, AlertApi {
         { signal: combined },
       );
       for await (const value of decodeEvents(body)) {
+        if (value.type === "projection.resync") {
+          invalidateAlerts();
+          throw new ApiError(503, "PROJECTION_RESYNC", true);
+        }
         if (value.type === "alert.created" || value.type === "alert.updated")
           event(value as AlertEvent);
         else if (

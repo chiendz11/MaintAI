@@ -60,7 +60,16 @@ export function watchMachine(
         (inFlight ??= (async () => {
           try {
             const value = await api.live(machine, signal);
+            current = emptyLive(machine);
             apply(value);
+            for (const value of buffer) apply(value);
+            buffer = [];
+            size = 0;
+          } catch (error) {
+            for (const value of buffer) apply(value);
+            buffer = [];
+            size = 0;
+            throw error;
           } finally {
             inFlight = undefined;
           }
@@ -86,7 +95,7 @@ export function watchMachine(
             });
           },
           (value) => {
-            if (booting) {
+            if (booting || inFlight) {
               size += new TextEncoder().encode(rawText(value)).length;
               if (size > MAX_BODY || buffer.length >= 128)
                 throw new Error("Bootstrap buffer exceeds budget");

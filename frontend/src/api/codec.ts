@@ -141,6 +141,7 @@ function parseEvent(
       "brief.updated",
       "drift.updated",
       "service.degraded",
+      "projection.resync",
     ].includes(name)
   ) {
     const check = plain(value);
@@ -220,6 +221,7 @@ export async function* decodeEvents(
               "brief.updated",
               "drift.updated",
               "service.degraded",
+              "projection.resync",
             ].includes(name)
           )
             yield parseEvent(data.join("\n"), name);

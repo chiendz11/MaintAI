@@ -50,7 +50,9 @@ def main(argv=None):
         logging.basicConfig(level=logging.INFO, format="%(message)s")
         alerts = AlertRepository(repository.connection_factory, channel=settings.sse.alert_channel)
         projections = ProjectionRepository(
-            repository.connection_factory, alert_reader=alerts.active
+            repository.connection_factory,
+            alert_reader=alerts.active,
+            generations=settings.projection_generations,
         )
         from backend.shared.copilot.repository import BriefRepository
         from backend.shared.monitoring.runtime import catalog
@@ -78,7 +80,9 @@ def main(argv=None):
                     dsn=settings.database_url,
                     settings=settings.sse,
                     alert_repository=alerts,
-                    m7_factory=repository.connection_factory if settings.m7 else None,
+                    m7_factory=repository.connection_factory
+                    if settings.m7 or settings.projection_generations
+                    else None,
                 ),
             ),
             host=settings.host,
