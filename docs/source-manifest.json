@@ -15,7 +15,7 @@
     {
       "path": "docs/README.md",
       "source_filename": "README.md",
-      "sha256": "93612d920fa2abf16009dce7d27f6220c7b4ea6bc552375d1dd6f1562da11180",
+      "sha256": "ea290e1a8042fccbc67068ad6a1dd9d5747fb1225c3713e52b04481324df3c4a",
       "upstream_sha256": "b8f3731050d7cba47d5eecebd8ecfa7457dc4a7c427e9f408a1a22dd89c9b0d7"
     },
     {
@@ -270,6 +270,10 @@
       "path": "docs/reports/M6_IMPLEMENTATION_REPORT.md",
       "sha256": "052d6123a38659d7754565dd089125a351e43a4fbda86c4ba0686b1b96e195ea",
       "decision_revision": "1.0.0"
+    },
+    {
+      "path": "docs/reports/M7_IMPLEMENTATION_REPORT.md",
+      "sha256": "80fa2f68602a45edabff123fcfde9f850ee89e419a9ee161e471f84c992d4eb6"
     },
     {
       "path": "docs/design-basis/report/Nh\u00f3m-8_MaintAI_Kien-truc.pdf",

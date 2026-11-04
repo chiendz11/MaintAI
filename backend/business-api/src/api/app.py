@@ -29,6 +29,8 @@ def create_app(
     notifications=None,
     alerts=None,
     history=None,
+    briefs=None,
+    monitoring=None,
 ):
     @asynccontextmanager
     async def lifespan(app):
@@ -283,6 +285,9 @@ def create_app(
         alerts.metrics = metrics.alerts
         from .alerts import install
 
-        install(app, verifier, alerts)
+        install(app, verifier, alerts, briefs=briefs)
 
+    from .copilot import install as install_m7
+
+    install_m7(app, verifier, briefs, monitoring)
     return app

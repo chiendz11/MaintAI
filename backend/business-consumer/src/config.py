@@ -5,6 +5,7 @@ import os
 from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
+from backend.shared.copilot.config import M7Settings
 from backend.shared.notifications import DEFAULT_CHANNEL, Notifier
 from maintai_messaging.config import KafkaSettings
 
@@ -26,6 +27,8 @@ class Settings:
     alert_channel: str = "maintai_business_alert_v1"
     processing_read_url: str | None = None
     processing_token_file: str | None = field(default=None, repr=False)
+
+    m7: M7Settings | None = None
 
     @classmethod
     def from_env(cls, env=None):
@@ -76,6 +79,7 @@ class Settings:
                 or (profile == "local-test" and not loopback(value.hostname))
             ):
                 raise ValueError("Invalid Processing evidence origin")
+        m7 = M7Settings.from_env(env, local=profile == "local-test")
         return cls(
-            database_url, kafka, host, port, channel, alert_channel, url or None, token or None
+            database_url, kafka, host, port, channel, alert_channel, url or None, token or None, m7
         )

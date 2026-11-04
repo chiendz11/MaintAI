@@ -88,3 +88,50 @@ def grant_business_permissions(connection, *, reader_role, consumer_role, api_ro
         is not None
     ):
         grant(api_role, "SELECT,INSERT,UPDATE,DELETE", ("history_marker_snapshots",))
+
+    if (
+        connection.execute("SELECT to_regclass('brief_jobs') AS name").fetchone()["name"]
+        is not None
+    ):
+        read = (
+            "brief_jobs",
+            "brief_facades",
+            "brief_idempotency",
+            "brief_job_audit",
+            "business_m7_notifications",
+            "drift_catalog",
+            "drift_catalog_state",
+        )
+        grant(reader_role, "SELECT", read)
+        grant(consumer_role, "SELECT", read)
+        grant(consumer_role, "UPDATE", ("brief_jobs", "drift_catalog_state"))
+        grant(
+            consumer_role,
+            "INSERT",
+            ("brief_job_audit", "business_m7_notifications", "drift_catalog"),
+        )
+        if api_role is not None:
+            grant(api_role, "SELECT", read)
+            grant(
+                api_role,
+                "INSERT",
+                (
+                    "brief_jobs",
+                    "brief_facades",
+                    "brief_idempotency",
+                    "brief_job_audit",
+                    "business_m7_notifications",
+                ),
+            )
+            grant(api_role, "UPDATE (job_id)", ("brief_facades",))
+            grant(api_role, "SELECT, INSERT", ("drift_list_snapshots", "drift_list_members"))
+
+        grant(
+            consumer_role, "SELECT, INSERT, UPDATE", ("drift_scan_progress", "drift_catalog_errors")
+        )
+        grant(
+            consumer_role,
+            "DELETE",
+            ("drift_list_snapshots", "drift_list_members", "drift_catalog_errors"),
+        )
+        grant(consumer_role, "SELECT", ("drift_list_snapshots", "drift_list_members"))

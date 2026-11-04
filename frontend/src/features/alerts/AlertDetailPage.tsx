@@ -1,3 +1,4 @@
+import { CopilotPanel } from "../copilot/CopilotPanel";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import { ApiError } from "../../api/client";
@@ -188,13 +189,7 @@ export function AlertDetailPage({
                 {rawText(detail.sensor_event.features)}
               </pre>
             </Panel>
-            <Panel title="Technician Copilot" eyebrow="ASSISTANCE">
-              <Badge value={detail.copilot.status} />
-              <p className="subtitle">
-                Khuyến nghị chưa khả dụng. Bạn vẫn có thể kiểm tra evidence và
-                xử lý cảnh báo.
-              </p>
-            </Panel>
+            <CopilotPanel api={api.copilot} alert={id} canManage={canManage} />
           </div>
           <Panel title="Lịch sử xử lý" eyebrow="AUDIT TIMELINE">
             <ol className="alert-timeline">

@@ -30,7 +30,7 @@ class Feedback(BaseModel):
     note: str = ""
 
 
-def install(app, verifier, repository):
+def install(app, verifier, repository, *, briefs=None):
     from backend.shared.alerts.domain import AlertError
 
     def identity(request, mutate=False):
@@ -76,11 +76,45 @@ def install(app, verifier, repository):
     @app.get("/api/v1/alerts/{alert_id:path}")
     def detail(alert_id: str, request: Request):
         principal = identity(request)
-        return call(request, lambda: repository.detail(alert_id, principal.machines))
+        raw = request.scope.get("raw_path", request.url.path.encode()).split(b"?", 1)[0]
+        if alert_id.endswith("/brief") and raw.endswith(b"/brief"):
+            request.state.metric_route = "/api/v1/alerts/{alert_id}/brief"
+            if briefs is None:
+                return {"copilot_status": "UNAVAILABLE", "message": "UNAVAILABLE", "brief": None}
+            return call(request, lambda: briefs.facade(alert_id[:-6], principal.machines))
+        result = call(request, lambda: repository.detail(alert_id, principal.machines))
+        if briefs is not None and "copilot" in result:
+            facade = call(request, lambda: briefs.facade(alert_id, principal.machines))
+            brief = facade["brief"]
+            result["copilot"] = {
+                "status": facade["copilot_status"],
+                "brief_id": brief["brief_id"] if brief else None,
+                "grounded_status": brief["grounded_status"] if brief else None,
+            }
+        return result
 
     @app.post("/api/v1/alerts/{alert_id:path}/{action}")
     def action(alert_id: str, action: str, request: Request, body: dict):
         principal = identity(request, True)
+        if action == "brief" and request.scope.get("raw_path", b"").endswith(b"/brief"):
+            from fastapi.responses import JSONResponse
+
+            request.state.metric_route = "/api/v1/alerts/{alert_id}/brief"
+            if briefs is None:
+                raise RegistryFailure(503, "DEPENDENCY_UNAVAILABLE")
+            if set(body) != {"intent"} or not isinstance(body["intent"], str):
+                raise RegistryFailure(422, "VALIDATION_FAILED")
+            value = call(
+                request,
+                lambda: briefs.enqueue(
+                    alert_id,
+                    principal.machines,
+                    principal.subject,
+                    request.headers.get("Idempotency-Key"),
+                    body["intent"],
+                ),
+            )
+            return JSONResponse(value, status_code=202)
         if action not in {"ack", "start", "escalate", "resolve", "false-alert", "feedback"}:
             raise RegistryFailure(404, "NOT_FOUND")
         model = (

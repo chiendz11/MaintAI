@@ -1,3 +1,4 @@
+import type { M7Event } from "./m7-client";
 import type {
   AlertEvent,
   AlertPage,
@@ -125,15 +126,27 @@ export function parseLiveSnapshot(text: string): LiveSnapshot {
     latest_processing: axis(value.latest_processing),
   } as LiveSnapshot;
 }
-function parseEvent(text: string, name: string): LiveEvent | AlertEvent {
+function parseEvent(
+  text: string,
+  name: string,
+): LiveEvent | AlertEvent | M7Event {
   const value = tokens(text);
   if (!object(value) || !object(value.data))
     throw new Error("Invalid SSE envelope");
-  if (name === "alert.created" || name === "alert.updated") {
+  if (
+    [
+      "alert.created",
+      "alert.updated",
+      "brief.ready",
+      "brief.updated",
+      "drift.updated",
+      "service.degraded",
+    ].includes(name)
+  ) {
     const check = plain(value);
     if (!eventValidator(check) || value.type !== name)
       throw new Error("Invalid alert event");
-    return check as AlertEvent;
+    return check as AlertEvent | M7Event;
   }
   integer(value.data.sequence_number);
   const check = plain(value) as RecordValue;
@@ -172,7 +185,7 @@ export function rawText(value: unknown): string {
 }
 export async function* decodeEvents(
   stream: ReadableStream<Uint8Array>,
-): AsyncGenerator<LiveEvent | AlertEvent> {
+): AsyncGenerator<LiveEvent | AlertEvent | M7Event> {
   const reader = stream.getReader(),
     decoder = new TextDecoder("utf-8", { fatal: true });
   let pending = "",
@@ -203,6 +216,10 @@ export async function* decodeEvents(
               "processing.status_changed",
               "alert.created",
               "alert.updated",
+              "brief.ready",
+              "brief.updated",
+              "drift.updated",
+              "service.degraded",
             ].includes(name)
           )
             yield parseEvent(data.join("\n"), name);
@@ -229,7 +246,13 @@ export async function* decodeSSE(
   stream: ReadableStream<Uint8Array>,
 ): AsyncGenerator<LiveEvent> {
   for await (const event of decodeEvents(stream))
-    if (event.type !== "alert.created" && event.type !== "alert.updated")
+    if (
+      [
+        "telemetry.received",
+        "prediction.completed",
+        "processing.status_changed",
+      ].includes(event.type)
+    )
       yield event as LiveEvent;
 }
 function parseAlertDto<T>(text: string, validate: (v: unknown) => boolean): T {

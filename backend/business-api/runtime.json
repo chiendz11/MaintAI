@@ -25,7 +25,8 @@
     "Health/metrics HTTP",
     "Authenticated fetch SSE with PostgreSQL LISTEN/NOTIFY fan-out",
     "Alert list/detail/lifecycle/feedback REST and Alert SSE",
-    "M6-HISTORY-01 history/raw/chart/export facade"
+    "M6-HISTORY-01 history/raw/chart/export facade",
+    "M7 brief/job REST and Monitoring/Drift report REST"
   ],
   "boundaries": [
     "Không consume Kafka trực tiếp để broadcast SSE; mỗi API replica nhận notification và đọc latest projections.",
@@ -35,10 +36,9 @@
   "dockerfile": "backend/business-api/Dockerfile",
   "dockerfile_status": "implemented",
   "implemented_contract_revision": "1.3.2",
-  "implemented_scope": "M4 live/SSE and M5 Alert behavior preserved; M6 Processing HTTP facade, signed actor delegation, composite Alert marker snapshots and authenticated export/download proxy. Provider/shared rollout acceptance is separate.",
+  "implemented_scope": "M4 live/SSE and M5 Alert behavior preserved; M6 Processing HTTP facade, signed actor delegation, composite Alert marker snapshots and authenticated export/download proxy. Provider/shared rollout acceptance is separate. M7 on-demand brief enqueue/read and Monitoring/Drift catalog REST; provider acceptance remains separate.",
   "planned_interfaces": [
-    "Business durable job state",
-    "Published drift report S3 objects"
+    "Shared-provider validation for RAG auth/provenance and Drift publisher/heartbeat"
   ],
   "outcome_contract": {
     "read_version": "1.4.0",

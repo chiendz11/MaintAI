@@ -7,7 +7,7 @@ name = "maintai-business"
 version = "0.1.0"
 description = "Business owner registry foundation in the existing skeleton"
 requires-python = ">=3.12"
-dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.30,<1", "psycopg[binary]>=3.2,<4", "alembic>=1.14,<2", "PyJWT[crypto]>=2.10,<3", "httpx>=0.28,<1", "maintai-messaging[postgres,observability]==0.3.1", "prometheus-client>=0.21,<1", "jsonschema>=4.23,<5"]
+dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.30,<1", "psycopg[binary]>=3.2,<4", "alembic>=1.14,<2", "PyJWT[crypto]>=2.10,<3", "httpx>=0.28,<1", "maintai-messaging[postgres,observability]==0.3.1", "prometheus-client>=0.21,<1", "jsonschema>=4.23,<5", "boto3==1.43.114"]
 
 [project.scripts]
 maintai-business-api = "api.main:main"
@@ -16,11 +16,11 @@ maintai-business-migrate = "backend.shared.persistence.migration:main"
 maintai-business-provision = "backend.shared.persistence.provision:main"
 
 [tool.setuptools]
-packages = ["backend", "backend.shared", "backend.shared.persistence", "backend.shared.projections", "backend.shared.notifications", "backend.shared.inbox", "backend.shared.alerts", "backend.shared.audit", "backend.shared.feedback", "backend.shared.ordering", "backend.migrations", "backend.migrations.versions", "api", "business_consumer", "business_consumer.handlers", "business_consumer.handlers.telemetry", "business_consumer.handlers.prediction", "business_consumer.handlers.alert", "business_processing_client", "business_sse"]
-package-dir = {backend = ".", api = "business-api/src/api", business_consumer = "business-consumer/src", business_processing_client = "business-api/src/processing_client", business_sse = "business-api/src/sse"}
+packages = ["backend", "backend.shared", "backend.shared.persistence", "backend.shared.projections", "backend.shared.notifications", "backend.shared.inbox", "backend.shared.alerts", "backend.shared.audit", "backend.shared.feedback", "backend.shared.ordering", "backend.shared.copilot", "backend.shared.monitoring", "rag_client", "backend.migrations", "backend.migrations.versions", "api", "business_consumer", "business_consumer.handlers", "business_consumer.handlers.telemetry", "business_consumer.handlers.prediction", "business_consumer.handlers.alert", "business_processing_client", "business_sse"]
+package-dir = {rag_client = "business-api/src/rag_client", backend = ".", api = "business-api/src/api", business_consumer = "business-consumer/src", business_processing_client = "business-api/src/processing_client", business_sse = "business-api/src/sse"}
 
 [tool.setuptools.data-files]
-"share/maintai-business/contracts" = ["../contracts/v1.3/schemas/history-m6.schema.json", "../contracts/v1.3/schemas/raw-catalog-m6.schema.json"]
+"share/maintai-business/contracts" = ["../contracts/v1.3/schemas/brief-request.schema.json", "../contracts/v1.3/schemas/business.schema.json", "../contracts/v1.3/schemas/common.schema.json", "../contracts/v1.3/schemas/drift-reference.schema.json", "../contracts/v1.3/schemas/drift-report.schema.json", "../contracts/v1.3/schemas/features.schema.json", "../contracts/v1.3/schemas/history-m6.schema.json", "../contracts/v1.3/schemas/ingestion.schema.json", "../contracts/v1.3/schemas/maintenance-brief.schema.json", "../contracts/v1.3/schemas/monitoring.schema.json", "../contracts/v1.3/schemas/prediction.schema.json", "../contracts/v1.3/schemas/raw-catalog-m6.schema.json", "../contracts/v1.3/schemas/runtime.schema.json"]
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib -q"
