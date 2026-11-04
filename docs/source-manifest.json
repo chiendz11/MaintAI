@@ -285,6 +285,13 @@
       "sha256": "5b8d0b5644389e56973e5db0cf747ea4400187f6306c9cf9ed56d3d017b0f836"
     },
     {
+      "path": "docs/reports/PHASE2_DEVOPS_IMPLEMENTATION_REPORT.md",
+      "source_filename": null,
+      "upstream_sha256": null,
+      "added_on": "2026-11-04",
+      "sha256": "410e79308a41c8184d0336f36cf1d5b2f5a43ea5d2ca0f4939dbb111e4810734"
+    },
+    {
       "path": "storage-consumer/M6_READER_GUIDE.md",
       "source_filename": null,
       "upstream_sha256": null,
@@ -320,7 +327,7 @@
       "path": "docs/operations/DEVOPS_FRAMEWORK_AND_OPERATIONS_GUIDE.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "ea68e1cbf92eec510d10bcce37f01c60792a99483c412182ee422bb37382fb55"
+      "sha256": "14dc88f18cf371f7cff5e041a3e0720418156c33efef4e7d2fb75006b0f528e7"
     },
     {
       "path": "docs/operations/LOCAL_DEMO_GUIDE.md",
