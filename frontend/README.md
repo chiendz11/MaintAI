@@ -160,8 +160,8 @@ Copilot hoặc Drift screens còn thuộc M6/M7; shared OIDC/TLS/ACL/ingress/pro
 thật cần nghiệm thu riêng. Tests hoặc
 screenshot không chứng minh throughput100máy, production rollout hoặc toàn hệ thống hoàn tất.
 
-Thiết kế: [Frontend guide](../docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md),
-[UI Architecture](../docs/UI_ARCHITECTURE.md), [Business SSE](../backend/README.md).
+Thiết kế: [Frontend guide](../docs/subsystems/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md),
+[UI Architecture](../docs/architecture/UI_ARCHITECTURE.md), [Business SSE](../backend/README.md).
 
 ## M5 — Cảnh báo và xử lý lỗi mạng
 

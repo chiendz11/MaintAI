@@ -1,10 +1,10 @@
 # MaintAI API contracts
 
 Bộ contract máy đọc được nằm trong [v1.3/](v1.3/README.md), baseline **1.3.2** cho DTO không đổi; Ingestion M1 revision **1.4.0**, mô tả Business/Processing **2.0.0** bổ sung profile M6.
-[System Contracts v1.4 §34–39](../docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md)
+[System Contracts v1.4 §34–39](../docs/architecture/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md)
 là target thiết kế mới. [Kafka bundle](kafka/README.md) bổ sung canonical wire
 schemas1.4, inbox/outbox SQL và fixtures dùng bởi Python SDK. HTTP/provider/release
-provenance migrations chưa hoàn tất; xem [readiness](../docs/implementation-readiness.md).
+provenance migrations chưa hoàn tất; xem [readiness](../docs/architecture/implementation-readiness.md).
 Bộ tài liệu/contracts kiến trúc v1.1 đã gỡ theo yêu cầu người dùng; schema và ví dụ
 còn hiệu lực đã chuyển sang bundle hiện hành, không còn tham chiếu bộ cũ.
 
@@ -31,7 +31,7 @@ Sáu OpenAPI mô tả interface mục tiêu; chúng không xác nhận runtime �
 
 Version baseline1.3.2 độc lập với wire protocol: ML/RAG giữ1.1.0, Drift report/reference
 giữ1.0.0, sensor envelope1.3.0 và processing outcome1.4.0. Outcome/history entrypoints dùng chung schema Kafka;
-xem [OUTCOME-14-ONLY](../docs/OUTCOME_V1_4_MIGRATION.md). Không tự chuyển dữ liệu cũ.
+xem [OUTCOME-14-ONLY](../docs/subsystems/OUTCOME_V1_4_MIGRATION.md). Không tự chuyển dữ liệu cũ.
 
 - Sensor0.3.0 dùng SensorRequest1.3.0, ACK202 và Control baseline1.3.2. Tests đối chiếu
   runtime.schema.json hiện hành; frozen fixture synchronous v1.1 đã gỡ khi migrate.
@@ -40,7 +40,7 @@ xem [OUTCOME-14-ONLY](../docs/OUTCOME_V1_4_MIGRATION.md). Không tự chuyển d
   và [report](v1.3/schemas/drift-report.schema.json) trong bundle hiện hành.
 - Kafka transport/inbox/outbox/raw S3 adapters nằm tại `messaging/`; SSE/application
   history/curated archive vẫn cần owner implement. Không coi schemas là full app.
-  Xem [implementation readiness](../docs/implementation-readiness.md).
+  Xem [implementation readiness](../docs/architecture/implementation-readiness.md).
 
 ## Validation và CI
 
@@ -65,7 +65,7 @@ giữ nguyên cấu trúc thư mục khi chia sẻ bundle.
 
 Kafka có validation riêng: `maintai-kafka validate-contracts` và
 `python messaging/scripts/lock_contracts.py --check`; xem
-[hướng dẫn nhóm](../docs/KAFKA_DEVELOPMENT_GUIDE.md). Không đổi hoặc xóa baseline
+[hướng dẫn nhóm](../docs/subsystems/KAFKA_DEVELOPMENT_GUIDE.md). Không đổi hoặc xóa baseline
 v1.3 đang là dependency của accepted/alert/legacy Kafka schemas.
 
 ## M6 history profile
@@ -74,7 +74,7 @@ v1.3 đang là dependency của accepted/alert/legacy Kafka schemas.
 [raw-catalog-m6.schema.json](v1.3/schemas/raw-catalog-m6.schema.json) tách khỏi
 runtime.schema.json đang được Kafka bundle2.0.0 khóa. M6 history/export yêu cầu
 X-MaintAI-History-Profile; M5 evidence point-read/status và DTO providers khác giữ
-nguyên. Xem [đặc tả M6](../docs/M6_HISTORY_ARCHITECTURE_DECISION.md).
+nguyên. Xem [đặc tả M6](../docs/reports/M6_HISTORY_ARCHITECTURE_DECISION.md).
 
 M6 schema/fixtures chỉ freeze thiết kế; chưa có runtime/capability rollout.
 Validator kiểm cross-field range/frontier/identity và claims shape/lifetime;

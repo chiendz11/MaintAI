@@ -10,8 +10,8 @@ servers:
   description: Illustrative only; configure environment routing.
 externalDocs:
   description: Design target v1.4; this OpenAPI remains the 1.3.2 baseline pending migration.
-  url: https://github.com/chiendz11/MaintAI/blob/main/docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md
-x-maintai-decisions: ../../../docs/api-contract-decisions.md
+  url: https://github.com/chiendz11/MaintAI/blob/main/docs/architecture/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md
+x-maintai-decisions: ../../../docs/architecture/api-contract-decisions.md
 tags:
 - name: Inference
   description: Backend-only model inference
