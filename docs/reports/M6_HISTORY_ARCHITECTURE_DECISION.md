@@ -195,7 +195,7 @@ localhost của host cho Pod. Export signed URL phải truy cập được từ 
 
 Runtime tham chiếu đọc `PROCESSING_RETENTION_ENABLED=false` và
 `PROCESSING_CLEANER_DRY_RUN=true`; các giá trị bật source deletion bị từ chối.
-Xem [cấu hình runtime](../processing/read-api/HISTORY.md). M6 không xóa processing outcomes,
+Xem [cấu hình runtime](../../processing/read-api/HISTORY.md). M6 không xóa processing outcomes,
 raw evidence hay model/policy artifacts; không chạy processed archive trong Worker.
 Dry-run nằm cùng codebase Read API, chỉ báo candidates, pins/holds và lý do chặn.
 Hết snapshot TTL chỉ giải phóng metadata/pins, không xóa source data. Export TTL
@@ -224,7 +224,7 @@ không hứa lưu vô hạn hoặc production-ready.
 
 ## 10. Profile HTTP, tương thích và ủy quyền
 
-M6 history/export dùng `X-MaintAI-History-Profile: M6-HISTORY-01/1.0.0`. OpenAPI Business/Processing có description revision2.0.0 do thay shape/clock history; URL `/api/v1` giữ nguyên. Đây là revision thiết kế, không tuyên bố các runtime đang phục vụ version2.0. Schema M6 tách tại [history-m6.schema.json](../contracts/v1.3/schemas/history-m6.schema.json); runtime.schema.json và Kafka bundle2.0.0 giữ nguyên.
+M6 history/export dùng `X-MaintAI-History-Profile: M6-HISTORY-01/1.0.0`. OpenAPI Business/Processing có description revision2.0.0 do thay shape/clock history; URL `/api/v1` giữ nguyên. Đây là revision thiết kế, không tuyên bố các runtime đang phục vụ version2.0. Schema M6 tách tại [history-m6.schema.json](../../contracts/v1.3/schemas/history-m6.schema.json); runtime.schema.json và Kafka bundle2.0.0 giữ nguyên.
 
 M5 point-read/status và các DTO Alert/live không đổi. HistoryRecord1.0.0 của evidence M5 vẫn dùng endpoint point-read hiện có. Collection/export M6 dùng HistoryRecord2.0.0 thêm processed_at từ DB completed_at và giữ original outcome. Pages mang profile/schema_version/collection/time_basis; old cursors không được diễn giải lại. Client/provider phải rollout profile cùng nhau; thiếu hoặc sai profile trả400, M6 chưa bật không được giả trả snapshot thành công.
 

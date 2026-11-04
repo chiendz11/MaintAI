@@ -4,7 +4,7 @@ Cập nhật: 2026-10-28. Python dùng chung, package `maintai-messaging==0.3.0`
 Kafka contract bundle2.0.0. Đây là code transport và durable delivery để các
 thành viên phát triển nghiệp vụ; không phải xác nhận toàn hệ thống đã chạy.
 
-**PROC-ORDER-01:** §12 + [implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md)
+**PROC-ORDER-01:** §12 + [implementation report](../reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md)
 mô tả keyed Processing/ordered relay đã có source SDK0.2.0, explicit modes và
 migration002. Serial/legacy defaults giữ nguyên; full app callbacks vẫn cần owner.
 
@@ -22,8 +22,8 @@ không phải tự viết lại producer/commit offset và Người4 không ph�
 consumer archive. Mỗi owner vẫn chịu trách nhiệm hành vi nghiệp vụ và lỗi của
 service mình, Người4 chịu trách nhiệm vận hành cluster.
 
-Code nằm ở [messaging/](../messaging/README.md), contracts chuẩn ở
-[contracts/kafka/](../contracts/kafka/README.md). Đây là thư viện dùng chung được
+Code nằm ở [messaging/](../../messaging/README.md), contracts chuẩn ở
+[contracts/kafka/](../../contracts/kafka/README.md). Đây là thư viện dùng chung được
 đóng gói vào image của các service, không thêm Kafka microservice hoặc DB chung.
 
 Đã cung cấp: broker ACK có timeout, kiểm tra schema/key, offset thủ công sau
@@ -75,7 +75,7 @@ Sensor --HTTP--> IngestionGateway --broker ACK--> HTTP202
 | `inference.results`1.4.0 | Processing outbox relay | `business-prediction-v1`; optional `outcome-archive-v1` |
 | `alert.signals`1.0.0 | Processing outbox relay | `business-alert-v1` |
 
-Nguồn chính xác là [topology.json](../contracts/kafka/topology.json). Production:
+Nguồn chính xác là [topology.json](../../contracts/kafka/topology.json). Production:
 12 partitions/topic,3 replicas, min ISR2, retention7 ngày, max broker message1MiB;
 SDK default payload256KiB. Local chỉ1 broker, replica/minISR1. Không tự giảm số
 partition, không bật auto-create topic. Số máy tối đa còn phụ thuộc ML/DB/lag.
@@ -273,7 +273,7 @@ Kafka của Ingestion/Processing/Business không chia cho ML/RAG/frontend.
 
 ### Raw Storage consumer đã có implementation
 
-Owner runtime0.1.0 hiện ở [storage-consumer/](../storage-consumer/README.md), CLI
+Owner runtime0.1.0 hiện ở [storage-consumer/](../../storage-consumer/README.md), CLI
 `maintai-storage serve`: thêm versioning preflight, independent group loops,
 bounded retry, graceful shutdown, management probes và OBS-01. Khi chạy runtime
 này **không chạy đồng thời** SDK CLI bên dưới với cùng groups. `maintai-storage
@@ -439,15 +439,15 @@ initial legacy-DB bootstrap limit và GitOps config3 pending ở implementation 
 Giả định ban đầu100 máy×1 reading/s=100/s. Kiến trúc scale-ready giữ12 partition
 và các group độc lập; không có1 consumer/partition cho mỗi máy. TăngX>100 cần
 đo/tính riêng source, Processing, Relay, Business và Storage, không chỉ tăng Worker.
-[Công thức và latency plan](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100)
+[Công thức và latency plan](../design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100)
 ghi rõ serial runner/cycle, keyed active slots và downstream pools. Không đổi
 wire bundle, Kafka topology hoặc migration SQL chỉ vì giả định100 máy.
 
 
 ## M6-RAW-01 — Raw catalog, không thay Kafka wire
 
-Theo [M6 decision](M6_HISTORY_ARCHITECTURE_DECISION.md), Chiến/Người4 bổ sung
-catalog/coverage vào Storage theo [handoff](M6_RAW_ARCHIVE_HANDOFF.md); không đổi
+Theo [M6 decision](../reports/M6_HISTORY_ARCHITECTURE_DECISION.md), Chiến/Người4 bổ sung
+catalog/coverage vào Storage theo [handoff](../reports/M6_RAW_ARCHIVE_HANDOFF.md); không đổi
 raw-manifest1.0.0, SDK0.3.0/bundle2.0.0 hoặc SQL001/002. Raw commit boundary giữ
 object+manifest; catalog lag và reconciliation từ durable manifests phải công bố
 riêng. M6 không bật outcome archive, processed cold history hoặc source cleanup.

@@ -45,6 +45,6 @@
     "sdk_version": "0.3.1",
     "kafka_bundle_version": "2.0.0",
     "decision": "PROC-ORDER-01/1.0.0",
-    "document": "docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md"
+    "document": "docs/reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md"
   }
 }

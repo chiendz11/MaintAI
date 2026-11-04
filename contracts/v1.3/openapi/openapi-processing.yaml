@@ -1064,8 +1064,8 @@ components:
       description: 'Business-signed RS256 JWT, not a browser token. Verify issuer/JWKS/kid, aud processing-history,
         service azp binding, actor/roles/machines and lifetime<=60s. Shape: history-m6.schema.json#/$defs/DelegationClaims.
         Never trust unsigned headers.'
-x-maintai-decisions: ../../../docs/api-contract-decisions.md
+x-maintai-decisions: ../../../docs/architecture/api-contract-decisions.md
 x-maintai-source: System Contracts §34 / design amendment1.3.2
 externalDocs:
   description: M6 history architecture and migration
-  url: ../../../docs/M6_HISTORY_ARCHITECTURE_DECISION.md
+  url: ../../../docs/reports/M6_HISTORY_ARCHITECTURE_DECISION.md

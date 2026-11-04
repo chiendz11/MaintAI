@@ -96,5 +96,5 @@ Embedding revision được khóa trong `embedding-lock.json`; `knowledge-demo.j
 khóa PDF/version/checksum. Job owner chạy `python -m ingestion.prepare_demo`
 để migrate, cache embedding, ingest và kiểm retrieval; chạy lại không thêm
 chunks trùng. Job không gọi Groq. Chi tiết tại
-[LOCAL-DEMO-01](../docs/LOCAL_DEMO_PREPARATION.md). Image cài PyTorch CPU trước
+[LOCAL-DEMO-01](../docs/operations/LOCAL_DEMO_PREPARATION.md). Image cài PyTorch CPU trước
 requirements runtime để không tải CUDA không dùng trong demo laptop.

@@ -1,11 +1,11 @@
 # HISTORY-01 — Lịch sử DB/S3, archive và retention
 
-> **M6 override29/10/2026:** [M6-HISTORY-01](M6_HISTORY_ARCHITECTURE_DECISION.md) ưu tiên phần history/snapshot/export bên dưới: Read API ghi metadata qua pool riêng, runner export trong Read API; processed archive và source cleaner hoãn sau M6. Các thuật toán archive/retention bên dưới là thiết kế tương lai, không là task M6. Brief/recovery ngoài phạm vi này giữ nguyên.
+> **M6 override29/10/2026:** [M6-HISTORY-01](../reports/M6_HISTORY_ARCHITECTURE_DECISION.md) ưu tiên phần history/snapshot/export bên dưới: Read API ghi metadata qua pool riêng, runner export trong Read API; processed archive và source cleaner hoãn sau M6. Các thuật toán archive/retention bên dưới là thiết kế tương lai, không là task M6. Brief/recovery ngoài phạm vi này giữ nguyên.
 
 Chi tiết thiết kế kế thừa1.3.2, rà soát khi nhập target1.4 ngày2026-10-19.
 Processing sở hữu logical processing history; Business chỉ facade. Giữ thuật toán
 archive/coverage/export còn cần, áp dụng khi không trái System Contracts v1.4 §36
-và [quyết định dự án](README.md). Cursor, retention và writer cho snapshot/export
+và [quyết định dự án](../README.md). Cursor, retention và writer cho snapshot/export
 phải đối chiếu các khác biệt trong [readiness](implementation-readiness.md).
 
 ## 1. Dữ liệu và retention M6
@@ -172,7 +172,7 @@ versioning phải bật để ObjectRef có version_id thật; không dùng gi�
 
 ## 9. PROC-ORDER-01 — history khi outcomes hoàn thành song song
 
-Theo [quyết định concurrency/ordering](PROCESSING_CONCURRENCY_AND_ORDERING.md),
+Theo [quyết định concurrency/ordering](../subsystems/PROCESSING_CONCURRENCY_AND_ORDERING.md),
 Processing có thể hoàn tất máy B trước A dù A có Kafka offset thấp hơn. Lưu
 source sequence/locator và completed_at riêng, không dùng completion order làm
 source order hoặc thay history pagination cursor đã freeze. History vẫn giữ

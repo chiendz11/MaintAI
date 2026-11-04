@@ -1,10 +1,10 @@
 > **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
 > durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
 > có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
-> [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
+> [Implementation report](../reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
 > readiness §19 ghi bằng chứng, commands và giới hạn; các snapshot cũ đọc theo ngày.
 
-> **Tích hợp MaintAI — 2026-10-19:** Tài liệu thiết kế mục tiêu v1.4, chưa xác nhận code/DB/GitOps đã migrate. Đọc [docs index](README.md) để áp dụng quyết định nhóm 4 người, Simulator UI riêng và thứ tự ưu tiên; [readiness](implementation-readiness.md) ghi các schema/scaffold chưa được cung cấp.
+> **Tích hợp MaintAI — 2026-10-19:** Tài liệu thiết kế mục tiêu v1.4, chưa xác nhận code/DB/GitOps đã migrate. Đọc [docs index](../README.md) để áp dụng quyết định nhóm 4 người, Simulator UI riêng và thứ tự ưu tiên; [readiness](implementation-readiness.md) ghi các schema/scaffold chưa được cung cấp.
 
 # MaintAI v1.4 — Quy chuẩn quản lý phiên bản và truy vết nguồn gốc (Versioning & Provenance)
 
@@ -111,7 +111,7 @@ Nhãn AI4I chỉ là ground truth của dataset tĩnh cho thí nghiệm, không 
 ## 4. Tái lập Training với MLflow
 
 Quy trình SDK/ledger/unknown recovery theo
-[MLFLOW_INTEGRATION_GUIDE.md](MLFLOW_INTEGRATION_GUIDE.md) MLFLOW-01/1.0.0,
+[MLFLOW_INTEGRATION_GUIDE.md](../subsystems/MLFLOW_INTEGRATION_GUIDE.md) MLFLOW-01/1.0.0,
 System Contracts §41. Numeric registry version, logical MaintAI model_version,
 MLflow run_id và serving artifact digests là các danh tính riêng cần liên kết.
 
@@ -243,12 +243,12 @@ prediction provenance; Operator/Sensor audit vẫn phải xác định actor/API
 
 **M6-HISTORY-01,29/10:** Read API giữ SELECT cho original data, được ghi metadata
 snapshot/export/catalog bằng credential quyền hẹp riêng theo
-[quyết định M6](M6_HISTORY_ARCHITECTURE_DECISION.md). M6 chưa archive processed
+[quyết định M6](../reports/M6_HISTORY_ARCHITECTURE_DECISION.md). M6 chưa archive processed
 outcomes hoặc xóa source data; cleaner chỉ dry-run. Raw/cold ở S3/MinIO không đồng
 nghĩa processed history đã có bản archive. Không áp dụng hot30d để xóa outcomes.
 Export ghi snapshot/query clocks/profile/schema, source refs và output checksum;
 không thay model/risk lineage gốc. Catalog/coverage theo
-[M6-RAW-01](M6_RAW_ARCHIVE_HANDOFF.md) có version riêng, không sửa raw-manifest1.0.0.
+[M6-RAW-01](../reports/M6_RAW_ARCHIVE_HANDOFF.md) có version riêng, không sửa raw-manifest1.0.0.
 
 | Loại dữ liệu | Nơi lưu nguồn | Chiến lược cần cấu hình |
 |---|---|---|
@@ -306,7 +306,7 @@ Thay đổi breaking event/API schema: cập nhật JSON Schema, migration notes
 
 ## 14. PROC-ORDER-01 — source order, dispatch order và migration identity
 
-[Decision1.0.0 ngày23/10](PROCESSING_CONCURRENCY_AND_ORDERING.md) bổ sung behavior
+[Decision1.0.0 ngày23/10](../subsystems/PROCESSING_CONCURRENCY_AND_ORDERING.md) bổ sung behavior
 cho target1.4.0. Không đổi wire schema chỉ để đồng bộ revision của Markdown.
 
 - `sequence_number` là order nguồn bền vững per machine xuyên restart/epoch;
@@ -338,4 +338,4 @@ phân biệt SHA256 file bytes với canonical `policy_sha256` mà Worker phát.
 chọn app Git SHA + version + cả hai hashes và materialize vào ConfigMap có content
 hash; không sửa ngưỡng độc lập. Đổi policy là release cấu hình có provenance,
 không buộc đổi ML model hoặc Kafka wire. Infrastructure không sở hữu policy
-trong private data. Xem [RISK-POLICY-01](RISK_POLICY_OWNERSHIP.md).
+trong private data. Xem [RISK-POLICY-01](../subsystems/RISK_POLICY_OWNERSHIP.md).

@@ -7,13 +7,13 @@
 
 
 Ngày23/10/2026, revision1.0.0. Môi trường local được authoring riêng tại
-[MaintAI-k3d](../../MaintAI-k3d/README.md), cạnh repo app/AWS/GitOps.
+[MaintAI-k3d](../../../MaintAI-k3d/README.md), cạnh repo app/AWS/GitOps.
 Không thay System Contracts v1.4, PROC-ORDER-01 hoặc production release rules.
 
 ## Phân biệt “đã có Kafka” và “đã có pipeline”
 
 SDK0.2.0/bundle1.1.0 đã có keyed concurrency, safe offset coordinator, durable SQL
-fence và ordered relay. [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md)
+fence và ordered relay. [Implementation report](../reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md)
 ghi87 tests với real Kafka/PG trong harness riêng. Đây là bằng chứng thư viện và
 durability adapter; không phải actual application DQ/ML/risk/history/SSE E2E.
 
@@ -41,18 +41,18 @@ các image local này. K3s1.35 khác cloud baseline1.33; local không thay kiể
 
 ## Trình tự tích hợp
 
-1. Theo [README local](../../MaintAI-k3d/README.md) để init/check/render offline.
+1. Theo [README local](../../../MaintAI-k3d/README.md) để init/check/render offline.
 2. Khi chủ động chạy: Docker → k3d up → build local platform images → bootstrap
    core/monitoring. Các bước này chưa được chạy trong lần tạo folder.
 3. Owner hoàn thiện source/probes/auth/image và cấu hình app. Import actual image,
    pin source/config, thực hiện domain migrations riêng + messaging migrations và
-   explicit ordered activation; xem [App integration](../../MaintAI-k3d/docs/APP_INTEGRATION.md).
+   explicit ordered activation; xem [App integration](../../../MaintAI-k3d/docs/APP_INTEGRATION.md).
 4. Bật từng workload đủ điều kiện; Sensor1 replica/Recreate/PVC, PAUSED trước.
    Sensor trong Pod vẫn cần JWT, HTTPS Ingestion/issuer/JWKS và trust/DNS thực;
    anonymous loopback không áp dụng cho Pod0.0.0.0. Local profile chưa cấp IdP/TLS.
 5. Resume và kiểm từ source ID/sequence đến ACK202/Kafka/ML/risk/outbox/Business/
    alert/SSE/UI, rồi crash/retry/rebalance/reconnect/load. Bảng chi tiết:
-   [Pipeline readiness](../../MaintAI-k3d/docs/PIPELINE_READINESS.md).
+   [Pipeline readiness](../../../MaintAI-k3d/docs/PIPELINE_READINESS.md).
 
 Main UI và Simulator UI deploy riêng; Grafana/MLflow dùng UI native. Local
 Simulator UI proxy `/api/` tới Sensor cùng origin; Business không proxy simulator.
@@ -81,5 +81,5 @@ Giả định vận hành ban đầu100 máy×1 reading/s;5 máy là smoke/defau
 Kiến trúc scale-ready khiX>100 qua tính/đo capacity từng stage; laptop không tự được
 coi là đủ CPU/RAM/IOPS cho mọiX. Chọn source rate, replicas và ML/DB pools sau khi
 providers/images/auth/migrations hoàn tất; tài liệu không bật app hoặc tạo cluster.
-Theo [Capacity §11](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100)
+Theo [Capacity §11](../design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100)
 để tối ưu latency, đồng thời giữ source/Kafka/DB/S3/Business/UI metrics và evidence.

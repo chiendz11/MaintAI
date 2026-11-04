@@ -1,7 +1,7 @@
 > **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
 > durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
 > có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
-> [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
+> [Implementation report](../reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
 > readiness §19 ghi bằng chứng, commands và giới hạn; các snapshot cũ đọc theo ngày.
 
 # OBS-01 — Metrics và bàn giao Grafana cho MaintAI
@@ -11,7 +11,7 @@
 metrics/exporters/dashboards đã chạy. Không đổi HTTP/Kafka/DB schema bằng Markdown.
 
 Đọc cùng [MLflow integration](MLFLOW_INTEGRATION_GUIDE.md),
-[UI Architecture](UI_ARCHITECTURE.md), [readiness](implementation-readiness.md).
+[UI Architecture](../architecture/UI_ARCHITECTURE.md), [readiness](../architecture/implementation-readiness.md).
 Catalog trong §3 là tên/type/labels chuẩn. Các tên ngắn trong Guide cũ là aliases
 tham khảo đã bị thay thế; không tự phát hành thêm một họ metrics khác.
 
@@ -346,8 +346,8 @@ không tăng ở code branch trước transaction rồi dựa rollback để s�
    up của Pushgateway, heartbeat age và report status; up=1 không chứng minh Worker
    chạy gần đây. Xóa retired grouping keys theo runbook khi đổi environment/job.
 
-Source hiện có [Drift metrics](../drift-worker/src/drift_monitor/metrics.py) và
-[worker](../drift-worker/src/drift_monitor/worker.py) đã làm render/PUT/checkpoint
+Source hiện có [Drift metrics](../../drift-worker/src/drift_monitor/metrics.py) và
+[worker](../../drift-worker/src/drift_monitor/worker.py) đã làm render/PUT/checkpoint
 phần baseline. Nó chưa chứng minh target data adapters, strict lease/fencing,
 retention aggregate hoặc Grafana provisioning. Không sửa source trong lượt docs.
 
@@ -465,7 +465,7 @@ chuyển sang prefix maintai_replay_ và không được scrape thành server me
 Retry count/oldest_unacked_event_age/buffer_used_bytes còn có trong structured
 spool logs; không biến chúng thành fields của ControlState. Không thêm metric
 family/labels ngoài catalog. Python/provider tests kiểm commit points; xem
-[Sensor README](../sensor/README.md) và [implementation report](SENSOR_IMPLEMENTATION_REPORT.md).
+[Sensor README](../../sensor/README.md) và [implementation report](../reports/SENSOR_IMPLEMENTATION_REPORT.md).
 Prometheus/ServiceMonitor/Grafana rollout ở GitOps vẫn chưa được xác minh.
 
 ## 11. PROC-ORDER-01 — metrics cho keyed Processing và ordered Outbox
@@ -518,7 +518,7 @@ Theo dõi offered/generated/accepted unique rate, Kafka lag/oldest age, keyed qu
 frontier, inference/DB pool latency, outbox/archive age, Business/SSE và browser
 render. Chỉ backend DB-visible metric không chứng minh target alert UI p95≤2s.
 
-Tính n/c/pool theo [Capacity §11](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100),
+Tính n/c/pool theo [Capacity §11](../design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100),
 đo lại sau mỗi thay đổi để giữ latency/coverage. Planning utilization70% là giả định;
 không có threshold HPA hoặc SLO metric mới được tự áp dụng bởi mục này.
 
@@ -539,4 +539,4 @@ không dùng Pod Ready để suy History COMPLETE.
 Không thêm alert/dashboard production trong app; Chiến cập nhật repo GitOps khi
 bật module. Catalog generation heartbeat mặc định30s khi idle để có captured_at;
 readers vẫn kiểm snapshot/cutoff/gaps/freshness, không suy complete từ max timestamp.
-Xem [Storage report](STORAGE_CATALOG_IMPLEMENTATION_REPORT.md).
+Xem [Storage report](../reports/STORAGE_CATALOG_IMPLEMENTATION_REPORT.md).

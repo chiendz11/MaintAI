@@ -5,9 +5,9 @@ Contracts `1.4.0` §42 và Implementation Guide §53. Thiết kế đã có
 **SDK0.2.0/bundle1.1.0 implementation**; full app/runtime còn cần tích hợp. Quyết định có version
 riêng; không tự tăng version HTTP/Kafka, sửa frozen SQL hoặc thêm Deployment.
 
-Đọc cùng [System Contracts](MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md),
-[Kafka Guide](KAFKA_DEVELOPMENT_GUIDE.md), [Runtime Dataflow](RUNTIME_DATAFLOW.md),
-[Recovery](recovery-jobs-operations.md) và [readiness](implementation-readiness.md).
+Đọc cùng [System Contracts](../architecture/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md),
+[Kafka Guide](KAFKA_DEVELOPMENT_GUIDE.md), [Runtime Dataflow](../architecture/RUNTIME_DATAFLOW.md),
+[Recovery](../architecture/recovery-jobs-operations.md) và [readiness](../architecture/implementation-readiness.md).
 
 Nguồn trao đổi: [chat thiết kế23/10](https://chatgpt.com/s/t_6adac03f80e88191a825ee7eecc0202d).
 Quyết định này chuẩn hóa nội dung theo contract của repo: sửa giả định sortable
@@ -29,12 +29,12 @@ máy chạy đồng thời, vẫn giữ tuần tự công việc của từng m�
 | Storage | Runtime0.1.0 dùng runner hiện tại, microbatch1 | Không đổi sang keyed runner trong workstream này |
 | Deployment | Worker, Relay, Read API tách runtime, cùng Processing owner | Giữ ba runtime, DB owner, image group và các topic hiện hành |
 
-Bằng chứng source lúc soạn decision: [ConsumerRunner](../messaging/src/maintai_messaging/consumer.py)
-có một handler thread; [OutboxRelay](../messaging/src/maintai_messaging/postgres.py)
+Bằng chứng source lúc soạn decision: [ConsumerRunner](../../messaging/src/maintai_messaging/consumer.py)
+có một handler thread; [OutboxRelay](../../messaging/src/maintai_messaging/postgres.py)
 legacy claim theo row. Đường opt-in mới ở
-[keyed.py](../messaging/src/maintai_messaging/keyed.py) và
-[ordering.py](../messaging/src/maintai_messaging/ordering.py). Commands và source
-boundaries ở [implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md).
+[keyed.py](../../messaging/src/maintai_messaging/keyed.py) và
+[ordering.py](../../messaging/src/maintai_messaging/ordering.py). Commands và source
+boundaries ở [implementation report](../reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md).
 
 Đây là Processing scheduler, khác Sensor scheduler sinh readings. Các queues,
 executor và coordinator ở **trong Processing Worker**, không là microservice,
@@ -201,7 +201,7 @@ keyed concurrency và capacity từng stage có thể điều chỉnh khiX>100, 
 safe offsets và durable fences. Với12 partitions, bình quân8,33 readings/s/partition
 nếu key đều;1 member nhận12 partitions, nếu3 members thì4 partitions/member và
 khoảng33,33 readings/s/member. Phân phối thực có thể lệch. Số member không là số
-máy;100 không là giới hạn cứng. Xem [cách tính scale/latency](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).
+máy;100 không là giới hạn cứng. Xem [cách tính scale/latency](../design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).
 
 Năng lực lý thuyết gần `replicas × active_keys / mean_handler_seconds`, còn bị
 chặn bởi per-key sequential rate, ML/DB, tail latency, skew, memory và retry.
@@ -313,6 +313,6 @@ Người4 thống nhất Kafka/pool/termination/retention budgets và provision 
 Tài liệu/sơ đồ/kiểm hash chỉ xác nhận đặc tả thống nhất. SDK0.2.0 đã có keyed
 runner/coordinator/fence/ordered relay và migration002 với real broker/DB tests;
 full app callbacks/images/deployment/load vẫn cần tích hợp. Xem
-[implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md), Plan §K
+[implementation report](../reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md), Plan §K
 và readiness §19. Initial legacy inbox cần reviewed cursor bootstrap riêng;
 activation bản này fail closed, không tự backfill.

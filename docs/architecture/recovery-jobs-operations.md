@@ -1,9 +1,9 @@
 > **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
 
-> **M6 override29/10/2026:** [M6-HISTORY-01](M6_HISTORY_ARCHITECTURE_DECISION.md) ưu tiên phần history/snapshot/export bên dưới: Read API ghi metadata qua pool riêng, runner export trong Read API; processed archive và source cleaner hoãn sau M6. Các thuật toán archive/retention bên dưới là thiết kế tương lai, không là task M6. Brief/recovery ngoài phạm vi này giữ nguyên.
+> **M6 override29/10/2026:** [M6-HISTORY-01](../reports/M6_HISTORY_ARCHITECTURE_DECISION.md) ưu tiên phần history/snapshot/export bên dưới: Read API ghi metadata qua pool riêng, runner export trong Read API; processed archive và source cleaner hoãn sau M6. Các thuật toán archive/retention bên dưới là thiết kế tương lai, không là task M6. Brief/recovery ngoài phạm vi này giữ nguyên.
 > durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
 > có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
-> [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
+> [Implementation report](../reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
 > readiness §19 ghi bằng chứng, commands và giới hạn; các snapshot cũ đọc theo ngày.
 
 # RECOVERY-01 — Jobs bền vững, phục hồi và vận hành
@@ -11,7 +11,7 @@
 Chi tiết kế thừa1.3.2, rà soát khi nhập target1.4 ngày2026-10-19. Giữ các quyết định
 durable jobs, Drift publication/catalog và recovery chưa bị v1.4 thay thế; không
 override version/payload mới. Đây là thiết kế, không phải runbook đã được chạy.
-Xem [thứ tự ưu tiên và quyết định dự án](README.md).
+Xem [thứ tự ưu tiên và quyết định dự án](../README.md).
 
 ## 1. Transaction và crash boundaries
 
@@ -35,8 +35,8 @@ Không dùng string event_id, string epoch hoặc completion time làm source or
 **M6-HISTORY-01,29/10:** Export runner thuộc runtime Read API, cùng Deployment,
 pool/budgets riêng. Worker chỉ realtime; không thêm processing-maintenance.
 Read API metadata credential chỉ ghi history_meta, không ghi source/outcome/outbox.
-Giữ [decision](M6_HISTORY_ARCHITECTURE_DECISION.md) và
-[raw handoff](M6_RAW_ARCHIVE_HANDOFF.md) khi áp dụng các quy tắc recovery dưới đây.
+Giữ [decision](../reports/M6_HISTORY_ARCHITECTURE_DECISION.md) và
+[raw handoff](../reports/M6_RAW_ARCHIVE_HANDOFF.md) khi áp dụng các quy tắc recovery dưới đây.
 Raw catalog có thể lag sau commit; reconciliation phải phục hồi từ durable raw
 manifests, không chỉ từ Kafka chưa commit. DB-only demo không chứng minh full M6.
 
@@ -170,7 +170,7 @@ failover/multiple replicas cần lease/fencing, không chỉ số replicas=1.
 
 ## 8. Observability và acceptance
 
-Catalog và exact update/reset semantics theo [OBS-01](OBSERVABILITY_IMPLEMENTATION.md),
+Catalog và exact update/reset semantics theo [OBS-01](../subsystems/OBSERVABILITY_IMPLEMENTATION.md),
 ưu tiên shorthand metric names kế thừa; MLflow dùng workflow riêng ở §9 bên dưới.
 
 Trace correlation xuyên HTTP/Kafka/job/archive bằng event_id/result_id/job_id và
@@ -188,7 +188,7 @@ RAG timeout, catalog downtime+full reconcile và rolling schema2 consumer-first.
 
 ## 9. MLflow operation recovery — MLFLOW-01
 
-Chi tiết ở [MLFLOW_INTEGRATION_GUIDE.md](MLFLOW_INTEGRATION_GUIDE.md) §6–8.
+Chi tiết ở [MLFLOW_INTEGRATION_GUIDE.md](../subsystems/MLFLOW_INTEGRATION_GUIDE.md) §6–8.
 Training orchestration ledger do platform quản lý, khác Business Copilot/job DB;
 không thêm training SQL tables vào mlflow_db hoặc DB ứng dụng khác.
 
@@ -210,7 +210,7 @@ implementation, không tạo ledger adapter chỉ bằng ví dụ Python trong d
 
 ## 10. PROC-ORDER-01 — recovery cho keyed tasks và ordered outbox
 
-Theo [đặc tả chuẩn](PROCESSING_CONCURRENCY_AND_ORDERING.md) §4–7; SDK0.2.0 đã có
+Theo [đặc tả chuẩn](../subsystems/PROCESSING_CONCURRENCY_AND_ORDERING.md) §4–7; SDK0.2.0 đã có
 keyed/ordered/fenced implementations và tests; xem implementation report/readiness §19.
 
 - Mỗi partition có receipt ledger và safe completed prefix. Một lower-offset

@@ -452,5 +452,5 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-x-maintai-decisions: ../../../docs/api-contract-decisions.md
+x-maintai-decisions: ../../../docs/architecture/api-contract-decisions.md
 x-maintai-source: System Contracts §34 / design amendment1.3.2

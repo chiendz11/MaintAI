@@ -1,18 +1,18 @@
 > **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
 > durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
 > có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
-> [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
+> [Implementation report](../reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
 > readiness §19 ghi bằng chứng, commands và giới hạn; các snapshot cũ đọc theo ngày.
 
-> **Tích hợp MaintAI — 2026-10-19:** Tài liệu thiết kế mục tiêu v1.4, chưa xác nhận code/DB/GitOps đã migrate. Đọc [docs index](README.md) để áp dụng quyết định nhóm 4 người, Simulator UI riêng và thứ tự ưu tiên; [readiness](implementation-readiness.md) ghi các schema/scaffold chưa được cung cấp.
+> **Tích hợp MaintAI — 2026-10-19:** Tài liệu thiết kế mục tiêu v1.4, chưa xác nhận code/DB/GitOps đã migrate. Đọc [docs index](../README.md) để áp dụng quyết định nhóm 4 người, Simulator UI riêng và thứ tự ưu tiên; [readiness](implementation-readiness.md) ghi các schema/scaffold chưa được cung cấp.
 
 # MaintAI v1.4 — Luồng dữ liệu lúc chạy và các bất biến bắt buộc
 
-**M6-HISTORY-01,29/10:** [Decision](M6_HISTORY_ARCHITECTURE_DECISION.md) ưu tiên
+**M6-HISTORY-01,29/10:** [Decision](../reports/M6_HISTORY_ARCHITECTURE_DECISION.md) ưu tiên
 history cũ: processed outcomes đọc DB, raw đọc catalog S3/MinIO; Read API ghi
 metadata snapshot/export quyền hẹp và chạy export nền. Không đưa maintenance vào
 Worker, không processed archive/cleanup thật. Catalog contract ở
-[M6-RAW-01](M6_RAW_ARCHIVE_HANDOFF.md); chưa có publisher chỉ bởi cập nhật docs.
+[M6-RAW-01](../reports/M6_RAW_ARCHIVE_HANDOFF.md); chưa có publisher chỉ bởi cập nhật docs.
 
 Đọc cùng [Kiến trúc Deployment](DEPLOYMENT_ARCHITECTURE.md) để hiểu ranh giới runtime, và [Quy chuẩn Versioning & Provenance](VERSIONING_AND_PROVENANCE.md) để hiểu các định danh bất biến.
 
@@ -200,7 +200,7 @@ pool có quyền hẹp riêng. Kafka locator/sequence ordering realtime không �
 ## 7. Những phần chưa hoàn thành ở code thật
 
 Kafka wire, raw manifest microbatch1, topic/ACL và compatibility reader đã được
-code riêng trong [SDK/hướng dẫn Kafka](KAFKA_DEVELOPMENT_GUIDE.md). Chưa xác nhận
+code riêng trong [SDK/hướng dẫn Kafka](../subsystems/KAFKA_DEVELOPMENT_GUIDE.md). Chưa xác nhận
 real broker/S3 integration hoặc deployment. Còn cần hot/cold query, curated archive
 membership, migrations/app callbacks, endpoint prediction history nếu UI cần tab
 chi tiết và benchmark. SDK không hoàn tất toàn luồng trong sơ đồ này.
@@ -219,7 +219,7 @@ real selected run/registry identity và verified result trước release dispatc
 MLflow create timeout/5xx có thể đã commit, nên không blind retry theo tag search.
 Dispatch ACK khác deploy success; metrics/logging outage không được làm rollback
 Alert hoặc đổi risk. Chi tiết source/gate/SDK/recovery ở
-[OBS-01](OBSERVABILITY_IMPLEMENTATION.md) và [MLFLOW-01](MLFLOW_INTEGRATION_GUIDE.md).
+[OBS-01](../subsystems/OBSERVABILITY_IMPLEMENTATION.md) và [MLFLOW-01](../subsystems/MLFLOW_INTEGRATION_GUIDE.md).
 
 
 ## 9. Sensor provider đã implement
@@ -232,7 +232,7 @@ HTTP/browser/TLS fixtures và giới hạn deployment ở [readiness §15](imple
 
 ## 10. PROC-ORDER-01 — đọc, xử lý, commit và publish có thứ tự
 
-Nguồn chi tiết: [Processing concurrency/ordering](PROCESSING_CONCURRENCY_AND_ORDERING.md).
+Nguồn chi tiết: [Processing concurrency/ordering](../subsystems/PROCESSING_CONCURRENCY_AND_ORDERING.md).
 Chuỗi trong Worker:
 
 ```text
@@ -267,5 +267,5 @@ tham gia coordinator của Processing và có offsets/commit boundary riêng.
 Baseline100 máy×1 reading/s. Hệ thống scale-ready qua các stage riêng, nhưng khiX
 đổi phải tínhR=X×r và đo từ ingest tới browser, bao gồm queue/outbox/Business/SSE.
 Giữ cùng source ID cho mẫu latency, không cộng p95 các stage hay dùng202 làm kết
-quả inference. Đo/tối ưu bottleneck theo [Capacity §11](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100),
+quả inference. Đo/tối ưu bottleneck theo [Capacity §11](../design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100),
 không đổi ordering/durability hoặc bỏ history/alerts để giảm thời gian giả.

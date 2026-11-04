@@ -1,12 +1,12 @@
 > Cập nhật28/10: phiên bản hiện hành là SDK0.3.0/bundle2.0.0 theo
-> [OUTCOME-14-ONLY](OUTCOME_V1_4_MIGRATION.md). Báo cáo bên dưới giữ nguyên
+> [OUTCOME-14-ONLY](../subsystems/OUTCOME_V1_4_MIGRATION.md). Báo cáo bên dưới giữ nguyên
 > bằng chứng ngày23/10 của SDK0.2.0; không phải kết quả kiểm tra của release mới.
 
 # PROC-ORDER-01 — source Kafka, migrations và cách tích hợp
 
 **Ngày2026-10-23.** SDK `maintai-messaging==0.2.0`, Kafka bundle `1.1.0`,
-Processing transport `0.1.0`. Đọc cùng [đặc tả](PROCESSING_CONCURRENCY_AND_ORDERING.md),
-System Contracts §42, Guide §53 và [readiness](implementation-readiness.md).
+Processing transport `0.1.0`. Đọc cùng [đặc tả](../subsystems/PROCESSING_CONCURRENCY_AND_ORDERING.md),
+System Contracts §42, Guide §53 và [readiness](../architecture/implementation-readiness.md).
 
 Đã có code transport/durability, tests và CI. **Full Processing application chưa
 hoàn tất**: DQ/ML/risk/history callbacks thuộc Người1, model thuộc Người2;
@@ -33,19 +33,19 @@ dùng kết quả đã durable. Không hứa một lần gọi ML duy nhất qua
 
 | File | Ý nghĩa |
 | --- | --- |
-| [SDK keyed.py](../messaging/src/maintai_messaging/keyed.py) | Keyed FIFO/fair dispatch, daemon executor, per-partition receipt ledger/safe prefix, pause/resume hysteresis, deadlines/drain |
-| [SDK ordering.py](../messaging/src/maintai_messaging/ordering.py) | Explicit migration/activation, durable assignment token/fence, two-phase handler/source cursor, bound ordered outbox và head-only relay |
-| [SDK metrics.py](../messaging/src/maintai_messaging/metrics.py) | Optional queue/frontier/stale completion và DB-wide blocked-head collectors; metric failure không đổi business result |
-| [SDK config.py](../messaging/src/maintai_messaging/config.py) | Validated KeyedSettings, finite deadlines, bounded records/bytes/keys |
-| [SDK postgres.py](../messaging/src/maintai_messaging/postgres.py) | Cho ordered relay finish row và key cursor trong cùng transaction; legacy default giữ nguyên |
-| [SDK CLI](../messaging/src/maintai_messaging/cli.py), [service](../messaging/src/maintai_messaging/service.py) | Explicit mode flags/env, Processing-only runner selection, owner migration/activation commands |
-| [Migration002](../contracts/kafka/migrations/002_processing_ordering.sql) | Capability gate, durable assignments, source cursor, per-topic key cursor và dispatch order; không sửa001 |
-| [Archived bundle1.0 manifest](../contracts/kafka/releases/1.0.0.json) | Giữ nguồn gốc/hash của release trước; manifest mới1.1 thêm002 |
-| [Processing package](../processing/pyproject.toml) | Transport wrappers0.1.0, pin SDK0.2.0[postgres] |
-| [worker.py](../processing/src/maintai_processing/worker.py), [outbox_relay.py](../processing/src/maintai_processing/outbox_relay.py) | Entry modules thật, gọi SDK CLI đúng role; không tự migrate DB |
-| [handlers.py](../processing/src/maintai_processing/handlers.py) | Load reviewed prepare/persist callbacks, owner DSN và đúng Kafka group/prefix; thiếu callback thì fail closed |
-| [Tests unit](../messaging/tests/unit/test_keyed.py), [DB/broker](../messaging/tests/integration/test_processing_ordering.py), [wrappers](../processing/tests/test_kafka_entrypoints.py) | Ordering/holes/drain, SQL rollback/fencing, relay races/retry/ACK loss, real Kafka roundtrip và no-fake callback boundary |
-| [CI](../.github/workflows/ci.yml) | Kafka jobs chạy tests mới, build SDK/Processing packages, wheel smoke và JUnit integration artifact; giữ required gate |
+| [SDK keyed.py](../../messaging/src/maintai_messaging/keyed.py) | Keyed FIFO/fair dispatch, daemon executor, per-partition receipt ledger/safe prefix, pause/resume hysteresis, deadlines/drain |
+| [SDK ordering.py](../../messaging/src/maintai_messaging/ordering.py) | Explicit migration/activation, durable assignment token/fence, two-phase handler/source cursor, bound ordered outbox và head-only relay |
+| [SDK metrics.py](../../messaging/src/maintai_messaging/metrics.py) | Optional queue/frontier/stale completion và DB-wide blocked-head collectors; metric failure không đổi business result |
+| [SDK config.py](../../messaging/src/maintai_messaging/config.py) | Validated KeyedSettings, finite deadlines, bounded records/bytes/keys |
+| [SDK postgres.py](../../messaging/src/maintai_messaging/postgres.py) | Cho ordered relay finish row và key cursor trong cùng transaction; legacy default giữ nguyên |
+| [SDK CLI](../../messaging/src/maintai_messaging/cli.py), [service](../../messaging/src/maintai_messaging/service.py) | Explicit mode flags/env, Processing-only runner selection, owner migration/activation commands |
+| [Migration002](../../contracts/kafka/migrations/002_processing_ordering.sql) | Capability gate, durable assignments, source cursor, per-topic key cursor và dispatch order; không sửa001 |
+| [Archived bundle1.0 manifest](../../contracts/kafka/releases/1.0.0.json) | Giữ nguồn gốc/hash của release trước; manifest mới1.1 thêm002 |
+| [Processing package](../../processing/pyproject.toml) | Transport wrappers0.1.0, pin SDK0.2.0[postgres] |
+| [worker.py](../../processing/src/maintai_processing/worker.py), [outbox_relay.py](../../processing/src/maintai_processing/outbox_relay.py) | Entry modules thật, gọi SDK CLI đúng role; không tự migrate DB |
+| [handlers.py](../../processing/src/maintai_processing/handlers.py) | Load reviewed prepare/persist callbacks, owner DSN và đúng Kafka group/prefix; thiếu callback thì fail closed |
+| [Tests unit](../../messaging/tests/unit/test_keyed.py), [DB/broker](../../messaging/tests/integration/test_processing_ordering.py), [wrappers](../../processing/tests/test_kafka_entrypoints.py) | Ordering/holes/drain, SQL rollback/fencing, relay races/retry/ACK loss, real Kafka roundtrip và no-fake callback boundary |
+| [CI](../../.github/workflows/ci.yml) | Kafka jobs chạy tests mới, build SDK/Processing packages, wheel smoke và JUnit integration artifact; giữ required gate |
 
 Storage pin lên SDK0.2.0, raw bundle metadata1.1.0; runner/microbatch/wire archive
 giữ nguyên. Business vẫn default serial handlers; app SQL/REST/SSE chưa implement.

@@ -32,7 +32,7 @@ chọn chúng bằng nhau nhưng consumer không được mặc định điều 
 
 ## 2. Một định dạng outcome duy nhất
 
-Schema chuẩn là [Kafka outcome](../contracts/kafka/events/inference-result.schema.json).
+Schema chuẩn là [Kafka outcome](../../contracts/kafka/events/inference-result.schema.json).
 Topology chỉ cho phép đọc và ghi `schema_version=1.4.0` trên `inference.results`.
 Không đổi tên topic, partition, Kafka key `machine_id` hoặc consumer group.
 

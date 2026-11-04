@@ -142,7 +142,7 @@ amendment. Hai placeholder simulator facade/control và bộ tài liệu/contrac
 kiến trúc v1.1 đã xóa. Các schema/provider examples còn hiệu lực được chuyển sang
 bundle hiện hành; metadata runtime target1.3.2 giữ nguyên trạng thái implementation.
 Báo cáo dependency/giữ-xóa:
-[legacy-artifact-audit.md](legacy-artifact-audit.md).
+[legacy-artifact-audit.md](../reports/legacy-artifact-audit.md).
 
 ## 9. Khoảng cách cần giải quyết trước khi code v1.4 — 2026-10-19
 
@@ -202,7 +202,7 @@ mỗi thư mục. `NOT_AVAILABLE`/provenance_incomplete chỉ dùng theo schema 
 - GitOps code thêm rejected topic/ACL/exporter, protocol/manifest pin và source
   SHA gates. Workloads vẫn disabled; không run platform render/test/build/deploy.
 
-Hướng dẫn chính: [KAFKA_DEVELOPMENT_GUIDE.md](KAFKA_DEVELOPMENT_GUIDE.md).
+Hướng dẫn chính: [KAFKA_DEVELOPMENT_GUIDE.md](../subsystems/KAFKA_DEVELOPMENT_GUIDE.md).
 
 ## 12. UI-01 — Readiness bốn UI, 2026-10-20
 
@@ -234,7 +234,7 @@ tiếp theo có source và checks riêng ở §13.
 
 ## 13. Simulator UI0.1.0 — implementation20/10
 
-- Source: [sensor-simulator-UI/README.md](../sensor-simulator-UI/README.md); React/TypeScript/Vite
+- Source: [sensor-simulator-UI/README.md](../../sensor-simulator-UI/README.md); React/TypeScript/Vite
   app độc lập Business/Sensor, lockfile, public runtime config và Dockerfile riêng.
 - Demo5 máy có control/scenario, preview sáu features/RPM/reading feed; demo state
   trong tab, không gửi reading/control tới external API.
@@ -255,8 +255,8 @@ tiếp theo có source và checks riêng ở §13.
 
 ## 14. OBS-01 / MLFLOW-01 — chuẩn hóa thiết kế20/10
 
-Đã có [OBSERVABILITY_IMPLEMENTATION.md](OBSERVABILITY_IMPLEMENTATION.md) và
-[MLFLOW_INTEGRATION_GUIDE.md](MLFLOW_INTEGRATION_GUIDE.md), System Contracts §41,
+Đã có [OBSERVABILITY_IMPLEMENTATION.md](../subsystems/OBSERVABILITY_IMPLEMENTATION.md) và
+[MLFLOW_INTEGRATION_GUIDE.md](../subsystems/MLFLOW_INTEGRATION_GUIDE.md), System Contracts §41,
 Guide §49. Hai quyết định revision1.0.0 chốt names/types/labels/units/buckets,
 one-hot drift, commit/retry semantics, SDK reference, registry identity, durable
 operation intents và strict schema mapping. Các short aliases đã gỡ khỏi phần
@@ -291,7 +291,7 @@ expiry/iat/role/scope/machine permissions, JWKS cache; outbound service token fi
 hoặc OAuth client-credentials. Bốn scenario UI khớp YAML; không ép risk/Alert.
 Probes và OBS-01 metrics nằm trong Sensor runtime; UI đã hiện last_controlled_by.
 
-Bằng chứng local được ghi chi tiết ở [Sensor implementation report](SENSOR_IMPLEMENTATION_REPORT.md).
+Bằng chứng local được ghi chi tiết ở [Sensor implementation report](../reports/SENSOR_IMPLEMENTATION_REPORT.md).
 Có tests restart thật qua CLI/HTTP, lost-ACK retry, durable sequence/receipt,
 parallel CAS, quota/TTL/auth, TLS JWKS/OAuth RSA fixture; browser integration gọi
 provider Python thật (Ingestion fixture202/local auth). Unit/contract/schema,
@@ -328,7 +328,7 @@ IAM/SASL/TLS production hoặc versioned bucket integration. Image build/output
 digest, registry publish, rollout/termination, retention/catch-up và object cost/
 throughput **chưa được xác nhận**. Microbatch1 cần2 PUT/record chưa tính retries;
 đổi batch membership/manifest cần contract review và benchmark, không chỉ tăng
-batch size bằng env. Xem [Storage runbook](../storage-consumer/README.md).
+batch size bằng env. Xem [Storage runbook](../../storage-consumer/README.md).
 
 ## 17. MLFLOW-IMAGE-01 — nguồn image và signer cutover21/10
 
@@ -357,7 +357,7 @@ Infrastructure IAM hiện còn grant mlflow ECR cho GitOps publisher, cần chuy
 sang app role ở repo hạ tầng trong lượt riêng. Local Compose dùng PostgreSQL17 +
 filesystem artifacts, không chứng minh S3/MinIO production. Chưa publish, dispatch,
 apply/deploy, commit hoặc push bởi lượt chuyển source này. Xem
-[MLflow runbook](../ml-service/mlflow/README.md).
+[MLflow runbook](../../ml-service/mlflow/README.md).
 
 ## 18. PROC-ORDER-01 — thiết kế và source23/10
 
@@ -377,7 +377,7 @@ này đã cập nhật sau yêu cầu triển khai source, migrations và tests/
 | GitOps | SDK/bundle pin + config3 schema/profile NOT_ACTIVATED | Config3 receiver/publisher cutover, real callback/image/source SHA review |
 
 Chi tiết từng file/API/commands/defaults ở
-[implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md). Worker/
+[implementation report](../reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md). Worker/
 Relay metadata vẫn skeleton/null/placeholder; không thêm runtime/DB/UI.
 
 ## 19. PROC-ORDER-01 — validation source và giới hạn23/10
@@ -403,13 +403,13 @@ vẫn cần owner integration. Legacy source inbox không có cursor evidence kh
 
 ## 20. Local Kubernetes profile —23/10
 
-Folder [MaintAI-k3d](../../MaintAI-k3d/README.md) đã được authoring với core platform,
+Folder [MaintAI-k3d](../../../MaintAI-k3d/README.md) đã được authoring với core platform,
 image/source locks, owner DB/S3 bootstrap, monitoring, gated app manifests và CLI
 riêng context. Offline tool/schema/hash checks có thể chạy; chưa build platform
 images, tạo k3d, validate K8s server hoặc chạy full app E2E. Native MLflow còn chờ
 app image compatibility lock; IdP/TLS/DNS, actual app providers/domain callbacks
 và migrations chưa được tạo thay bằng mocks. Training/Drift job renderer chưa có
-trong local0.1. Xem [local integration](LOCAL_DEVELOPMENT_K3D.md) và bảng readiness
+trong local0.1. Xem [local integration](../operations/LOCAL_DEVELOPMENT_K3D.md) và bảng readiness
 ở folder local. Đây là nền tảng để nhóm tích hợp, không là trạng thái pipeline Ready.
 
 ## 21. Baseline100 máy; scale-ready về kiến trúc
@@ -420,7 +420,7 @@ Capacity thực và target alert UI p95≤2s vẫn cần run baseline100/s. KhiX
 tínhR=X×r rồi tối ưu/scale đúng stage bằng latency/lag/pool/IOPS/CPU/browser evidence;
 không suy throughput từ partition count, replica config hoặc SDK tests.
 
-[Công thức và quy trình](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).
+[Công thức và quy trình](../design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).
 Đây là amendment giả định, không thay historical87 transport tests, wire versions,
 SQL001/002, model thresholds hoặc trạng thái app/image/deployment còn pending.
 
@@ -429,7 +429,7 @@ SQL001/002, model thresholds hoặc trạng thái app/image/deployment còn pend
 Ingestion có FastAPI runtime với SDK gateway/publisher, JWT/JWKS verifier, bounded
 raw-body/admission, ACK-first accepted/rejected, response adapter, health/metrics
 và graceful shutdown. HTTP Ingestion OpenAPI tăng MINOR1.4.0; các OpenAPI khác
-vẫn1.3.2, Kafka bundle/wire không đổi. Xem [runbook](../ingestion-api/README.md).
+vẫn1.3.2, Kafka bundle/wire không đổi. Xem [runbook](../../ingestion-api/README.md).
 
 Unit/HTTP contracts, real Kafka localhost29092 và installed image smoke dùng JWT
 chữ ký với JWKS fixture local được kiểm tra riêng. Không suy shared OIDC provider,
@@ -440,7 +440,7 @@ kiểm tra cụ thể nằm trong docs/superpowers/plans/ và báo cáo phiên l
 
 ## 23. Outcome1.4-only — source migration ngày28/10
 
-[OUTCOME-14-ONLY](OUTCOME_V1_4_MIGRATION.md) thay mọi chỉ dẫn compatibility2.0
+[OUTCOME-14-ONLY](../subsystems/OUTCOME_V1_4_MIGRATION.md) thay mọi chỉ dẫn compatibility2.0
 trong snapshot cũ. SDK0.3.0/bundle2.0.0 bỏ reader legacy, Business giữ risk gốc,
 HTTP/history ProcessingResult dùng schema Kafka1.4. SQL001/002 không thay đổi;
 không có backfill risk, không rewrite Kafka, không reset offset hoặc migration
@@ -458,21 +458,21 @@ Kiểm tra unit/contract và build wheel khác với tests DB/Kafka/container; c
 M4 được merge qua PR12; M5 thêm Alert handler thứ ba, hot evidence HTTP point-read,
 owner migration0003, append-only audit/feedback và immutable Alert notification
 snapshots. Fleet/Detail đã có nguồn Alert thật; Main UI có Alert list/detail/actions.
-[Report](M5_IMPLEMENTATION_REPORT.md) ưu tiên các mô tả inherited còn ghi hai loops,
+[Report](../reports/M5_IMPLEMENTATION_REPORT.md) ưu tiên các mô tả inherited còn ghi hai loops,
 Frontend skeleton hoặc thiếu Alert source. Shared providers/production/load acceptance
 không tự hoàn tất. M6/M7/M8 giữ phạm vi riêng; không bật archive cleaner trong M5.
 
 
 ## M6-HISTORY-01 — Contract freeze29/10, chưa là runtime evidence
 
-[Đặc tả M6](M6_HISTORY_ARCHITECTURE_DECISION.md) và [catalog](M6_RAW_ARCHIVE_HANDOFF.md)
+[Đặc tả M6](../reports/M6_HISTORY_ARCHITECTURE_DECISION.md) và [catalog](../reports/M6_RAW_ARCHIVE_HANDOFF.md)
 thay các mục chờ cursor/writer của snapshot cũ. Machine contracts có profile/schema
 riêng; chỉ revision mô tả Business/Processing tăng2.0.0, không nâng đồng loạt runtime,
 Kafka hoặc provider khác. JWT delegation cần keys/issuer/JWKS và tests chữ ký/scope
 ở runtime. JSON fixture không chứng minh credential đã được cấp.
 
 Source đã có history/snapshot/chart/export, SQL metadata grants, Business facade và
-UI M6; xem [báo cáo implementation](M6_IMPLEMENTATION_REPORT.md). Local harness dùng
+UI M6; xem [báo cáo implementation](../reports/M6_IMPLEMENTATION_REPORT.md). Local harness dùng
 DB/Kafka/MinIO với Storage consumer/audit/publisher thật. Platform rollout và
 shared credentials cần kiểm riêng; không cần AWS để chạy local.
 Các bảng inventory cũ không thay checkpoint source này. Source cleaner/processed
@@ -480,8 +480,8 @@ archive không thuộc acceptance M6 mới; chỉ retention dry-run, giữ sourc
 
 ## 26. Storage catalog0.2.0 — Source bàn giao M6
 
-[Report](STORAGE_CATALOG_IMPLEMENTATION_REPORT.md) ghi commands/tests/CI và giới hạn;
-[Reader Guide](../storage-consumer/M6_READER_GUIDE.md) là điểm bắt đầu cho Người1.
+[Report](../reports/STORAGE_CATALOG_IMPLEMENTATION_REPORT.md) ghi commands/tests/CI và giới hạn;
+[Reader Guide](../../storage-consumer/M6_READER_GUIDE.md) là điểm bắt đầu cho Người1.
 Có raw catalog protocol1.0.0, bounded immutable generations/segments/CAS pointer,
 read-only Kafka audit, safe coverage, explicit S3 rebuild và local Compose harness.
 Không sửa Kafka bundle/SQL, không làm SQL metadata hoặc History HTTP/UI của M6.

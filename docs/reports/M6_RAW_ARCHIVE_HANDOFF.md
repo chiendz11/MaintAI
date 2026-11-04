@@ -10,7 +10,7 @@ Giữ nguyên raw-manifest1.0.0, Kafka bundle2.0.0, SDK0.3.x và archive identit
 Storage0.1.0 ghi exact raw bytes + key/headers vào JSONL.gz; conditional PUT,
 checksum, object VersionId, immutable manifest; commit Kafka sau object+manifest.
 Đường dẫn hiện có theo topic/partition/offset. Retry không được thay bytes tại cùng
-locator. Xem [Storage README](../storage-consumer/README.md).
+locator. Xem [Storage README](../../storage-consumer/README.md).
 
 M6 cần thêm lớp metadata tra theo **máy + received_at**, và bằng chứng tập receipts
 đã có thể query. Object/manifest đã ghi không tự tạo catalog; Kafka committed
@@ -42,8 +42,8 @@ Generation là **delta**, không chứa lại toàn bộ lịch sử. Reader duy
 qua exact `parent_ref` đến checkpoint đã commit hoặc root; lưu checkpoint để tiếp
 tục sau restart và không công bố dữ liệu nhập dở là đầy đủ. Metadata index query
 theo máy/time; không quét bucket mỗi HTTP request. Xem
-[reader guide](../storage-consumer/M6_READER_GUIDE.md) và
-[schema provider](../storage-consumer/src/maintai_storage/schemas/catalog.json).
+[reader guide](../../storage-consumer/M6_READER_GUIDE.md) và
+[schema provider](../../storage-consumer/src/maintai_storage/schemas/catalog.json).
 
 Publisher ghi segments → verify refs → immutable generation → CAS pointer. CAS
 phải reconcile các partitions khi nhiều replicas/rebalance; không cho generation
@@ -164,11 +164,11 @@ kết quả đã chạy được ghi riêng trong [báo cáo M6](M6_IMPLEMENTATI
 
 ## 8. Machine schemas và coverage response
 
-Các định nghĩa provider fixture cũ trong [raw-catalog-m6.schema.json](../contracts/v1.3/schemas/raw-catalog-m6.schema.json) chỉ phục vụ compatibility/offline fixtures; PartitionCoverage được HTTP M6 sử dụng. Native provider được validate bằng schema đóng gói của Storage, không thay raw-manifest1.0.0. Pointer chứa generation_id/generation_ref; generation chứa parent_ref, segment refs và partitions. Schema provider trong package Storage là nguồn chuẩn cho pointer/generation/segment/entry. ObjectRef provider chỉ có bucket/key/version_id/sha256, không có size_bytes. Segment giữ entries với identity `topic:partition:offset`. Export ObjectRef trong HTTP DTO vẫn bắt buộc size_bytes; không dùng schema export để validate provider.
+Các định nghĩa provider fixture cũ trong [raw-catalog-m6.schema.json](../../contracts/v1.3/schemas/raw-catalog-m6.schema.json) chỉ phục vụ compatibility/offline fixtures; PartitionCoverage được HTTP M6 sử dụng. Native provider được validate bằng schema đóng gói của Storage, không thay raw-manifest1.0.0. Pointer chứa generation_id/generation_ref; generation chứa parent_ref, segment refs và partitions. Schema provider trong package Storage là nguồn chuẩn cho pointer/generation/segment/entry. ObjectRef provider chỉ có bucket/key/version_id/sha256, không có size_bytes. Segment giữ entries với identity `topic:partition:offset`. Export ObjectRef trong HTTP DTO vẫn bắt buộc size_bytes; không dùng schema export để validate provider.
 
-Raw pages/chart dùng [history-m6.schema.json](../contracts/v1.3/schemas/history-m6.schema.json): available_from/available_through được null khi không có bằng chứng theo clock nguồn; partition_coverage và catalog_generation giữ cutoff đã pin. Chỉ trả COMPLETE khi mọi partition cần cho scope query đã verify, không có gap trong phần query yêu cầu. Offset coverage không chứng minh completeness của mọi readings trước một thời gian nguồn; late receipts xuất hiện khi refresh.
+Raw pages/chart dùng [history-m6.schema.json](../../contracts/v1.3/schemas/history-m6.schema.json): available_from/available_through được null khi không có bằng chứng theo clock nguồn; partition_coverage và catalog_generation giữ cutoff đã pin. Chỉ trả COMPLETE khi mọi partition cần cho scope query đã verify, không có gap trong phần query yêu cầu. Offset coverage không chứng minh completeness của mọi readings trước một thời gian nguồn; late receipts xuất hiện khi refresh.
 
-Các fixtures trong [examples/m6](../contracts/v1.3/examples/m6/) là metadata giả để validate offline, không là objects đã upload hoặc bằng chứng Storage publisher đã chạy. Coverage frontier ordering, duplicate locator/partition và gaps được kiểm trong validator; exact object versions, checksum thực và CAS/reconciliation cần integration runtime.
+Các fixtures trong [examples/m6](../../contracts/v1.3/examples/m6) là metadata giả để validate offline, không là objects đã upload hoặc bằng chứng Storage publisher đã chạy. Coverage frontier ordering, duplicate locator/partition và gaps được kiểm trong validator; exact object versions, checksum thực và CAS/reconciliation cần integration runtime.
 
 Raw page/chart partition_coverage không lặp topic/partition; response membership
 được giới hạn bởi generation/snapshot đã pin. Không suy thiếu receipts từ khoảng

@@ -56,7 +56,7 @@ không ghi số run hoặc commit giả trước khi GitHub cấp định danh.
 ## 3. Bắt đầu công việc M6 sau khi merge
 
 Người1 fetch origin/main và merge vào nhánh M6 của mình, đọc
-[M6 Reader Guide](../storage-consumer/M6_READER_GUIDE.md),
+[M6 Reader Guide](../../storage-consumer/M6_READER_GUIDE.md),
 [M6-HISTORY-01](M6_HISTORY_ARCHITECTURE_DECISION.md) và
 [M6-RAW-01](M6_RAW_ARCHIVE_HANDOFF.md). Có schema/examples và helper library để
 làm catalog sync/index phía Processing; fixtures có thể dùng ngay khi chưa có AWS.

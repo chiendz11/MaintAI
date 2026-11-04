@@ -23,13 +23,13 @@ latest projections nằm trong [Business projections](business-consumer/README.m
 Consumer chạy ba serial role loops telemetry/prediction/alert. Alert lifecycle đã có ở M5;
 brief/drift jobs vẫn thuộc pha sau.
 Kafka loops và transactional inbox dùng
-[messaging SDK](../messaging/README.md); cách tích hợp tại [Kafka guide §6](../docs/KAFKA_DEVELOPMENT_GUIDE.md). Xem
-[runtime map](../architecture/README.md) và [migration](../docs/repository-layout.md).
+[messaging SDK](../messaging/README.md); cách tích hợp tại [Kafka guide §6](../docs/subsystems/KAFKA_DEVELOPMENT_GUIDE.md). Xem
+[runtime map](../architecture/README.md) và [migration](../docs/architecture/repository-layout.md).
 
 
 > **Thiết kế v1.4:** Xem [docs index](../docs/README.md),
-> [Guide v1.4](../docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md) và
-> [readiness](../docs/implementation-readiness.md). Runtime metadata hiện có vẫn
+> [Guide v1.4](../docs/subsystems/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md) và
+> [readiness](../docs/architecture/implementation-readiness.md). Runtime metadata hiện có vẫn
 > baseline1.3.2; source chưa tự migrate theo việc nhập tài liệu.
 
 ## M6 — History facade
@@ -61,7 +61,7 @@ Chi tiết storage, clocks và limits tại
 
 ## PROC-ORDER-01 — Business giữ projections/lifecycle độc lập
 
-[Decision §8](../docs/PROCESSING_CONCURRENCY_AND_ORDERING.md) áp keyed execution
+[Decision §8](../docs/subsystems/PROCESSING_CONCURRENCY_AND_ORDERING.md) áp keyed execution
 ở Processing; Business giữ serial role loops/inbox SDK0.3.1. Registry, projection
 storage/callbacks, Consumer, live HTTP và status facade đã có. Fleet/MachineDetail
 đọc projections; thông tin Alert cần nguồn đọc cùng Business DB. M5 đã nối Alert reader thật vào runtime; chưa có Alert được trả count0/list rỗng
@@ -102,7 +102,7 @@ trường hợp thiếu nguồn để không phục hồi fallback giả.
 
 Outcome1.4.0 giữ nguyên risk đã ghi; SDK từ chối outcome2.0 trước callback.
 Không backfill legacy hoặc tính lại risk trong GET. Fleet thiếu risk đã lưu là
-lỗi dữ liệu và vẫn trả503; xem [quyết định cutover](../docs/OUTCOME_V1_4_MIGRATION.md). INVALID/FAILED/PENDING lần lượt hiển thị
+lỗi dữ liệu và vẫn trả503; xem [quyết định cutover](../docs/subsystems/OUTCOME_V1_4_MIGRATION.md). INVALID/FAILED/PENDING lần lượt hiển thị
 INVALID/UNKNOWN/UNKNOWN; Detail không trả prediction lịch sử như prediction hiện tại.
 `/live` giữ snapshot lịch sử độc lập. Khi Detail có `data_status=VALID`, telemetry
 chưa xác minh hoặc INVALID không được gắn nhãn VALID; `latest_sensor` trả null trong
@@ -188,4 +188,4 @@ gặp signal sẽ fail closed và không commit offset. Không dùng cấu hình
 
 API probes kiểm cả bảng M5. Metrics Alert created/dedup/transitions/visibility
 được cập nhật sau commit theo OBS-01; retry/duplicate không tăng tạo Alert.
-Chi tiết tests/file inventory nằm trong [M5 report](../docs/M5_IMPLEMENTATION_REPORT.md).
+Chi tiết tests/file inventory nằm trong [M5 report](../docs/reports/M5_IMPLEMENTATION_REPORT.md).

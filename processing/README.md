@@ -3,7 +3,7 @@
 **RISK-POLICY-01:** Source policy/schema/catalog ở
 [`config/risk-policies/`](config/risk-policies/README.md). GitOps chọn version/hash
 và tạo ConfigMap read-only cho Worker; infrastructure không sở hữu nội dung
-policy. Xem [quyết định30/10](../docs/RISK_POLICY_OWNERSHIP.md). Policy demo dùng
+policy. Xem [quyết định30/10](../docs/subsystems/RISK_POLICY_OWNERSHIP.md). Policy demo dùng
 ngưỡng tham khảo, không có production calibration hoặc guarantee tạo Alert.
 
 | Runtime folder | Workload | Trách nhiệm |
@@ -24,13 +24,13 @@ Shared [messaging SDK](../messaging/README.md) có durable Kafka consumer,
 inbox/outbox SQL, OutcomeFactory và relay. Source hiện có callbacks DQ/ML/risk,
 history SQL, owner migrations, app entrypoints/probes và Read API.
 Writer và reader chỉ outcome1.4.0; không tương thích legacy2.0.0. Xem
-[hướng dẫn nhóm §5](../docs/KAFKA_DEVELOPMENT_GUIDE.md) và
+[hướng dẫn nhóm §5](../docs/subsystems/KAFKA_DEVELOPMENT_GUIDE.md) và
 [runtime map](../architecture/README.md).
 
 
 > **Thiết kế v1.4:** Xem [docs index](../docs/README.md),
-> [Guide v1.4](../docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md) và
-> [readiness](../docs/implementation-readiness.md). Runtime metadata hiện có vẫn
+> [Guide v1.4](../docs/subsystems/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md) và
+> [readiness](../docs/architecture/implementation-readiness.md). Runtime metadata hiện có vẫn
 > baseline1.3.2; source chưa tự migrate theo việc nhập tài liệu.
 
 ## PROC-ORDER-01 — transport source đã có, app còn cần tích hợp
@@ -51,7 +51,7 @@ connection ghi history/risk/outbox; phải enqueue đúng một terminal result.
 INVALID/UNAVAILABLE không phát signal. Duplicate dùng outcome cũ; source order
 conflict fail closed. Offset coordinator không commit vượt lower-offset hole.
 
-[Runbook/commands/tests](../docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md)
+[Runbook/commands/tests](../docs/reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md)
 ghi rõ explicit001/002 + activation sau drain. Initial legacy inbox cần reviewed
 cursor bootstrap; không xóa inbox để bật mode. [Read API](read-api/README.md) đã có
 internal status/point-read và M6 history/chart/raw/export. Source pool SELECT-only,

@@ -108,5 +108,5 @@ implement không bị xóa chỉ vì transport đã chuyển sang thư viện ch
 
 Thêm `contracts/kafka/` làm nguồn wire chuẩn, `messaging/` làm SDK; wheel đóng gói
 bản sao đúng hash để phân phối, không phải một nguồn contract thứ hai để sửa tay.
-Thêm duy nhất [Kafka development guide](KAFKA_DEVELOPMENT_GUIDE.md) làm hướng dẫn
+Thêm duy nhất [Kafka development guide](../subsystems/KAFKA_DEVELOPMENT_GUIDE.md) làm hướng dẫn
 cho4 người và cập nhật index/readiness/layout, thay vì tạo4 bản hướng dẫn trùng.

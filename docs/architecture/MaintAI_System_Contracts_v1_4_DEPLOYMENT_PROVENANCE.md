@@ -1,10 +1,10 @@
 > **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
 > durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
 > có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
-> [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
+> [Implementation report](../reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
 > readiness §19 ghi bằng chứng, commands và giới hạn; các snapshot cũ đọc theo ngày.
 
-> **Tích hợp MaintAI — 2026-10-19:** Tài liệu thiết kế mục tiêu v1.4, chưa xác nhận code/DB/GitOps đã migrate. Đọc [docs index](README.md) để áp dụng quyết định nhóm 4 người, Simulator UI riêng và thứ tự ưu tiên; [readiness](implementation-readiness.md) ghi các schema/scaffold chưa được cung cấp.
+> **Tích hợp MaintAI — 2026-10-19:** Tài liệu thiết kế mục tiêu v1.4, chưa xác nhận code/DB/GitOps đã migrate. Đọc [docs index](../README.md) để áp dụng quyết định nhóm 4 người, Simulator UI riêng và thứ tự ưu tiên; [readiness](implementation-readiness.md) ghi các schema/scaffold chưa được cung cấp.
 
 > **v1.4 — Chuẩn kiến trúc Deployment và Versioning/Provenance (19/10/2026).** Đây là bản đầy đủ kế thừa v1.3.1 và bổ sung điều khoản v1.4. Khi có mâu thuẫn, **ưu tiên chương v1.4**. Việc chỉnh sửa Markdown không đồng nghĩa đã sửa repository, GitOps, DB hay các service thực tế.
 > **Thứ tự đọc:** `DEPLOYMENT_ARCHITECTURE.md`, `RUNTIME_DATAFLOW.md`, `VERSIONING_AND_PROVENANCE.md`, `IMPLEMENTATION_PLAN.md`. Schemas máy đọc và mẫu Deployments tại `../contracts/`, `../implementation/`.
@@ -12,15 +12,15 @@
 # MaintAI — Hợp đồng hệ thống v1.4: Deployment và truy vết nguồn gốc (kế thừa đầy đủ v1.3.1)
 
 > **PROC-ORDER-01 — 2026-10-23:** §42 thông qua
-> [Processing concurrency/ordering](PROCESSING_CONCURRENCY_AND_ORDERING.md)
+> [Processing concurrency/ordering](../subsystems/PROCESSING_CONCURRENCY_AND_ORDERING.md)
 > revision1.0.0. Các điều khoản keyed execution, safe offset frontier và ordered
 > outbox ở đây ưu tiên mô tả tuần tự/row-only relay kế thừa. Đây là target mới,
 > SDK0.2.0 đã có implementation/migration/tests; app/prod integration còn pending.
 > Wire versions và deployment boundaries giữ nguyên.
 
 > **OBS-01 / MLFLOW-01 — 2026-10-20:** System Contracts §41 và Guide §49
-> thông qua [metrics catalog](OBSERVABILITY_IMPLEMENTATION.md) và
-> [MLflow integration](MLFLOW_INTEGRATION_GUIDE.md) revision1.0.0. Các chi tiết
+> thông qua [metrics catalog](../subsystems/OBSERVABILITY_IMPLEMENTATION.md) và
+> [MLflow integration](../subsystems/MLFLOW_INTEGRATION_GUIDE.md) revision1.0.0. Các chi tiết
 > names/types/labels/buckets, SDK/identity/recovery ưu tiên ví dụ kế thừa mâu thuẫn;
 > docs không tự migrate app, schemas, ledger hoặc platform.
 
@@ -1638,7 +1638,7 @@ Ví dụ RAG:
 # 20. Metrics Contract
 
 **OBS-01/1.0.0 — 2026-10-20:** §41 và
-[OBSERVABILITY_IMPLEMENTATION.md](OBSERVABILITY_IMPLEMENTATION.md) chốt types,
+[OBSERVABILITY_IMPLEMENTATION.md](../subsystems/OBSERVABILITY_IMPLEMENTATION.md) chốt types,
 units, labels/enums, buckets, runtime owners và commit/retry semantics. Catalog
 đó bổ sung danh sách tối thiểu ở dưới và thay short aliases/ví dụ mâu thuẫn.
 HTTP/Kafka payload versions không đổi; source/GitOps còn cần implement/migrate.
@@ -2260,7 +2260,7 @@ contracts/
 ```
 
 Markdown target là1.4.0; HTTP bundle máy đọc được vẫn1.3.2. Kafka schemas đã freeze
-riêng tại [contracts/kafka/](../contracts/kafka/README.md); `contracts/provenance/`
+riêng tại [contracts/kafka/](../../contracts/kafka/README.md); `contracts/provenance/`
 trong bộ bàn giao vẫn chưa được cung cấp. Freeze provider/release schemas và
 consumer migration trước khi đổi producer. Xem [repository layout](repository-layout.md)
 và [readiness](implementation-readiness.md).
@@ -2651,9 +2651,9 @@ Ghi DB chỉ để phục vụ REST recovery/read model, **không phải điều
 ## 33.5. Kết quả Processing — đã thay bằng outcome1.4.0
 
 Định dạng union2.0.0/result_kind và ví dụ1.1.0 trước đây đã bị thay thế.
-Tất cả producer/consumer nghiệp vụ dùng [schema outcome1.4.0](../contracts/kafka/events/inference-result.schema.json)
-và [fixtures hiện hành](../contracts/kafka/examples/manifest.json), theo §35 và
-[OUTCOME-14-ONLY](OUTCOME_V1_4_MIGRATION.md). Không viết producer từ ví dụ cũ.
+Tất cả producer/consumer nghiệp vụ dùng [schema outcome1.4.0](../../contracts/kafka/events/inference-result.schema.json)
+và [fixtures hiện hành](../../contracts/kafka/examples/manifest.json), theo §35 và
+[OUTCOME-14-ONLY](../subsystems/OUTCOME_V1_4_MIGRATION.md). Không viết producer từ ví dụ cũ.
 
 `kind` gồm PREDICTION_COMPLETED, DATA_INVALID, INFERENCE_UNAVAILABLE. Kafka key
 là machine_id; result_id là identity bất biến; event_id dẫn về sensor event.
@@ -2711,10 +2711,10 @@ Giữ nguyên: Ingestion Deployment riêng; DQ ở Processing Worker; Business k
 
 # 35. v1.4 — Kafka topics, HTTP status và quyền sở hữu
 
-**Wire freeze của repo:** [Kafka bundle2.0.0](../contracts/kafka/README.md) và
-[hướng dẫn tích hợp](KAFKA_DEVELOPMENT_GUIDE.md) là ánh xạ máy đọc được của mục
+**Wire freeze của repo:** [Kafka bundle2.0.0](../../contracts/kafka/README.md) và
+[hướng dẫn tích hợp](../subsystems/KAFKA_DEVELOPMENT_GUIDE.md) là ánh xạ máy đọc được của mục
 này: accepted1.3.0, rejected1.4.0, outcome reader/writer1.4.0 `kind`, alert1.0.0.
-[OUTCOME-14-ONLY](OUTCOME_V1_4_MIGRATION.md) bỏ reader2.0.0; Business giữ
+[OUTCOME-14-ONLY](../subsystems/OUTCOME_V1_4_MIGRATION.md) bỏ reader2.0.0; Business giữ
 risk_score gốc của COMPLETED, không lấy probability bù risk. Ví dụ inherited
 ở §33.5 đã được thay bằng schema hiện hành. Quarantine mặc định HASH_ONLY,
 key theo verified source identity.
@@ -2849,7 +2849,7 @@ publish/deploy hay coi local source checks là server integration evidence. Chi 
 Kafka versions hoặc chứng minh code đã migrate. Các điều khoản ở đây và catalog
 được dẫn ưu tiên ví dụ metrics/MLflow kế thừa nếu mâu thuẫn.
 
-1. [OBSERVABILITY_IMPLEMENTATION.md](OBSERVABILITY_IMPLEMENTATION.md) là catalog
+1. [OBSERVABILITY_IMPLEMENTATION.md](../subsystems/OBSERVABILITY_IMPLEMENTATION.md) là catalog
    chuẩn: base names, Counter/Gauge/Histogram, labels/enum, units, bucket profiles,
    owners và commit/reset/retry semantics. Không tự thêm aliases/ID labels.
 2. Duration histograms dùng base names, library sinh _bucket/_sum/_count;
@@ -2862,7 +2862,7 @@ Kafka versions hoặc chứng minh code đã migrate. Các điều khoản ở �
    Timestamp từ đúng accepted source event; Alert Signal1.0 thiếu accepted time
    thì phải resolve qua owner interface hoặc migrate DTO được review. Chưa có
    source thì skip observation+coverage signal, không bịa latency.
-5. [MLFLOW_INTEGRATION_GUIDE.md](MLFLOW_INTEGRATION_GUIDE.md) chốt logical training/
+5. [MLFLOW_INTEGRATION_GUIDE.md](../subsystems/MLFLOW_INTEGRATION_GUIDE.md) chốt logical training/
    candidate identities, real run/registry IDs, required params/metrics/evidence,
    immutable artifact refs, SDK usage và release mapping. MLflow tags/aliases
    không phải unique key hoặc immutable content guarantee.
@@ -2886,7 +2886,7 @@ các actions đó hoặc tự phê duyệt release/model.
 # 42. PROC-ORDER-01 — Concurrency và ordering của Processing/Outbox
 
 **Decision1.0.0,2026-10-23.**
-[PROCESSING_CONCURRENCY_AND_ORDERING.md](PROCESSING_CONCURRENCY_AND_ORDERING.md)
+[PROCESSING_CONCURRENCY_AND_ORDERING.md](../subsystems/PROCESSING_CONCURRENCY_AND_ORDERING.md)
 là đặc tả chi tiết được ủy quyền cho điều khoản này. Target system vẫn1.4.0;
 decision bổ sung behavior, không tự thay closed DTO, frozen SQL hoặc SDK version.
 
@@ -2949,15 +2949,15 @@ không auto tách service hoặc tăng partition theo từng máy.12 partition g
 trước reviewed remapping/order cutover. Các profile scale là cấu hình phân tích,
 không thay schema,topic,SQL migrations,SDK defaults hoặc actual deployments.
 
-Chi tiết, phép tính và quy trìnhX>100: [Design basis revision1.1](design-basis/README.md),
-[Capacity §11](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).
+Chi tiết, phép tính và quy trìnhX>100: [Design basis revision1.1](../design-basis/README.md),
+[Capacity §11](../design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).
 Smoke5 máy vẫn dùng phát triển nhỏ; source default5 không tự đổi trong lượt docs.
 
 
 # 44. M6-HISTORY-01 — History, snapshots và exports (29/10/2026)
 
-[M6 History architecture](M6_HISTORY_ARCHITECTURE_DECISION.md) và
-[Raw catalog protocol](M6_RAW_ARCHIVE_HANDOFF.md) ưu tiên các đoạn history mâu thuẫn
+[M6 History architecture](../reports/M6_HISTORY_ARCHITECTURE_DECISION.md) và
+[Raw catalog protocol](../reports/M6_RAW_ARCHIVE_HANDOFF.md) ưu tiên các đoạn history mâu thuẫn
 trong §36, HISTORY-01, Guide và metadata kế thừa. Outcomes được giữ trong
 processing_db; processed archive/cold outcome fallback và xóa source data hoãn
 sau M6. Raw archive vẫn thuộc Storage; Kafka SDK/bundle/raw-manifest không đổi.
@@ -2993,4 +2993,4 @@ Policy `demo-risk-v1` dùng ngưỡng tham khảo §9.2, manifest ghi demo/chưa
 không bảo đảm scenario Critical tạo alert. ConfigMap content hash thay Pod
 reference khi đổi policy. Model identity và receipts vẫn là gate riêng. Flow
 local được triển khai; production cutover phải review riêng, không sửa schema
-production đã freeze. Xem [quyết định đầy đủ](RISK_POLICY_OWNERSHIP.md).
+production đã freeze. Xem [quyết định đầy đủ](../subsystems/RISK_POLICY_OWNERSHIP.md).

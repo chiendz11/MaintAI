@@ -4,8 +4,8 @@
 §41 và Guide §43.2/§49. Đây là hướng dẫn implementation mục tiêu, chưa triển khai
 trainer, ledger adapter hoặc MLflow deployment. Không thay schema bằng ví dụ code.
 
-Đọc cùng [Versioning & Provenance](VERSIONING_AND_PROVENANCE.md),
-[Metrics catalog](OBSERVABILITY_IMPLEMENTATION.md), [readiness](implementation-readiness.md).
+Đọc cùng [Versioning & Provenance](../architecture/VERSIONING_AND_PROVENANCE.md),
+[Metrics catalog](OBSERVABILITY_IMPLEMENTATION.md), [readiness](../architecture/implementation-readiness.md).
 
 ## 1. Ai làm gì và khi nào cần MLflow
 
@@ -54,7 +54,7 @@ snippets. Không chọn một patch chỉ vì cùng major3 mà bỏ qua capabili
 ### 2.1. Quyết định nguồn image và local dev — 21/10/2026
 
 Source Dockerfile/requirements lock/local Compose/README/publisher nằm ở
-[`ml-service/mlflow/`](../ml-service/mlflow/README.md), cùng ML domain nhưng
+[`ml-service/mlflow/`](../../ml-service/mlflow/README.md), cùng ML domain nhưng
 image/runtime riêng với training và inference. Server/UI dùng upstream MLflow.
 Production Deployment/Service/DB/S3/IAM/auth/config vẫn do GitOps/hạ tầng quản lý.
 App runtime map giữ14 application descriptors +1 platform descriptor MLflow;
@@ -402,7 +402,7 @@ deleted runs/versions nếu backend hỗ trợ; delete không phải lý do tạ
 
 ## 8. Output và compatibility với contracts hiện có
 
-Platform [model-result-v1.schema.json](../../MaintAI-gitops/contracts/model-result-v1.schema.json)
+Platform [model-result-v1.schema.json](../../../MaintAI-gitops/contracts/model-result-v1.schema.json)
 đang bắt buộc: schema_version, release_id, logical model_version, dataset_version,
 source_sha, training_image, artifacts(model/preprocessor/drift_reference/metadata),
 evaluation/evaluation_report, mlflow_run_id và quality_gate_version. Validate đúng

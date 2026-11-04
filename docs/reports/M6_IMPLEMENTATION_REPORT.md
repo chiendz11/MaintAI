@@ -44,8 +44,8 @@ rỗng do expiry race. Idempotency descriptor giữ lại để CSV hết hạn 
 Parquet dùng UTF-8 identity/time columns và JSON logical type cho outcome/features/
 record; dữ liệu heterogeneous INVALID, NUL và số nguyên lớn không bị ép sang int64.
 Xem physical format, limits và biến môi trường trong
-[tham chiếu Read API](../processing/read-api/HISTORY.md),
-[Business README](../backend/README.md) và [Frontend README](../frontend/README.md).
+[tham chiếu Read API](../../processing/read-api/HISTORY.md),
+[Business README](../../backend/README.md) và [Frontend README](../../frontend/README.md).
 
 ## Kiểm chứng và giới hạn bằng chứng
 

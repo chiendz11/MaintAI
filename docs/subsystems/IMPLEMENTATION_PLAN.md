@@ -1,10 +1,10 @@
 > **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
 > durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
 > có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
-> [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
+> [Implementation report](../reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
 > readiness §19 ghi bằng chứng, commands và giới hạn; các snapshot cũ đọc theo ngày.
 
-> **Tích hợp MaintAI — 2026-10-19:** Tài liệu thiết kế mục tiêu v1.4, chưa xác nhận code/DB/GitOps đã migrate. Đọc [docs index](README.md) để áp dụng quyết định nhóm 4 người, Simulator UI riêng và thứ tự ưu tiên; [readiness](implementation-readiness.md) ghi các schema/scaffold chưa được cung cấp.
+> **Tích hợp MaintAI — 2026-10-19:** Tài liệu thiết kế mục tiêu v1.4, chưa xác nhận code/DB/GitOps đã migrate. Đọc [docs index](../README.md) để áp dụng quyết định nhóm 4 người, Simulator UI riêng và thứ tự ưu tiên; [readiness](../architecture/implementation-readiness.md) ghi các schema/scaffold chưa được cung cấp.
 
 # MaintAI v1.4 — Kế hoạch tích hợp và nghiệm thu cho con người và AI coding tool
 
@@ -129,7 +129,7 @@ Các bài này kiểm tra JSON Schemas/invariants/mẫu K8s, **không chứng mi
 
 ## I. UI-01 — Workstream bốn UI và phát hành độc lập
 
-Quyết định20/10/2026 tại [UI Architecture](UI_ARCHITECTURE.md), System Contracts §40
+Quyết định20/10/2026 tại [UI Architecture](../architecture/UI_ARCHITECTURE.md), System Contracts §40
 và Guide §48. Bảng này là **kế hoạch các PR implementation sau**, không phải các
 việc đã thực thi trong lượt sửa docs.
 
@@ -180,8 +180,8 @@ network tests và deployment phải có yêu cầu thực thi riêng; docs khôn
 UI-P2 đã có source/provider/auth/persistence/scheduler/spool và local tests.
 Các phần Sensor của OBS handoff đã có instrumentation. Production IdP/PVC/Kafka,
 image/GitOps rollout và affected-component release validation còn mở; không đánh
-hoàn tất platform/E2E chỉ vì provider tests qua. Xem [readiness §15](implementation-readiness.md#15-sensor030--providerdurable-runtime2010)
-và [báo cáo file thay đổi](SENSOR_IMPLEMENTATION_REPORT.md).
+hoàn tất platform/E2E chỉ vì provider tests qua. Xem [readiness §15](../architecture/implementation-readiness.md#15-sensor030--providerdurable-runtime2010)
+và [báo cáo file thay đổi](../reports/SENSOR_IMPLEMENTATION_REPORT.md).
 
 ## K. PROC-ORDER-01 — workstream keyed Processing và ordered relay
 
@@ -228,12 +228,12 @@ Mỗi mứcX cần offered/accepted/processed unique rate, stage latency/oldest 
 ML/DB/Relay/Storage/Business/SSE resource budgets, alert browser p95≤2s và recovery
 headroom. Tính n/c/pool rồi tối ưu bottleneck trước khi tăng tài nguyên; giữ inbox,
 FIFO/fences/offset prefix và ordered outbox. Đầu ra là capacity report của đúng
-source/model/image/config, không chỉ một sơ đồ/replica count. [Plan chi tiết](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).
+source/model/image/config, không chỉ một sơ đồ/replica count. [Plan chi tiết](../design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).
 
 ## M. M6-HISTORY-01 — Kế hoạch sau design freeze29/10
 
-Nguồn chuẩn: [decision](M6_HISTORY_ARCHITECTURE_DECISION.md),
-[Storage handoff](M6_RAW_ARCHIVE_HANDOFF.md), [readiness](implementation-readiness.md).
+Nguồn chuẩn: [decision](../reports/M6_HISTORY_ARCHITECTURE_DECISION.md),
+[Storage handoff](../reports/M6_RAW_ARCHIVE_HANDOFF.md), [readiness](../architecture/implementation-readiness.md).
 
 | Bước | Chủ trì | Deliverable |
 | --- | --- | --- |

@@ -37,4 +37,4 @@ unknown outcome. Không trả/log provider error body, API key hoặc retrieved 
 
 Tests dùng fake HTTP/DB/retrieval để kiểm wire và failure semantics. Chỉ được ghi
 live Groq verified khi có credential thật và thực sự gọi provider; unit/CI smoke
-không là bằng chứng đó. Đọc [RAG README](../rag-service/README.md) cho lệnh và handoff.
+không là bằng chứng đó. Đọc [RAG README](../../rag-service/README.md) cho lệnh và handoff.

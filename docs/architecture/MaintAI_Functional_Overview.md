@@ -1,6 +1,6 @@
 # MaintAI — Mô tả chức năng hệ thống
 
-> **Target v1.4 + UI-01 — 2026-10-20:** System Contracts §34–40 và [quyết định dự án](README.md)
+> **Target v1.4 + UI-01 — 2026-10-20:** System Contracts §34–40 và [quyết định dự án](../README.md)
 > ưu tiên phần kế thừa. Giữ Simulator UI riêng và các chi tiết history/jobs/recovery;
 > bổ sung schema quarantine và provenance. Machine contracts vẫn baseline1.3.2.
 
@@ -39,7 +39,7 @@ Tài liệu này diễn giải chức năng, không định nghĩa lại payload
 | [System Contracts](MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md) | Invariants, enums, giao tiếp giữa các thành phần, traceability và failure semantics; là chuẩn ưu tiên. |
 | [Phụ lục HTTP API](api-contract-decisions.md) | Các chi tiết bổ sung về phân trang, vòng đời cảnh báo, brief, monitoring và trạng thái HTTP/UI. |
 | `contracts/README.md` (machine-readable source trong repository, **không được đính kèm bộ Markdown này**) | Đường dẫn API, request/response, lỗi và dữ liệu mẫu cụ thể. |
-| [Implementation Guide](MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md) | Hướng dẫn tổ chức và triển khai từng module; các phần đề xuất không mặc định là yêu cầu bắt buộc. |
+| [Implementation Guide](../subsystems/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md) | Hướng dẫn tổ chức và triển khai từng module; các phần đề xuất không mặc định là yêu cầu bắt buộc. |
 | [UI Architecture — UI-01](UI_ARCHITECTURE.md) | Bốn UI, nhóm người dùng, ownership/auth/API, prototype gaps và phát hành độc lập. |
 
 ## 2. Người dùng và các thành phần tham gia
@@ -185,7 +185,7 @@ Simulator gửi schema1.3.0 gồm `event_id`, `machine_id`, `stream_epoch`,
 
 Nếu Kafka lỗi, trả 503/504 retryable; Simulator giữ cùng event_id/payload trong local buffer để retry backoff. **400/422 envelope invalid chỉ reject record đó**: sau auth/size guard, Ingestion phải đợi ACK `sensor.rejected` trước khi trả400/422; mặc định HASH_ONLY, không raw body. Local rejected log chỉ bổ trợ. Simulator tiếp tục phát record kế khi RUNNING, không dừng toàn bộ stream. Auth401/403 là lỗi cấu hình cần can thiệp, không retry vô hạn; oversized413 không lưu quarantine tùy tiện. `machine_id` phải được provision; machine lookup lỗi hoặc chưa provision được ghi nhận ở Processing, **không tự tạo máy**.
 
-Kafka transport dùng [shared Python SDK](KAFKA_DEVELOPMENT_GUIDE.md), contracts
+Kafka transport dùng [shared Python SDK](../subsystems/KAFKA_DEVELOPMENT_GUIDE.md), contracts
 ở `contracts/kafka/`; app auth/HTTP/DQ/ML/risk callbacks và Sensor ACK202 migration
 vẫn cần implement. Library không tự hoàn tất feature của người dùng.
 
@@ -282,7 +282,7 @@ Nếu event R4 đã nhận nhưng prediction mới nhất vẫn là R2, UI hiể
 Main UI gọi Business API; Business authorize rồi gọi Processing Read API, không
 SQL cross-owner. M6 đọc original outcomes từ processing_db, raw từ S3/MinIO qua
 catalog đã verify. Read API sở hữu snapshot/export và chỉ ghi metadata quyền hẹp.
-Chi tiết chốt tại [M6-HISTORY-01](M6_HISTORY_ARCHITECTURE_DECISION.md).
+Chi tiết chốt tại [M6-HISTORY-01](../reports/M6_HISTORY_ARCHITECTURE_DECISION.md).
 
 | Chức năng | Public route `/api/v1` | Cách dùng |
 | --- | --- | --- |
@@ -532,10 +532,10 @@ tính report làm heartbeat. Ngưỡng stale là cấu hình môi trường.
 
 ### 12.2. Health, metrics và logs cho vận hành
 
-Instrumentation theo [OBS-01](OBSERVABILITY_IMPLEMENTATION.md): từng module owner
+Instrumentation theo [OBS-01](../subsystems/OBSERVABILITY_IMPLEMENTATION.md): từng module owner
 tạo metrics với names/types/labels/buckets và commit/retry semantics đã chốt;
 Người4 nối Prometheus/exporters/Grafana trong GitOps. Training tạo experiments/
-metrics/artifacts/Registry evidence theo [MLFLOW-01](MLFLOW_INTEGRATION_GUIDE.md).
+metrics/artifacts/Registry evidence theo [MLFLOW-01](../subsystems/MLFLOW_INTEGRATION_GUIDE.md).
 MLflow UI không tự có dữ liệu nếu app chưa log; docs không chứng minh deployment.
 
 Ingestion API, Business API, ML và RAG cần `/health/live`, `/health/ready` và `/metrics`; Kafka workers expose metrics/health qua exporter hoặc probe tương ứng. Liveness
@@ -799,7 +799,7 @@ nhưng envelope hợp lệ →202 sau accepted-topic ACK, Processing INVALID, ML
 - Recovery bao gồm shadow projection rebuild/reconciliation, rolling schema và
   capacity acceptance; đây là chức năng/đặc tả cần implement, chưa phải code chạy.
 
-Xem [normative decisions](README.md),
+Xem [normative decisions](../README.md),
 [history contract](history-storage-contract.md), [recovery/jobs](recovery-jobs-operations.md)
 và [readiness](implementation-readiness.md).
 
@@ -825,7 +825,7 @@ không tự thêm endpoint UI hoặc coi diagnostics/provenance đã có impleme
 
 ## 23. Nhiều máy hoạt động đồng thời — PROC-ORDER-01
 
-Thiết kế23/10 tại [Processing concurrency/ordering](PROCESSING_CONCURRENCY_AND_ORDERING.md)
+Thiết kế23/10 tại [Processing concurrency/ordering](../subsystems/PROCESSING_CONCURRENCY_AND_ORDERING.md)
 cho các máy xử lý độc lập hơn: inference máy A chậm không buộc mọi máy khác
 chờ cùng handler. Readings của **một máy** vẫn lần lượt DQ/ML/risk và lưu outcome;
 khác máy được chạy đồng thời trong budget. Không cần một partition/service mỗi máy.
@@ -852,4 +852,4 @@ Hệ thống scale-ready: khiX>100, vẫn giữ flow/ownership nhưng tínhR=X×
 source, ML, DB, Relay/Storage, Business/SSE theo stage latency/lag và tài nguyên.
 100 không là maximum machine count. Mục tiêu alert hiển thị p95≤2s (không gồm LLM)
 cần đo tới browser theo workload thực; nhiều máy hơn không bắt UI vẽ mọi reading
-trung gian hoặc tạo thêm một kết nối SSE cho mỗi máy. [Cơ sở và công thức](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).
+trung gian hoặc tạo thêm một kết nối SSE cho mỗi máy. [Cơ sở và công thức](../design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).

@@ -1,10 +1,10 @@
 > **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
 > durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
 > có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
-> [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
+> [Implementation report](../reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
 > readiness §19 ghi bằng chứng, commands và giới hạn; các snapshot cũ đọc theo ngày.
 
-> **Tích hợp MaintAI — 2026-10-19:** Tài liệu thiết kế mục tiêu v1.4, chưa xác nhận code/DB/GitOps đã migrate. Đọc [docs index](README.md) để áp dụng quyết định nhóm 4 người, Simulator UI riêng và thứ tự ưu tiên; [readiness](implementation-readiness.md) ghi các schema/scaffold chưa được cung cấp.
+> **Tích hợp MaintAI — 2026-10-19:** Tài liệu thiết kế mục tiêu v1.4, chưa xác nhận code/DB/GitOps đã migrate. Đọc [docs index](../README.md) để áp dụng quyết định nhóm 4 người, Simulator UI riêng và thứ tự ưu tiên; [readiness](../architecture/implementation-readiness.md) ghi các schema/scaffold chưa được cung cấp.
 
 > **v1.4 — Chuẩn Deployment và Versioning/Provenance (19/10/2026).** Đây là bản đầy đủ kế thừa v1.3.1, bổ sung yêu cầu v1.4 có thứ tự ưu tiên cao hơn khi mâu thuẫn. Chỉnh sửa Markdown **không** đồng nghĩa đã thay source, GitOps, DB hoặc runtime.
 > **Đọc trước khi triển khai:** `DEPLOYMENT_ARCHITECTURE.md`, `RUNTIME_DATAFLOW.md`, `VERSIONING_AND_PROVENANCE.md`, `IMPLEMENTATION_PLAN.md`; JSON Schemas và K8s scaffold đặt trong `../contracts/` và `../implementation/`.
@@ -23,7 +23,7 @@
 > names/types/labels/buckets, SDK/identity/recovery ưu tiên ví dụ kế thừa mâu thuẫn;
 > docs không tự migrate app, schemas, ledger hoặc platform.
 
-> **UI-01 — 2026-10-20:** Đọc [UI Architecture](UI_ARCHITECTURE.md) và §48 cho bốn
+> **UI-01 — 2026-10-20:** Đọc [UI Architecture](../architecture/UI_ARCHITECTURE.md) và §48 cho bốn
 > UI chính cùng release độc lập. §40–41 dưới đây vẫn mô tả realtime Business và
 > Control API; UI-01 không tự thêm rate/counters DTO hoặc triển khai frontend.
 
@@ -1712,7 +1712,7 @@ Những ID này thuộc logs/traces/DB, không thuộc metrics labels.
 ## 21.5. Grafana dashboards
 
 Các panel kế thừa dưới đây là nội dung tham khảo. UI-01 §2.3 trong
-[UI_ARCHITECTURE.md](UI_ARCHITECTURE.md) nhóm chúng vào năm dashboard kỹ thuật và
+[UI_ARCHITECTURE.md](../architecture/UI_ARCHITECTURE.md) nhóm chúng vào năm dashboard kỹ thuật và
 chốt datasource/permissions; số dashboard không là số UI/Deployments.
 
 ### Dashboard 1 — System Overview
@@ -3256,8 +3256,8 @@ Feature INVALID nhưng envelope đúng vẫn được `202` sau `sensor.readings
 - `DATA_INVALID`: Bắt buộc validation errors, **cấm** có model/prediction/risk giả.
 - `INFERENCE_UNAVAILABLE`: Bắt buộc typed error, **cấm** fake success.
 
-JSON Schema của repo: [inference-result.schema.json](../contracts/kafka/events/inference-result.schema.json);
-fixtures ở [Kafka examples](../contracts/kafka/examples/manifest.json). Python SDK và
+JSON Schema của repo: [inference-result.schema.json](../../contracts/kafka/events/inference-result.schema.json);
+fixtures ở [Kafka examples](../../contracts/kafka/examples/manifest.json). Python SDK và
 owner integration ở [Kafka guide](KAFKA_DEVELOPMENT_GUIDE.md). Transactional outbox
 tạo bản ghi cho cả outcome không có Alert. Reader/writer chỉ1.4.0 `kind` theo
 [OUTCOME-14-ONLY](OUTCOME_V1_4_MIGRATION.md); bỏ reader2.0.0, không tính risk
@@ -3317,11 +3317,11 @@ Bắt đầu bằng source inventory và freeze contract v1.4. Sau khi fixtures 
 
 # 48. UI-01 — Hướng dẫn triển khai bốn giao diện
 
-Nguồn chuẩn của quyết định UI/release: [UI Architecture](UI_ARCHITECTURE.md),
+Nguồn chuẩn của quyết định UI/release: [UI Architecture](../architecture/UI_ARCHITECTURE.md),
 System Contracts §40. Đích là4 UI, trong đó nhóm viết2 frontend độc lập, dùng
 Grafana và MLflow UI thật. Portal không bắt buộc runtime riêng. Source mới chỉ
 được tạo khi có tác vụ implementation. Sau lượt docs, tác vụ20/10 đã thêm
-[Simulator UI0.1.0](../sensor-simulator-UI/README.md): demo/live client/OIDC/recovery,
+[Simulator UI0.1.0](../../sensor-simulator-UI/README.md): demo/live client/OIDC/recovery,
 build/tests và Dockerfile/descriptor riêng. Sensor0.3.0 đã bổ sung provider/HTTP
 integration; production IdP/Kafka E2E và container/rollout evidence vẫn thiếu.
 
@@ -3436,9 +3436,9 @@ prediction/risk. Metrics server theo OBS-01; offline replay summary dùng prefix
 maintai_replay_ để không nhầm với reading đã commit. Dockerfile pin base digest,
 serve/probes; output image/container/rollout vẫn cần kiểm chứng riêng.
 
-Đọc [Sensor README](../sensor/README.md) để cài/chạy, claims mapping, volume,
+Đọc [Sensor README](../../sensor/README.md) để cài/chạy, claims mapping, volume,
 quota/TTL và maintenance. Không xóa journal rồi reuse máy cũ với sequence1.
-Readiness §15 ghi các kiểm tra thật và giới hạn; [báo cáo thay đổi](SENSOR_IMPLEMENTATION_REPORT.md)
+Readiness §15 ghi các kiểm tra thật và giới hạn; [báo cáo thay đổi](../reports/SENSOR_IMPLEMENTATION_REPORT.md)
 liệt kê từng file/lý do. Rate/counters/preview live vẫn cần PR contract riêng;
 UI giữ unavailable đúng §48.2, không thêm fields vào closed ControlState.
 
@@ -3471,7 +3471,7 @@ Tuổi oldest_uncommitted tính từ local poll, không thay broker lag. Không 
 archive_kind/machine/event labels hoặc dùng metric như audit ledger.
 
 Chi tiết lệnh, env defaults, failure matrix, IAM và opt-in loopback Kafka/MinIO
-integration ở [Storage README](../storage-consumer/README.md). Dockerfile pin base
+integration ở [Storage README](../../storage-consumer/README.md). Dockerfile pin base
 digest, non-root10001, đóng gói SDK/contracts từ repo-root build context. CI mới
 kiểm package và container offline; thêm workflow không chứng minh đã chạy remote
 hoặc publish image. Readiness §16 giữ bằng chứng thực tế và giới hạn AWS/rollout.
@@ -3500,7 +3500,7 @@ Compose local dùng cùng Dockerfile với PostgreSQL17 + filesystem artifacts,
 bind loopback, không tự nối AWS. Chạy source tests không cần MLflow/AWS/Docker.
 Base/client pair, real PostgreSQL/S3/auth và published image vẫn cần validation;
 IAM ECR mlflow ở infrastructure còn cần chuyển từ GitOps sang app publisher trước
-activation. Xem [MLflow runbook](../ml-service/mlflow/README.md), MLFLOW-01 §2.1
+activation. Xem [MLflow runbook](../../ml-service/mlflow/README.md), MLFLOW-01 §2.1
 và readiness §17. Production config và database migrations vẫn do platform quản lý.
 
 # 53. PROC-ORDER-01 — Triển khai keyed Processing và ordered Outbox
@@ -3579,13 +3579,13 @@ revisions. Đây là kiến trúc scale-ready;100 máy không là giới hạn t
 
 Metrics chuẩn ở OBS-01 §11, đã có optional SDK collectors. Plan §K/readiness §19
 phân biệt SDK implementation/tests với app/prod gaps. Commands và evidence thật
-ở [implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md); không
+ở [implementation report](../reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md); không
 tick full app/load/rollout chỉ vì transport tests pass.
 
 # 54. Chạy tích hợp local bằng k3d — LOCAL-K3D-01
 
-Ngày23/10/2026. Đọc [Local development](LOCAL_DEVELOPMENT_K3D.md) và
-[README MaintAI-k3d](../../MaintAI-k3d/README.md). Đây là môi trường dev bổ sung,
+Ngày23/10/2026. Đọc [Local development](../operations/LOCAL_DEVELOPMENT_K3D.md) và
+[README MaintAI-k3d](../../../MaintAI-k3d/README.md). Đây là môi trường dev bổ sung,
 không là thay đổi event/API schema hay miễn trừ auth/provenance production.
 
 Code local bootstrap gồm private cluster config, Kafka4 KRaft12 partition/topic,
@@ -3622,7 +3622,7 @@ n≈ceil(R×T/(u×c)) cho Worker và budget riêng cho serial runners; tối ưu
 rồi đo lại alert UI p95≤2s, throughput/coverage và backlog recovery. Giữ ordering,
 inbox/outbox và full history, không bỏ reading/alert để làm latency đẹp.
 
-[Capacity §11](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100)
+[Capacity §11](../design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100)
 có ví dụX=100/200/500/1.000 với assumptions rõ;1.000 chỉ là ví dụ mở rộng, không là
 yêu cầu ban đầu. Các phép tính không thay load test hoặc tự bật HPA/Deployment.
 
@@ -3648,8 +3648,8 @@ chứng minh đã migrate data, chạy Docker/DB, nối Alert provider hoặc ng
 
 # 57. M6-HISTORY-01 — History và export trong Read API
 
-Đọc [System Contracts §44](MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md#44-m6-history-01--history-snapshots-và-exports-29102026),
-[M6 architecture](M6_HISTORY_ARCHITECTURE_DECISION.md) và [raw catalog](M6_RAW_ARCHIVE_HANDOFF.md).
+Đọc [System Contracts §44](../architecture/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md#44-m6-history-01--history-snapshots-và-exports-29102026),
+[M6 architecture](../reports/M6_HISTORY_ARCHITECTURE_DECISION.md) và [raw catalog](../reports/M6_RAW_ARCHIVE_HANDOFF.md).
 Phần này thay hướng maintenance/archive/export trong Worker của thiết kế kế thừa
 cho phạm vi M6. Không triển khai processed archive hoặc cleaner source trong M6.
 

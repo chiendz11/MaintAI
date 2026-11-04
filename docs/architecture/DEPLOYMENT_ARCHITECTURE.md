@@ -1,14 +1,14 @@
 > **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
 > durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
 > có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
-> [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
+> [Implementation report](../reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
 > readiness §19 ghi bằng chứng, commands và giới hạn; các snapshot cũ đọc theo ngày.
 
-> **Tích hợp MaintAI — 2026-10-19:** Tài liệu thiết kế mục tiêu v1.4, chưa xác nhận code/DB/GitOps đã migrate. Đọc [docs index](README.md) để áp dụng quyết định nhóm 4 người, Simulator UI riêng và thứ tự ưu tiên; [readiness](implementation-readiness.md) ghi các schema/scaffold chưa được cung cấp.
+> **Tích hợp MaintAI — 2026-10-19:** Tài liệu thiết kế mục tiêu v1.4, chưa xác nhận code/DB/GitOps đã migrate. Đọc [docs index](../README.md) để áp dụng quyết định nhóm 4 người, Simulator UI riêng và thứ tự ưu tiên; [readiness](implementation-readiness.md) ghi các schema/scaffold chưa được cung cấp.
 
 # MaintAI v1.4 — Kiến trúc triển khai Kubernetes theo Deployment
 
-**M6-HISTORY-01,29/10/2026:** [Quyết định M6](M6_HISTORY_ARCHITECTURE_DECISION.md)
+**M6-HISTORY-01,29/10/2026:** [Quyết định M6](../reports/M6_HISTORY_ARCHITECTURE_DECISION.md)
 ưu tiên history/roles/archive cũ: ba Deployment Processing giữ nguyên; snapshot/
 export chạy trong Read API, Worker chỉ realtime. Read API SELECT dữ liệu gốc và
 ghi metadata bằng pool quyền hẹp. Không processed archive hoặc cleanup thật M6.
@@ -143,7 +143,7 @@ flowchart LR
 | `knowledge_db` | RAG | Service `rag_rw` | Documents, chunks, pgvector |
 
 Storage Consumer lưu raw accepted/rejected cùng catalog/coverage vào S3 hoặc MinIO
-local theo [M6-RAW-01](M6_RAW_ARCHIVE_HANDOFF.md). M6 giữ processed outcomes trong
+local theo [M6-RAW-01](../reports/M6_RAW_ARCHIVE_HANDOFF.md). M6 giữ processed outcomes trong
 processing_db và chưa bật xóa dữ liệu gốc hoặc processed archive. Read API chỉ
 được ghi metadata snapshot/export/catalog riêng, không có quyền sửa outcome/outbox.
 Không quét bucket mỗi query; lịch sử Alert vẫn thuộc Business.
@@ -214,8 +214,8 @@ dùng MinIO; history outcomes/CSV nhỏ có thể demo DB-only với raw capabil
 
 ## 9. Điều kiện hoàn thành và bằng chứng
 
-Chuẩn instrumentation/handoff: [OBS-01](OBSERVABILITY_IMPLEMENTATION.md),
-[MLFLOW-01](MLFLOW_INTEGRATION_GUIDE.md), System Contracts §41. App source xuất
+Chuẩn instrumentation/handoff: [OBS-01](../subsystems/OBSERVABILITY_IMPLEMENTATION.md),
+[MLFLOW-01](../subsystems/MLFLOW_INTEGRATION_GUIDE.md), System Contracts §41. App source xuất
 metrics/logging/training data; GitOps giữ scrape/target labels/Pushgateway,
 dashboards/rules và MLflow Server config; infrastructure giữ cloud resources.
 Không thêm service/UI/DB chỉ vì tạo tài liệu instrumentation. Cặp exact MLflow
@@ -227,7 +227,7 @@ Manifest kèm bộ bàn giao là **scaffold có placeholder**, không phải b�
 
 ## 10. PROC-ORDER-01 — nội bộ runtime thay đổi, topology giữ nguyên
 
-Quyết định23/10/2026 tại [đặc tả concurrency/ordering](PROCESSING_CONCURRENCY_AND_ORDERING.md),
+Quyết định23/10/2026 tại [đặc tả concurrency/ordering](../subsystems/PROCESSING_CONCURRENCY_AND_ORDERING.md),
 System Contracts §42, Guide §53. Worker chứa poll loop, keyed FIFO/executor,
 completion coordinator và durable assignment fence. Relay thêm per-topic/key
 head-of-line cursor/lease. Không tạo thêm Scheduler/Coordinator Deployment,
@@ -252,7 +252,7 @@ nhật config/concurrency/pool/grace/pinned image khi có PR implementation và 
 
 ## 11. Local k3d profile — LOCAL-K3D-01
 
-Bổ sung ngày23/10: [MaintAI-k3d](../../MaintAI-k3d/README.md) là folder hạ tầng
+Bổ sung ngày23/10: [MaintAI-k3d](../../../MaintAI-k3d/README.md) là folder hạ tầng
 local riêng, không thay topology AWS ở trên. k3s1.35.5/1 node, Kafka4/1 broker với
 12 partition/topic, PostgreSQL/pgvector và MinIO versioning; optional Prometheus/
 Grafana/Pushgateway. Apps disabled trước khi có actual images/callbacks/auth/probes/
@@ -262,7 +262,7 @@ Không có Scheduler/Coordinator Deployment mới. Giữ13 long-running workload
 trong local catalog, chưa có renderer batch Training/Drift ở profile0.1. Cloud
 Strimzi/HA/RDS/S3/IAM/ALB/Argo CD không được chứng minh bởi profile này. Private
 kubeconfig/loopback port-forward, owner Secrets và data path tách biệt. Hướng dẫn,
-readiness/activation và giới hạn ở [Local development](LOCAL_DEVELOPMENT_K3D.md).
+readiness/activation và giới hạn ở [Local development](../operations/LOCAL_DEVELOPMENT_K3D.md).
 Chưa chạy cluster/build/E2E; không bật production workloads hoặc sửa Terraform.
 
 ## 12. Capacity baseline100 và scale-ready choX>100
@@ -276,4 +276,4 @@ trung bình8,33 reading/s, nhưng burst/skew cần đo riêng.
 VớiX>100, tínhR=X×r, n/c/pool budgets theo mean stage time/headroom; đo queue age,
 ML/DB time, outbox/archive age và end-to-end browser p95 trước khi chọn thêm replicas,
 CPU/pool hoặc tối ưu query/model. Tăng partition chỉ khi có nhu cầu/cutover review;
-không đồng nhấtX máy vớiX partition/consumer. [Capacity và latency plan](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).
+không đồng nhấtX máy vớiX partition/consumer. [Capacity và latency plan](../design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).

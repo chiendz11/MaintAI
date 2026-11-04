@@ -54,7 +54,7 @@ Machine `state` vẫn giữ `NORMAL/WATCH/HIGH/CRITICAL/INVALID/UNKNOWN`. `PENDI
 **M6-HISTORY-01 đã chốt29/10:** Đoạn PAGE-02 bên dưới chỉ mô tả wire baseline.
 Target M6 raw sort received_at + Kafka receipt locator, outcome sort processed_at
 (completed_at) + result_id; opaque cursor gắn snapshot/scope theo
-[decision](M6_HISTORY_ARCHITECTURE_DECISION.md). Không âm thầm dùng cursor cũ với
+[decision](../reports/M6_HISTORY_ARCHITECTURE_DECISION.md). Không âm thầm dùng cursor cũ với
 clock/collection mới; PR M6 phải version/đồng bộ OpenAPI/schema/providers/UI trước
 khi enable. Baseline1.3.2 hiện có chưa đổi trong lượt docs này.
 
@@ -416,8 +416,8 @@ image/build độc lập không miễn provider/consumer tests khi shared contra
 
 ## OBS-01 / MLFLOW-01 — Metrics và tracking không thay HTTP DTO (2026-10-20)
 
-System Contracts §41 chốt [metrics catalog](OBSERVABILITY_IMPLEMENTATION.md) và
-[MLflow workflow](MLFLOW_INTEGRATION_GUIDE.md) revision1.0.0. Internal metrics
+System Contracts §41 chốt [metrics catalog](../subsystems/OBSERVABILITY_IMPLEMENTATION.md) và
+[MLflow workflow](../subsystems/MLFLOW_INTEGRATION_GUIDE.md) revision1.0.0. Internal metrics
 exposition, bounded labels/buckets và run/artifact metadata không tự thêm fields
 vào Business/Simulator/OpenAPI DTO, Kafka events hoặc strict model-result-v1.
 
@@ -435,7 +435,7 @@ khác nhau, không thay semantics bằng một monitoring status chung.
 
 ## PROC-ORDER-API-01 — Concurrency không đổi ACK hoặc consistency boundary
 
-Quyết định23/10: [PROC-ORDER-01](PROCESSING_CONCURRENCY_AND_ORDERING.md), Contracts §42.
+Quyết định23/10: [PROC-ORDER-01](../subsystems/PROCESSING_CONCURRENCY_AND_ORDERING.md), Contracts §42.
 Keyed Processing/ordered relay là internal behavior; chưa đổi OpenAPI/HTTP status,
 wire tagged union, SSE event names hoặc closed DTO trong lượt docs.
 
@@ -465,7 +465,7 @@ Ingestion API description tăng MINOR lên1.4.0 theo System §25 vì thêm opera
 
 ## OUTCOME-14-ONLY — 2026-10-28
 
-[Quyết định outcome1.4](OUTCOME_V1_4_MIGRATION.md) ưu tiên các đoạn inherited
+[Quyết định outcome1.4](../subsystems/OUTCOME_V1_4_MIGRATION.md) ưu tiên các đoạn inherited
 về union2.0.0. Kafka và entrypoint ProcessingResult/history chỉ dùng schema
 1.4.0, discriminator kind, event_id nguồn và risk_score bắt buộc cho COMPLETED.
 Wrapper history giữ source_event_id và so với outcome.event_id. SSE result_kind
@@ -475,7 +475,7 @@ không có probability fallback hoặc hỗ trợ đọc/backfill legacy.
 
 ## M6-HISTORY-01 — Versioned history profile
 
-[M6 architecture](M6_HISTORY_ARCHITECTURE_DECISION.md) ưu tiên PAGE-02/history
+[M6 architecture](../reports/M6_HISTORY_ARCHITECTURE_DECISION.md) ưu tiên PAGE-02/history
 clock/SELECT-only/export-writer kế thừa. M6 history/export dùng profile header và
 schema riêng, OpenAPI Business/Processing description2.0.0. M5 point/status/live/
 Alert DTO không đổi; Kafka bundle/runtime.schema.json immutable giữ nguyên.

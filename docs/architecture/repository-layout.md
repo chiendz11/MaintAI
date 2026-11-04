@@ -13,7 +13,7 @@ là baseline runtime1.3.2, chưa tự thay folder/image/entrypoint khi nhập do
 RISK-POLICY-01: `processing/config/risk-policies/` là source policy/schema/catalog
 thuộc app. Đây là cấu hình có version, không là deployment hoặc service mới.
 GitOps materialize policy đã chọn vào ConfigMap; infrastructure chỉ hỗ trợ
-runtime/bootstrap. Xem [policy ownership](RISK_POLICY_OWNERSHIP.md).
+runtime/bootstrap. Xem [policy ownership](../subsystems/RISK_POLICY_OWNERSHIP.md).
 
 UI-01 ngày2026-10-20 chốt bốn UI chính, chi tiết
 [UI Architecture](UI_ARCHITECTURE.md). `frontend/` vẫn là Business UI;
@@ -29,7 +29,7 @@ index. Provider Sensor0.3.0 đã có HTTP/browser integration; chưa build image
 nhưng phải có image/config/Deployment và release riêng; shared library ảnh hưởng
 nhiều consumer thì CI/release có phối hợp.
 
-[`architecture/runtime-map.json`](../architecture/runtime-map.json) liệt kê14 app
+[`architecture/runtime-map.json`](../../architecture/runtime-map.json) liệt kê14 app
 runtime folders và1 platform descriptor MLflow riêng. Mỗi folder có `runtime.json`
 và `Dockerfile`; đây là metadata
 inventory, **không phải Kubernetes manifests hoặc bằng chứng mọi entrypoint đã implement**.
@@ -86,7 +86,7 @@ Kafka broker/topic, Docker runtime hoặc repositories GitOps/infrastructure.
 - `backend/`, `processing/`, ML/RAG/Frontend
   vẫn thiếu application runtime. Kafka producer/consumer, inbox/outbox migration
   và raw S3 adapter nằm tại `messaging/`; owner tích hợp DQ/risk/history/projections,
-  auth/probes/SSE và migrations nghiệp vụ. Xem [hướng dẫn nhóm](KAFKA_DEVELOPMENT_GUIDE.md).
+  auth/probes/SSE và migrations nghiệp vụ. Xem [hướng dẫn nhóm](../subsystems/KAFKA_DEVELOPMENT_GUIDE.md).
 - Trainer tham chiếu và deployment blueprints trong hai repo riêng vẫn ở trạng
   thái trước migration, chưa tự chuyển theo việc nhập bộ Markdown mới.
 - `contracts/v1.3/` là bundle hiện hành tự chứa sáu OpenAPI/schemas/examples và
@@ -116,12 +116,12 @@ Chi tiết từng module và acceptance ở [readiness ledger](implementation-re
 Hai placeholder simulator facade/control trong Business/Main UI đã được xóa;
 tài liệu/contracts kiến trúc v1.1 đã gỡ sau khi chuyển các dependency còn dùng.
 Executable source Sensor/Drift được giữ theo yêu cầu người dùng. Xem
-[báo cáo rà soát](legacy-artifact-audit.md). Metadata14 runtimes dùng baseline
+[báo cáo rà soát](../reports/legacy-artifact-audit.md). Metadata14 runtimes dùng baseline
 1.3.2; việc thêm Simulator UI client/descriptor không chứng minh deployment thật.
 
 ## PROC-ORDER-01 — module đề xuất bên trong Processing
 
-[Decision1.0.0,23/10](PROCESSING_CONCURRENCY_AND_ORDERING.md) đề xuất keyed runner,
+[Decision1.0.0,23/10](../subsystems/PROCESSING_CONCURRENCY_AND_ORDERING.md) đề xuất keyed runner,
 per-machine queues/executor, partition completion coordinator và assignment fence
 trong Worker; order cursor/key lease/head-only claim trong Relay. Các modules
 đã có trong SDK0.2.0; processing/src có wrappers/factory. Full app callbacks,
@@ -144,7 +144,7 @@ vào các module rỗng. Lượt chuẩn hóa OBS-01 ngày2026-10-25 dọn bốn
 `src/`; HTTP/auth/guards/metrics thực thi ở package trên. SDK0.2.0/bundle1.1.0
 được pin từ lượt cập nhật ordering trước đó; cleanup này không đổi wire/bundle.
 Sensor0.3.0 đã có ACK202 client riêng. Local tests và image smoke không thay
-nghiệm thu shared OIDC/TLS/ACL, k3d hoặc đo tải; xem [runbook M1](../ingestion-api/README.md).
+nghiệm thu shared OIDC/TLS/ACL, k3d hoặc đo tải; xem [runbook M1](../../ingestion-api/README.md).
 
 
 ## Source M5
@@ -152,13 +152,13 @@ nghiệm thu shared OIDC/TLS/ACL, k3d hoặc đo tải; xem [runbook M1](../inge
 Backend thêm `shared/alerts`, `shared/audit`, `shared/feedback`, migration0003 và
 `business-consumer/src/handlers/alert`. API/SSE/Main UI giữ runtime hiện có.
 Processing hot point-read ở `shared/persistence/evidence.py`; history/archive
-list jobs còn M6. Source, test và bàn giao tại [M5 report](M5_IMPLEMENTATION_REPORT.md).
+list jobs còn M6. Source, test và bàn giao tại [M5 report](../reports/M5_IMPLEMENTATION_REPORT.md).
 
 ## M6-HISTORY-01 — Không thêm folder runtime thứ tư cho Processing
 
-Theo [decision29/10](M6_HISTORY_ARCHITECTURE_DECISION.md), Worker chỉ realtime;
+Theo [decision29/10](../reports/M6_HISTORY_ARCHITECTURE_DECISION.md), Worker chỉ realtime;
 snapshot/export/catalog-sync modules thuộc processing/read-api/ và share owner
 migrations, không thêm processing-maintenance. Read API có pool metadata quyền
 hẹp, original data read-only. Storage catalog/coverage ở storage-consumer/, contract
-[M6-RAW-01](M6_RAW_ARCHIVE_HANDOFF.md); processed archive/cleanup thật hoãn. Runtime
+[M6-RAW-01](../reports/M6_RAW_ARCHIVE_HANDOFF.md); processed archive/cleanup thật hoãn. Runtime
 metadata giữ implemented_scope cũ và ghi target riêng, không tự khẳng định M6 có code.

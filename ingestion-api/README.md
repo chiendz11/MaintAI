@@ -15,7 +15,7 @@ Business và Processing có vòng triển khai/nghiệm thu riêng.
 - HTTP Ingestion OpenAPI1.4.0 là additive MINOR cho M1. Các HTTP APIs khác vẫn
   baseline1.3.2, không suy full target1.4 đã được triển khai.
 - HTTP ACK bỏ `schema_version` nội bộ SDK. Error được map sang HTTP Error hiện có;
-  `rejection_id` ở `error.details`. Xem [quyết định HTTP](../docs/api-contract-decisions.md#ingest-m1-01--http-adapter-và-operational-profile-2026-10-23).
+  `rejection_id` ở `error.details`. Xem [quyết định HTTP](../docs/architecture/api-contract-decisions.md#ingest-m1-01--http-adapter-và-operational-profile-2026-10-23).
 
 ## Cài đặt development (Python3.12)
 
@@ -121,7 +121,7 @@ validation422 không retry mù. Wrapper không tự retry publish sau uncertaint
 - `/health/ready`: config/Kafka metadata/auth key state. Check stale, missing topics,
   unavailable dependency hoặc shutdown drain→503. Metadata không chứng minh produce
   ACL, ISR quorum, archive S3 hay Business endpoint.
-- `/metrics`: catalog [OBS-01 §3.1–3.2](../docs/OBSERVABILITY_IMPLEMENTATION.md),
+- `/metrics`: catalog [OBS-01 §3.1–3.2](../docs/subsystems/OBSERVABILITY_IMPLEMENTATION.md),
   một registry/process, Content-Type từ Prometheus client. Platform giới hạn
   network access. Không machine/event IDs, tokens, bodies hoặc raw URLs làm labels.
 - Một publisher/process, blocking SDK/JWKS/probes qua worker threads. Khi request

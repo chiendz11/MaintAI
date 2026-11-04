@@ -11,10 +11,10 @@ Ingestion M1 có additive HTTP revision1.4.0 (health/metrics/errors). Business v
 Processing description2.0.0 freeze history profile M6; ba OpenAPI khác giữ1.3.2. Shared DTOs và Kafka bundle không tự bump theo revision này.
 
 Target docs mới là v1.4; xem [docs index](../../docs/README.md) và
-[readiness](../../docs/implementation-readiness.md). Bộ này giữ baseline1.3.2 cho
+[readiness](../../docs/architecture/implementation-readiness.md). Bộ này giữ baseline1.3.2 cho
 các DTO chưa thay đổi; Kafka rejected/provenance nằm ở `../kafka/`. Outcome/history
 entrypoints nay dùng chung schema Kafka1.4.0 theo
-[OUTCOME-14-ONLY](../../docs/OUTCOME_V1_4_MIGRATION.md); validator nạp schema này
+[OUTCOME-14-ONLY](../../docs/subsystems/OUTCOME_V1_4_MIGRATION.md); validator nạp schema này
 trong cùng repo. API description1.3.2 khác provider payload ML/RAG1.1.0,
 sensor envelope1.3.0, processing outcome1.4.0,
 alert signal/archive/SSE và Drift report/reference schema1.0.0. ML/RAG và các

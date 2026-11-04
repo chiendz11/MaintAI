@@ -3,12 +3,12 @@
 **Quyết định dự án:** chốt ngày 2026-10-20, revision UI-01 `1.0.0`, bổ sung cho
 thiết kế hệ thống v1.4. Đây là đặc tả mục tiêu. Lượt cập nhật này chỉ sửa docs;
 không tự tạo frontend, API, image, dashboard provisioning hoặc deployment.
-**Implementation tiếp theo20/10:** đã có [Simulator UI0.1.0](../sensor-simulator-UI/README.md)
+**Implementation tiếp theo20/10:** đã có [Simulator UI0.1.0](../../sensor-simulator-UI/README.md)
 với demo/live client, OIDC, recovery và checks. Sensor0.3.0 đã có provider và
 browser/provider HTTP tests; image/deployment và production IdP/Kafka E2E còn thiếu. Các điều khoản dưới vẫn là yêu cầu mục tiêu.
 
 Đọc cùng [System Contracts §40](MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md#40-ui-01--bốn-giao-diện-và-ranh-giới-phát-hành),
-[Implementation Guide §48](MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md#48-ui-01--hướng-dẫn-triển-khai-bốn-giao-diện)
+[Implementation Guide §48](../subsystems/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md#48-ui-01--hướng-dẫn-triển-khai-bốn-giao-diện)
 và [Deployment Architecture](DEPLOYMENT_ARCHITECTURE.md). Khi ví dụ HTML khác API,
 schema/contract đang freeze quyết định request/response; không tự suy ra API từ nút demo.
 
@@ -84,7 +84,7 @@ Grafana demo thành một ứng dụng React production. Năm nhóm dashboard th
 | Drift Monitoring | PSI/trend, model/reference/window, worker freshness và saved report nói gì? |
 
 Prometheus nhận metrics từ services/exporters; Drift one-shot đẩy qua Pushgateway.
-Instrumentation/catalog và handoff theo [OBS-01](OBSERVABILITY_IMPLEMENTATION.md).
+Instrumentation/catalog và handoff theo [OBS-01](../subsystems/OBSERVABILITY_IMPLEMENTATION.md).
 Grafana hiển thị kết quả đã tính. Detector vẫn thuộc Drift Worker, không chạy lại
 PSI hay retraining/promote chỉ vì người xem mở dashboard.
 
@@ -107,7 +107,7 @@ metrics, artifacts, dataset/split lineage, registered model version và release
 evidence được liên kết. MLflow Server sở hữu `mlflow_db` và artifact-store access;
 browser không giữ DB/S3 credentials.
 
-App training tạo nội dung theo [MLFLOW-01](MLFLOW_INTEGRATION_GUIDE.md): SDK,
+App training tạo nội dung theo [MLFLOW-01](../subsystems/MLFLOW_INTEGRATION_GUIDE.md): SDK,
 frozen artifacts, selected run/version, durable retry/unknown checkpoints; dùng
 UI có sẵn không tự tạo các evidence này. Platform server/config vẫn ở GitOps.
 
@@ -149,9 +149,9 @@ flowchart LR
 
 ## 4. API Simulator: phần đã đặc tả và khoảng cách với demo
 
-Nguồn máy đọc được: [Simulator OpenAPI](../contracts/v1.3/openapi/openapi-simulator.yaml),
+Nguồn máy đọc được: [Simulator OpenAPI](../../contracts/v1.3/openapi/openapi-simulator.yaml),
 baseline1.3.2; provider Sensor0.3.0 đã implement baseline này và được kiểm HTTP local;
-không phải deployment production. Xem [Sensor README](../sensor/README.md).
+không phải deployment production. Xem [Sensor README](../../sensor/README.md).
 
 | Chức năng | Interface hiện có trong baseline |
 | --- | --- |
@@ -193,7 +193,7 @@ phù hợp rồi implement Sensor/provider + UI cùng fixtures. UI thiếu capab
 `frontend` vẫn là Business UI, không rename runtime/image group đang có. App hiện
 có14 app runtime descriptors baseline1.3.2, gồm Simulator UI mới, cộng1 platform
 descriptor MLflow,
-trong [runtime map](../architecture/runtime-map.json). Descriptor mới được thêm
+trong [runtime map](../../architecture/runtime-map.json). Descriptor mới được thêm
 cùng source implementation, không do đếm số UI. MLflow upstream image packaging
 và publisher ở `ml-service/mlflow/`, không có React UI riêng; Grafana provisioning
 vẫn ở GitOps. Hạ tầng, ingress,
@@ -289,11 +289,11 @@ Không có live Kafka/Prometheus/PostgreSQL/S3/ML trong browser. Chức năng pr
 chưa có contract được liệt kê ở §4; mẫu DB datasource cần review ở §2.3.
 Tài liệu target tiếp tục1.4, UI-01 có revision riêng; không đổi tên cả bộ docs
 thành1.6 hoặc gắn nhãn implementation complete. Khoảng cách triển khai theo dõi
-tại [readiness](implementation-readiness.md) và [implementation plan](IMPLEMENTATION_PLAN.md).
+tại [readiness](implementation-readiness.md) và [implementation plan](../subsystems/IMPLEMENTATION_PLAN.md).
 
 ## 10. PROC-ORDER-01 — UI khi Processing chạy song song
 
-Quyết định23/10 tại [đặc tả concurrency/ordering](PROCESSING_CONCURRENCY_AND_ORDERING.md)
+Quyết định23/10 tại [đặc tả concurrency/ordering](../subsystems/PROCESSING_CONCURRENCY_AND_ORDERING.md)
 §8 giữ bốn UI và các release boundaries hiện hành. Keyed queues/offset coordinator
 ở Worker; UI không gọi chúng, mở thêm Kafka connection hoặc tự sắp xếp toàn hệ thống.
 
@@ -322,4 +322,4 @@ và một SSE connection/browser; không mở một connection cho mỗi sensor.
 latest telemetry khi cần, giữ đầy đủ alert lifecycle/history;100 không là hard limit.
 Target alert hiển thịp95≤2s phải đo tới browser, không chỉ DB commit. KhiX>100,
 tối ưu stage gây chậm và subscription/filter sau freeze contract thay vì broadcast
-mọi reading tới mọi client. [Capacity §11](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).
+mọi reading tới mọi client. [Capacity §11](../design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).
