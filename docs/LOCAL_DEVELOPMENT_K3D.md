@@ -1,10 +1,9 @@
 # LOCAL-K3D-01 — chạy MaintAI trên máy dev
 
-> Cập nhật30/10/2026: quy trình active nằm trong hai repo
-> [Infrastructure](../../Maint-infrastructure/local/README.md) và
-> [GitOps](../../MaintAI-gitops/docs/LOCAL_DEVELOPMENT.md), theo
-> [LOCAL-DEMO-01](LOCAL_DEMO_PREPARATION.md). Phần scaffold MaintAI-k3d bên dưới
-> là lịch sử; không chạy song song hai bộ tooling để quản lý cùng cluster.
+> Cập nhật 04/11/2026: Để khởi động và chạy thử cụm demo local 1-click qua Terraform và GitOps, hãy xem
+> [LOCAL_DEMO_GUIDE.md](LOCAL_DEMO_GUIDE.md) và khung chuẩn hóa DevOps tại
+> [DEVOPS_FRAMEWORK_AND_OPERATIONS_GUIDE.md](DEVOPS_FRAMEWORK_AND_OPERATIONS_GUIDE.md).
+> Phần kỹ thuật bên dưới là đặc tả nền tảng local và tham chiếu quy trình; không chạy song song hai bộ tooling để quản lý cùng cluster.
 
 
 Ngày23/10/2026, revision1.0.0. Môi trường local được authoring riêng tại

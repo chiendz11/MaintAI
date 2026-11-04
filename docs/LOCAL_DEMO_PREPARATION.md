@@ -4,6 +4,8 @@ Quyết định ngày30/10/2026. Áp dụng cho local k3d; không thay provenanc
 của production, wire outcome1.4.0 hoặc SQL đã freeze. Infrastructure local thuộc
 Maint-infrastructure; desired state/cache PVC thuộc MaintAI-gitops.
 
+> **Tham chiếu vận hành:** Xem hướng dẫn chạy demo 1-click tại [LOCAL_DEMO_GUIDE.md](LOCAL_DEMO_GUIDE.md) và khung chuẩn hóa DevOps tại [DEVOPS_FRAMEWORK_AND_OPERATIONS_GUIDE.md](DEVOPS_FRAMEWORK_AND_OPERATIONS_GUIDE.md).
+
 ## Model identity khi chưa có MLflow
 
 Worker hiện chỉ cho profile local-fixture với loopback adapters. Tool

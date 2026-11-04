@@ -4,6 +4,9 @@
 **Môi trường mục tiêu:** Linux (Arch Linux / Ubuntu hoặc tương đương), Docker Engine, k3d v5.9.0, Kubernetes/kubectl (1.34–1.36), Argo CD.  
 **Kiến trúc:** Chuẩn **Cloud Production GitOps** — Toàn bộ images ứng dụng được build và phân phối qua GitHub Container Registry (`ghcr.io`), Argo CD tự động đồng bộ và chạy Database PreSync Migration Hooks.
 
+> [!NOTE]
+> **Khung DevOps Toàn Diện:** Để tìm hiểu sâu về kiến trúc chuẩn 4 repositories, quản lý bí mật LocalStack + ESO, Ingress ALB, HPA và Observability, xem [DEVOPS_FRAMEWORK_AND_OPERATIONS_GUIDE.md](DEVOPS_FRAMEWORK_AND_OPERATIONS_GUIDE.md).
+
 ---
 
 ## 0. Tổng quan Kiến trúc Vận hành
