@@ -129,3 +129,57 @@ def test_rollback_after_alert_writes_has_no_notification_receipt_or_metric(busin
         metrics.registry.get_sample_value("maintai_alerts_created_total", {"severity": "HIGH"})
         is None
     )
+
+
+def test_m7_roles_can_enqueue_complete_and_clean_only_metadata(business_database):
+    from backend.shared.copilot.repository import BriefRepository
+    from backend.shared.monitoring.catalog import DriftCatalog
+
+    from .test_copilot_jobs import result
+
+    db = business_database
+    setup(db)
+    deliver_alert(db)
+    roles = ["m7_" + uuid4().hex for _ in range(3)]
+    with db.factory() as connection:
+        for role in roles:
+            connection.execute(sql.SQL("CREATE ROLE {} NOLOGIN").format(sql.Identifier(role)))
+        grant_business_permissions(
+            connection, reader_role=roles[0], consumer_role=roles[1], api_role=roles[2]
+        )
+
+    def factory(index):
+        @contextmanager
+        def connect():
+            with db.factory() as connection:
+                connection.execute(sql.SQL("SET ROLE {}").format(sql.Identifier(roles[index])))
+                connection.commit()
+                yield connection
+
+        return connect
+
+    try:
+        api_factory, consumer_factory = factory(2), factory(1)
+        aid = AlertRepository(api_factory).list({"M-001"})["items"][0]["alert_id"]
+        jobs = BriefRepository(api_factory)
+        receipt = jobs.enqueue(aid, {"M-001"}, "tech", "grant", "MAINTENANCE_BRIEF")
+        worker = BriefRepository(consumer_factory)
+        claim = worker.claim("worker")
+        assert worker.complete(claim, result(aid))
+        assert jobs.job(receipt["job_id"], {"M-001"})["status"] == "SUCCEEDED"
+        DriftCatalog(consumer_factory, None, b"x" * 32).cleanup()
+        for statement in (
+            "UPDATE brief_jobs SET output=NULL",
+            "DELETE FROM brief_jobs",
+            "DELETE FROM drift_catalog",
+            "UPDATE brief_job_audit SET event_type='forged'",
+        ):
+            with api_factory() as connection, pytest.raises(psycopg.errors.InsufficientPrivilege):
+                connection.execute(statement)
+        with consumer_factory() as connection, pytest.raises(psycopg.errors.InsufficientPrivilege):
+            connection.execute("DELETE FROM alerts")
+    finally:
+        with db.factory() as connection:
+            for role in roles:
+                connection.execute(sql.SQL("DROP OWNED BY {}").format(sql.Identifier(role)))
+                connection.execute(sql.SQL("DROP ROLE {}").format(sql.Identifier(role)))

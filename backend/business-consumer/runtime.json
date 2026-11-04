@@ -36,7 +36,9 @@
     "Business latest projection DB writes",
     "Health/metrics HTTP",
     "Post-commit PostgreSQL NOTIFY invalidation hints",
-    "Processing HTTP evidence; transactional immutable Alert notifications"
+    "Processing HTTP evidence; transactional immutable Alert notifications",
+    "RAG HTTP calls from leased brief jobs",
+    "S3 Drift catalog publication scans and metadata snapshot cleanup"
   ],
   "boundaries": [
     "Ba handlers là module của một deployment; không tạo telemetry-service/prediction-service riêng.",
@@ -46,15 +48,11 @@
   "dockerfile": "backend/business-consumer/Dockerfile",
   "dockerfile_status": "implemented",
   "implemented_contract_revision": "1.3.2",
-  "planned_background_tasks": [
-    "brief-jobs",
-    "drift-catalog-sync"
-  ],
-  "implemented_scope": "Telemetry/prediction projections plus inbox-protected Alert Signals; immutable hot evidence through Processing HTTP, fixed300s dedupe, audit and transactional Alert notifications. Brief/drift jobs, shared provider/deployment/load acceptance remain separate.",
+  "planned_background_tasks": [],
+  "implemented_scope": "Telemetry/prediction projections plus inbox-protected Alert Signals; immutable hot evidence through Processing HTTP, fixed300s dedupe, audit and transactional Alert notifications. M7 leased brief workers and resumable verified Drift catalog scans are opt-in; shared provider/deployment/load acceptance remains separate.",
   "planned_kafka_subscriptions": [],
   "planned_interfaces": [
-    "RAG API from leased brief jobs",
-    "Committed drift report S3 manifests"
+    "Shared-provider validation for RAG auth/provenance and Drift publisher/heartbeat"
   ],
   "outcome_contract": {
     "read_version": "1.4.0",

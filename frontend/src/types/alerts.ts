@@ -74,6 +74,7 @@ export type FeedbackCreated = {
   recorded_at: string;
 };
 export interface AlertApi {
+  readonly copilot?: import("../api/m7-client").M7Client;
   alerts(
     filters: {
       status?: string;

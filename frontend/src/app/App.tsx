@@ -1,3 +1,4 @@
+import { MonitoringPage } from "../features/monitoring/MonitoringPage";
 import { AlertsPage } from "../features/alerts/AlertsPage";
 import { AlertDetailPage } from "../features/alerts/AlertDetailPage";
 import { watchAlerts } from "../realtime/alerts";
@@ -44,6 +45,9 @@ export function App({
       ? decodeURIComponent(location.pathname.slice(8))
       : null,
   );
+  const [monitoringRoute, setMonitoringRoute] = useState(
+    () => location.pathname === "/monitoring",
+  );
   const [expired, setExpired] = useState(false);
   const unauthorized = useCallback(() => setExpired(true), []);
   const api = useMemo(
@@ -60,6 +64,7 @@ export function App({
   );
   useEffect(() => {
     const pop = () => {
+      setMonitoringRoute(location.pathname === "/monitoring");
       setMachine(selectedMachine());
       setAlertRoute(location.pathname.startsWith("/alerts"));
       setAlertId(
@@ -77,6 +82,7 @@ export function App({
       "",
       machine === null ? "/machines" : "/machines/" + pathSegment(machine),
     );
+    setMonitoringRoute(false);
     setMachine(machine);
     setAlertRoute(false);
     setAlertId(null);
@@ -91,6 +97,7 @@ export function App({
       "",
       id === null ? "/alerts" : "/alerts/" + pathSegment(id),
     );
+    setMonitoringRoute(false);
     setMachine(null);
     setAlertRoute(true);
     setAlertId(id);
@@ -127,7 +134,11 @@ export function App({
         <p className="nav-label">KHÔNG GIAN LÀM VIỆC</p>
         <nav>
           <button
-            className={!machine && !alertRoute ? "nav-item active" : "nav-item"}
+            className={
+              !machine && !alertRoute && !monitoringRoute
+                ? "nav-item active"
+                : "nav-item"
+            }
             onClick={() => navigate(null)}
           >
             <CircleGauge size={19} />
@@ -149,10 +160,19 @@ export function App({
             Cảnh báo
             <ChevronRight size={15} />
           </button>
-          <div className="nav-item disabled" title="Chức năng chưa khả dụng">
+          <button
+            className={monitoringRoute ? "nav-item active" : "nav-item"}
+            onClick={() => {
+              history.pushState(null, "", "/monitoring");
+              setMonitoringRoute(true);
+              setMachine(null);
+              setAlertRoute(false);
+              setAlertId(null);
+            }}
+          >
             <Radio size={19} />
-            Monitoring<span>Sắp có</span>
-          </div>
+            Monitoring
+          </button>
         </nav>
         <div className="sidebar-bottom">
           <ShieldCheck size={18} />
@@ -167,11 +187,13 @@ export function App({
             Workspace
             <ChevronRight size={13} />
             <strong>
-              {alertRoute
-                ? "Alerts"
-                : machine
-                  ? "Machine detail"
-                  : "Fleet overview"}
+              {monitoringRoute
+                ? "Monitoring"
+                : alertRoute
+                  ? "Alerts"
+                  : machine
+                    ? "Machine detail"
+                    : "Fleet overview"}
             </strong>
           </div>
           <div className="topbar-right">
@@ -202,7 +224,9 @@ export function App({
           </div>
         </header>
         <main className="content">
-          {alertRoute ? (
+          {monitoringRoute ? (
+            <MonitoringPage api={"copilot" in api ? api.copilot : undefined} />
+          ) : alertRoute ? (
             alertId ? (
               <AlertDetailPage
                 key={alertId}

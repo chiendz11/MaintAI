@@ -189,3 +189,11 @@ gặp signal sẽ fail closed và không commit offset. Không dùng cấu hình
 API probes kiểm cả bảng M5. Metrics Alert created/dedup/transitions/visibility
 được cập nhật sau commit theo OBS-01; retry/duplicate không tăng tạo Alert.
 Chi tiết tests/file inventory nằm trong [M5 report](../docs/M5_IMPLEMENTATION_REPORT.md).
+
+## M7 — Copilot và Monitoring
+
+Xem [cấu hình, API và semantics M7](../docs/M7_IMPLEMENTATION_REPORT.md).
+Migrations0005/0006 bổ sung brief jobs và Drift catalog trong business_db.
+`BUSINESS_M7_ENABLED=true` bật API/Consumer tương ứng sau owner migrations/grants;
+RAG/S3 lỗi không chặn luồng Kafka hoặc Alert lifecycle. Job workers và catalog
+scans chạy riêng trong Consumer; API chỉ enqueue/đọc và phục vụ REST/SSE.

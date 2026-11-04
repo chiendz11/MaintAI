@@ -24,6 +24,25 @@ def serve(settings, *, stop=None, connection_factory=None):
         if settings.processing_read_url
         else None
     )
+    runners = []
+    job_metrics = None
+    if settings.m7:
+        from backend.shared.copilot.metrics import JobMetrics
+        from backend.shared.copilot.repository import BriefRepository
+        from backend.shared.copilot.runner import BriefRunner
+        from backend.shared.monitoring.runtime import CatalogRunner, catalog
+        from rag_client import RAGClient
+
+        job_metrics = JobMetrics(metrics.registry)
+        runners = [
+            BriefRunner(
+                BriefRepository(factory),
+                RAGClient(settings.m7.rag_url, settings.m7.rag_token_file, local=settings.m7.local),
+                stop,
+                metrics=job_metrics,
+            ),
+            CatalogRunner(catalog(settings.m7, factory), stop),
+        ]
     failed = threading.Event()
     previous = {}
     server = uvicorn.Server(
@@ -68,6 +87,8 @@ def serve(settings, *, stop=None, connection_factory=None):
                         ):
                             # All table names are internal constants.
                             connection.execute(f"SELECT 1 FROM {table} LIMIT 0")
+                    if job_metrics is not None:
+                        job_metrics.observe(factory)
                     database = True
                 except Exception:
                     try:
@@ -104,6 +125,8 @@ def serve(settings, *, stop=None, connection_factory=None):
                 raise RuntimeError("Business Consumer probes did not start")
             time.sleep(0.01)
         monitor_thread.start()
+        for runner in runners:
+            runner.start()
         # No keyed limits: Business retains the SDK serial runner for each role.
         serve_consumers(
             settings.kafka,
@@ -123,6 +146,8 @@ def serve(settings, *, stop=None, connection_factory=None):
         if evidence is not None:
             evidence.close()
         stop.set()
+        for runner in runners:
+            runner.close()
         server.should_exit = True
         if monitor_thread.ident is not None:
             monitor_thread.join(timeout=6)
