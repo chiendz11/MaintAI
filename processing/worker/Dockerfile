@@ -6,12 +6,14 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1
 RUN python -m pip install build==1.6.1 setuptools==84.0.0 wheel==0.48.0
 COPY messaging/ /build/messaging/
 COPY contracts/ /build/contracts/
-RUN python -m build --wheel --no-isolation messaging --outdir /wheels
+COPY storage-consumer/ /build/storage-consumer/
+RUN python -m build --wheel --no-isolation messaging --outdir /wheels \
+    && python -m build --wheel --no-isolation storage-consumer --outdir /wheels
 COPY processing/requirements.lock /build/processing/requirements.lock
 # Large wheels can exceed pip's short default read timeout on the CI build network.
 ENV PIP_DEFAULT_TIMEOUT=120
 # Never resolve the internal SDK from an external index.
-RUN python -c "from pathlib import Path; p=Path('processing/requirements.lock'); Path('/tmp/deps.lock').write_text('\n'.join(l for l in p.read_text().splitlines() if not l.startswith('maintai-messaging=='))+'\n')" \
+RUN python -c "from pathlib import Path; p=Path('processing/requirements.lock'); Path('/tmp/deps.lock').write_text('\n'.join(l for l in p.read_text().splitlines() if not l.startswith(('maintai-messaging==', 'maintai-storage-consumer==')))+'\n')" \
     && python -m pip wheel -r /tmp/deps.lock --wheel-dir /wheels
 COPY processing/ /build/processing/
 RUN python -m build --wheel --no-isolation processing --outdir /wheels

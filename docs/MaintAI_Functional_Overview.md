@@ -102,8 +102,9 @@ Simulator UI -> Sensor Control API + scheduler -> Ingestion API -> Kafka sensor.
   business-live-v1 -> Business Consumer -> latest raw telemetry
 Processing outbox -> inference.results / alert.signals -> Business Consumer
   -> business_db -> transactional NOTIFY -> Business API replicas -> Main UI REST/SSE
-Main UI history -> Business API -> Processing Read API -> hot DB / S3 processed
-Processing maintenance loop -> verified processed archive / manifests -> retention cleanup
+Main UI history -> Business API -> Processing Read API -> outcomes DB / raw MinIO-S3 catalog
+Read API -> snapshot/export metadata + bounded durable export runner
+M6: no processed archive, no Worker maintenance loop, no real cleanup
 Business durable job loop -> RAG briefs / drift manifest catalog sync
 Drift CronJob -> drift_db + S3 report/manifest; no Drift HTTP deployment
 Approved dataset -> batch training/evaluation -> GitOps PR -> reviewed model release
@@ -279,7 +280,9 @@ Nếu event R4 đã nhận nhưng prediction mới nhất vẫn là R2, UI hiể
 ### 7.3. Lịch sử sensor, processing outcomes và biểu đồ
 
 Main UI gọi Business API; Business authorize rồi gọi Processing Read API, không
-SQL cross-owner. Processing chọn hot DB hoặc verified S3 archive theo snapshot.
+SQL cross-owner. M6 đọc original outcomes từ processing_db, raw từ S3/MinIO qua
+catalog đã verify. Read API sở hữu snapshot/export và chỉ ghi metadata quyền hẹp.
+Chi tiết chốt tại [M6-HISTORY-01](M6_HISTORY_ARCHITECTURE_DECISION.md).
 
 | Chức năng | Public route `/api/v1` | Cách dùng |
 | --- | --- | --- |
@@ -289,8 +292,10 @@ SQL cross-owner. Processing chọn hot DB hoặc verified S3 archive theo snapsh
 | Biểu đồ theo thời gian | GET /machines/{machine_id}/timeseries | min/max/avg/count, units, null gaps, event markers |
 | Xuất lịch sử | POST /history-exports; GET /history-exports/{job_id} | Job bền vững, authorized download sau success |
 
-Profile khởi đầu: hot30d, raw/processed archive365d, cấu hình được. Snapshot/cursor
-có expiry, nguồn/tier/as_of/coverage; empty200 khác expired410 và source unavailable503.
+M6 chưa archive processed outcomes hoặc xóa source data. Profile30d/365d hoãn
+chờ retention approval; snapshot/cursor có expiry và coverage. Outcome sort theo
+processed_at/result_id, raw theo received_at/Kafka locator; empty200 khác
+expired410 và unavailable503. Full raw demo dùng MinIO local, không cần AWS S3.
 Chart/export có query budgets để không chiếm hết pool dashboard. Alert evidence
 business-owned vẫn còn khi hot records đã cleanup. Raw invalid fields được render
 an toàn, không biến null thành0% hoặc NORMAL. Chi tiết normative ở
@@ -655,7 +660,7 @@ v1.1 đã gỡ; code Sensor/Drift chưa tự migrate theo việc dọn tài li�
 ### 18.1. Storage và retraining
 
 Storage Consumer ghi raw receipt batches có topic/partition/offset manifests;
-Processing maintenance ghi original outcome batches vào processed archive theo HISTORY-01. S3 raw là evidence dài hạn, không tự động có nhãn failure mới. Data Preparation kiểm tra quality, nguồn ground truth và version hóa curated dataset (DVC hoặc manifest phù hợp) trước khi Training Pipeline dùng; không auto-retrain mỗi khi một batch được upload. MLflow Server sở hữu metadata DB và S3 artifacts.
+Processed archive được hoãn sau M6; M6 giữ original outcomes trong processing_db. S3 raw là evidence dài hạn, không tự động có nhãn failure mới. Data Preparation kiểm tra quality, nguồn ground truth và version hóa curated dataset (DVC hoặc manifest phù hợp) trước khi Training Pipeline dùng; không auto-retrain mỗi khi một batch được upload. MLflow Server sở hữu metadata DB và S3 artifacts.
 
 ### 18.2. Những lỗi phải được hiển thị / giám sát
 
@@ -772,7 +777,7 @@ Simulator tiếp tục record sau. Publish không được xác nhận →503/50
 Không archive raw vô điều kiện cho request unauthenticated/quá lớn. Feature INVALID
 nhưng envelope hợp lệ →202 sau accepted-topic ACK, Processing INVALID, ML call=0.
 
-**Business database ownership:** Không lưu mỗi raw event vào `business_db`; chỉ latest snapshot per machine (telemetry, last valid prediction, latest processing), alerts/feedback/brief. Raw history đi S3; inference history qua Processing owner, hot DB + verified S3 archive. SSE do projector event/notification kích hoạt chứ không cần full raw DB. Nếu nhiều Business API Pods: Business Consumer commit read model rồi broadcast notification bằng PG LISTEN/NOTIFY (MVP) hoặc Redis pub/sub; REST snapshot khôi phục khi miss.
+**Business database ownership:** Không lưu mỗi raw event vào `business_db`; chỉ latest snapshot per machine (telemetry, last valid prediction, latest processing), alerts/feedback/brief. Raw history đi S3/MinIO; inference history M6 qua Processing Read API đọc processing_db, processed archive hoãn. SSE do projector event/notification kích hoạt chứ không cần full raw DB. Nếu nhiều Business API Pods: Business Consumer commit read model rồi broadcast notification bằng PG LISTEN/NOTIFY (MVP) hoặc Redis pub/sub; REST snapshot khôi phục khi miss.
 
 **Simulator Control state API:** `GET /api/v1/simulator/machines/{id}/control`, `POST .../pause`, `POST .../resume`, `PUT .../scenario`; auth demo-only. `PAUSED` là command-state có source, không suy từ thiếu event; `STREAMING` không xác nhận máy công nghiệp hoạt động; FE tránh nhập nhằng connection state, risk và alert lifecycle.
 
@@ -783,8 +788,9 @@ nhưng envelope hợp lệ →202 sau accepted-topic ACK, Processing INVALID, ML
 
 - Machine History có raw readings, terminal outcomes, point lookup và chart
   min/max/avg/count, source IDs/model versions, null gaps và explicit coverage.
-- History xuyên hot DB/S3; hot30d/archive365d là profile tham khảo1.3.2, v1.4 cần
-  phê duyệt retention thực tế. Chỉ cleanup verified data không pin/hold, không tái tính model để thay lịch sử.
+- M6: outcomes giữ DB, raw qua S3/MinIO catalog; chưa processed archive hoặc cleanup
+  source data. Snapshot/export nằm trong Read API, quyền ghi chỉ metadata riêng.
+  Profile30d/365d chưa bật; không tái tính model để thay lịch sử.
 - Export bất đồng bộ có job status, authorization, artifact expiry và download.
 - Copilot jobs bền vững, retry/lease/fencing; failure không cản xử lý alert.
 - Drift metadata catalog đồng bộ từ S3 report manifests, UI có catalog freshness;
@@ -802,7 +808,7 @@ và [readiness](implementation-readiness.md).
 - **Quarantine trung tâm:** Lưu request sai schema được phép giữ qua `sensor.rejected`
   và S3 sanitized archive. Tra cứu có quyền theo source/request/time; không đòi
   machine_id khi payload thiếu trường này. Kafka ACK và trạng thái archive là hai việc riêng.
-- **History độc lập:** Main UI → Business → Processing Read API read-only; lịch sử
+- **History độc lập:** Main UI → Business → Processing Read API; SELECT original data, ghi metadata quyền hẹp; lịch sử
   alert/actions/feedback vẫn do Business phục vụ. Cold lookup dùng index/partition/
   manifest có giới hạn. Filters/cursor v1.4 phải freeze cùng OpenAPI trước khi code.
 - **Truy vết prediction/alert:** Liên kết reading/Kafka locator, DQ rules digest,

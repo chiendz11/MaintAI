@@ -1,0 +1,410 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "M6 raw catalog1.0.0; separate from immutable raw-manifest1.0.0",
+  "$defs": {
+    "Entry": {
+      "type": "object",
+      "properties": {
+        "catalog_schema_version": {
+          "const": "1.0.0"
+        },
+        "receipt_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "topic": {
+          "enum": [
+            "sensor.readings",
+            "sensor.rejected"
+          ]
+        },
+        "partition": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_event_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "machine_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "received_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "Z$|\\+00:00$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "server_accepted_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "Z$|\\+00:00$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_identity": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "request_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "receipt_kind": {
+          "enum": [
+            "ACCEPTED",
+            "REJECTED"
+          ]
+        },
+        "raw_object_ref": {
+          "$ref": "runtime.schema.json#/$defs/ObjectRef"
+        },
+        "raw_manifest_ref": {
+          "$ref": "runtime.schema.json#/$defs/ObjectRef"
+        },
+        "event_locator": {
+          "const": 0
+        }
+      },
+      "required": [
+        "catalog_schema_version",
+        "receipt_id",
+        "topic",
+        "partition",
+        "offset",
+        "source_event_id",
+        "machine_id",
+        "received_at",
+        "server_accepted_at",
+        "source_identity",
+        "request_id",
+        "receipt_kind",
+        "raw_object_ref",
+        "raw_manifest_ref",
+        "event_locator"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "receipt_kind": {
+                "const": "ACCEPTED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "topic": {
+                "const": "sensor.readings"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "topic": {
+                "const": "sensor.rejected"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "PartitionCoverage": {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "enum": [
+            "sensor.readings",
+            "sensor.rejected"
+          ]
+        },
+        "partition": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "start_offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "archived_next_offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "indexed_next_offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "captured_log_end_offset": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "captured_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "Z$|\\+00:00$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from_offset": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "to_offset": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "from_offset",
+              "to_offset",
+              "reason"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "status": {
+          "enum": [
+            "COMPLETE",
+            "LAGGING",
+            "GAP",
+            "UNKNOWN"
+          ]
+        }
+      },
+      "required": [
+        "topic",
+        "partition",
+        "start_offset",
+        "archived_next_offset",
+        "indexed_next_offset",
+        "captured_log_end_offset",
+        "captured_at",
+        "gaps",
+        "status"
+      ],
+      "additionalProperties": false,
+      "description": "Offsets are exclusive frontiers of verified user receipts, not proof of time completeness. Semantic validator checks ordering, gaps and capture pairs."
+    },
+    "SegmentRef": {
+      "type": "object",
+      "properties": {
+        "segment_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "topic": {
+          "enum": [
+            "sensor.readings",
+            "sensor.rejected"
+          ]
+        },
+        "partition": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "min_received_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "Z$|\\+00:00$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_received_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "Z$|\\+00:00$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "entry_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "object_ref": {
+          "$ref": "runtime.schema.json#/$defs/ObjectRef"
+        }
+      },
+      "required": [
+        "segment_id",
+        "topic",
+        "partition",
+        "min_received_at",
+        "max_received_at",
+        "entry_count",
+        "object_ref"
+      ],
+      "additionalProperties": false
+    },
+    "Segment": {
+      "type": "object",
+      "properties": {
+        "catalog_schema_version": {
+          "const": "1.0.0"
+        },
+        "segment_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "entries": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/Entry"
+          }
+        }
+      },
+      "required": [
+        "catalog_schema_version",
+        "segment_id",
+        "entries"
+      ],
+      "additionalProperties": false
+    },
+    "Generation": {
+      "type": "object",
+      "properties": {
+        "catalog_schema_version": {
+          "const": "1.0.0"
+        },
+        "generation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "published_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$|\\+00:00$"
+        },
+        "parent_ref": {
+          "anyOf": [
+            {
+              "$ref": "runtime.schema.json#/$defs/ObjectRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "segments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SegmentRef"
+          }
+        },
+        "partitions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/PartitionCoverage"
+          }
+        }
+      },
+      "required": [
+        "catalog_schema_version",
+        "generation_id",
+        "published_at",
+        "parent_ref",
+        "segments",
+        "partitions"
+      ],
+      "additionalProperties": false
+    },
+    "Pointer": {
+      "type": "object",
+      "properties": {
+        "catalog_schema_version": {
+          "const": "1.0.0"
+        },
+        "generation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "generation_ref": {
+          "$ref": "runtime.schema.json#/$defs/ObjectRef"
+        }
+      },
+      "required": [
+        "catalog_schema_version",
+        "generation_id",
+        "generation_ref"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

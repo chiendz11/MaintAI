@@ -1,0 +1,68 @@
+# Isolated component demo/test harness. Full-system deployment remains k3d + Argo CD.
+name: maintai-storage-demo
+x-runtime: &runtime
+  image: maintai-storage-catalog:local
+  build:
+    context: ../..
+    dockerfile: storage-consumer/Dockerfile
+  read_only: true
+  tmpfs: [/tmp]
+  environment: &env
+    KAFKA_LOCAL_MODE: 'true'
+    KAFKA_SECURITY_PROTOCOL: PLAINTEXT
+    KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    S3_RAW_BUCKET: maintai-storage-demo
+    S3_ENDPOINT_URL: http://minio:9000
+    S3_ADDRESSING_STYLE: path
+    AWS_REGION: us-east-1
+    AWS_ACCESS_KEY_ID: storage-local-fixture
+    AWS_SECRET_ACCESS_KEY: storage-local-fixture-password
+    AWS_EC2_METADATA_DISABLED: 'true'
+    STORAGE_ARCHIVE_OUTCOMES: 'false'
+    STORAGE_CATALOG_ENABLED: 'true'
+    STORAGE_CATALOG_INTERVAL_SECONDS: '1'
+services:
+  kafka:
+    extends:
+      file: ../../messaging/tests/integration/compose.yaml
+      service: kafka
+    image: apache/kafka:4.0.0@sha256:3f7b939115cd4872e9cee9369d80bd69712fde55f9902f46d793f64848dedc75
+  minio:
+    image: maintai-storage-minio-fixture:2025-04-22
+    build:
+      context: .
+      dockerfile: Minio.Dockerfile
+    command: [server, /data, --console-address, ':9001']
+    environment:
+      MINIO_ROOT_USER: storage-local-fixture
+      MINIO_ROOT_PASSWORD: storage-local-fixture-password
+    ports:
+      - '127.0.0.1:19000:9000'
+      - '127.0.0.1:19001:9001'
+    volumes:
+      - minio-data:/data
+  bootstrap:
+    <<: *runtime
+    entrypoint: [python, /fixture/bootstrap.py]
+    volumes:
+      - ./bootstrap.py:/fixture/bootstrap.py:ro
+    depends_on:
+      kafka:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    restart: 'no'
+  storage:
+    <<: *runtime
+    environment:
+      <<: *env
+      STORAGE_HTTP_PORT: '8008'
+    ports:
+      - '127.0.0.1:18008:8008'
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+    stop_grace_period: 45s
+volumes:
+  kafka-data:
+  minio-data:

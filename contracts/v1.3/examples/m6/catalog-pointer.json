@@ -1,0 +1,11 @@
+{
+  "catalog_schema_version": "1.0.0",
+  "generation_id": "generation-fixture",
+  "generation_ref": {
+    "bucket": "maintai-contract-fixture",
+    "key": "raw-catalog/v1/generations/generation-fixture.json",
+    "version_id": "fixture-version",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "size_bytes": 128
+  }
+}

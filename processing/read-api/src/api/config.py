@@ -5,6 +5,8 @@ import os
 from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
+from .history_config import HistorySettings
+
 
 def loopback(host):
     try:
@@ -23,6 +25,7 @@ class Settings:
     machines_claim: str
     host: str
     port: int
+    history: HistorySettings | None = None
 
     @classmethod
     def from_env(cls, env=None):
@@ -68,4 +71,14 @@ class Settings:
                 raise ValueError("Local test issuer/JWKS must use loopback")
             if not local and url.scheme != "https":
                 raise ValueError("Shared OIDC requires HTTPS")
-        return cls(db, issuer, audience, jwks, roles, machines, host, port)
+        return cls(
+            db,
+            issuer,
+            audience,
+            jwks,
+            roles,
+            machines,
+            host,
+            port,
+            HistorySettings.from_env(env, db, local=local),
+        )

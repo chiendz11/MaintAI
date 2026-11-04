@@ -49,8 +49,9 @@ client theo baseline5 operations, OIDC và command recovery. Browser checks dùn
 API fixtures và provider HTTP thật; provider có TLS JWKS/OAuth fixtures. Image chưa
 build/deploy, production IdP/Kafka integration chưa verify.
 Business API bỏ control
-facade; Sensor giữ control backend. Processing maintenance và Business job loops
-nằm trong owner runtimes hiện có, chưa thêm deployment mới. History/archive/auth/
+facade; Sensor giữ control backend. Theo [M6-HISTORY-01](../docs/M6_HISTORY_ARCHITECTURE_DECISION.md),
+snapshot/export/catalog-sync nằm trong Read API; Worker không có maintenance loop.
+Business job loops vẫn trong owner runtime hiện có; không thêm deployment mới. History/archive/auth/
 recovery giữ chi tiết tại [docs index](../docs/README.md) và các phụ lục được dẫn ở đó.
 Runtime JSON đã mô tả target1.3.2; Dockerfiles/source còn cần implement. Bảng
 trên không chứng minh entrypoint hoặc deployment đã chạy.

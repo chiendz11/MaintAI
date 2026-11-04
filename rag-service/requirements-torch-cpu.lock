@@ -1,0 +1,2 @@
+# Embedding runs on CPU in the laptop demo; generation is hosted by Groq.
+torch==2.10.0+cpu

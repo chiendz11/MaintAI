@@ -37,6 +37,37 @@ class Metrics:
             registry=self.registry,
         )
         self.age.set_function(state.oldest_age)
+        self.catalog_runs = Counter(
+            "maintai_storage_catalog_sync_total",
+            "Catalog sync cycles by result",
+            ["status"],
+            registry=self.registry,
+        )
+        self.catalog_entries = Counter(
+            "maintai_storage_catalog_entries_total",
+            "Verified receipts offered to catalog publication",
+            registry=self.registry,
+        )
+        self.catalog_partitions = Gauge(
+            "maintai_storage_catalog_partitions",
+            "Partition counts by bounded topic and coverage state",
+            ["topic", "status"],
+            registry=self.registry,
+        )
+
+    def catalog_result(self, status, count):
+        self.observe(lambda: self.catalog_runs.labels(status=status).inc())
+        self.observe(lambda: self.catalog_entries.inc(count))
+
+    def catalog_coverage(self, partitions):
+        for topic in ("sensor.readings", "sensor.rejected"):
+            for status in ("COMPLETE", "LAGGING", "GAP", "UNKNOWN"):
+                count = sum(p["topic"] == topic and p["status"] == status for p in partitions)
+                self.observe(
+                    lambda t=topic, s=status, n=count: self.catalog_partitions.labels(
+                        topic=t, status=s
+                    ).set(n)
+                )
 
     def observe(self, method, *args):
         # A collector failure must never alter the archive receipt or offset decision.

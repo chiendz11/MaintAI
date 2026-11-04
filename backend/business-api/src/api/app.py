@@ -21,7 +21,14 @@ from .observability import Metrics
 
 
 def create_app(
-    repository, verifier, *, status_client=None, projections=None, notifications=None, alerts=None
+    repository,
+    verifier,
+    *,
+    status_client=None,
+    projections=None,
+    notifications=None,
+    alerts=None,
+    history=None,
 ):
     @asynccontextmanager
     async def lifespan(app):
@@ -34,12 +41,17 @@ def create_app(
                 await notifications.stop()
             if status_client is not None:
                 await status_client.aclose()
+            if history is not None:
+                await history.aclose()
 
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     metrics = Metrics()
     if notifications is not None:
         notifications.metrics = metrics
     app.state.metrics = metrics
+    from .history import install
+
+    install(app, verifier, history)
     app.state.implementation_scope = {
         "registry": True,
         "fleet_detail": projections is not None,
@@ -145,7 +157,23 @@ def create_app(
             raise RegistryFailure(503, "DEPENDENCY_UNAVAILABLE") from None
 
     @app.get("/api/v1/machines/{machine_id:path}")
-    def machine(machine_id: str, request: Request):
+    async def machine(machine_id: str, request: Request):
+        raw_path = request.scope.get("raw_path", request.url.path.encode()).split(b"?", 1)[0]
+        for resource in ("predictions", "sensor-readings", "timeseries"):
+            suffix = "/" + resource
+            if machine_id.endswith(suffix) and raw_path.endswith(suffix.encode()):
+                machine = machine_id[: -len(suffix)]
+                identity = await asyncio.to_thread(read_identity, request)
+                identity.authorize(machine)
+                request.state.metric_route = "/api/v1/machines/{machine_id}/" + resource
+                if request.headers.get("X-MaintAI-History-Profile") != "M6-HISTORY-01/1.0.0":
+                    raise RegistryFailure(400, "INVALID_HISTORY_PROFILE")
+                if history is None:
+                    raise RegistryFailure(503, "HISTORY_UNAVAILABLE")
+                return await history.machine(identity, machine, resource, request)
+        return await asyncio.to_thread(machine_detail, machine_id, request)
+
+    def machine_detail(machine_id: str, request: Request):
         # Inspect the raw fixed suffix before decoded opaque IDs. A detail ID ending
         # in /live must encode that slash; an actual live resource appends /live literally.
         raw_path = request.scope.get("raw_path", request.url.path.encode()).split(b"?", 1)[0]

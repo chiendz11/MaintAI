@@ -20,6 +20,17 @@ def resolve_model_identity(
     *,
     verified_identity: ModelIdentity | None,
 ) -> ModelIdentity:
+    validate_model_identity(verified_identity)
+    if (
+        response.model_version != verified_identity.model_version
+        or response.preprocessor_version != verified_identity.preprocessor_version
+    ):
+        raise ValueError("Serving model identity does not match prediction response")
+    return verified_identity
+
+
+def validate_model_identity(verified_identity):
+    """Validate identity shape only; this does not attest artifact authenticity."""
     if not isinstance(verified_identity, ModelIdentity):
         raise ValueError("Verified serving model identity is required")
     contracts = default_contracts()
@@ -40,9 +51,3 @@ def resolve_model_identity(
     }
     if not Draft202012Validator(schema).is_valid(asdict(verified_identity)):
         raise ValueError("Incomplete or invalid model identity")
-    if (
-        response.model_version != verified_identity.model_version
-        or response.preprocessor_version != verified_identity.preprocessor_version
-    ):
-        raise ValueError("Serving model identity does not match prediction response")
-    return verified_identity

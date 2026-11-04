@@ -1,0 +1,29 @@
+
+# API
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+pydantic>=2.6.0
+pydantic-settings>=2.2.0
+httpx>=0.28.1
+
+# PDF Parsing
+PyMuPDF
+pypdf>=4.1.0
+
+# Document Processing
+langchain-core
+langchain-text-splitters
+
+# Embedding
+sentence-transformers
+numpy
+
+# PostgreSQL + pgvector
+psycopg[binary]
+python-dotenv
+
+# Testing
+pytest>=8.1.0
+
+# Optional API file upload
+python-multipart>=0.0.9

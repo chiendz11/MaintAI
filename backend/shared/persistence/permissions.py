@@ -80,3 +80,11 @@ def grant_business_permissions(connection, *, reader_role, consumer_role, api_ro
             grant(api_role, "UPDATE (updated_at)", ("machines",))
             grant(api_role, "UPDATE (status,updated_at)", ("alerts",))
             grant(api_role, "INSERT", ("alert_events", "feedback", "alert_notifications"))
+    if (
+        api_role is not None
+        and connection.execute("SELECT to_regclass('history_marker_snapshots') AS name").fetchone()[
+            "name"
+        ]
+        is not None
+    ):
+        grant(api_role, "SELECT,INSERT,UPDATE,DELETE", ("history_marker_snapshots",))

@@ -20,7 +20,34 @@ addFormats(ajv);
 for (const name of ["common", "business", "prediction", "features"])
   ajv.addSchema(schema(name), base + name + ".schema.json");
 const runtime = schema("runtime");
+ajv.addSchema(
+  JSON.parse(
+    readFileSync(
+      new URL(
+        "../../contracts/kafka/events/inference-result.schema.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  ),
+  "https://maintai.invalid/contracts/kafka/events/inference-result.schema.json",
+);
+ajv.addSchema(runtime, base + "runtime.schema.json");
+for (const name of ["history-m6", "raw-catalog-m6"])
+  ajv.addSchema(schema(name), base + name + ".schema.json");
 const validators = {
+  historyPageValidator: {
+    $ref: base + "history-m6.schema.json#/$defs/HistoryPage",
+  },
+  rawHistoryPageValidator: {
+    $ref: base + "history-m6.schema.json#/$defs/RawHistoryPage",
+  },
+  chartValidator: {
+    $ref: base + "history-m6.schema.json#/$defs/TimeSeriesPage",
+  },
+  exportJobValidator: {
+    $ref: base + "history-m6.schema.json#/$defs/ExportJob",
+  },
   liveValidator: runtime.$defs.LiveSnapshot,
   eventValidator: runtime.$defs.SSEEvent,
   pageValidator: { $ref: base + "business.schema.json#/$defs/MachineList" },

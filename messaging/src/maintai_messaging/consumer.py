@@ -74,7 +74,10 @@ class ConsumerRunner:
         *,
         contracts: ContractRegistry | None = None,
         client=None,
+        max_buffered_records: int = 64,
     ):
+        if type(max_buffered_records) is not int or not 2 <= max_buffered_records <= 1024:
+            raise ConfigurationError("Serial buffer must contain between 2 and 1024 records")
         self.settings = settings
         self.contracts = contracts or default_contracts()
         profiles = self.contracts.topology["profiles"]
@@ -86,6 +89,8 @@ class ConsumerRunner:
         self.client = client or Consumer(settings.consumer_config(profiles[role]["group_id"]))
         self._generation = 0
         self._busy = False
+        self._backpressured = False
+        self._buffer_limit = max_buffered_records
         self._pending = deque()
         self.processed = 0
         self.rebalances = 0
@@ -94,7 +99,7 @@ class ConsumerRunner:
         self._generation += 1
         self.rebalances += 1
         consumer.assign(partitions)
-        if self._busy:
+        if self._backpressured:
             consumer.pause(partitions)
 
     def _revoked(self, _consumer, _partitions):
@@ -127,6 +132,19 @@ class ConsumerRunner:
             raise ConsumerFailed("Kafka poll failed; offsets remain explicit")
         return Record.from_message(message)
 
+    def _flow_control(self):
+        buffered = len(self._pending) + int(self._busy)
+        if buffered >= self._buffer_limit and not self._backpressured:
+            self._backpressured = True
+            assigned = self.client.assignment()
+            if assigned:
+                self.client.pause(assigned)
+        elif self._backpressured and buffered <= self._buffer_limit // 2:
+            self._backpressured = False
+            assigned = self.client.assignment()
+            if assigned:
+                self.client.resume(assigned)
+
     def run(self, stop: threading.Event | None = None, *, max_records: int | None = None):
         stop = stop or threading.Event()
         if max_records is not None and max_records < 1:
@@ -146,7 +164,10 @@ class ConsumerRunner:
                     if not future.done():
                         extra = self._poll(self.settings.poll_interval_seconds)
                         if extra is not None:
+                            if len(self._pending) + 1 >= self._buffer_limit:
+                                raise ConsumerFailed("Serial consumer exceeded its bounded buffer")
                             self._pending.append((self._generation, extra))
+                            self._flow_control()
                         continue
                     try:
                         future.result()
@@ -165,9 +186,7 @@ class ConsumerRunner:
                         self.processed += 1
                     self._busy = False
                     future = None
-                    assigned = self.client.assignment()
-                    if assigned:
-                        self.client.resume(assigned)
+                    self._flow_control()
                 if stop.is_set() or (max_records is not None and self.processed >= max_records):
                     break
                 if self._pending:
@@ -180,9 +199,7 @@ class ConsumerRunner:
                     continue
                 generation = self._generation
                 self._busy = True
-                assigned = self.client.assignment()
-                if assigned:
-                    self.client.pause(assigned)
+                self._flow_control()
                 future = executor.submit(self._execute, record)
         finally:
             # Auto commit and auto offset storage are both disabled. A handler

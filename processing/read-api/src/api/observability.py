@@ -25,6 +25,19 @@ class Metrics:
             ["dependency", "error_type"],
             registry=self.registry,
         )
+        self.history_queries = Counter(
+            "maintai_history_queries_total",
+            "Completed history query responses",
+            ["source", "outcome"],
+            registry=self.registry,
+        )
+        self.history_duration = Histogram(
+            "maintai_history_query_duration_seconds",
+            "History read duration",
+            ["source"],
+            registry=self.registry,
+            buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60, 120),
+        )
 
     def http(self, route, method, status, elapsed):
         method = (
@@ -37,3 +50,10 @@ class Metrics:
 
     def dependency(self, dependency):
         self.errors.labels(dependency, "UNAVAILABLE").inc()
+
+    def history(self, source, status, elapsed):
+        if source not in {"HOT", "ARCHIVE", "MIXED"}:
+            return
+        outcome = "SUCCESS" if status == 200 else "PARTIAL" if status == 206 else "ERROR"
+        self.history_queries.labels(source, outcome).inc()
+        self.history_duration.labels(source).observe(elapsed)

@@ -1,0 +1,36 @@
+{
+  "catalog_schema_version": "1.0.0",
+  "generation_id": "generation-fixture",
+  "published_at": "2026-10-18T00:00:02Z",
+  "parent_ref": null,
+  "segments": [
+    {
+      "segment_id": "segment-fixture",
+      "topic": "sensor.readings",
+      "partition": 0,
+      "min_received_at": "2026-10-18T00:00:00Z",
+      "max_received_at": "2026-10-18T00:00:00Z",
+      "entry_count": 2,
+      "object_ref": {
+        "bucket": "maintai-contract-fixture",
+        "key": "raw-catalog/v1/segments/fixture.json",
+        "version_id": "fixture-version",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "size_bytes": 128
+      }
+    }
+  ],
+  "partitions": [
+    {
+      "topic": "sensor.readings",
+      "partition": 0,
+      "start_offset": 0,
+      "archived_next_offset": 2,
+      "indexed_next_offset": 2,
+      "captured_log_end_offset": 2,
+      "captured_at": "2026-10-18T00:00:02Z",
+      "gaps": [],
+      "status": "COMPLETE"
+    }
+  ]
+}

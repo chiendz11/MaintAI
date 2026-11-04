@@ -6,6 +6,16 @@ S3 archive adapters. This package is a library, not another Deployment.
 Canonical contract source: `../contracts/kafka/`. Wheels/sdists include those
 files; inference.results readers and writers accept only outcome 1.4.0.
 
+## SDK0.3.1 — bounded serial prefetch
+
+The serial ConsumerRunner still executes one durable handler at a time. It now
+prefetches at most64 records (including the active handler), pauses at that bound
+and resumes below half the bound. It no longer pauses every partition after each
+record. This avoids starving other machines during continuous replay. Buffered
+records are not committed on shutdown; failure/rebalance still requires broker
+redelivery. Wire bundle2.0.0 and SQL001/002 are unchanged. See
+[local demo preparation](../docs/LOCAL_DEMO_PREPARATION.md#serial-consumer-prefetch).
+
 ## SDK0.3.0 / bundle2.0.0 — OUTCOME-14-ONLY
 
 The legacy2.0 reader and DecodedEvent.legacy are removed. Completed outcomes

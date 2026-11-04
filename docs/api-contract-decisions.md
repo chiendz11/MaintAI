@@ -51,6 +51,13 @@ Machine `state` vẫn giữ `NORMAL/WATCH/HIGH/CRITICAL/INVALID/UNKNOWN`. `PENDI
 
 ## PAGE-02 — Sensor history và keyset cursor
 
+**M6-HISTORY-01 đã chốt29/10:** Đoạn PAGE-02 bên dưới chỉ mô tả wire baseline.
+Target M6 raw sort received_at + Kafka receipt locator, outcome sort processed_at
+(completed_at) + result_id; opaque cursor gắn snapshot/scope theo
+[decision](M6_HISTORY_ARCHITECTURE_DECISION.md). Không âm thầm dùng cursor cũ với
+clock/collection mới; PR M6 phải version/đồng bộ OpenAPI/schema/providers/UI trước
+khi enable. Baseline1.3.2 hiện có chưa đổi trong lượt docs này.
+
 `GET /api/v1/machines/{machine_id}/sensor-readings` trả `items`, `next_before`,
 `next_before_event_id`; mặc định 100, tối đa 500 bản ghi. Order:
 `received_at DESC, event_id DESC`. Cặp cursor trỏ tới bản ghi cuối trang; trang
@@ -464,3 +471,21 @@ về union2.0.0. Kafka và entrypoint ProcessingResult/history chỉ dùng schem
 Wrapper history giữ source_event_id và so với outcome.event_id. SSE result_kind
 là field riêng, không tự đổi cùng Kafka. Fleet lấy risk gốc từ projection;
 không có probability fallback hoặc hỗ trợ đọc/backfill legacy.
+
+
+## M6-HISTORY-01 — Versioned history profile
+
+[M6 architecture](M6_HISTORY_ARCHITECTURE_DECISION.md) ưu tiên PAGE-02/history
+clock/SELECT-only/export-writer kế thừa. M6 history/export dùng profile header và
+schema riêng, OpenAPI Business/Processing description2.0.0. M5 point/status/live/
+Alert DTO không đổi; Kafka bundle/runtime.schema.json immutable giữ nguyên.
+
+Processing completed_at (API processed_at) khác raw received_at; profile/cursor
+không chuyển latest ordering từ sequence sang time. Nullable time availability
+đi cùng explicit partition coverage; no unknown cutoff fabricated. Small CSV200
+hoặc durable202 theo preflight, không tự đổi mode sau khi đã gửi headers.
+
+Internal history cần cả service token và Business-signed delegation<=60s;
+actor/scope từ token đã kiểm chữ ký, không browser headers. Source ro pool không
+được ghi; metadata rw pool và leased runner trong Read API là phạm vi quyền riêng.
+Các operation khác giữ nguyên machine semantics trước thay đổi này.

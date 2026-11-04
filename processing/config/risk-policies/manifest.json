@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "schema_path": "risk-policy.schema.json",
+  "schema_sha256": "fca723490dc669f864eb37c9247879bcef953440eea7cf14ae2733502579f0c3",
+  "policies": {
+    "demo-risk-v1": {
+      "path": "demo-risk-v1.json",
+      "sha256": "254926e93f9a9435bf938c1e4d4f605ada5415f9a024b53aaabf762e963cc588",
+      "policy_sha256": "25ec9dc4a1178bee4b560349c88dbb6b25fe7615f99884b5b8cc1e2f4963c08c",
+      "usage": "demo",
+      "calibration_status": "illustrative_not_calibrated"
+    }
+  }
+}

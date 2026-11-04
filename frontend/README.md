@@ -99,6 +99,37 @@ ID có slash/Unicode phải encode đúng một lần. Dot-only IDs `.` và `..`
 được từ browser vì WHATWG URL chuẩn hóa chúng; UI chặn trước request thay vì gửi
 sang resource sai. Giải pháp interface cho trường hợp này cần review riêng.
 
+## Lịch sử và export M6
+
+Nút **Lịch sử** trong Machine Detail mở bảng kết quả Processing hoặc raw receipts.
+Bộ lọc nhập theo giờ thiết bị rồi chuyển sang UTC; giây/millisecond được giữ khi
+áp dụng lại. Processing dùng `processed_at`, raw dùng `received_at`; snapshot có
+TTL riêng, phân trang không thay dữ liệu live hoặc prediction lịch sử.
+
+Các lệnh M6 gửi profile `M6-HISTORY-01/1.0.0` tới Business. Browser không giữ service
+credential hoặc tự tạo delegation JWT. Sequence/Kafka offsets dùng BigInt; raw
+numeric lexemes giữ nguyên khi hiển thị. Bảng không biến INVALID/FAILED thành NORMAL.
+
+Biểu đồ SVG hiển thị min/max/avg/count/invalid_count, giữ khoảng trống và các đỉnh
+min/max. Raw features và risk/probability dùng clocks riêng. Marker thiếu timestamp
+đúng trục giữ vị trí null và nằm trong danh sách, không ghép vào bucket bằng clock
+khác. Bộ lọc model/loại outcome chỉ áp dụng bảng, biểu đồ dùng range đã áp dụng.
+
+CSV nhỏ được tải trực tiếp; Parquet hoặc export lớn dùng job. UI giữ mã idempotency
+của yêu cầu chưa rõ kết quả và chỉ đối chiếu lại khi người dùng chọn; không tự retry
+POST. Có thể nhập job ID để tra cứu lại rồi tải qua Business proxy. Đổi máy/logout
+abort các requests và polling cũ. Artifact hết hạn cần tạo yêu cầu mới có chủ đích.
+
+Demo dùng contract fixtures cố định ngày18/10/2026 và có nhãn mô phỏng. Demo có CSV
+và hai biểu đồ fixture `risk_score`/`rotational_speed_rpm`; không giả lập durable
+Parquet job thành công. Live không fallback sang demo khi raw/catalog unavailable.
+
+Browser test `tests/browser/history-live.spec.ts` dùng `MAINTAI_M6_INTEGRATION=1`
+cùng M4/M5 flags. Provider fixture cần Compose M6 tại
+[`processing/read-api/tests/compose.yaml`](../processing/read-api/tests/compose.yaml).
+Đây là reader/facade/UI integration với catalog publisher fixture; không chứng
+minh Storage publisher hoặc IAM/OIDC shared đã sẵn sàng.
+
 ## Build image
 
 Build context là repository root vì frontend validate schemas từ contracts chung:

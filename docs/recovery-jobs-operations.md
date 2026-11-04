@@ -1,4 +1,6 @@
 > **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
+
+> **M6 override29/10/2026:** [M6-HISTORY-01](M6_HISTORY_ARCHITECTURE_DECISION.md) ưu tiên phần history/snapshot/export bên dưới: Read API ghi metadata qua pool riêng, runner export trong Read API; processed archive và source cleaner hoãn sau M6. Các thuật toán archive/retention bên dưới là thiết kế tương lai, không là task M6. Brief/recovery ngoài phạm vi này giữ nguyên.
 > durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
 > có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
 > [Implementation report](PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) và
@@ -20,7 +22,8 @@ Xem [thứ tự ưu tiên và quyết định dự án](README.md).
 | Relay | Publish ACK rồi mark published | Publish lại được, result/signal ID giữ nguyên |
 | Business | Inbox + projection/alert/audit transaction trước offset | Dedupe side effects, CAS ordering; không commit offset vượt event chưa hoàn tất |
 | Raw Storage | Object + manifest bền vững trước offset | Deterministic batch identity, reconcile uncertain upload |
-| Processed archive | Verified immutable batch trước cleanup | Xem HISTORY-01, không xóa theo tuổi đơn thuần |
+| M6 snapshot/export — Read API | Snapshot/job metadata commit trước response/202 | Lease/fencing/retry; original outcomes read-only; không chạy trong Worker |
+| Processed archive | Hoãn sau M6 | M6 không bật cleanup dữ liệu gốc; thiết kế cũ không tự kích hoạt |
 
 Kafka/PostgreSQL/S3/external ML không có transaction exactly-once chung. In-flight
 record hoàn tất ngoài thứ tự chỉ được commit contiguous completed offset frontier
@@ -28,6 +31,14 @@ theo từng partition. Poison/conflict cần durable quarantine rồi mới adva
 Không dùng string event_id, string epoch hoặc completion time làm source ordering.
 
 ## 2. Durable jobs chung
+
+**M6-HISTORY-01,29/10:** Export runner thuộc runtime Read API, cùng Deployment,
+pool/budgets riêng. Worker chỉ realtime; không thêm processing-maintenance.
+Read API metadata credential chỉ ghi history_meta, không ghi source/outcome/outbox.
+Giữ [decision](M6_HISTORY_ARCHITECTURE_DECISION.md) và
+[raw handoff](M6_RAW_ARCHIVE_HANDOFF.md) khi áp dụng các quy tắc recovery dưới đây.
+Raw catalog có thể lag sau commit; reconciliation phải phục hồi từ durable raw
+manifests, không chỉ từ Kafka chưa commit. DB-only demo không chứng minh full M6.
 
 Logical jobs tables thuộc owner, gồm job_id/type, actor/scope, idempotency key +
 payload hash, status, immutable input refs, attempts/max_attempts, next_attempt_at,

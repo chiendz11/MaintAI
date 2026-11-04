@@ -2,16 +2,17 @@
 
 **Chủ đề:** Predictive Maintenance & Technician Copilot.
 **Nội dung:** Yêu cầu — Giả định vận hành — Kiến trúc — Biện luận.
-**Phiên bản:** 1.2.2 — ngày 24/10/2026.
+**Phiên bản:** 1.2.3 — ngày 25/10/2026.
 
 ## Bản PDF để nộp
 
-[Nhóm 11 — MaintAI: Yêu cầu, giả định và biện luận kiến trúc (8 trang A4)](<report/Nhóm-11_ MaintAI_Kien-truc.pdf>)
+[Nhóm 8 — MaintAI: Yêu cầu, giả định và biện luận kiến trúc (8 trang A4)](report/Nhóm-8_MaintAI_Kien-truc.pdf)
 được biên tập theo mạch yêu cầu → giả định 100 máy → lựa chọn kiến trúc. Lý do
 và đánh đổi được giải thích ngay cạnh từng lựa chọn. Sáu trang đầu giữ phần
 phân tích cùng hai sơ đồ rút gọn; trang 7–8 bổ sung ảnh kiến trúc tổng thể và
 deployment trên A4 ngang để đọc rõ các nhãn. Ảnh được nhúng dạng vector.
 PDF đọc độc lập, không yêu cầu mở mã nguồn hoặc tài liệu khác.
+Trang đầu có mã sinh viên và họ tên đầy đủ của bốn thành viên Nhóm 8.
 [Bản nội dung có thể chỉnh sửa](report/report.md) được lưu cùng PDF; các phần
 01–04 dưới đây giữ bản phân tích đầy đủ.
 

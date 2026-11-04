@@ -1,0 +1,10 @@
+# Bỏ qua các file cấu hình mật khẩu, biến môi trường
+.env
+# Bỏ qua thư mục môi trường ảo python
+venv/
+env/
+__pycache__/
+# Bỏ qua các file log hoặc file build tạm thời
+*.log
+dist/
+build/

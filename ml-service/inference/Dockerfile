@@ -1,7 +1,8 @@
 # Build context: root repository MaintAI.
 # Image thử tích hợp baseline; chưa phải production release.
 
-FROM python:3.12-slim
+# Official Python OCI index resolved 2026-10-29; includes linux/amd64.
+FROM python:3.12-slim@sha256:aa943ce411423c7582288f18707ff66eddcbaeb510502d747a72aeb34f30d159
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

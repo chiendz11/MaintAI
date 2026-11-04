@@ -1,16 +1,16 @@
 openapi: 3.1.1
 info:
   title: MaintAI Business REST/SSE API
-  version: 1.3.2
-  description: Target business API; normative amendment1.3.2. Legacy unchanged business DTOs are explicitly reused.
-    Auth required, main UI only. No ingestion or simulator control routes.
+  version: 2.0.0
+  description: Description revision2.0.0 freezes M6-HISTORY-01/1.0.0 history/export interfaces. Existing
+    M1-M5 runtime DTOs and Kafka bundle remain unchanged; M6 routes are specification only.
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 servers:
 - url: https://business.example.invalid
   description: Illustrative only; configure environment routing.
 externalDocs:
-  description: Design target v1.4; this OpenAPI remains the 1.3.2 baseline pending migration.
-  url: https://github.com/chiendz11/MaintAI/blob/main/docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md
+  description: M6 history architecture and migration
+  url: ../../../docs/M6_HISTORY_ARCHITECTURE_DECISION.md
 x-maintai-decisions: ../../../docs/api-contract-decisions.md
 tags:
 - name: Sensor
@@ -38,11 +38,11 @@ paths:
       tags:
       - Machines
       summary: List fleet state
-      description: Order machine_id ASC. Empty filtered results return 200 with items=[] and total=0. INVALID/UNKNOWN
-        are explicit states with no current risk score; do not render them as NORMAL. Authentication is required
-        on shared deployment. For all shared deployment requests, enforce the listed roles; 401/403 are explicit
-        failures. See completion decision AUTH-01. Amendment1.3.2 requires authentication and machine-scope checks;
-        any legacy optional-auth wording is superseded.
+      description: Order machine_id ASC. Empty filtered results return 200 with items=[] and total=0.
+        INVALID/UNKNOWN are explicit states with no current risk score; do not render them as NORMAL.
+        Authentication is required on shared deployment. For all shared deployment requests, enforce the
+        listed roles; 401/403 are explicit failures. See completion decision AUTH-01. Amendment1.3.2 requires
+        authentication and machine-scope checks; any legacy optional-auth wording is superseded.
       x-maintai-source: baseline 15.1; completion PAGE-01, STATE-01
       parameters:
       - $ref: '#/components/parameters/RequestId'
@@ -117,11 +117,12 @@ paths:
       tags:
       - Machines
       summary: Get current machine detail
-      description: latest_prediction describes the current event only; it is null for INVALID/UNKNOWN. Historical
-        predictions remain available through historical records; do not silently reuse an old prediction as the
-        current result. Authentication is required on shared deployment. For all shared deployment requests, enforce
-        the listed roles; 401/403 are explicit failures. See completion decision AUTH-01. Amendment1.3.2 requires
-        authentication and machine-scope checks; any legacy optional-auth wording is superseded.
+      description: latest_prediction describes the current event only; it is null for INVALID/UNKNOWN.
+        Historical predictions remain available through historical records; do not silently reuse an old
+        prediction as the current result. Authentication is required on shared deployment. For all shared
+        deployment requests, enforce the listed roles; 401/403 are explicit failures. See completion decision
+        AUTH-01. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
+        wording is superseded.
       x-maintai-source: baseline 15.2; completion STATE-01
       parameters:
       - $ref: '#/components/parameters/RequestId'
@@ -180,35 +181,38 @@ paths:
     get:
       operationId: listRawHistory
       summary: Read accepted raw history with explicit coverage
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
-        wording is superseded.'
+      description: M6-HISTORY-01/1.0.0; design only, no M6 runtime rollout. Read API uses SELECT-only
+        source pool plus a separate metadata writer pool for snapshots/jobs. Original outcomes stay in
+        PostgreSQL; no processed archive or source cleanup in M6. UTC microseconds; every page/job/download
+        rechecks current actor and machine scope. Read accepted timeline receipts via pinned raw catalog
+        generation, order received_at DESC,topic DESC,partition DESC,offset DESC; preserve duplicate source
+        events at different locators. Rejected/poison missing machine/time do not enter this collection.
+        Default last1h, range<=31d, snapshot10m/100000 IDs. Nullable time availability with explicit partition
+        coverage; uncertain required coverage returns503, never partial/empty success.
       x-maintai-roles:
       - VIEWER
       - TECHNICIAN
       - ADMIN
       parameters:
-      - &id004
-        name: machine_id
+      - name: machine_id
         in: path
         required: true
         schema: &id002
           type: string
           minLength: 1
-      - &id005
-        name: from
+      - name: from
         in: query
         required: false
         schema: &id001
           type: string
           format: date-time
-      - &id006
-        name: to
+        description: Inclusive Clock selected by metric collection.
+      - name: to
         in: query
         required: false
         schema: *id001
-      - &id007
-        name: limit
+        description: Exclusive Clock selected by metric collection.
+      - name: limit
         in: query
         required: false
         schema:
@@ -216,11 +220,19 @@ paths:
           minimum: 1
           maximum: 500
           default: 100
-      - &id008
-        name: cursor
+      - name: cursor
         in: query
         required: false
         schema: *id002
+        description: Opaque authenticated M6 token binding profile, collection, frozen query, actor/scope,
+          snapshot, sort/last key, key version and expiry; legacy tokens rejected.
+      - name: X-MaintAI-History-Profile
+        in: header
+        required: true
+        schema:
+          type: string
+          const: M6-HISTORY-01/1.0.0
+        description: Explicit opt-in; absent/other profile is rejected, never reinterpret a baseline cursor.
       responses:
         '400':
           description: Invalid request/cursor.
@@ -287,20 +299,24 @@ paths:
           content:
             application/json:
               schema:
-                $ref: ../schemas/runtime.schema.json#/$defs/RawHistoryPage
+                $ref: ../schemas/history-m6.schema.json#/$defs/RawHistoryPage
+              examples:
+                m6:
+                  externalValue: ../examples/m6/raw-page-offset-coverage.json
       security:
       - BearerAuth: []
+      x-maintai-history-profile: M6-HISTORY-01/1.0.0
   /api/v1/alerts:
     get:
       operationId: listAlerts
       tags:
       - Alerts
       summary: List alerts
-      description: Order created_at DESC, alert_id DESC; total counts matching rows before limit/offset. An unknown
-        filter machine_id produces an empty result rather than claiming the machine resource exists. Authentication
-        is required on shared deployment. For all shared deployment requests, enforce the listed roles; 401/403
-        are explicit failures. See completion decision AUTH-01. Amendment1.3.2 requires authentication and machine-scope
-        checks; any legacy optional-auth wording is superseded.
+      description: Order created_at DESC, alert_id DESC; total counts matching rows before limit/offset.
+        An unknown filter machine_id produces an empty result rather than claiming the machine resource
+        exists. Authentication is required on shared deployment. For all shared deployment requests, enforce
+        the listed roles; 401/403 are explicit failures. See completion decision AUTH-01. Amendment1.3.2
+        requires authentication and machine-scope checks; any legacy optional-auth wording is superseded.
       x-maintai-source: baseline 15.4; completion PAGE-01
       parameters:
       - $ref: '#/components/parameters/RequestId'
@@ -388,11 +404,12 @@ paths:
       tags:
       - Alerts
       summary: Get alert detail
-      description: Alert severity and lifecycle remain independent of copilot availability. Return current CopilotSummary
-        and history ordered timestamp ASC, alert_event_id ASC. Fetch full brief via the backend /brief endpoint;
-        frontend never calls RAG directly. Authentication is required on shared deployment. For all shared deployment
-        requests, enforce the listed roles; 401/403 are explicit failures. See completion decision AUTH-01. Amendment1.3.2
-        requires authentication and machine-scope checks; any legacy optional-auth wording is superseded.
+      description: Alert severity and lifecycle remain independent of copilot availability. Return current
+        CopilotSummary and history ordered timestamp ASC, alert_event_id ASC. Fetch full brief via the
+        backend /brief endpoint; frontend never calls RAG directly. Authentication is required on shared
+        deployment. For all shared deployment requests, enforce the listed roles; 401/403 are explicit
+        failures. See completion decision AUTH-01. Amendment1.3.2 requires authentication and machine-scope
+        checks; any legacy optional-auth wording is superseded.
       x-maintai-source: baseline 15.5; completion BRIEF-01, AUDIT-01
       parameters:
       - $ref: '#/components/parameters/RequestId'
@@ -453,12 +470,13 @@ paths:
       tags:
       - Alerts
       summary: Ack alert
-      description: 'Allowed source statuses: OPEN; target: ACKNOWLEDGED. Atomically validate transition, update
-        status and append audit history. Every other transition, including repeating a completed action, returns
-        409. With auth enabled actor_id must match the authenticated principal (otherwise 403); actor_id alone grants
-        no authority. Authentication is required on shared deployment. For all shared deployment requests, enforce
-        the listed roles; 401/403 are explicit failures. See completion decision AUTH-01. Amendment1.3.2 requires
-        authentication and machine-scope checks; any legacy optional-auth wording is superseded.'
+      description: 'Allowed source statuses: OPEN; target: ACKNOWLEDGED. Atomically validate transition,
+        update status and append audit history. Every other transition, including repeating a completed
+        action, returns 409. With auth enabled actor_id must match the authenticated principal (otherwise
+        403); actor_id alone grants no authority. Authentication is required on shared deployment. For
+        all shared deployment requests, enforce the listed roles; 401/403 are explicit failures. See completion
+        decision AUTH-01. Amendment1.3.2 requires authentication and machine-scope checks; any legacy
+        optional-auth wording is superseded.'
       x-maintai-source: baseline 10.3/11; completion ACTION-01
       parameters:
       - $ref: '#/components/parameters/RequestId'
@@ -538,12 +556,13 @@ paths:
       tags:
       - Alerts
       summary: Start alert
-      description: 'Allowed source statuses: ACKNOWLEDGED, ESCALATED; target: IN_PROGRESS. Atomically validate transition,
-        update status and append audit history. Every other transition, including repeating a completed action,
-        returns 409. With auth enabled actor_id must match the authenticated principal (otherwise 403); actor_id
-        alone grants no authority. Authentication is required on shared deployment. For all shared deployment requests,
-        enforce the listed roles; 401/403 are explicit failures. See completion decision AUTH-01. Amendment1.3.2
-        requires authentication and machine-scope checks; any legacy optional-auth wording is superseded.'
+      description: 'Allowed source statuses: ACKNOWLEDGED, ESCALATED; target: IN_PROGRESS. Atomically
+        validate transition, update status and append audit history. Every other transition, including
+        repeating a completed action, returns 409. With auth enabled actor_id must match the authenticated
+        principal (otherwise 403); actor_id alone grants no authority. Authentication is required on shared
+        deployment. For all shared deployment requests, enforce the listed roles; 401/403 are explicit
+        failures. See completion decision AUTH-01. Amendment1.3.2 requires authentication and machine-scope
+        checks; any legacy optional-auth wording is superseded.'
       x-maintai-source: baseline 10.3/11; completion ACTION-01
       parameters:
       - $ref: '#/components/parameters/RequestId'
@@ -625,12 +644,13 @@ paths:
       tags:
       - Alerts
       summary: Escalate alert
-      description: 'Allowed source statuses: OPEN, ACKNOWLEDGED, IN_PROGRESS; target: ESCALATED. Atomically validate
-        transition, update status and append audit history. Every other transition, including repeating a completed
-        action, returns 409. With auth enabled actor_id must match the authenticated principal (otherwise 403);
-        actor_id alone grants no authority. Authentication is required on shared deployment. For all shared deployment
-        requests, enforce the listed roles; 401/403 are explicit failures. See completion decision AUTH-01. Amendment1.3.2
-        requires authentication and machine-scope checks; any legacy optional-auth wording is superseded.'
+      description: 'Allowed source statuses: OPEN, ACKNOWLEDGED, IN_PROGRESS; target: ESCALATED. Atomically
+        validate transition, update status and append audit history. Every other transition, including
+        repeating a completed action, returns 409. With auth enabled actor_id must match the authenticated
+        principal (otherwise 403); actor_id alone grants no authority. Authentication is required on shared
+        deployment. For all shared deployment requests, enforce the listed roles; 401/403 are explicit
+        failures. See completion decision AUTH-01. Amendment1.3.2 requires authentication and machine-scope
+        checks; any legacy optional-auth wording is superseded.'
       x-maintai-source: baseline 10.3/11; completion ACTION-01
       parameters:
       - $ref: '#/components/parameters/RequestId'
@@ -715,11 +735,12 @@ paths:
       - Alerts
       summary: Resolve alert
       description: 'Allowed source statuses: ACKNOWLEDGED, IN_PROGRESS, ESCALATED; target: RESOLVED. Atomically
-        validate transition, update status and append audit history. Every other transition, including repeating
-        a completed action, returns 409. With auth enabled actor_id must match the authenticated principal (otherwise
-        403); actor_id alone grants no authority. Authentication is required on shared deployment. For all shared
-        deployment requests, enforce the listed roles; 401/403 are explicit failures. See completion decision AUTH-01.
-        Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth wording is superseded.'
+        validate transition, update status and append audit history. Every other transition, including
+        repeating a completed action, returns 409. With auth enabled actor_id must match the authenticated
+        principal (otherwise 403); actor_id alone grants no authority. Authentication is required on shared
+        deployment. For all shared deployment requests, enforce the listed roles; 401/403 are explicit
+        failures. See completion decision AUTH-01. Amendment1.3.2 requires authentication and machine-scope
+        checks; any legacy optional-auth wording is superseded.'
       x-maintai-source: baseline 10.3/11; completion ACTION-01
       parameters:
       - $ref: '#/components/parameters/RequestId'
@@ -803,12 +824,13 @@ paths:
       tags:
       - Alerts
       summary: False alert alert
-      description: 'Allowed source statuses: OPEN, ACKNOWLEDGED, IN_PROGRESS; target: FALSE_ALERT. Atomically validate
-        transition, update status and append audit history. Every other transition, including repeating a completed
-        action, returns 409. With auth enabled actor_id must match the authenticated principal (otherwise 403);
-        actor_id alone grants no authority. Authentication is required on shared deployment. For all shared deployment
-        requests, enforce the listed roles; 401/403 are explicit failures. See completion decision AUTH-01. Amendment1.3.2
-        requires authentication and machine-scope checks; any legacy optional-auth wording is superseded.'
+      description: 'Allowed source statuses: OPEN, ACKNOWLEDGED, IN_PROGRESS; target: FALSE_ALERT. Atomically
+        validate transition, update status and append audit history. Every other transition, including
+        repeating a completed action, returns 409. With auth enabled actor_id must match the authenticated
+        principal (otherwise 403); actor_id alone grants no authority. Authentication is required on shared
+        deployment. For all shared deployment requests, enforce the listed roles; 401/403 are explicit
+        failures. See completion decision AUTH-01. Amendment1.3.2 requires authentication and machine-scope
+        checks; any legacy optional-auth wording is superseded.'
       x-maintai-source: baseline 10.3/11; completion ACTION-01
       parameters:
       - $ref: '#/components/parameters/RequestId'
@@ -892,11 +914,12 @@ paths:
       tags:
       - Feedback
       summary: Record technician feedback
-      description: Append feedback to the existing alert and trace the authenticated actor. This does not change
-        alert lifecycle, risk policy or trigger training. A false-alert lifecycle action is a separate endpoint.
-        Authentication is required on shared deployment. For all shared deployment requests, enforce the listed
-        roles; 401/403 are explicit failures. See completion decision AUTH-01. Amendment1.3.2 requires authentication
-        and machine-scope checks; any legacy optional-auth wording is superseded.
+      description: Append feedback to the existing alert and trace the authenticated actor. This does
+        not change alert lifecycle, risk policy or trigger training. A false-alert lifecycle action is
+        a separate endpoint. Authentication is required on shared deployment. For all shared deployment
+        requests, enforce the listed roles; 401/403 are explicit failures. See completion decision AUTH-01.
+        Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth wording
+        is superseded.
       x-maintai-source: baseline 12; completion ACTION-02 (201 status)
       parameters:
       - $ref: '#/components/parameters/RequestId'
@@ -963,12 +986,12 @@ paths:
       tags:
       - Copilot
       summary: Read latest cached maintenance brief
-      description: Always read through backend. PENDING, NOT_REQUESTED and UNAVAILABLE return 200 with brief=null
-        and an explicit copilot_status. AVAILABLE includes a full brief; inspect grounded_status because insufficient
-        evidence is a completed business result. Does not trigger RAG or wait for generation. Authentication is
-        required on shared deployment. For all shared deployment requests, enforce the listed roles; 401/403 are
-        explicit failures. See completion decision AUTH-01. Amendment1.3.2 requires authentication and machine-scope
-        checks; any legacy optional-auth wording is superseded.
+      description: Always read through backend. PENDING, NOT_REQUESTED and UNAVAILABLE return 200 with
+        brief=null and an explicit copilot_status. AVAILABLE includes a full brief; inspect grounded_status
+        because insufficient evidence is a completed business result. Does not trigger RAG or wait for
+        generation. Authentication is required on shared deployment. For all shared deployment requests,
+        enforce the listed roles; 401/403 are explicit failures. See completion decision AUTH-01. Amendment1.3.2
+        requires authentication and machine-scope checks; any legacy optional-auth wording is superseded.
       x-maintai-source: completion BRIEF-01
       parameters:
       - $ref: '#/components/parameters/RequestId'
@@ -1034,9 +1057,9 @@ paths:
     post:
       operationId: requestMaintenanceBrief
       summary: Enqueue a durable brief job after authorization
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
-        wording is superseded.'
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification
+        only; runtime not implemented. Amendment1.3.2 requires authentication and machine-scope checks;
+        any legacy optional-auth wording is superseded.'
       x-maintai-roles:
       - TECHNICIAN
       - ADMIN
@@ -1135,13 +1158,14 @@ paths:
       tags:
       - Monitoring
       summary: Read service and drift monitoring summary
-      description: A successful observation can be DEGRADED and still return 200. Worker freshness is derived from
-        checkpoint last_success_at and configured stale_after_seconds (900 is illustrative), not report.computed_at,
-        because reports may be reused. latest_report.window_end_at exposes data recency separately. Drift does not
-        change machine or alert severity. Resolve the deployed model and configured worker; do not merge unrelated
-        checkpoints. Authentication is required on shared deployment. For all shared deployment requests, enforce
-        the listed roles; 401/403 are explicit failures. See completion decision AUTH-01. Amendment1.3.2 requires
-        authentication and machine-scope checks; any legacy optional-auth wording is superseded.
+      description: A successful observation can be DEGRADED and still return 200. Worker freshness is
+        derived from checkpoint last_success_at and configured stale_after_seconds (900 is illustrative),
+        not report.computed_at, because reports may be reused. latest_report.window_end_at exposes data
+        recency separately. Drift does not change machine or alert severity. Resolve the deployed model
+        and configured worker; do not merge unrelated checkpoints. Authentication is required on shared
+        deployment. For all shared deployment requests, enforce the listed roles; 401/403 are explicit
+        failures. See completion decision AUTH-01. Amendment1.3.2 requires authentication and machine-scope
+        checks; any legacy optional-auth wording is superseded.
       x-maintai-source: completion MON-01
       parameters:
       - $ref: '#/components/parameters/RequestId'
@@ -1193,9 +1217,9 @@ paths:
     get:
       operationId: listPublishedDriftReports
       summary: Read Business metadata catalog; surface catalog staleness
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
-        wording is superseded.'
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification
+        only; runtime not implemented. Amendment1.3.2 requires authentication and machine-scope checks;
+        any legacy optional-auth wording is superseded.'
       x-maintai-roles:
       - VIEWER
       - TECHNICIAN
@@ -1303,9 +1327,9 @@ paths:
       tags:
       - Monitoring
       summary: Read one persisted drift report
-      description: Fetch exact S3 report version from authorized catalog and verify SHA-256; never query drift_db
-        or run detector. Missing/corrupt source ->503. Amendment1.3.2 requires authentication and machine-scope
-        checks; any legacy optional-auth wording is superseded.
+      description: Fetch exact S3 report version from authorized catalog and verify SHA-256; never query
+        drift_db or run detector. Missing/corrupt source ->503. Amendment1.3.2 requires authentication
+        and machine-scope checks; any legacy optional-auth wording is superseded.
       x-maintai-source: completion MON-02
       parameters:
       - $ref: '#/components/parameters/RequestId'
@@ -1370,9 +1394,9 @@ paths:
     get:
       operationId: streamLiveUpdates
       summary: Authenticated SSE; REST resync after reconnect; no durable replay
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
-        wording is superseded.'
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification
+        only; runtime not implemented. Amendment1.3.2 requires authentication and machine-scope checks;
+        any legacy optional-auth wording is superseded.'
       x-maintai-roles:
       - VIEWER
       - TECHNICIAN
@@ -1461,8 +1485,8 @@ paths:
       tags:
       - Operations
       summary: Process liveness
-      description: 200 means process is alive. Do not depend on external DB/LLM readiness in liveness checks; avoid
-        restart loops.
+      description: 200 means process is alive. Do not depend on external DB/LLM readiness in liveness
+        checks; avoid restart loops.
       x-maintai-source: baseline 19.1
       parameters:
       - $ref: '#/components/parameters/RequestId'
@@ -1495,9 +1519,10 @@ paths:
       tags:
       - Operations
       summary: Dependency readiness
-      description: 200 only when ready for the service function; 503 when required checks fail, including DEGRADED
-        RAG. Readiness bodies intentionally use the health schema rather than the business error envelope. Platform
-        may configure RAG separately because RAG failure must not remove backend alert functionality.
+      description: 200 only when ready for the service function; 503 when required checks fail, including
+        DEGRADED RAG. Readiness bodies intentionally use the health schema rather than the business error
+        envelope. Platform may configure RAG separately because RAG failure must not remove backend alert
+        functionality.
       x-maintai-source: baseline 19.2; completion HEALTH-01
       parameters:
       - $ref: '#/components/parameters/RequestId'
@@ -1567,8 +1592,9 @@ paths:
       tags:
       - Operations
       summary: Prometheus metrics
-      description: Platform scrape endpoint, not a frontend data API. Example is illustrative; actual service metrics
-        follow baseline section 20. Do not label metrics with unique event/machine/report IDs.
+      description: Platform scrape endpoint, not a frontend data API. Example is illustrative; actual
+        service metrics follow baseline section 20. Do not label metrics with unique event/machine/report
+        IDs.
       x-maintai-source: baseline 20
       parameters:
       - $ref: '#/components/parameters/RequestId'
@@ -1588,23 +1614,54 @@ paths:
     get:
       operationId: listProcessingHistory
       summary: List immutable outcomes across hot/archive tiers
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
-        wording is superseded.'
+      description: M6-HISTORY-01/1.0.0; design only, no M6 runtime rollout. Read API uses SELECT-only
+        source pool plus a separate metadata writer pool for snapshots/jobs. Original outcomes stay in
+        PostgreSQL; no processed archive or source cleanup in M6. UTC microseconds; every page/job/download
+        rechecks current actor and machine scope. Filter from inclusive/to exclusive by processing_results.completed_at,
+        exposed as processed_at. Order processed_at DESC,result_id DESC. First page materializes committed
+        bounded membership; late commits require a new snapshot. Default last1h, range<=31d, snapshot10m/100000
+        IDs; subsequent cursor requests reuse frozen omitted time bounds. No OFFSET or archive fallback.
       x-maintai-roles:
       - VIEWER
       - TECHNICIAN
       - ADMIN
       parameters:
-      - *id004
-      - *id005
-      - *id006
-      - *id007
-      - *id008
+      - name: machine_id
+        in: path
+        required: true
+        schema: &id005
+          type: string
+          minLength: 1
+      - name: from
+        in: query
+        required: false
+        schema: &id004
+          type: string
+          format: date-time
+        description: Inclusive Clock selected by metric collection.
+      - name: to
+        in: query
+        required: false
+        schema: *id004
+        description: Exclusive Clock selected by metric collection.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 500
+          default: 100
+      - name: cursor
+        in: query
+        required: false
+        schema: *id005
+        description: Opaque authenticated M6 token binding profile, collection, frozen query, actor/scope,
+          snapshot, sort/last key, key version and expiry; legacy tokens rejected.
       - name: model_version
         in: query
         required: false
-        schema: *id002
+        schema: *id005
       - name: result_kind
         in: query
         required: false
@@ -1614,6 +1671,13 @@ paths:
           - PREDICTION_COMPLETED
           - DATA_INVALID
           - INFERENCE_UNAVAILABLE
+      - name: X-MaintAI-History-Profile
+        in: header
+        required: true
+        schema:
+          type: string
+          const: M6-HISTORY-01/1.0.0
+        description: Explicit opt-in; absent/other profile is rejected, never reinterpret a baseline cursor.
       responses:
         '400':
           description: Invalid request/cursor.
@@ -1680,16 +1744,20 @@ paths:
           content:
             application/json:
               schema:
-                $ref: ../schemas/runtime.schema.json#/$defs/HistoryPage
+                $ref: ../schemas/history-m6.schema.json#/$defs/HistoryPage
+              examples:
+                m6:
+                  externalValue: ../examples/m6/processing-page.json
       security:
       - BearerAuth: []
+      x-maintai-history-profile: M6-HISTORY-01/1.0.0
   /api/v1/predictions/{result_id}:
     get:
       operationId: getProcessingHistory
       summary: Read one original processing outcome
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
-        wording is superseded.'
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification
+        only; runtime not implemented. Amendment1.3.2 requires authentication and machine-scope checks;
+        any legacy optional-auth wording is superseded.'
       x-maintai-roles:
       - VIEWER
       - TECHNICIAN
@@ -1698,7 +1766,9 @@ paths:
       - name: result_id
         in: path
         required: true
-        schema: *id002
+        schema:
+          type: string
+          minLength: 1
       responses:
         '400':
           description: Invalid request/cursor.
@@ -1772,17 +1842,38 @@ paths:
     get:
       operationId: getMachineTimeSeries
       summary: Read bounded min/max/avg/count chart buckets
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
-        wording is superseded.'
+      description: M6-HISTORY-01/1.0.0; design only, no M6 runtime rollout. Read API uses SELECT-only
+        source pool plus a separate metadata writer pool for snapshots/jobs. Original outcomes stay in
+        PostgreSQL; no processed archive or source cleanup in M6. UTC microseconds; every page/job/download
+        rechecks current actor and machine scope. Numeric sensor metrics use RAW/received_at; probability/risk
+        use PROCESSING/processed_at. Bounded UTC buckets [start,end), gaps null, no interpolation; probability
+        only completed valid. Alert markers are merged only by Business, never cross-owner SQL. Marker
+        cursor is actor/query/snapshot-bound and independent of bucket budget; marker lacking exact axis
+        clock has null position_at and remains in a separate list. Markers use snapshot as_of; new alerts
+        appear on refresh. No metadata write via source pool.
       x-maintai-roles:
       - VIEWER
       - TECHNICIAN
       - ADMIN
       parameters:
-      - *id004
-      - *id005
-      - *id006
+      - name: machine_id
+        in: path
+        required: true
+        schema: &id007
+          type: string
+          minLength: 1
+      - name: from
+        in: query
+        required: false
+        schema: &id006
+          type: string
+          format: date-time
+        description: Inclusive Clock selected by metric collection.
+      - name: to
+        in: query
+        required: false
+        schema: *id006
+        description: Exclusive Clock selected by metric collection.
       - name: metric
         in: query
         required: true
@@ -1820,7 +1911,14 @@ paths:
       - name: markers_cursor
         in: query
         required: false
-        schema: *id002
+        schema: *id007
+      - name: X-MaintAI-History-Profile
+        in: header
+        required: true
+        schema:
+          type: string
+          const: M6-HISTORY-01/1.0.0
+        description: Explicit opt-in; absent/other profile is rejected, never reinterpret a baseline cursor.
       responses:
         '400':
           description: Invalid request/cursor.
@@ -1887,16 +1985,26 @@ paths:
           content:
             application/json:
               schema:
-                $ref: ../schemas/runtime.schema.json#/$defs/TimeSeriesPage
+                $ref: ../schemas/history-m6.schema.json#/$defs/TimeSeriesPage
+              examples:
+                m6:
+                  externalValue: ../examples/m6/processing-chart.json
       security:
       - BearerAuth: []
+      x-maintai-history-profile: M6-HISTORY-01/1.0.0
   /api/v1/history-exports:
     post:
       operationId: createHistoryExport
       summary: Durably enqueue an authorized frozen history export
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
-        wording is superseded.'
+      description: 'M6-HISTORY-01/1.0.0; design only, no M6 runtime rollout. Read API uses SELECT-only
+        source pool plus a separate metadata writer pool for snapshots/jobs. Original outcomes stay in
+        PostgreSQL; no processed archive or source cleanup in M6. UTC microseconds; every page/job/download
+        rechecks current actor and machine scope. Idempotency binds actor, canonical query/format/delivery
+        and effective frozen snapshot/scope; same key with different intent409. AUTO CSV may stream only
+        after complete preflight<=10000 rows/10 MiB/10s, otherwise durable job202 before headers. PARQUET/JOB
+        always202 after commit. Read API runner concurrency1/replica, leases/fencing/recovery; no Worker
+        loop. No object store: small PROCESSING CSV may work, artifact jobs unavailable. Same streaming
+        key reuses frozen snapshot; expired input returns410, not a new query.'
       x-maintai-roles:
       - VIEWER
       - TECHNICIAN
@@ -1905,7 +2013,16 @@ paths:
       - name: Idempotency-Key
         in: header
         required: true
-        schema: *id002
+        schema:
+          type: string
+          minLength: 1
+      - name: X-MaintAI-History-Profile
+        in: header
+        required: true
+        schema:
+          type: string
+          const: M6-HISTORY-01/1.0.0
+        description: Explicit opt-in; absent/other profile is rejected, never reinterpret a baseline cursor.
       responses:
         '400':
           description: Invalid request/cursor.
@@ -1972,32 +2089,60 @@ paths:
           content:
             application/json:
               schema:
-                $ref: ../schemas/runtime.schema.json#/$defs/ExportJob
+                $ref: ../schemas/history-m6.schema.json#/$defs/ExportJob
+        '200':
+          description: Preflight-complete small CSV stream; failure after headers aborts stream and is
+            not reported as a successful file. UTF-8 CSV quoting and spreadsheet-text sanitization required.
+            No DB transaction held for a slow client.
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: Attachment filename generated by server, no untrusted header text.
+            X-MaintAI-History-Snapshot:
+              schema:
+                type: string
+                minLength: 1
+          content:
+            text/csv:
+              schema:
+                type: string
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: ../schemas/runtime.schema.json#/$defs/ExportRequest
+              $ref: ../schemas/history-m6.schema.json#/$defs/ExportRequest
       security:
       - BearerAuth: []
+      x-maintai-history-profile: M6-HISTORY-01/1.0.0
   /api/v1/history-exports/{job_id}:
     get:
       operationId: getHistoryExport
       summary: Read persisted export state
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
-        wording is superseded.'
+      description: M6-HISTORY-01/1.0.0; design only, no M6 runtime rollout. Read API uses SELECT-only
+        source pool plus a separate metadata writer pool for snapshots/jobs. Original outcomes stay in
+        PostgreSQL; no processed archive or source cleanup in M6. UTC microseconds; every page/job/download
+        rechecks current actor and machine scope. Read persisted job only; does not execute or retry export.
+        Expiry revokes download without deleting source outcomes.
       x-maintai-roles:
       - VIEWER
       - TECHNICIAN
       - ADMIN
       parameters:
-      - &id009
-        name: job_id
+      - name: job_id
         in: path
         required: true
-        schema: *id002
+        schema:
+          type: string
+          minLength: 1
+      - name: X-MaintAI-History-Profile
+        in: header
+        required: true
+        schema:
+          type: string
+          const: M6-HISTORY-01/1.0.0
+        description: Explicit opt-in; absent/other profile is rejected, never reinterpret a baseline cursor.
       responses:
         '400':
           description: Invalid request/cursor.
@@ -2064,22 +2209,39 @@ paths:
           content:
             application/json:
               schema:
-                $ref: ../schemas/runtime.schema.json#/$defs/ExportJob
+                $ref: ../schemas/history-m6.schema.json#/$defs/ExportJob
       security:
       - BearerAuth: []
+      x-maintai-history-profile: M6-HISTORY-01/1.0.0
   /api/v1/history-exports/{job_id}/download:
     get:
       operationId: downloadHistoryExport
       summary: Authorize and redirect to a short-lived private download
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
-        wording is superseded.'
+      description: M6-HISTORY-01/1.0.0; design only, no M6 runtime rollout. Read API uses SELECT-only
+        source pool plus a separate metadata writer pool for snapshots/jobs. Original outcomes stay in
+        PostgreSQL; no processed archive or source cleanup in M6. UTC microseconds; every page/job/download
+        rechecks current actor and machine scope. Check owner/current scope/status/TTL and exact artifact
+        reference before303 signed URL (<=5m), or200 authenticated proxy. Never forward Authorization/delegation
+        to object storage. Download target must be browser-reachable; no internal-only MinIO DNS. Artifact
+        TTL24h; before success409, expired410.
       x-maintai-roles:
       - VIEWER
       - TECHNICIAN
       - ADMIN
       parameters:
-      - *id009
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+      - name: X-MaintAI-History-Profile
+        in: header
+        required: true
+        schema:
+          type: string
+          const: M6-HISTORY-01/1.0.0
+        description: Explicit opt-in; absent/other profile is rejected, never reinterpret a baseline cursor.
       responses:
         '400':
           description: Invalid request/cursor.
@@ -2149,15 +2311,27 @@ paths:
               schema:
                 type: string
                 format: uri
+        '200':
+          description: Authenticated proxy of a verified completed artifact; no redirects with service/browser
+            credentials to the object store.
+          content:
+            text/csv:
+              schema:
+                type: string
+            application/vnd.apache.parquet:
+              schema:
+                type: string
+                format: binary
       security:
       - BearerAuth: []
+      x-maintai-history-profile: M6-HISTORY-01/1.0.0
   /api/v1/machines/{machine_id}/live:
     get:
       operationId: getLiveSnapshot
       summary: Read separate telemetry, prediction and processing axes
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
-        wording is superseded.'
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification
+        only; runtime not implemented. Amendment1.3.2 requires authentication and machine-scope checks;
+        any legacy optional-auth wording is superseded.'
       x-maintai-roles:
       - VIEWER
       - TECHNICIAN
@@ -2240,9 +2414,9 @@ paths:
     get:
       operationId: getEventStatus
       summary: Proxy authorized persisted Processing status
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
-        wording is superseded.'
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification
+        only; runtime not implemented. Amendment1.3.2 requires authentication and machine-scope checks;
+        any legacy optional-auth wording is superseded.'
       x-maintai-roles:
       - VIEWER
       - TECHNICIAN
@@ -2326,9 +2500,9 @@ paths:
     get:
       operationId: getBriefJob
       summary: Read a durable Copilot job; never invoke LLM from GET
-      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification only; runtime
-        not implemented. Amendment1.3.2 requires authentication and machine-scope checks; any legacy optional-auth
-        wording is superseded.'
+      description: 'Normative semantics: System Contracts §34, HISTORY-01 and RECOVERY-01. Specification
+        only; runtime not implemented. Amendment1.3.2 requires authentication and machine-scope checks;
+        any legacy optional-auth wording is superseded.'
       x-maintai-roles:
       - VIEWER
       - TECHNICIAN
@@ -2465,7 +2639,8 @@ components:
       bearerFormat: JWT
   responses:
     INVALID_REQUEST:
-      description: Invalid request. See error.retryable; never infer a normal business state from this error.
+      description: Invalid request. See error.retryable; never infer a normal business state from this
+        error.
       headers:
         X-Request-ID:
           description: Generated or propagated identifier for tracing this response.
@@ -2543,7 +2718,8 @@ components:
             forbidden:
               externalValue: ../examples/http/errors/forbidden.json
     MACHINE_NOT_FOUND:
-      description: Machine not found. See error.retryable; never infer a normal business state from this error.
+      description: Machine not found. See error.retryable; never infer a normal business state from this
+        error.
       headers:
         X-Request-ID:
           description: Generated or propagated identifier for tracing this response.
@@ -2569,7 +2745,8 @@ components:
             machine_not_found:
               externalValue: ../examples/http/errors/machine_not_found.json
     INTERNAL_ERROR:
-      description: Internal error. See error.retryable; never infer a normal business state from this error.
+      description: Internal error. See error.retryable; never infer a normal business state from this
+        error.
       headers:
         X-Request-ID:
           description: Generated or propagated identifier for tracing this response.
@@ -2595,7 +2772,8 @@ components:
             internal_error:
               externalValue: ../examples/http/errors/internal_error.json
     VALIDATION_FAILED:
-      description: Validation failed. See error.retryable; never infer a normal business state from this error.
+      description: Validation failed. See error.retryable; never infer a normal business state from this
+        error.
       headers:
         X-Request-ID:
           description: Generated or propagated identifier for tracing this response.
@@ -2621,7 +2799,8 @@ components:
             validation_failed:
               externalValue: ../examples/http/errors/validation_failed.json
     DEPENDENCY_UNAVAILABLE:
-      description: Dependency unavailable. See error.retryable; never infer a normal business state from this error.
+      description: Dependency unavailable. See error.retryable; never infer a normal business state from
+        this error.
       headers:
         X-Request-ID:
           description: Generated or propagated identifier for tracing this response.
@@ -2653,7 +2832,8 @@ components:
             dependency_unavailable:
               externalValue: ../examples/http/errors/dependency_unavailable.json
     ALERT_NOT_FOUND:
-      description: Alert not found. See error.retryable; never infer a normal business state from this error.
+      description: Alert not found. See error.retryable; never infer a normal business state from this
+        error.
       headers:
         X-Request-ID:
           description: Generated or propagated identifier for tracing this response.
@@ -2679,8 +2859,8 @@ components:
             alert_not_found:
               externalValue: ../examples/http/errors/alert_not_found.json
     INVALID_ALERT_TRANSITION:
-      description: Invalid alert transition. See error.retryable; never infer a normal business state from this
-        error.
+      description: Invalid alert transition. See error.retryable; never infer a normal business state
+        from this error.
       headers:
         X-Request-ID:
           description: Generated or propagated identifier for tracing this response.
@@ -2706,7 +2886,8 @@ components:
             invalid_alert_transition:
               externalValue: ../examples/http/errors/invalid_alert_transition.json
     DRIFT_REPORT_NOT_FOUND:
-      description: Drift report not found. See error.retryable; never infer a normal business state from this error.
+      description: Drift report not found. See error.retryable; never infer a normal business state from
+        this error.
       headers:
         X-Request-ID:
           description: Generated or propagated identifier for tracing this response.

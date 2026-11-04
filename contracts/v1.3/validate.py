@@ -95,6 +95,7 @@ def resolve_reference(base, reference, documents):
 
 def semantic_checks(value):
     for node in walk(value):
+        m6_semantic_checks(node)
         if {"checklist", "citations", "retrieval", "grounded_status"} <= node.keys():
             citations = {item["citation_id"]: item for item in node["citations"]}
             if len(citations) != len(node["citations"]):
@@ -153,9 +154,92 @@ def semantic_checks(value):
                 raise ValueError("Conclusive drift report needs six distinct features")
 
 
+def m6_semantic_checks(node):
+    """Cross-field checks for design fixtures; no signature/S3/runtime validation."""
+    if node.get("profile") == "M6-HISTORY-01/1.0.0":
+        if "from" in node and datetime.fromisoformat(
+            node["from"]
+        ) >= datetime.fromisoformat(node["to"]):
+            raise ValueError("M6 range must have from before to")
+        if "as_of" in node:
+            if datetime.fromisoformat(node["expires_at"]) <= datetime.fromisoformat(
+                node["as_of"]
+            ):
+                raise ValueError("M6 snapshot expires before its as_of")
+            first, last = node["available_from"], node["available_through"]
+            if (
+                first is not None
+                and last is not None
+                and datetime.fromisoformat(first) > datetime.fromisoformat(last)
+            ):
+                raise ValueError("M6 available range is reversed")
+        if node.get("collection") == "RAW":
+            keys = [(p["topic"], p["partition"]) for p in node["partition_coverage"]]
+            if len(set(keys)) != len(keys):
+                raise ValueError("Raw page repeats partition coverage")
+            if any(p["status"] != "COMPLETE" for p in node["partition_coverage"]):
+                raise ValueError("Incomplete raw partition cannot claim COMPLETE page")
+    if node.get("aud") == "processing-history" and "azp" in node:
+        if not 0 < node["exp"] - node["iat"] <= 60 or node["nbf"] > node["exp"]:
+            raise ValueError("M6 delegation exceeds its lifetime budget")
+    if "catalog_schema_version" in node:
+        if "receipt_id" in node:
+            identity = f"{node['topic']}:{node['partition']}:{node['offset']}"
+            if node["receipt_id"] != identity:
+                raise ValueError("Catalog receipt differs from Kafka locator")
+        if "entries" in node:
+            ids = [entry["receipt_id"] for entry in node["entries"]]
+            if len(set(ids)) != len(ids):
+                raise ValueError("Catalog segment repeats a receipt")
+        if "partitions" in node:
+            keys = [(p["topic"], p["partition"]) for p in node["partitions"]]
+            if len(set(keys)) != len(keys):
+                raise ValueError("Catalog generation repeats a partition")
+            partitions = {
+                key: p for key, p in zip(keys, node["partitions"], strict=True)
+            }
+            for segment in node["segments"]:
+                if (segment["topic"], segment["partition"]) not in partitions:
+                    raise ValueError(
+                        "Catalog segment is outside declared partition scope"
+                    )
+        if "min_received_at" in node:
+            first, last = node["min_received_at"], node["max_received_at"]
+            if (first is None) != (last is None) or (
+                first is not None
+                and datetime.fromisoformat(first) > datetime.fromisoformat(last)
+            ):
+                raise ValueError("Catalog segment time bounds differ")
+    if {
+        "start_offset",
+        "archived_next_offset",
+        "indexed_next_offset",
+        "gaps",
+        "status",
+    } <= node.keys():
+        if (
+            not node["start_offset"]
+            <= node["indexed_next_offset"]
+            <= node["archived_next_offset"]
+        ):
+            raise ValueError("Catalog frontiers are reversed")
+        if (node["captured_log_end_offset"] is None) != (node["captured_at"] is None):
+            raise ValueError("Catalog capture time/frontier must be present together")
+        if node["status"] == "COMPLETE" and node["gaps"]:
+            raise ValueError("COMPLETE catalog partition contains a gap")
+        if node["status"] == "GAP" and not node["gaps"]:
+            raise ValueError("GAP catalog partition must describe its gap")
+        for gap in node["gaps"]:
+            if gap["from_offset"] >= gap["to_offset"]:
+                raise ValueError("Catalog gap must have positive exclusive range")
+
+
 def main():
     documents = {}
-    for path in [*ROOT.rglob("*.json"), CONTRACTS / "kafka/events/inference-result.schema.json"]:
+    for path in [
+        *ROOT.rglob("*.json"),
+        CONTRACTS / "kafka/events/inference-result.schema.json",
+    ]:
         documents[path.resolve()] = read_json(path)
     for path in ROOT.rglob("*.yaml"):
         documents[path.resolve()] = yaml.load(path.read_text(), Loader=UniqueLoader)

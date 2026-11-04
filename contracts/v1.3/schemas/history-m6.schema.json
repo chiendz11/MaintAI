@@ -1,0 +1,979 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "M6 History HTTP profile1.0.0; design contract, not runtime evidence",
+  "$defs": {
+    "HistoryRecord": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": "2.0.0"
+        },
+        "result_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "machine_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_server_accepted_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "outcome": {
+          "$ref": "runtime.schema.json#/$defs/ProcessingResult"
+        },
+        "features_raw": {
+          "type": "object"
+        },
+        "raw_ref": {
+          "anyOf": [
+            {
+              "$ref": "runtime.schema.json#/$defs/ObjectRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "risk_snapshot": {
+          "anyOf": [
+            {
+              "$ref": "runtime.schema.json#/$defs/RiskSnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "processed_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$|\\+00:00$"
+        }
+      },
+      "required": [
+        "schema_version",
+        "result_id",
+        "source_event_id",
+        "machine_id",
+        "source_server_accepted_at",
+        "outcome",
+        "features_raw",
+        "raw_ref",
+        "risk_snapshot",
+        "processed_at"
+      ],
+      "additionalProperties": false,
+      "description": "M6 list/export record. processed_at is processing_results.completed_at; original outcome is unchanged. M5 point-read retains HistoryRecord1.0.0."
+    },
+    "HistoryPage": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": "2.0.0"
+        },
+        "profile": {
+          "const": "M6-HISTORY-01/1.0.0"
+        },
+        "snapshot_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$|\\+00:00$"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$|\\+00:00$"
+        },
+        "coverage": {
+          "const": "COMPLETE"
+        },
+        "available_from": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "Z$|\\+00:00$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "available_through": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "Z$|\\+00:00$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collection": {
+          "const": "PROCESSING"
+        },
+        "time_basis": {
+          "const": "processed_at"
+        },
+        "tiers_used": {
+          "const": [
+            "HOT"
+          ]
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/HistoryRecord"
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "profile",
+        "snapshot_id",
+        "as_of",
+        "expires_at",
+        "coverage",
+        "available_from",
+        "available_through",
+        "next_cursor",
+        "collection",
+        "time_basis",
+        "tiers_used",
+        "items"
+      ],
+      "additionalProperties": false
+    },
+    "RawHistoryPage": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": "2.0.0"
+        },
+        "profile": {
+          "const": "M6-HISTORY-01/1.0.0"
+        },
+        "snapshot_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$|\\+00:00$"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$|\\+00:00$"
+        },
+        "coverage": {
+          "const": "COMPLETE"
+        },
+        "available_from": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "Z$|\\+00:00$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "available_through": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "Z$|\\+00:00$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collection": {
+          "const": "RAW"
+        },
+        "time_basis": {
+          "const": "received_at"
+        },
+        "tiers_used": {
+          "const": [
+            "ARCHIVE"
+          ]
+        },
+        "catalog_generation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "partition_coverage": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "raw-catalog-m6.schema.json#/$defs/PartitionCoverage"
+          }
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "runtime.schema.json#/$defs/RawHistoryRecord"
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "profile",
+        "snapshot_id",
+        "as_of",
+        "expires_at",
+        "coverage",
+        "available_from",
+        "available_through",
+        "next_cursor",
+        "collection",
+        "time_basis",
+        "tiers_used",
+        "catalog_generation",
+        "partition_coverage",
+        "items"
+      ],
+      "additionalProperties": false
+    },
+    "TimeSeriesPage": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": "2.0.0"
+        },
+        "profile": {
+          "const": "M6-HISTORY-01/1.0.0"
+        },
+        "snapshot_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$|\\+00:00$"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$|\\+00:00$"
+        },
+        "coverage": {
+          "const": "COMPLETE"
+        },
+        "available_from": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "Z$|\\+00:00$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "available_through": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "Z$|\\+00:00$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collection": {
+          "enum": [
+            "PROCESSING",
+            "RAW"
+          ]
+        },
+        "time_basis": {
+          "enum": [
+            "processed_at",
+            "received_at"
+          ]
+        },
+        "tiers_used": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "HOT",
+              "ARCHIVE"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "catalog_generation": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "partition_coverage": {
+          "type": "array",
+          "items": {
+            "$ref": "raw-catalog-m6.schema.json#/$defs/PartitionCoverage"
+          }
+        },
+        "metric": {
+          "enum": [
+            "air_temperature_k",
+            "process_temperature_k",
+            "rotational_speed_rpm",
+            "torque_nm",
+            "tool_wear_min",
+            "failure_probability",
+            "risk_score"
+          ]
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resolution": {
+          "enum": [
+            "1s",
+            "10s",
+            "1m",
+            "5m",
+            "1h",
+            "1d"
+          ]
+        },
+        "buckets": {
+          "type": "array",
+          "maxItems": 2000,
+          "items": {
+            "$ref": "runtime.schema.json#/$defs/ChartBucket"
+          }
+        },
+        "markers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ChartMarker"
+          }
+        },
+        "markers_next_cursor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "profile",
+        "snapshot_id",
+        "as_of",
+        "expires_at",
+        "coverage",
+        "available_from",
+        "available_through",
+        "next_cursor",
+        "collection",
+        "time_basis",
+        "tiers_used",
+        "catalog_generation",
+        "partition_coverage",
+        "metric",
+        "unit",
+        "resolution",
+        "buckets",
+        "markers",
+        "markers_next_cursor"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "collection": {
+                "const": "PROCESSING"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "time_basis": {
+                "const": "processed_at"
+              },
+              "tiers_used": {
+                "const": [
+                  "HOT"
+                ]
+              },
+              "catalog_generation": {
+                "type": "null"
+              },
+              "partition_coverage": {
+                "maxItems": 0
+              },
+              "metric": {
+                "enum": [
+                  "failure_probability",
+                  "risk_score"
+                ]
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "time_basis": {
+                "const": "received_at"
+              },
+              "tiers_used": {
+                "const": [
+                  "ARCHIVE"
+                ]
+              },
+              "catalog_generation": {
+                "type": "string",
+                "minLength": 1
+              },
+              "partition_coverage": {
+                "minItems": 1
+              },
+              "metric": {
+                "enum": [
+                  "air_temperature_k",
+                  "process_temperature_k",
+                  "rotational_speed_rpm",
+                  "torque_nm",
+                  "tool_wear_min"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "ChartMarker": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "ALERT",
+            "PREDICTION"
+          ]
+        },
+        "reference_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "position_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "Z$|\\+00:00$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_received_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "Z$|\\+00:00$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_server_accepted_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "Z$|\\+00:00$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "processed_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "Z$|\\+00:00$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "reference_id",
+        "source_event_id",
+        "position_at",
+        "source_received_at",
+        "source_server_accepted_at",
+        "processed_at"
+      ],
+      "additionalProperties": false,
+      "description": "position_at uses page time_basis. Missing exact source clock leaves position_at null and marker remains visible in the separate marker list; never substitute another clock."
+    },
+    "ExportRequest": {
+      "type": "object",
+      "properties": {
+        "machine_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true
+        },
+        "from": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "to": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "PARQUET",
+            "CSV"
+          ]
+        },
+        "resource": {
+          "type": "string",
+          "enum": [
+            "PROCESSING",
+            "RAW"
+          ]
+        },
+        "model_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "result_kind": {
+          "type": "string",
+          "enum": [
+            "PREDICTION_COMPLETED",
+            "DATA_INVALID",
+            "INFERENCE_UNAVAILABLE"
+          ]
+        },
+        "profile": {
+          "const": "M6-HISTORY-01/1.0.0"
+        },
+        "delivery": {
+          "enum": [
+            "AUTO",
+            "JOB"
+          ],
+          "default": "AUTO",
+          "description": "AUTO permits bounded CSV streaming; otherwise create a durable job. PARQUET always uses a job."
+        },
+        "snapshot_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "machine_ids",
+        "from",
+        "to",
+        "format",
+        "resource",
+        "profile"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "resource": {
+                "const": "RAW"
+              }
+            },
+            "required": [
+              "resource"
+            ]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "model_version"
+                  ]
+                },
+                {
+                  "required": [
+                    "result_kind"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "ExportJob": {
+      "type": "object",
+      "properties": {
+        "job_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "QUEUED",
+            "RUNNING",
+            "SUCCEEDED",
+            "FAILED",
+            "EXPIRED"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "attempts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "error_code": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status_url": {
+          "type": "string",
+          "format": "uri-reference"
+        },
+        "artifact_ref": {
+          "anyOf": [
+            {
+              "$ref": "runtime.schema.json#/$defs/ObjectRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expires_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "download_url": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uri-reference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "profile": {
+          "const": "M6-HISTORY-01/1.0.0"
+        },
+        "snapshot_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resource": {
+          "enum": [
+            "PROCESSING",
+            "RAW"
+          ]
+        },
+        "time_basis": {
+          "enum": [
+            "processed_at",
+            "received_at"
+          ]
+        }
+      },
+      "required": [
+        "job_id",
+        "status",
+        "created_at",
+        "updated_at",
+        "attempts",
+        "error_code",
+        "status_url",
+        "artifact_ref",
+        "expires_at",
+        "download_url",
+        "profile",
+        "snapshot_id",
+        "resource",
+        "time_basis"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "SUCCEEDED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "artifact_ref": {
+                "$ref": "runtime.schema.json#/$defs/ObjectRef"
+              },
+              "expires_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "download_url": {
+                "type": "string",
+                "format": "uri-reference"
+              },
+              "error_code": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "FAILED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "error_code": {
+                "type": "string",
+                "minLength": 1
+              },
+              "artifact_ref": {
+                "type": "null"
+              },
+              "download_url": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "QUEUED",
+                  "RUNNING",
+                  "EXPIRED"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "artifact_ref": {
+                "type": "null"
+              },
+              "download_url": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "resource": {
+                "const": "PROCESSING"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "time_basis": {
+                "const": "processed_at"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "time_basis": {
+                "const": "received_at"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "DelegationClaims": {
+      "type": "object",
+      "properties": {
+        "iss": {
+          "type": "string",
+          "minLength": 1
+        },
+        "aud": {
+          "const": "processing-history"
+        },
+        "sub": {
+          "type": "string",
+          "minLength": 1
+        },
+        "azp": {
+          "type": "string",
+          "minLength": 1
+        },
+        "iat": {
+          "type": "integer"
+        },
+        "nbf": {
+          "type": "integer"
+        },
+        "exp": {
+          "type": "integer"
+        },
+        "jti": {
+          "type": "string",
+          "minLength": 1
+        },
+        "roles": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "VIEWER",
+              "TECHNICIAN",
+              "ADMIN"
+            ]
+          }
+        },
+        "machines": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "iss",
+        "aud",
+        "sub",
+        "azp",
+        "iat",
+        "nbf",
+        "exp",
+        "jti",
+        "roles",
+        "machines"
+      ],
+      "additionalProperties": false,
+      "description": "Claims only. Must verify Business RS256 signature/kid and configured issuer/JWKS; aud processing-history, azp equals authenticated service subject, exp-iat<=60s, leeway<=5s. JSON shape alone proves neither authentication nor authorization."
+    }
+  }
+}

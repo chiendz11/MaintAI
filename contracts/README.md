@@ -1,6 +1,6 @@
 # MaintAI API contracts
 
-Bộ contract máy đọc được nằm trong [v1.3/](v1.3/README.md), baseline **1.3.2**, riêng Ingestion M1 có HTTP revision **1.4.0**.
+Bộ contract máy đọc được nằm trong [v1.3/](v1.3/README.md), baseline **1.3.2** cho DTO không đổi; Ingestion M1 revision **1.4.0**, mô tả Business/Processing **2.0.0** bổ sung profile M6.
 [System Contracts v1.4 §34–39](../docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md)
 là target thiết kế mới. [Kafka bundle](kafka/README.md) bổ sung canonical wire
 schemas1.4, inbox/outbox SQL và fixtures dùng bởi Python SDK. HTTP/provider/release
@@ -55,8 +55,7 @@ python3.12 -m venv .venv-contracts
 Validator kiểm tra cấu trúc OpenAPI/JSON Schema, local refs, HTTP examples/defaults,
 SSE và positive/negative fixtures. Nó phát hiện citation sai retrieval context,
 label lệch threshold, lineage sai và drift summary bất nhất. Không import ứng dụng,
-không cần Docker/DB và không tải remote schemas. Không được tham chiếu ra ngoài
-bundle `v1.3/`.
+không cần Docker/DB và không tải remote schemas. Local refs được kiểm trong contracts/, gồm canonical Kafka outcome1.4.0; không tải remote schema.
 
 Job `api-contracts` chạy validator này và vẫn thuộc `CI / required`. Khi đổi API,
 cập nhật đặc tả, schema, ví dụ và provider/consumer tests liên quan. Kiểm tra tài
@@ -68,3 +67,15 @@ Kafka có validation riêng: `maintai-kafka validate-contracts` và
 `python messaging/scripts/lock_contracts.py --check`; xem
 [hướng dẫn nhóm](../docs/KAFKA_DEVELOPMENT_GUIDE.md). Không đổi hoặc xóa baseline
 v1.3 đang là dependency của accepted/alert/legacy Kafka schemas.
+
+## M6 history profile
+
+[history-m6.schema.json](v1.3/schemas/history-m6.schema.json) và
+[raw-catalog-m6.schema.json](v1.3/schemas/raw-catalog-m6.schema.json) tách khỏi
+runtime.schema.json đang được Kafka bundle2.0.0 khóa. M6 history/export yêu cầu
+X-MaintAI-History-Profile; M5 evidence point-read/status và DTO providers khác giữ
+nguyên. Xem [đặc tả M6](../docs/M6_HISTORY_ARCHITECTURE_DECISION.md).
+
+M6 schema/fixtures chỉ freeze thiết kế; chưa có runtime/capability rollout.
+Validator kiểm cross-field range/frontier/identity và claims shape/lifetime;
+không xác minh JWT signature, uploaded object checksum, CAS hay coverage thực.

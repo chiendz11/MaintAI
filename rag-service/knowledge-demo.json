@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "embedding": {
+    "schema_version": "1.0.0",
+    "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+    "dimensions": 384,
+    "source": "https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+  },
+  "documents": [
+    {
+      "path": "documents/pdffile.pdf",
+      "document_id": "abb-motor",
+      "version": "demo-1",
+      "section": "maintenance",
+      "sha256": "5bd9c3ef37a655d88cecaf3040332ced6816cba9a1474acff354fc4af6946af7",
+      "query": "motor maintenance inspection overheating ventilation bearings"
+    }
+  ]
+}

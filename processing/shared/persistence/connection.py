@@ -112,8 +112,12 @@ def grant_processing_permissions(connection, *, reader_role, worker_role, relay_
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Explicit Processing owner migration job")
-    parser.add_argument("operation", choices=["upgrade", "activate-ordering"])
+    parser.add_argument(
+        "operation", choices=["upgrade", "activate-ordering", "grant-history-metadata"]
+    )
     parser.add_argument("--legacy-writers-drained", action="store_true")
+    parser.add_argument("--metadata-role")
+    parser.add_argument("--metadata-schema", default="history_meta")
     args = parser.parse_args(argv)
     try:
         dsn = os.environ.get("PROCESSING_DATABASE_URL")
@@ -122,12 +126,18 @@ def main(argv=None):
         if args.operation == "upgrade":
             upgrade(dsn)
             print("Processing owner migration applied; ordering activation is separate")
-        else:
+        elif args.operation == "activate-ordering":
             with connect(dsn) as connection, connection.transaction():
                 activate_processing_ordering(
                     connection, legacy_writers_drained=args.legacy_writers_drained
                 )
             print("Processing ordering activated")
+        else:
+            from processing.shared.history_meta.persistence import grant_metadata
+
+            with connect(dsn) as connection, connection.transaction():
+                grant_metadata(connection, role=args.metadata_role, schema=args.metadata_schema)
+            print("Processing history metadata permissions granted")
         return 0
     except Exception as exc:
         print(f"Processing migration failed: {type(exc).__name__}", file=sys.stderr)

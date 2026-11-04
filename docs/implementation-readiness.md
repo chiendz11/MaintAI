@@ -29,8 +29,8 @@ tạo branch, CURRENT_STATE, migration, test/build/deploy trong đó không ph�
 | --- | --- |
 | Terminal result union | OUTCOME-14-ONLY: Kafka/HTTP/history dùng outcome1.4.0; bỏ reader2.0, cutover dữ liệu riêng |
 | Simulator UI | Frontend riêng -> Sensor; Main UI -> Business; không Business control facade |
-| History | Processing Read API thống nhất hot DB + S3; HISTORY-01 |
-| Prediction archive | Processing-owned DB batch export; verified membership trước cleanup |
+| History | M6-HISTORY-01: outcomes DB + raw S3/MinIO catalog; Read API snapshot/export |
+| Prediction archive | Hoãn sau M6; giữ original outcomes DB, không cleanup thật |
 | Chart | Numeric allowlist, min/max/avg/count, bounded points, lineage markers |
 | Brief executor | Durable business jobs + leased runner trong Consumer |
 | Drift UI bridge | Versioned S3 report manifests -> Business metadata catalog |
@@ -66,8 +66,9 @@ validate; các invariant transaction/cursor/authorization cần runtime tests ri
    -> latest projection -> REST/SSE; event-time/source ordering đúng.
 3. **Business correctness:** alert inbox/lifecycle/audit/feedback, OIDC và scoped
    authorization; RAG unavailable không chặn alert.
-4. **History/archive:** point/range APIs, DB snapshots, Parquet+manifest batch,
-   coverage verification, hot cleanup pins, query/export UI.
+4. **M6 History:** point/range/chart, bounded snapshots, durable CSV/Parquet export
+   trong Read API; raw catalog/coverage từ Storage. Processed archive hoãn, cleanup
+   source data tắt; metadata SQL/grants và provider/UI cần implement.
 5. **Jobs/Drift/control:** durable briefs/export, drift catalog bridge, Sensor
    controller fencing/state persistence và Simulator UI riêng.
 6. **Recovery/rollout:** consumer crash/rebalance, projection rebuild, schema
@@ -149,9 +150,9 @@ Báo cáo dependency/giữ-xóa:
 | --- | --- | --- |
 | Quarantine | `contracts/kafka/` có rejected1.4 HASH_ONLY; SDK auth identity/size/envelope boundary, ACK trước400/422; Storage0.1.0 có rejected runtime/probes; GitOps topic/ACL | Ingestion HTTP auth/runtime, real broker/S3 integration; không lưu unauthorized/oversized body |
 | Outcome wire | Canonical reader/writer1.4.0/kind; bỏ reader2.0.0 theo OUTCOME-14-ONLY; source/DQ/model/risk lineage schema+fixtures | Owner callbacks/provider DTOs, consumer-first rollout; chưa có cutover/deployment; baseline vẫn nguyên vẹn |
-| History cursor | System §36 ghi received_at/event_id; Plan §C/§E và Dataflow dùng accepted-time ordering; baseline có opaque snapshot cursor | Chốt canonical timestamp/cursor, stable pagination, API filters/indexes và khả năng tương thích |
-| Read API read-only | v1.4 yêu cầu role `processing_ro`; thiết kế snapshot/export cũ có durable write state | Giữ Read API SELECT-only; bố trí owner writer/maintenance cho snapshot/export trước khi implement |
-| Hot/cold/archive | Chi tiết HISTORY-01 giữ original outcomes và coverage; v1.4 cho phép optional outcome archive qua Storage | Chọn writer/membership/manifest contract tương thích; không làm mất bằng chứng gốc hoặc cleanup chưa verify |
+| History cursor | M6-HISTORY-01: processed_at/result_id; raw received_at/topic/partition/offset; profile mới | Có runtime snapshots/cursors; xem M6 report. Shared rollout và provider acceptance kiểm riêng |
+| Read API pools | Source SELECT-only và metadata writer riêng trong cùng Read API | Có migration/grants/preflight/pools và leased export runner; Worker không chạy maintenance |
+| History/archive | Outcomes DB; raw qua catalog/partition coverage | Reader/index native Storage0.2.1 và pipeline MinIO local đã được kiểm chứng; shared rollout kiểm riêng. Không processed archive/source cleanup M6 |
 | Retention | HISTORY-01 có profile30d/365d; provenance v1.4 chưa chốt thời hạn cụ thể | Các con số cũ là tham khảo, owner phê duyệt theo dữ liệu/ngân sách trước khi bật cleanup |
 | Release/provenance | Mới có Markdown yêu cầu dataset/split/model/image/policy/document digests | Bổ sung schemas/examples/manifests, MLflow metadata, provider DTOs, migration và CI gates bằng bằng chứng thật |
 | Simulator UI | React demo/live client0.1.0, OIDC/recovery/build/descriptor riêng | Provider/browser HTTP đã test; production IdP, container build và rollout chưa verify |
@@ -460,3 +461,29 @@ snapshots. Fleet/Detail đã có nguồn Alert thật; Main UI có Alert list/de
 [Report](M5_IMPLEMENTATION_REPORT.md) ưu tiên các mô tả inherited còn ghi hai loops,
 Frontend skeleton hoặc thiếu Alert source. Shared providers/production/load acceptance
 không tự hoàn tất. M6/M7/M8 giữ phạm vi riêng; không bật archive cleaner trong M5.
+
+
+## M6-HISTORY-01 — Contract freeze29/10, chưa là runtime evidence
+
+[Đặc tả M6](M6_HISTORY_ARCHITECTURE_DECISION.md) và [catalog](M6_RAW_ARCHIVE_HANDOFF.md)
+thay các mục chờ cursor/writer của snapshot cũ. Machine contracts có profile/schema
+riêng; chỉ revision mô tả Business/Processing tăng2.0.0, không nâng đồng loạt runtime,
+Kafka hoặc provider khác. JWT delegation cần keys/issuer/JWKS và tests chữ ký/scope
+ở runtime. JSON fixture không chứng minh credential đã được cấp.
+
+Source đã có history/snapshot/chart/export, SQL metadata grants, Business facade và
+UI M6; xem [báo cáo implementation](M6_IMPLEMENTATION_REPORT.md). Local harness dùng
+DB/Kafka/MinIO với Storage consumer/audit/publisher thật. Platform rollout và
+shared credentials cần kiểm riêng; không cần AWS để chạy local.
+Các bảng inventory cũ không thay checkpoint source này. Source cleaner/processed
+archive không thuộc acceptance M6 mới; chỉ retention dry-run, giữ source data.
+
+## 26. Storage catalog0.2.0 — Source bàn giao M6
+
+[Report](STORAGE_CATALOG_IMPLEMENTATION_REPORT.md) ghi commands/tests/CI và giới hạn;
+[Reader Guide](../storage-consumer/M6_READER_GUIDE.md) là điểm bắt đầu cho Người1.
+Có raw catalog protocol1.0.0, bounded immutable generations/segments/CAS pointer,
+read-only Kafka audit, safe coverage, explicit S3 rebuild và local Compose harness.
+Không sửa Kafka bundle/SQL, không làm SQL metadata hoặc History HTTP/UI của M6.
+Platform k3d grants/image/env/policies cần đồng bộ trước full-system demo; source
+component/CI không là bằng chứng Argo đã sync hoặc app pipeline đã được deploy.

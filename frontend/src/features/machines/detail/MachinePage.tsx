@@ -10,6 +10,7 @@ import { Badge, ErrorNotice } from "../../../shared/ui";
 import { TelemetryCard } from "../live_telemetry/TelemetryCard";
 import { PredictionCard } from "../latest_prediction/PredictionCard";
 import { ProcessingCard } from "../processing_status/ProcessingCard";
+import { HistoryPanel } from "./HistoryPanel";
 
 export function MachinePage({
   machine,
@@ -31,6 +32,7 @@ export function MachinePage({
     [revision, setRevision] = useState(0),
     [now, setNow] = useState(Date.now());
   const [alertRevision] = useAlertRefresh();
+  const [historyOpen, setHistoryOpen] = useState(false);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
@@ -113,6 +115,15 @@ export function MachinePage({
         />
       </div>
       <ProcessingCard value={value.latest_processing} />
+      <button
+        className="button secondary"
+        onClick={() => setHistoryOpen((open) => !open)}
+      >
+        Lịch sử
+      </button>
+      {historyOpen && api.history && (
+        <HistoryPanel key={machine} api={api.history} machine={machine} />
+      )}
       <p className="snapshot-note">
         REST snapshot:{" "}
         {value.as_of

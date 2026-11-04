@@ -1,0 +1,65 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: maintai-rag
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: maintai-rag
+  template:
+    metadata:
+      labels:
+        app: maintai-rag
+    spec:
+      volumes:
+        - name: embedding-cache
+          emptyDir: {}
+
+      initContainers:
+        - name: prepare-embedding
+          image: maintai-rag:pr14
+          imagePullPolicy: Never
+          command:
+            - python
+            - -m
+            - ingestion.prepare_embedding
+          envFrom:
+            - secretRef:
+                name: maintai-rag-env
+          env:
+            - name: SENTENCE_TRANSFORMERS_HOME
+              value: /model-cache
+          volumeMounts:
+            - name: embedding-cache
+              mountPath: /model-cache
+
+      containers:
+        - name: rag
+          image: maintai-rag:pr14
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8002
+          envFrom:
+            - secretRef:
+                name: maintai-rag-env
+          env:
+            - name: SENTENCE_TRANSFORMERS_HOME
+              value: /model-cache
+            - name: MODEL_LOCAL_FILES_ONLY
+              value: "true"
+          volumeMounts:
+            - name: embedding-cache
+              mountPath: /model-cache
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8002
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8002
+            initialDelaySeconds: 60
+            periodSeconds: 20

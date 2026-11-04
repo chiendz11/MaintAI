@@ -1,8 +1,14 @@
 # MaintAI — Bốn sơ đồ hệ thống
 
-**Revision 1.2.0 · snapshot 23/10/2026 · thiết kế mục tiêu v1.4 + PROC-ORDER-01.**
+**Revision 1.3.0 · 29/10/2026 · thiết kế v1.4 + PROC-ORDER-01 + M6-HISTORY-01.**
 
-Revision này bổ sung keyed scheduler/executor/offset coordinator bên trong
+Revision1.3 đồng bộ [M6 decision](../M6_HISTORY_ARCHITECTURE_DECISION.md): Read API
+snapshot/export, original SELECT + metadata RW; outcomes giữ DB, raw catalog và
+exports ở MinIO/S3; không Worker maintenance hoặc processed archive trong M6.
+Không thêm deployment. Catalog provider Storage0.2.0 đã có source; History API/exports
+của M6 vẫn target. Xem report Storage để phân biệt local tests/CI/K8s.
+
+Revision1.2 trước đó bổ sung keyed scheduler/executor/offset coordinator bên trong
 Worker và head-of-key ordering ở Relay. SDK0.2.0 đã có source/tests, app/prod còn pending; không
 tăng số runtime/deployment hoặc UI. Use Case giữ nguyên phạm vi chức năng.
 
@@ -50,7 +56,7 @@ cho notification, ACK, background job, tùy chọn hoặc release. Chúng không
 nghĩa đồng nhất là “chưa implement”. Màu nền dùng để phân nhóm; dùng nhãn trạng
 thái và bảng bên dưới để đọc mức hoàn thiện.
 
-## 3. Snapshot mức hoàn thiện
+## 3. Snapshot mức hoàn thiện kế thừa23/10
 
 | Phần | Bằng chứng source ở snapshot này | Chưa được chứng minh bởi hình |
 | --- | --- | --- |
@@ -80,8 +86,9 @@ source tham chiếu; thay đổi source phải được review trước khi cậ
    API. `INVALID` không xóa last valid prediction. PG NOTIFY chỉ giao sau commit.
 7. Brief jobs/catalog sync ở Business Consumer; RAG không SQL vào business_db.
    Catalog đọc committed S3 report manifest, không đọc drift_db xuyên owner.
-8. Storage raw archive khác processed archive do Processing sở hữu. Hiện raw
-   manifest microbatch1; tùy chọn wire-outcome archive không thay processed history.
+8. M6 giữ processed history trong DB; raw manifest microbatch1 và catalog/coverage
+   bổ sung ở Storage. Snapshot/export runner thuộc Read API, không Worker.
+   Processed archive/cleanup thật hoãn; optional wire-outcome archive không bật.
 9. Drift là batch ngoài critical path. Approved dataset kích hoạt training;
    model/artifacts phát hành qua PR GitOps. Raw upload/drift không tự promote.
 10. MLflow Server, training và inference có images riêng. Image MLflow source ở

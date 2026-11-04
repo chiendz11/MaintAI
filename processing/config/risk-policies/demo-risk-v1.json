@@ -1,0 +1,9 @@
+{
+  "policy_version": "demo-risk-v1",
+  "thresholds": {
+    "watch": 0.40,
+    "high": 0.65,
+    "critical": 0.85
+  },
+  "create_alert_for": ["HIGH", "CRITICAL"]
+}

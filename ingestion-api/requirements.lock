@@ -69,7 +69,7 @@ lark==1.3.1
     # via
     #   -c ingestion-api/../messaging/requirements.lock
     #   rfc3987-syntax
-maintai-messaging==0.3.0
+maintai-messaging==0.3.1
     # via -r ingestion-api/requirements.in
 opentelemetry-api==1.45.1
     # via fastapi

@@ -1,0 +1,16 @@
+{
+  "job_id": "job_fixture_1",
+  "status": "SUCCEEDED",
+  "created_at": "2026-10-18T00:00:00Z",
+  "updated_at": "2026-10-18T00:00:00Z",
+  "attempts": 0,
+  "error_code": null,
+  "status_url": "/api/v1/history-exports/job_fixture_1",
+  "artifact_ref": null,
+  "expires_at": null,
+  "download_url": null,
+  "profile": "M6-HISTORY-01/1.0.0",
+  "snapshot_id": "snap_fixture_1",
+  "resource": "PROCESSING",
+  "time_basis": "processed_at"
+}

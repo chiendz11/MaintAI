@@ -442,3 +442,15 @@ và các group độc lập; không có1 consumer/partition cho mỗi máy. Tăn
 [Công thức và latency plan](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100)
 ghi rõ serial runner/cycle, keyed active slots và downstream pools. Không đổi
 wire bundle, Kafka topology hoặc migration SQL chỉ vì giả định100 máy.
+
+
+## M6-RAW-01 — Raw catalog, không thay Kafka wire
+
+Theo [M6 decision](M6_HISTORY_ARCHITECTURE_DECISION.md), Chiến/Người4 bổ sung
+catalog/coverage vào Storage theo [handoff](M6_RAW_ARCHIVE_HANDOFF.md); không đổi
+raw-manifest1.0.0, SDK0.3.0/bundle2.0.0 hoặc SQL001/002. Raw commit boundary giữ
+object+manifest; catalog lag và reconciliation từ durable manifests phải công bố
+riêng. M6 không bật outcome archive, processed cold history hoặc source cleanup.
+Read API tự sở hữu snapshot/export metadata và bounded runner; Worker chỉ realtime,
+không thêm processing-maintenance hoặc Kafka command topic cho export. Full demo
+raw dùng MinIO local, không cần AWS; fixture không chứng minh provider đã tích hợp.

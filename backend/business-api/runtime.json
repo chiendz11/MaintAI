@@ -5,7 +5,7 @@
   "runtime_id": "business-api",
   "workload_kind": "Deployment",
   "code_owner": "business-backend",
-  "implementation_status": "implemented_m5_alert_actions_feedback_and_realtime_local_fixture",
+  "implementation_status": "implemented_m6_local_fixture",
   "image_group": "business-backend",
   "image_digest": null,
   "entrypoint_status": "implemented_rest_sse",
@@ -24,7 +24,8 @@
     "Processing event status HTTP facade",
     "Health/metrics HTTP",
     "Authenticated fetch SSE with PostgreSQL LISTEN/NOTIFY fan-out",
-    "Alert list/detail/lifecycle/feedback REST and Alert SSE"
+    "Alert list/detail/lifecycle/feedback REST and Alert SSE",
+    "M6-HISTORY-01 history/raw/chart/export facade"
   ],
   "boundaries": [
     "Không consume Kafka trực tiếp để broadcast SSE; mỗi API replica nhận notification và đọc latest projections.",
@@ -34,7 +35,7 @@
   "dockerfile": "backend/business-api/Dockerfile",
   "dockerfile_status": "implemented",
   "implemented_contract_revision": "1.3.2",
-  "implemented_scope": "Scoped Fleet/Detail with real Alert source, three-axis live/status, authenticated SSE, Alert list/detail/actions/audit/feedback. History/export/Copilot/drift and shared deployment acceptance remain separate.",
+  "implemented_scope": "M4 live/SSE and M5 Alert behavior preserved; M6 Processing HTTP facade, signed actor delegation, composite Alert marker snapshots and authenticated export/download proxy. Provider/shared rollout acceptance is separate.",
   "planned_interfaces": [
     "Business durable job state",
     "Published drift report S3 objects"

@@ -31,7 +31,7 @@
 | 03 — Persistence | Processing, Business | Alembic mở rộng provenance/index, quyền `processing_ro`, outbox/inbox | Upgrade DB đã có dữ liệu cũ | Không mất dữ liệu, xử lý nullable legacy |
 | 04 — Quarantine | Ingestion, Storage | Serializer sanitize, ACK-first, topic/group archive riêng | 400/422 sau ACK; 503/504 khi Kafka down; size/auth policy | Rejected audit được và có giới hạn |
 | 05 — Outbox/Storage | Processing, Storage | Publish terminal outcomes; tùy chọn archive outcomes | Commit offset sau durable side effects, replay test | S3 manifests xác minh được |
-| 06 — History | Processing Read API, FE | Deployment riêng, DB read-only, filters/cursor, truy vấn cold S3 | Page ổn định khi timestamp trùng; INVALID hiển thị | Không quét cả bucket mỗi query |
+| 06 — History | Người1 + Chiến/Người4 | M6-HISTORY-01: Read API SELECT original + metadata RW; history/snapshot/export, raw catalog MinIO | Stable cursor, SQL least privilege, durable export/restart, coverage | Ba Processing Deployments; không processed archive/cleanup thật |
 | 07 — MLflow lineage | ML, MLOps | Dataset manifest/DVC, split SHA, MLflow run tags, registered version, artifact pin | Digest đúng; mismatch startup fail | Tái lập được run/release |
 | 08 — Policy/RAG/Drift | Processing, RAG, Drift | Policy SHA; document/prompt/reference version và citations | Alert provenance, grounding, drift mismatch | Truy vết đủ |
 | 09 — GitOps | MLOps | Image digest thực, manifest approvals, K8s overlays, readiness/ACL | Rollout/rollback, secret scan | Không còn placeholder; báo effective release |
@@ -88,7 +88,12 @@ GitOps              -> OCI digest pin + immutable release manifest
 
 ## E. API và Kafka consumers cần hoàn thiện
 
-Giữ Public Business API v1.3.1. `GET /api/v1/machines/{machine_id}/sensor-readings` dùng hai cursor `before`, `before_event_id` và thứ tự giảm ổn định. Các filters đề xuất `quality_status`, `from`, `to`, `limit` phải cập nhật OpenAPI/index cùng lúc (chưa mặc định là API đã có). Nếu muốn tab Prediction History đầy đủ, đề xuất trước endpoint `GET /api/v1/machines/{machine_id}/predictions` và review contract.
+M6-HISTORY-01 đã chốt29/10: outcome sort processed_at (completed_at)/result_id; raw
+sort received_at/Kafka locator; opaque snapshot cursor theo decision. Public route
+sensor-readings giữ tên nhưng không âm thầm tái dùng semantics before/event_id cũ.
+Người1 đồng bộ/version OpenAPI/schema, filters, provider/UI và migration indexes
+trước enable. Outcomes nằm DB, raw đọc catalog; Read API chạy snapshot/export bằng
+metadata credential riêng, không thêm service hoặc maintenance loop Worker.
 
 Schema-rejected không có machine_id phải có query riêng được phân quyền theo request/source/time. `inference.results` **giữ nguyên tên topic**; không tự tạo dual producers hoặc rename khi chưa có migration plan. Live telemetry từ `sensor.readings` vẫn tới Business trước ML. Outcome archive ở Storage là tùy chọn, không bắt buộc topic mới.
 
@@ -224,3 +229,21 @@ ML/DB/Relay/Storage/Business/SSE resource budgets, alert browser p95≤2s và re
 headroom. Tính n/c/pool rồi tối ưu bottleneck trước khi tăng tài nguyên; giữ inbox,
 FIFO/fences/offset prefix và ordered outbox. Đầu ra là capacity report của đúng
 source/model/image/config, không chỉ một sơ đồ/replica count. [Plan chi tiết](design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100).
+
+## M. M6-HISTORY-01 — Kế hoạch sau design freeze29/10
+
+Nguồn chuẩn: [decision](M6_HISTORY_ARCHITECTURE_DECISION.md),
+[Storage handoff](M6_RAW_ARCHIVE_HANDOFF.md), [readiness](implementation-readiness.md).
+
+| Bước | Chủ trì | Deliverable |
+| --- | --- | --- |
+| M6-A | Người1 | Version history OpenAPI/schema/cursor, migration indexes/history_meta, reader + metadata role grants |
+| M6-B | Chiến/Người4 | Catalog/coverage schema fixtures rồi Storage publisher + reconciliation; không sửa raw manifest freeze |
+| M6-C | Người1 | DB history/status/evidence/chart/snapshot + Business facade/Main UI; fixtures để làm song song M6-B |
+| M6-D | Người1 | CSV nhỏ streaming, durable CSV/Parquet jobs/restart/fencing/private download trong Read API |
+| M6-E | Chiến + Người1 | MinIO local credentials/policies/grants, provider integration, quyền và failure cases |
+| M6-F | Nhóm | Demo DB-only hoặc full M6 được ghi rõ; không AWS bắt buộc, không xóa source data |
+
+Worker không nhận maintenance/export loop. Processed archive và real retention
+cleanup hoãn sau M6; không thêm processing-maintenance. Machine/schema/platform
+implementation chưa hoàn thành chỉ vì bảng công việc đã được cập nhật.
