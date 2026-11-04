@@ -1,7 +1,7 @@
 # Kafka contracts — bundle 2.0.0
 
 Nguồn wire contract cho SDK [messaging/](../../messaging/README.md), target thiết
-kế MaintAI1.4.0. [Hướng dẫn nhóm](../../docs/KAFKA_DEVELOPMENT_GUIDE.md) giải thích
+kế MaintAI1.4.0. [Hướng dẫn nhóm](../../docs/subsystems/KAFKA_DEVELOPMENT_GUIDE.md) giải thích
 cách tích hợp và quyền của từng thành viên. Đây không phải một deployment mới.
 
 | Topic | Writer mới | Reader tương thích | Kafka key |
@@ -15,7 +15,7 @@ Version của tài liệu, bundle, Python package và từng event độc lập.
 là lineage wire mới theo target §35, **không phải** một nâng cấp SemVer tương thích
 của result2.0.0. SDK0.3.0 bỏ reader result2.0.0; bundle2.0.0 đánh dấu breaking
 change đó, không đổi version của outcome. Đọc
-[OUTCOME-14-ONLY](../../docs/OUTCOME_V1_4_MIGRATION.md) trước rollout: không
+[OUTCOME-14-ONLY](../../docs/subsystems/OUTCOME_V1_4_MIGRATION.md) trước rollout: không
 đổi nhãn/backfill event cũ, không tự reset offset hoặc xóa projection.
 
 - [topology.json](topology.json): topics, partitions, groups và schema/version map.
@@ -56,4 +56,4 @@ activation, không tự chạy ở startup. Phải drain legacy binaries; pendin
 hoặc legacy source inbox chưa bootstrap sẽ bị chặn. Không sort created_at để
 backfill hoặc xóa inbox để bật mode. Business DB không activate Processing mode.
 Fields mới là DB metadata, không thêm vào closed Kafka/HTTP payload. Đọc
-[runbook](../../docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) trước cutover.
+[runbook](../../docs/reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) trước cutover.

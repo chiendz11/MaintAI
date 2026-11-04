@@ -123,6 +123,6 @@ Payload version vẫn1.0.0, khớp runtime. Xuất bản đối chiếu vào out
 
 
 > **Thiết kế v1.4:** Xem [docs index](../docs/README.md),
-> [Guide v1.4](../docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md) và
-> [readiness](../docs/implementation-readiness.md). Runtime metadata hiện có vẫn
+> [Guide v1.4](../docs/subsystems/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md) và
+> [readiness](../docs/architecture/implementation-readiness.md). Runtime metadata hiện có vẫn
 > baseline1.3.2; source chưa tự migrate theo việc nhập tài liệu.

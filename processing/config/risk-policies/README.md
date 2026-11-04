@@ -39,4 +39,4 @@ Policy được cấp như cấu hình, không cần bake vào wheel/image hoặ
 `model-identity.json` vẫn là input riêng. Chuyển policy sang ConfigMap không tạo
 MLflow run, model identity, image receipts hoặc bật workloads. Profile mẫu vẫn tắt.
 
-Xem [quyết định và hướng dẫn đầy đủ](../../../docs/RISK_POLICY_OWNERSHIP.md).
+Xem [quyết định và hướng dẫn đầy đủ](../../../docs/subsystems/RISK_POLICY_OWNERSHIP.md).

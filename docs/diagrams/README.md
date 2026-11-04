@@ -2,7 +2,7 @@
 
 **Revision 1.3.0 · 29/10/2026 · thiết kế v1.4 + PROC-ORDER-01 + M6-HISTORY-01.**
 
-Revision1.3 đồng bộ [M6 decision](../M6_HISTORY_ARCHITECTURE_DECISION.md): Read API
+Revision1.3 đồng bộ [M6 decision](../reports/M6_HISTORY_ARCHITECTURE_DECISION.md): Read API
 snapshot/export, original SELECT + metadata RW; outcomes giữ DB, raw catalog và
 exports ở MinIO/S3; không Worker maintenance hoặc processed archive trong M6.
 Không thêm deployment. Catalog provider Storage0.2.0 đã có source; History API/exports
@@ -69,7 +69,7 @@ thái và bảng bên dưới để đọc mức hoàn thiện.
 | MLflow | Source đóng gói image/local-dev/publisher ở app | Base/version pins được chốt hoặc server production đã bật |
 | Kafka / platform | Manifests, topics, ACL, metrics và deployment wiring | Cluster đã reconcile, image đã publish hoặc workload đã Ready |
 
-Trạng thái đầy đủ nằm trong [readiness](../implementation-readiness.md) và
+Trạng thái đầy đủ nằm trong [readiness](../architecture/implementation-readiness.md) và
 [runtime inventory](../../architecture/README.md). `manifest.json` chụp hash của
 source tham chiếu; thay đổi source phải được review trước khi cập nhật hình.
 
@@ -101,16 +101,16 @@ source tham chiếu; thay đổi source phải được review trước khi cậ
 
 ## 5. Nguồn tham chiếu
 
-- [Functional Overview](../MaintAI_Functional_Overview.md): actors/chức năng.
-- [System Contracts](../MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md):
+- [Functional Overview](../architecture/MaintAI_Functional_Overview.md): actors/chức năng.
+- [System Contracts](../architecture/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md):
   semantics, DB ownership, jobs, DQ/outcomes và UI-01.
-- [Implementation Guide](../MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md):
+- [Implementation Guide](../subsystems/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md):
   module/runtime và ranh giới triển khai.
-- [Deployment Architecture](../DEPLOYMENT_ARCHITECTURE.md),
-  [Runtime Dataflow](../RUNTIME_DATAFLOW.md),
-  [Versioning & Provenance](../VERSIONING_AND_PROVENANCE.md).
-- [UI Architecture](../UI_ARCHITECTURE.md), [Kafka guide](../KAFKA_DEVELOPMENT_GUIDE.md),
-  [Processing concurrency/ordering](../PROCESSING_CONCURRENCY_AND_ORDERING.md),
+- [Deployment Architecture](../architecture/DEPLOYMENT_ARCHITECTURE.md),
+  [Runtime Dataflow](../architecture/RUNTIME_DATAFLOW.md),
+  [Versioning & Provenance](../architecture/VERSIONING_AND_PROVENANCE.md).
+- [UI Architecture](../architecture/UI_ARCHITECTURE.md), [Kafka guide](../subsystems/KAFKA_DEVELOPMENT_GUIDE.md),
+  [Processing concurrency/ordering](../subsystems/PROCESSING_CONCURRENCY_AND_ORDERING.md),
   [runtime map](../../architecture/runtime-map.json),
   [Kafka topology](../../contracts/kafka/topology.json).
 - Sibling `MaintAI-gitops`: `platform/kafka/`, `applications/addons/strimzi.yaml`
@@ -158,7 +158,7 @@ Graphviz/font version khác có thể đổi layout/bytes; review ảnh trước
 
 
 Revision1.2.0 phản ánh source SDK/transport đã implement. Xem
-[implementation report](../PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) để phân
+[implementation report](../reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) để phân
 biệt source/tests với app/probes/image/deployment và legacy cursor bootstrap gap.
 
 

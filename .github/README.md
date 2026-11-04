@@ -165,7 +165,7 @@ PostgreSQL generation/cursor/rollback và ordered-head retry/ACK-loss/race tests
 real Kafka keyed processing + ordered publish. JUnit integration lưu7 ngày.
 Hai jobs vẫn ở CI / required, không thêm skip/continue-on-error để giả xanh.
 
-Local evidence và lệnh opt-in: [implementation report](../docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md).
+Local evidence và lệnh opt-in: [implementation report](../docs/reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md).
 Có local Kafka4/PostgreSQL17 tests không đồng nghĩa remote Actions, Docker/EKS,
 app DQ/ML/risk hoặc load1.000 readings/s đã được xác nhận. Storage regression
 vẫn dùng default serial runner; raw Kafka+MinIO test là opt-in riêng.

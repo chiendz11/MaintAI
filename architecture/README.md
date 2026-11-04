@@ -1,6 +1,6 @@
 # Runtime inventory baseline1.3.2 — docs target v1.4
 
-[Deployment Architecture v1.4](../docs/DEPLOYMENT_ARCHITECTURE.md) mô tả target mới.
+[Deployment Architecture v1.4](../docs/architecture/DEPLOYMENT_ARCHITECTURE.md) mô tả target mới.
 Bảng và runtime JSON dưới đây là inventory đã có baseline1.3.2, chưa tự đồng bộ
 quarantine/provenance. Simulator UI đã có React client/demo, descriptor và Dockerfile
 riêng; Sensor Control provider0.3.0 đã implement; chưa có container/rollout evidence. MLflow là platform workload ở
@@ -39,7 +39,7 @@ trong Argo Workflow; `CronJob` chạy định kỳ, khác Deployment thường t
 Kafka/PostgreSQL/S3 hoặc MinIO/MLflow Server/Argo/monitoring thuộc GitOps và hạ tầng
 ở hai repo riêng; MLflow Dockerfile/pins/publisher/local dev thuộc app ML codebase.
 Không tạo production platform manifests trong app repo. Xem
-[runtime-map.json](runtime-map.json) và [ghi chú migration](../docs/repository-layout.md).
+[runtime-map.json](runtime-map.json) và [ghi chú migration](../docs/architecture/repository-layout.md).
 
 
 ## Chi tiết kế thừa1.3.2 và quyết định dự án
@@ -49,7 +49,7 @@ client theo baseline5 operations, OIDC và command recovery. Browser checks dùn
 API fixtures và provider HTTP thật; provider có TLS JWKS/OAuth fixtures. Image chưa
 build/deploy, production IdP/Kafka integration chưa verify.
 Business API bỏ control
-facade; Sensor giữ control backend. Theo [M6-HISTORY-01](../docs/M6_HISTORY_ARCHITECTURE_DECISION.md),
+facade; Sensor giữ control backend. Theo [M6-HISTORY-01](../docs/reports/M6_HISTORY_ARCHITECTURE_DECISION.md),
 snapshot/export/catalog-sync nằm trong Read API; Worker không có maintenance loop.
 Business job loops vẫn trong owner runtime hiện có; không thêm deployment mới. History/archive/auth/
 recovery giữ chi tiết tại [docs index](../docs/README.md) và các phụ lục được dẫn ở đó.
@@ -58,11 +58,11 @@ trên không chứng minh entrypoint hoặc deployment đã chạy.
 
 ## PROC-ORDER-01 — transport implementation và inventory baseline
 
-[Decision](../docs/PROCESSING_CONCURRENCY_AND_ORDERING.md), Contracts §42 và Guide
+[Decision](../docs/subsystems/PROCESSING_CONCURRENCY_AND_ORDERING.md), Contracts §42 và Guide
 §53 chốt keyed Worker/safe offset frontier/ordered relay. SDK0.2.0 đã có các
 modules này; processing/src/maintai_processing/ có transport wrappers/factory.
 Full app callbacks/probes, images và deployment còn thiếu. Xem
-[implementation report](../docs/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md).
+[implementation report](../docs/reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md).
 
 runtime-map.json thêm design-decision reference; Worker/Relay descriptors ghi
 transport package/source paths nhưng giữ skeleton/null/placeholder đúng thực tế.

@@ -15,16 +15,16 @@ cài package, validate config hoặc chạy unit tests.** `serve` cần Kafka v�
 Dùng `maintai-messaging[s3]==0.3.0` và [Kafka bundle2.0.0](../contracts/kafka/README.md):
 accepted1.3.0, rejected1.4.0, optional outcome1.4.0. Archive giữ nguyên bytes,
 kể cả event sai/cũ; không decode legacy thành kết quả nghiệp vụ. Xem
-[OUTCOME-14-ONLY](../docs/OUTCOME_V1_4_MIGRATION.md).
+[OUTCOME-14-ONLY](../docs/subsystems/OUTCOME_V1_4_MIGRATION.md).
 Package0.2.1, raw frame/manifest1.0.0, target docs1.4.0 là các version độc lập.
 Không đổi wire schemas để triển khai runtime.
 
 Storage không chạy DQ/ML/risk, tạo Alert, SQL vào DB owner khác hoặc tự kích hoạt
 training. Processing vẫn sở hữu processed history/curated export/verification/hot
 cleanup. Raw archive không thay History API hoặc approved dataset pipeline. Đọc
-[Kafka Guide §8](../docs/KAFKA_DEVELOPMENT_GUIDE.md),
-[Contract §35](../docs/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md),
-[Guide §44](../docs/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md).
+[Kafka Guide §8](../docs/subsystems/KAFKA_DEVELOPMENT_GUIDE.md),
+[Contract §35](../docs/architecture/MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md),
+[Guide §44](../docs/subsystems/MaintAI_Implementation_Development_Guide_v1_4_DEPLOYMENT_PROVENANCE.md).
 
 ## 2. Code và durability
 
@@ -162,7 +162,7 @@ local spool và không hứa nhận dữ liệu vô hạn khi broker đầy.
 
 ## 6. Metrics và logs
 
-`GET /metrics`, registry một process, theo [OBS-01](../docs/OBSERVABILITY_IMPLEMENTATION.md):
+`GET /metrics`, registry một process, theo [OBS-01](../docs/subsystems/OBSERVABILITY_IMPLEMENTATION.md):
 
 - `maintai_storage_batches_total{status="COMMITTED|RETRY|FAILED"}`: COMMITTED sau
   archive durable **trước Kafka ACK**, replay có thể tăng lại; không unique count.
@@ -219,8 +219,8 @@ production/shared bucket. Runtime không có quyền create/delete của test ha
 
 ## M6-RAW-01 — Bàn giao của Chiến/Người4 cho History
 
-Contract đã chốt29/10 tại [M6 Raw Archive Handoff](../docs/M6_RAW_ARCHIVE_HANDOFF.md),
-[kiến trúc M6](../docs/M6_HISTORY_ARCHITECTURE_DECISION.md). Source0.2.0 đã bổ sung catalog/audit/coverage/rebuild và reader helper; source0.1.0
+Contract đã chốt29/10 tại [M6 Raw Archive Handoff](../docs/reports/M6_RAW_ARCHIVE_HANDOFF.md),
+[kiến trúc M6](../docs/reports/M6_HISTORY_ARCHITECTURE_DECISION.md). Source0.2.0 đã bổ sung catalog/audit/coverage/rebuild và reader helper; source0.1.0
 giữ nguyên raw object/manifest. Xem [Reader Guide](M6_READER_GUIDE.md) và
 [local demo](local/README.md).
 Catalog cung cấp immutable generations/segments, per-partition safe frontiers,
@@ -237,4 +237,4 @@ upload raw/manifest/catalog lên MinIO. Nếu chưa có object store/catalog, ch
 outcomes history/CSV nhỏ từ DB, không giả raw history empty hoặc COMPLETE.
 Runtime catalog và schemas đã có source; SQL grants/Read API M6/platform k3d chưa
 được implement bởi phần Storage này. Bằng chứng kiểm tra ở
-[implementation report](../docs/STORAGE_CATALOG_IMPLEMENTATION_REPORT.md).
+[implementation report](../docs/reports/STORAGE_CATALOG_IMPLEMENTATION_REPORT.md).
