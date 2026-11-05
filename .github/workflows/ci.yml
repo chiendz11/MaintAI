@@ -731,6 +731,25 @@ jobs:
             --entrypoint python maintai-ml:ci \
             -c "import local_baseline; import feature_interactions; print('API and transformer imports: PASS')"
 
+      - name: Build training image
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            --build-arg "SOURCE_REVISION=$(git rev-parse HEAD)" \
+            -f ml-service/training/Dockerfile \
+            -t maintai-training:ci \
+            .
+
+      - name: Verify training dependencies and CLI
+        run: |
+          docker run --rm --pull never --network none \
+            --entrypoint python maintai-training:ci \
+            -m pip check
+
+          docker run --rm --pull never --network none \
+            --read-only \
+            --tmpfs /tmp:rw,nosuid,nodev,size=256m \
+            maintai-training:ci --help
 
   mlflow-source-ci:
     name: MLflow image source and release handoff
