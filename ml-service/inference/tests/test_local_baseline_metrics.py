@@ -154,6 +154,14 @@ class TestLocalBaselineMetrics(unittest.TestCase):
                 0.0,
             )
 
+    def test_service_role_header_and_metric(self):
+        response = self.client.post("/api/v1/predict", json=self.body)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.headers.get("x-service-role"),
+            self.api.SERVICE_ROLE,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
