@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import unittest
+import sys
 from pathlib import Path
 
 import joblib
@@ -12,6 +13,8 @@ import pandas as pd
 
 
 ROOT = Path(__file__).resolve().parents[3]
+SHARED_PREPROCESSING = ROOT / "ml-service/shared/preprocessing"
+sys.path.insert(0, str(SHARED_PREPROCESSING))
 
 COLUMN_MAP = {
     "Type": "product_type",
@@ -66,11 +69,35 @@ class TestCandidateBehavior(unittest.TestCase):
         cls.pipelines = {}
         cls.saved_scores = {}
 
-        for candidate in ["random_forest", "hist_gradient_boosting"]:
+        candidates = [
+            name.strip()
+            for name in os.environ.get(
+                "MAINTAI_CANDIDATES",
+                "random_forest,hist_gradient_boosting",
+            ).split(",")
+            if name.strip()
+        ]
+
+        allowed = {
+            "random_forest",
+            "hist_gradient_boosting",
+            "rf_interactions",
+            "hgb_interactions",
+        }
+        if not candidates or not set(candidates).issubset(allowed):
+            raise ValueError("Invalid candidate list.")
+
+        for candidate in candidates:
             folder = cls.directory / candidate
             experiment = json.loads(
                 (folder / "experiment.json").read_text(encoding="utf-8")
             )
+            if "transformer_sha256" in experiment:
+                transformer = SHARED_PREPROCESSING / "feature_interactions.py"
+                if sha256(transformer) != experiment["transformer_sha256"]:
+                    raise ValueError(
+                        f"{candidate}: transformer source checksum mismatch."
+                    )
             artifact = folder / "pipeline.joblib"
 
             if sha256(artifact) != experiment["pipeline_sha256"]:

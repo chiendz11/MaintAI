@@ -47,6 +47,17 @@ def summarize(frame, mask, candidate, slice_name, threshold):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--benchmark-dir", required=True, type=Path)
+    parser.add_argument(
+        "--candidates",
+        nargs="+",
+        default=CANDIDATES,
+        choices=[
+            "random_forest",
+            "hist_gradient_boosting",
+            "rf_interactions",
+            "hgb_interactions",
+        ],
+    )
     args = parser.parse_args()
     benchmark_dir = args.benchmark_dir.resolve()
 
@@ -120,7 +131,7 @@ def main():
         "inputs": {},
     }
 
-    for candidate in CANDIDATES:
+    for candidate in args.candidates:
         folder = benchmark_dir / candidate
         experiment_path = folder / "experiment.json"
         predictions_path = folder / "validation_predictions.csv"
