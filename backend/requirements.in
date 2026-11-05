@@ -9,3 +9,5 @@ maintai-messaging[postgres,observability]==0.3.1
 prometheus-client>=0.21,<1
 jsonschema>=4.23,<5
 boto3==1.43.114
+
+maintai-storage-consumer==0.2.1

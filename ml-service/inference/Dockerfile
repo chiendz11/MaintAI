@@ -17,6 +17,8 @@ RUN python -m pip install --no-cache-dir -r /app/requirements-serving.txt \
 
 COPY ml-service/inference/api/local_baseline.py /app/local_baseline.py
 
+COPY ml-service/shared/preprocessing/feature_interactions.py /app/feature_interactions.py
+
 # Model được mount khi chạy, không đóng cứng vào image.
 ENV MODEL_DIR=/models/current
 

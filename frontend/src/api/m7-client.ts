@@ -199,7 +199,12 @@ export class M7Client {
 
 export type M7Event = {
   schema_version: "1.0.0";
-  type: "brief.ready" | "brief.updated" | "drift.updated" | "service.degraded";
+  type:
+    | "brief.ready"
+    | "brief.updated"
+    | "drift.updated"
+    | "service.degraded"
+    | "projection.resync";
   machine_id: string | null;
   occurred_at: string;
   data: Record<string, string>;

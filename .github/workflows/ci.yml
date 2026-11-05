@@ -649,6 +649,108 @@ jobs:
         if: ${{ always() }}
         run: docker compose -p maintai-storage-catalog-ci -f storage-consumer/local/compose.yaml down --volumes
 
+  ml-model-ci:
+    name: ML unit contracts and inference image
+    needs: structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ml-service/inference/requirements-ci.lock
+
+      - name: Install pinned ML test dependencies
+        run: |
+          python -m pip install -r ml-service/inference/requirements-ci.lock
+          python -m pip check
+
+      - name: Run independent ML test suites
+        run: |
+          python - <<'PY'
+          import subprocess
+          import sys
+
+          suites = [
+              ("ml-service/inference/tests", "test_local_baseline*.py"),
+              ("ml-service/training/tests", "test_create_split.py"),
+              ("ml-service/training/tests", "test_feature_interactions.py"),
+              ("ml-service/training/tests", "test_benchmark_candidates.py"),
+          ]
+
+          runner = """
+          import sys
+          import unittest
+
+          suite = unittest.TestLoader().discover(
+              start_dir=sys.argv[1],
+              pattern=sys.argv[2],
+          )
+          if suite.countTestCases() == 0:
+              raise RuntimeError("No tests discovered")
+
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          if result.skipped:
+              raise RuntimeError("Unexpected skipped tests")
+          sys.exit(0 if result.wasSuccessful() else 1)
+          """
+
+          import textwrap
+          for directory, pattern in suites:
+              print(f"Running {directory}/{pattern}", flush=True)
+              subprocess.run(
+                  [
+                      sys.executable, "-c", textwrap.dedent(runner),
+                      directory, pattern,
+                  ],
+                  check=True,
+              )
+          PY
+
+      - name: Build inference image
+        run: |
+          docker build \
+            -f ml-service/inference/Dockerfile \
+            -t maintai-ml:ci \
+            .
+
+      - name: Verify image dependencies and transformer import
+        run: |
+          docker run --rm --network none \
+            --entrypoint python maintai-ml:ci \
+            -m pip check
+
+          docker run --rm --network none \
+            --entrypoint python maintai-ml:ci \
+            -c "import local_baseline; import feature_interactions; print('API and transformer imports: PASS')"
+
+      - name: Build training image
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            --build-arg "SOURCE_REVISION=$(git rev-parse HEAD)" \
+            -f ml-service/training/Dockerfile \
+            -t maintai-training:ci \
+            .
+
+      - name: Verify training dependencies and CLI
+        run: |
+          docker run --rm --pull never --network none \
+            --entrypoint python maintai-training:ci \
+            -m pip check
+
+          docker run --rm --pull never --network none \
+            --read-only \
+            --tmpfs /tmp:rw,nosuid,nodev,size=256m \
+            maintai-training:ci --help
+
   mlflow-source-ci:
     name: MLflow image source and release handoff
     needs: structure
@@ -720,6 +822,7 @@ jobs:
       MAINTAI_M5_INTEGRATION: '1'
       MAINTAI_M6_INTEGRATION: '1'
       MAINTAI_M7_INTEGRATION: '1'
+      MAINTAI_M8_INTEGRATION: '1'
       MAINTAI_M2_DB_PORT: '35432'
       MAINTAI_M2_KAFKA_PORT: '39092'
       KAFKA_TEST_BOOTSTRAP_SERVERS: 127.0.0.1:39092
@@ -773,6 +876,7 @@ jobs:
       MAINTAI_M5_INTEGRATION: '1'
       MAINTAI_M6_INTEGRATION: '1'
       MAINTAI_M7_INTEGRATION: '1'
+      MAINTAI_M8_INTEGRATION: '1'
       MAINTAI_M2_DB_PORT: '35432'
       MAINTAI_M2_KAFKA_PORT: '39092'
       MAINTAI_M3_DATABASE_URL: postgresql://maintai_test:maintai_test@127.0.0.1:35432/maintai_processing_test
@@ -885,6 +989,7 @@ jobs:
       - processing-ci
       - processing-integration
       - frontend-ci
+      - ml-model-ci
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

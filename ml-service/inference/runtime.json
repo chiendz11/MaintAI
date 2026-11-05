@@ -5,10 +5,10 @@
   "runtime_id": "ml-service",
   "workload_kind": "Deployment",
   "code_owner": "ml",
-  "implementation_status": "skeleton",
+  "implementation_status": "partial",
   "image_group": "ml-service",
   "image_digest": null,
-  "entrypoint_status": "not_implemented_for_v1.3.2",
+  "entrypoint_status": "local_integration_api",
   "purpose": "Online preprocessing + model inference; caller nghiệp vụ là Processing Worker.",
   "source_paths": [
     "ml-service/inference",
@@ -22,9 +22,10 @@
     "Approved model artifacts"
   ],
   "boundaries": [
-    "Image riêng với training; không fit/train trên request, không quyết định severity hoặc tạo alert."
+    "Image riêng với training; không fit/train trên request, không quyết định severity hoặc tạo alert.",
+    "Local candidate serving verified; shared authentication, approved artifact retrieval and production release are not verified."
   ],
   "dockerfile": "ml-service/inference/Dockerfile",
-  "dockerfile_status": "placeholder",
+  "dockerfile_status": "implemented",
   "implemented_contract_revision": null
 }

@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 
 from backend.shared.copilot.config import M7Settings
 from backend.shared.notifications import DEFAULT_CHANNEL, Notifier
+from backend.shared.projections.config import RebuildSettings, generations_enabled
 from maintai_messaging.config import KafkaSettings
 
 
@@ -29,6 +30,8 @@ class Settings:
     processing_token_file: str | None = field(default=None, repr=False)
 
     m7: M7Settings | None = None
+    projection_generations: bool = False
+    rebuild: RebuildSettings | None = None
 
     @classmethod
     def from_env(cls, env=None):
@@ -81,5 +84,15 @@ class Settings:
                 raise ValueError("Invalid Processing evidence origin")
         m7 = M7Settings.from_env(env, local=profile == "local-test")
         return cls(
-            database_url, kafka, host, port, channel, alert_channel, url or None, token or None, m7
+            database_url,
+            kafka,
+            host,
+            port,
+            channel,
+            alert_channel,
+            url or None,
+            token or None,
+            m7,
+            generations_enabled(env),
+            RebuildSettings.from_env(env, local=profile == "local-test"),
         )
