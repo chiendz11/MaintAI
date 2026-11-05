@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from statistics import mean
 from typing import Any
+from evaluation.ranking_metrics import retrieval_ranking_metrics
 
 
 RECALL_LEVELS = (1, 3, 5)
@@ -43,19 +44,42 @@ def recall_at_k(
     return len(gold & found) / len(gold)
 
 
+def hit_at_k(
+    retrieved: list[dict],
+    expected: list[dict],
+    k: int,
+) -> float | None:
+    if k <= 0:
+        raise ValueError("k must be positive")
+
+    if not expected:
+        return None
+
+    gold = {
+        source_key(item["document_id"], item["chunk_id"])
+        for item in expected
+    }
+
+    found = {
+        source_key(item["document_id"], item["chunk_id"])
+        for item in retrieved[:k]
+    }
+
+    return float(bool(gold & found))
+
+
 def evaluate_retrieval(
     retrieved: list[dict],
     expected: list[dict],
 ) -> dict:
 
-    return {
-        f"recall_at_{k}": recall_at_k(
-            retrieved,
-            expected,
-            k,
-        )
+    metrics = {
+        f"recall_at_{k}": recall_at_k(retrieved, expected, k)
         for k in RECALL_LEVELS
     }
+    metrics["hit_at_5"] = hit_at_k(retrieved, expected, 5)
+    metrics.update(retrieval_ranking_metrics(retrieved, expected))
+    return metrics
 
 
 def evaluate_grounding(
@@ -240,6 +264,8 @@ def aggregate(cases: list[dict]) -> dict:
         "recall_at_1": avg_metric("recall_at_1"),
         "recall_at_3": avg_metric("recall_at_3"),
         "recall_at_5": avg_metric("recall_at_5"),
+        "mrr_at_5": avg_metric("mrr_at_5"),
+        "ndcg_at_5": avg_metric("ndcg_at_5"),
 
         "citation_structure_pass_rate": (
             mean(
@@ -258,4 +284,5 @@ def aggregate(cases: list[dict]) -> dict:
         ),
 
         "semantic_grounding_pass_rate": None,
+        "hit_at_5": avg_metric("hit_at_5"),
     }
