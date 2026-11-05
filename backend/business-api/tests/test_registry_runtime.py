@@ -10,7 +10,13 @@ import pytest
 
 
 @pytest.mark.parametrize(
-    "command", ["maintai-business-api", "maintai-business-migrate", "maintai-business-provision"]
+    "command",
+    [
+        "maintai-business-api",
+        "maintai-business-migrate",
+        "maintai-business-provision",
+        "maintai-business-rebuild",
+    ],
 )
 def test_installed_registry_commands_have_help_outside_checkout(command, tmp_path):
     result = subprocess.run(
@@ -28,7 +34,7 @@ def test_installed_registry_commands_have_help_outside_checkout(command, tmp_pat
 def test_registry_image_is_nonroot_installed_and_rejects_missing_config():
     if os.environ.get("MAINTAI_M2_CONTAINER_TEST") != "1":
         pytest.skip("Registry image checks were not enabled")
-    image = "maintai-business-registry:m2-local"
+    image = os.environ.get("MAINTAI_BUSINESS_API_IMAGE", "maintai-business-registry:m2-local")
     config = subprocess.run(
         ["docker", "image", "inspect", image], capture_output=True, text=True, timeout=15
     )

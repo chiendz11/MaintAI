@@ -7,9 +7,11 @@ RUN python -m pip install build==1.6.1 setuptools==84.0.0 wheel==0.48.0
 COPY messaging/ /build/messaging/
 COPY contracts/ /build/contracts/
 RUN python -m build --wheel --no-isolation messaging --outdir /wheels
+COPY storage-consumer/ /build/storage-consumer/
+RUN python -m build --wheel --no-isolation storage-consumer --outdir /wheels
 COPY backend/requirements.lock /build/backend/requirements.lock
 # The internal SDK is built from this checkout, never resolved from a public index.
-RUN python -c "from pathlib import Path; p=Path('backend/requirements.lock'); Path('/tmp/deps.lock').write_text('\n'.join(l for l in p.read_text().splitlines() if not l.startswith('maintai-messaging=='))+'\n')" \
+RUN python -c "from pathlib import Path; p=Path('backend/requirements.lock'); Path('/tmp/deps.lock').write_text('\n'.join(l for l in p.read_text().splitlines() if not l.startswith(('maintai-messaging==','maintai-storage-consumer==')))+'\n')" \
     && python -m pip wheel -r /tmp/deps.lock --wheel-dir /wheels
 COPY backend/ /build/backend/
 RUN python -m build --wheel --no-isolation backend --outdir /wheels

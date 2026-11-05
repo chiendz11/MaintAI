@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
 from backend.shared.copilot.config import M7Settings
+from backend.shared.projections.config import generations_enabled
 from business_sse.hub import SSESettings
 
 from .history_config import HistorySettings
@@ -33,6 +34,7 @@ class Settings:
     sse: SSESettings = field(default_factory=SSESettings)
     history: HistorySettings | None = None
     m7: M7Settings | None = None
+    projection_generations: bool = False
 
     @classmethod
     def from_env(cls, env=None):
@@ -108,4 +110,5 @@ class Settings:
             SSESettings.from_env(env),
             HistorySettings.from_env(env, processing_url=processing_url, local=local),
             M7Settings.from_env(env, local=local),
+            generations_enabled(env),
         )
