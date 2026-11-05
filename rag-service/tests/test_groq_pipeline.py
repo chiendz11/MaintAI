@@ -94,5 +94,12 @@ def test_http_errors_preserve_safe_provider_reason_and_retryability(
     error = response.json()["error"]
     assert error["code"] == "RAG_UNAVAILABLE"
     assert error["retryable"] is retryable
-    assert error["details"] == {"dependency": "groq", "reason": reason}
+    assert error["details"] == {
+        "dependency": "groq",
+        "reason": reason,
+        "fallback_message": (
+            "Chưa có khuyến nghị từ AI, "
+            "đề nghị kỹ thuật viên mở sổ tay kiểm tra trực tiếp."
+        ),
+    }
     assert "unit-test-not-a-real-key" not in response.text + caplog.text

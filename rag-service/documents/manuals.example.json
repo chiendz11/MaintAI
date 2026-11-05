@@ -1,0 +1,20 @@
+[
+  {
+    "path": "motor_manual.pdf",
+    "document_id": "motor-manual",
+    "document_version": "1.0",
+    "section": "maintenance"
+  },
+  {
+    "path": "compressor_manual.pdf",
+    "document_id": "compressor-manual",
+    "document_version": "1.0",
+    "section": "maintenance"
+  },
+  {
+    "path": "circuit_breaker_manual.pdf",
+    "document_id": "circuit-breaker-manual",
+    "document_version": "1.0",
+    "section": "maintenance"
+  }
+]
