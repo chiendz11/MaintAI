@@ -3,10 +3,14 @@
 from psycopg import sql
 
 
-def grant_business_permissions(connection, *, reader_role, consumer_role, api_role=None):
+def grant_business_permissions(
+    connection, *, reader_role, consumer_role, api_role=None, rebuild_role=None
+):
     roles = (
         (reader_role, consumer_role) if api_role is None else (reader_role, consumer_role, api_role)
     )
+    if rebuild_role is not None:
+        roles = (*roles, rebuild_role)
     if any(not isinstance(role, str) or not role.strip() for role in roles) or len(
         set(roles)
     ) != len(roles):
@@ -135,3 +139,68 @@ def grant_business_permissions(connection, *, reader_role, consumer_role, api_ro
             ("drift_list_snapshots", "drift_list_members", "drift_catalog_errors"),
         )
         grant(consumer_role, "SELECT", ("drift_list_snapshots", "drift_list_members"))
+
+    if (
+        connection.execute("SELECT to_regclass('projection_control') AS name").fetchone()["name"]
+        is not None
+    ):
+        generation_tables = tuple("projection_" + axis for axis in projections)
+        for role in (reader_role, api_role):
+            if role is not None:
+                grant(
+                    role,
+                    "SELECT",
+                    ("projection_control", "projection_generations", *generation_tables),
+                )
+        grant(
+            consumer_role,
+            "SELECT",
+            (
+                "projection_control",
+                "projection_generations",
+                "projection_rebuild_jobs",
+                "projection_members",
+            ),
+        )
+        grant(consumer_role, "UPDATE (building_job)", ("projection_control",))
+        grant(consumer_role, "UPDATE (state)", ("projection_generations",))
+        grant(
+            consumer_role,
+            "UPDATE (status,last_error,lease_until,journal_bytes,journal_count,updated_at)",
+            ("projection_rebuild_jobs",),
+        )
+        grant(consumer_role, "SELECT,INSERT", ("projection_journal",))
+        connection.execute(
+            sql.SQL("GRANT USAGE ON SEQUENCE {}.projection_journal_journal_id_seq TO {}").format(
+                sql.Identifier(schema), sql.Identifier(consumer_role)
+            )
+        )
+        grant(
+            consumer_role,
+            "SELECT,INSERT,UPDATE",
+            (*generation_tables, "projection_source_inbox", "projection_row_checksums"),
+        )
+        if rebuild_role is not None:
+            grant(
+                rebuild_role,
+                "SELECT",
+                ("machines", *projections, "maintai_kafka_inbox", "business_source_inbox"),
+            )
+            grant(
+                rebuild_role,
+                "SELECT,INSERT,UPDATE",
+                (
+                    "projection_control",
+                    "projection_generations",
+                    "projection_rebuild_jobs",
+                    "projection_source_inbox",
+                    "projection_row_checksums",
+                    "projection_catalog_seen",
+                    "projection_raw_entries",
+                    *generation_tables,
+                ),
+            )
+            grant(rebuild_role, "SELECT", ("projection_journal",))
+            grant(rebuild_role, "SELECT,INSERT", ("projection_members",))
+            grant(rebuild_role, "UPDATE (applied,source_ref)", ("projection_members",))
+            grant(rebuild_role, "INSERT", ("business_m7_notifications",))

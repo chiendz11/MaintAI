@@ -20,6 +20,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 
+import importlib.util
+
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
     CollectorRegistry,
@@ -145,7 +147,24 @@ async def lifespan(app):
             if not isinstance(metadata[field], str) or not metadata[field]:
                 raise ValueError(f"Invalid {field}")
 
-        # Chỉ load artifact tin cậy do chính ta tạo.
+        # Pipeline có tương tác cần đúng source module trong runtime.
+        if metadata.get("transformer_module") is not None:
+            if metadata["transformer_module"] != "feature_interactions":
+                raise ValueError("Unsupported transformer module")
+
+            spec = importlib.util.find_spec("feature_interactions")
+            if spec is None or spec.origin is None:
+                raise ValueError("Transformer module is unavailable")
+
+            transformer_path = Path(spec.origin)
+            actual_transformer_hash = hashlib.sha256(
+                transformer_path.read_bytes()
+            ).hexdigest()
+
+            if actual_transformer_hash != metadata["transformer_sha256"]:
+                raise ValueError("Transformer source checksum mismatch")
+
+        # Chỉ load artifact tin cậy sau khi kiểm tra model và module.
         pipeline = joblib.load(artifact)
 
         if list(pipeline.feature_names_in_) != FEATURES:

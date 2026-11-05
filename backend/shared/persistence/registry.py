@@ -33,6 +33,9 @@ class RegistryRepository:
                 raise ValueError("Duplicate machine in provisioning manifest")
             ids.add(machine["machine_id"])
         with self.connection_factory() as connection, connection.transaction():
+            from backend.shared.projections.generations import gate
+
+            gate(connection)
             for machine in machines:
                 connection.execute(
                     """INSERT INTO machines(machine_id,display_name)
