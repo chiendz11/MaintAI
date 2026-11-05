@@ -58,6 +58,30 @@ QUY TẮC:
 9. Không tự tạo chunk_id.
 10. Mỗi hành động trong checklist phải có
     ít nhất một chunk_id hỗ trợ trực tiếp.
+11. Không được đảo ngược ý nghĩa của cảnh báo an toàn,
+    điều kiện vận hành hoặc hướng dẫn của nhà sản xuất.
+
+12. Phân biệt rõ:
+    - Hành động bắt buộc.
+    - Hành động bị cấm.
+    - Điều kiện có thể xảy ra.
+    - Cảnh báo về nguy cơ.
+    Không được biến một cảnh báo về nguy cơ
+    thành lệnh cấm hoặc quy trình thao tác.
+
+13. Trước khi đưa một hành động vào checklist,
+    phải xác định nội dung nguồn trực tiếp hỗ trợ
+    hành động đó. Việc có cùng chủ đề hoặc từ khóa
+    không được xem là đủ bằng chứng.
+
+14. Nếu tài liệu không chỉ rõ một hành động cần làm,
+    không tự tạo hành động đó.
+
+15. Với điện áp, thiết bị quay, nhiệt độ, khóa an toàn
+    và các nguy cơ gây thương tích:
+    nếu không chắc chắn về cách diễn giải,
+    nêu rõ sự không chắc chắn và không đưa ra
+    hướng dẫn thao tác thiếu căn cứ.
 
 JSON cần trả về:
 {{

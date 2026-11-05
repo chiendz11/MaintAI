@@ -1,0 +1,280 @@
+{
+  "generated_at": "2026-11-05T09:44:11.196458+00:00",
+  "dataset": "evaluation/gold_set_retrieval.jsonl",
+  "top_k": 5,
+  "total_cases": 8,
+  "metrics": {
+    "recall_at_1": 0.4166666666666667,
+    "recall_at_3": 0.5416666666666667,
+    "recall_at_5": 0.8333333333333334,
+    "hit_at_5": 0.875,
+    "mrr_at_5": 0.5916666666666668,
+    "ndcg_at_5": 0.6181364608740484
+  },
+  "cases": [
+    {
+      "case_id": "abb_storage_001",
+      "retrieved_sources": [
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "170"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "172"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "177"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "165"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "132"
+        }
+      ],
+      "metrics": {
+        "recall_at_1": 0.0,
+        "recall_at_3": 0.0,
+        "recall_at_5": 0.0,
+        "hit_at_5": 0.0,
+        "mrr_at_5": 0.0,
+        "ndcg_at_5": 0.0
+      }
+    },
+    {
+      "case_id": "abb_lubrication_001",
+      "retrieved_sources": [
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "170"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "137"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "165"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "166"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "126"
+        }
+      ],
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_3": 1.0,
+        "recall_at_5": 1.0,
+        "hit_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "abb_safety_002",
+      "retrieved_sources": [
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "126"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "184"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "163"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "182"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "170"
+        }
+      ],
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_3": 1.0,
+        "recall_at_5": 1.0,
+        "hit_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    },
+    {
+      "case_id": "abb_safety_003",
+      "retrieved_sources": [
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "166"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "145"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "126"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "185"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "129"
+        }
+      ],
+      "metrics": {
+        "recall_at_1": 0.0,
+        "recall_at_3": 1.0,
+        "recall_at_5": 1.0,
+        "hit_at_5": 1.0,
+        "mrr_at_5": 0.3333333333333333,
+        "ndcg_at_5": 0.5
+      }
+    },
+    {
+      "case_id": "abb_storage_002",
+      "retrieved_sources": [
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "148"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "182"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "149"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "154"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "127"
+        }
+      ],
+      "metrics": {
+        "recall_at_1": 0.0,
+        "recall_at_3": 0.0,
+        "recall_at_5": 1.0,
+        "hit_at_5": 1.0,
+        "mrr_at_5": 0.2,
+        "ndcg_at_5": 0.38685280723454163
+      }
+    },
+    {
+      "case_id": "abb_storage_003",
+      "retrieved_sources": [
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "166"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "185"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "154"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "165"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "127"
+        }
+      ],
+      "metrics": {
+        "recall_at_1": 0.3333333333333333,
+        "recall_at_3": 0.3333333333333333,
+        "recall_at_5": 0.6666666666666666,
+        "hit_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 0.6713860725233041
+      }
+    },
+    {
+      "case_id": "abb_transport_001",
+      "retrieved_sources": [
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "166"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "137"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "154"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "125"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "128"
+        }
+      ],
+      "metrics": {
+        "recall_at_1": 0.0,
+        "recall_at_3": 0.0,
+        "recall_at_5": 1.0,
+        "hit_at_5": 1.0,
+        "mrr_at_5": 0.2,
+        "ndcg_at_5": 0.38685280723454163
+      }
+    },
+    {
+      "case_id": "abb_lifting_001",
+      "retrieved_sources": [
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "129"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "131"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "166"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "137"
+        },
+        {
+          "document_id": "abb-low-voltage-motors-en",
+          "chunk_id": "139"
+        }
+      ],
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_3": 1.0,
+        "recall_at_5": 1.0,
+        "hit_at_5": 1.0,
+        "mrr_at_5": 1.0,
+        "ndcg_at_5": 1.0
+      }
+    }
+  ]
+}

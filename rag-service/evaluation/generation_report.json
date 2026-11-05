@@ -1,0 +1,33 @@
+{
+  "generated_at": "2026-11-05T09:58:12.768158+00:00",
+  "dataset": "evaluation\\gold_set_generation.jsonl",
+  "summary": {
+    "total_cases": 1,
+    "schema_valid_rate": 1.0,
+    "citation_precision": null,
+    "citation_recall": null,
+    "citation_f1": null,
+    "answer_correctness": null,
+    "semantic_grounding": 0.5,
+    "correctness_reviewed_cases": 0,
+    "grounding_reviewed_cases": 1
+  },
+  "cases": [
+    {
+      "case_id": "abb_live_bearing_001",
+      "json_validity": {
+        "json_syntax_valid": true,
+        "schema_valid": true,
+        "errors": []
+      },
+      "citation_accuracy": null,
+      "answer_correctness": null,
+      "semantic_grounding": {
+        "reviewed": true,
+        "grounding_score": 0.5,
+        "supported_claims": 2,
+        "total_claims": 4
+      }
+    }
+  ]
+}
