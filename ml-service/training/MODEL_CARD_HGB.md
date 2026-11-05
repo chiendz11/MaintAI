@@ -318,6 +318,56 @@ không phải chữ ký phê duyệt hoặc bằng chứng nguồn gốc độc 
 | Invariants and metamorphic relations | Thứ tự cột/dòng, single/batch, save/load, score và nhãn-threshold |
 | Test-data adequacy | Báo số Failure và Wilson interval; cảnh báo slice ít mẫu, domain shift |
 
+## Phân tích lỗi và độ nhạy bổ sung
+
+### Lỗi trên validation tại threshold đã khóa
+
+Confusion matrix được kiểm chứng lại: TN=1924, FP=8, FN=10, TP=58.
+
+- Trong nhóm có cờ TWF, model phát hiện 1/8 Failure; 7/10 ca FN có cờ TWF.
+- HDF: phát hiện 25/25; PWF: 18/18; OSF: 17/18.
+- Hai mẫu target Failure không có failure-mode flag đều bị bỏ sót.
+- Sáu mẫu có cờ RNF đều mang target Normal trong validation này:
+  recall trên target Failure của nhóm RNF không xác định.
+- Nhóm tool wear trên train Q75 có 8 FN trong 33 Failure.
+- Failure-mode groups và sensor slices có thể chồng lấn; không cộng số lỗi
+  giữa các nhóm để suy ra tổng số bản ghi.
+
+Failure-mode flags chỉ dùng phân tích sau dự đoán, không dùng làm features
+hoặc thay thế target. Các kết quả xác định nhóm yếu, chưa chứng minh nguyên
+nhân lỗi hoặc rằng nhóm đó không thể dự đoán được.
+
+### Độ nhạy với perturbation đầu vào
+
+Đã chạy 60 kịch bản trên validation:
+- Gaussian noise ở mức 1% và 5% IQR train, năm seeds cố định, từng sensor.
+- Constant bias ±5% IQR train, từng sensor.
+- Giữ nguyên pipeline và threshold.
+- Đối chiếu baseline scores/labels và zero-noise control: PASS.
+- Không đánh giá test hoặc tính accuracy cho dữ liệu perturbation.
+
+Ở mức Gaussian 5% IQR, torque có tỷ lệ đổi nhãn trung bình cao nhất
+trong các sensor đã thử: 0,59% trên toàn bộ mẫu hợp lệ.
+
+Giảm air temperature 5% IQR làm 12 dự đoán FAILURE chuyển thành NORMAL:
+0,6% của 2.000 mẫu, nhưng 18,18% của 66 dự đoán FAILURE ban đầu.
+Tăng process temperature 5% IQR làm 10 dự đoán FAILURE chuyển thành NORMAL:
+0,5% toàn bộ mẫu, tương đương 15,15% dự đoán FAILURE ban đầu.
+
+Giảm tool wear 5% IQR tạo 58 input không hợp lệ (2,9%).
+Các hàng này được đếm riêng, không clip; score và nhãn được so sánh trên
+cùng các hàng còn hợp lệ.
+
+Mức perturbation là giả định thí nghiệm, chưa phải sai số cảm biến được
+nhà máy xác nhận. Đổi nhãn không tự động là prediction sai; nhãn không đổi
+cũng không chứng minh prediction đúng. Chưa đặt robustness acceptance gate.
+
+Nguồn bằng chứng:
+- validation-errors-y02oe7s_
+- robustness-vlkat02y
+
+Hai thư mục nằm trong benchmark interactions-validation-mx8qrw6p.
+
 ## 11. Phần còn lại trước nghiệm thu đầy đủ
 
 - Hoàn thiện README bàn giao, cách khởi động, xử lý lỗi và rollback.
