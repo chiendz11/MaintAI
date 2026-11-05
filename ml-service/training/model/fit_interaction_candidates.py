@@ -19,6 +19,8 @@ from sklearn.ensemble import (
 )
 from sklearn.metrics import average_precision_score
 
+import os
+import re
 
 ROOT = Path(__file__).resolve().parents[3]
 ABLATION_SCRIPT = Path(__file__).with_name("ablate_interactions.py")
@@ -39,9 +41,34 @@ def read_json(path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--ablation-dir", required=True, type=Path)
+    parser.add_argument(
+        "--output-root",
+        type=Path,
+        default=ROOT / "ml-service/artifacts/benchmarks",
+        help="Thư mục cha chứa output riêng cho mỗi lần chạy.",
+    )
     args = parser.parse_args()
     ablation_dir = args.ablation_dir.resolve()
 
+    # Image nhận revision tại build time; chạy local lấy từ Git.
+    image_revision = os.environ.get("MAINTAI_SOURCE_REVISION")
+    if image_revision is not None:
+        if re.fullmatch(r"[0-9a-f]{40}", image_revision) is None:
+            raise ValueError("Invalid MAINTAI_SOURCE_REVISION")
+        source_commit = image_revision
+        source_commit_origin = "image_build_revision"
+        working_tree_status = None
+    else:
+        source_commit = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
+        ).strip()
+        source_commit_origin = "local_git"
+        working_tree_status = subprocess.check_output(
+            ["git", "status", "--porcelain"], cwd=ROOT, text=True
+        )
+
+    # Revision là thông tin provenance, không phải chữ ký phê duyệt.
+    # Hash các script/input vẫn được ghi riêng trong metadata.
     protocol_path = ablation_dir / "protocol.json"
     protocol = read_json(protocol_path)
 
@@ -106,7 +133,7 @@ def main():
     x_val = features.iloc[val_indices]
     y_val = labels.iloc[val_indices].to_numpy(dtype=int)
 
-    output_root = ROOT / "ml-service/artifacts/benchmarks"
+    output_root = args.output_root.resolve()
     output_root.mkdir(parents=True, exist_ok=True)
     output = Path(tempfile.mkdtemp(
         prefix="interactions-validation-", dir=output_root
@@ -224,12 +251,9 @@ def main():
         "numpy_version": np.__version__,
         "pandas_version": pd.__version__,
         "python_version": sys.version,
-        "source_git_commit": subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
-        ).strip(),
-        "working_tree_status": subprocess.check_output(
-            ["git", "status", "--porcelain"], cwd=ROOT, text=True
-        ),
+        "source_git_commit": source_commit,
+        "source_commit_origin": source_commit_origin,
+        "working_tree_status": working_tree_status,
         "threshold_policy": "gate_then_f2_recall_precision_threshold",
         "validation_reused": True,
         "test_previously_opened_for_v1": True,

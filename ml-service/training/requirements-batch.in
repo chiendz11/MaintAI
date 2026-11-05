@@ -1,0 +1,13 @@
+# Python 3.12.
+# Dependencies trực tiếp cho training, evaluation và MLflow export.
+# Chưa phải lock toàn bộ dependencies gián tiếp.
+# EDA/plotting không nằm trong batch này.
+
+scikit-learn==1.9.1
+numpy==2.5.4
+pandas==3.1.0
+scipy==1.18.1
+joblib==1.6.0
+cloudpickle==3.1.2
+jsonschema==4.26.0
+mlflow==3.17.1
