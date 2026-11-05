@@ -197,3 +197,11 @@ Migrations0005/0006 bổ sung brief jobs và Drift catalog trong business_db.
 `BUSINESS_M7_ENABLED=true` bật API/Consumer tương ứng sau owner migrations/grants;
 RAG/S3 lỗi không chặn luồng Kafka hoặc Alert lifecycle. Job workers và catalog
 scans chạy riêng trong Consumer; API chỉ enqueue/đọc và phục vụ REST/SSE.
+
+## M8 — Projection rebuild
+
+Xem [generation storage, owner CLI và quy trình kích hoạt](../docs/reports/M8_PROJECTION_REBUILD.md).
+Mặc định tắt. Migration0007 giữ legacy tables và dữ liệu nghiệp vụ; bootstrap
+explicit sau drain writers. Live Consumer và rebuild dùng chung reducer; nguồn
+gốc từ Storage catalog/Processing HTTP, không chạy lại ML hoặc Alert Manager.
+Atomic cutover phát `projection.resync`; UI phục hồi bằng REST snapshot.

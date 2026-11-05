@@ -230,7 +230,7 @@ def test_installed_status_live_consumer_two_db_roles_and_sigterm(business_databa
         )
         launch(
             "api",
-            "maintai-business-registry:m2-local",
+            os.environ.get("MAINTAI_BUSINESS_API_IMAGE", "maintai-business-registry:m2-local"),
             {
                 "BUSINESS_PROFILE": "local-test",
                 "BUSINESS_HOST": "127.0.0.1",
@@ -248,7 +248,7 @@ def test_installed_status_live_consumer_two_db_roles_and_sigterm(business_databa
         )
         launch(
             "consumer",
-            "maintai-business-consumer:m3-local",
+            os.environ.get("MAINTAI_BUSINESS_CONSUMER_IMAGE", "maintai-business-consumer:m3-local"),
             {
                 "BUSINESS_CONSUMER_PROFILE": "local-test",
                 "BUSINESS_CONSUMER_HOST": "127.0.0.1",
@@ -271,7 +271,7 @@ def test_installed_status_live_consumer_two_db_roles_and_sigterm(business_databa
             second_api = f"http://127.0.0.1:{second_port}"
             launch(
                 "api2",
-                "maintai-business-registry:m2-local",
+                os.environ.get("MAINTAI_BUSINESS_API_IMAGE", "maintai-business-registry:m2-local"),
                 {
                     "BUSINESS_PROFILE": "local-test",
                     "BUSINESS_HOST": "127.0.0.1",

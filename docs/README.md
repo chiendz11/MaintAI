@@ -139,6 +139,7 @@ Hồ sơ bằng chứng kiểm thử và lịch sử tiến hóa kiến trúc:
 | **[M6 Raw Archive Handoff](reports/M6_RAW_ARCHIVE_HANDOFF.md)** | Giao thức bàn giao dữ liệu thô sang MinIO/S3 và quản lý catalog coverage theo partition. |
 | **[M6 Implementation Report](reports/M6_IMPLEMENTATION_REPORT.md)** | Nghiệm thu Mốc M6: Lịch sử xử lý, Export jobs, API Facade và kiểm thử tích hợp. |
 | **[M7 Copilot và Monitoring](reports/M7_IMPLEMENTATION_REPORT.md)** | Brief jobs, RAG client, Drift catalog, Monitoring UI và bằng chứng kiểm chứng local; phân biệt fixtures với tích hợp provider thật. |
+| **[M8 Projection rebuild](reports/M8_PROJECTION_REBUILD.md)** | Generation storage, original-source recovery, owner CLI/grants và REST/SSE resync; tích hợp providers shared là gate riêng. |
 | **[Processing Ordering Report](reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md)** | Bằng chứng kiểm thử 87 test cases của Keyed Runner, Offset Coordinator và Ordered Outbox Relay. |
 | **[Storage Catalog Report](reports/STORAGE_CATALOG_IMPLEMENTATION_REPORT.md)** | Báo cáo kiểm chứng triển khai Storage Consumer và MinIO catalog. |
 | **[Sensor Implementation Report](reports/SENSOR_IMPLEMENTATION_REPORT.md)** | Báo cáo kiểm chứng Sensor v0.3.0, SQLite spooling và 5 Control APIs. |

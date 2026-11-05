@@ -43,6 +43,20 @@ def serve(settings, *, stop=None, connection_factory=None):
             ),
             CatalogRunner(catalog(settings.m7, factory), stop),
         ]
+    if settings.projection_generations:
+        from backend.shared.projections.generations import current
+
+        with factory() as connection:
+            current(connection)
+    if settings.rebuild is not None:
+        from backend.shared.projections.runtime import build_runner
+
+        runners.append(build_runner(settings, stop))
+    rebuild_metrics = None
+    if settings.projection_generations:
+        from backend.shared.projections.metrics import RebuildMetrics
+
+        rebuild_metrics = RebuildMetrics(metrics.registry)
     failed = threading.Event()
     previous = {}
     server = uvicorn.Server(
@@ -89,6 +103,8 @@ def serve(settings, *, stop=None, connection_factory=None):
                             connection.execute(f"SELECT 1 FROM {table} LIMIT 0")
                     if job_metrics is not None:
                         job_metrics.observe(factory)
+                    if rebuild_metrics is not None:
+                        rebuild_metrics.observe(factory)
                     database = True
                 except Exception:
                     try:
@@ -136,6 +152,7 @@ def serve(settings, *, stop=None, connection_factory=None):
                 metrics=metrics,
                 notification_channel=settings.notification_channel,
                 alert_channel=settings.alert_channel,
+                generations=settings.projection_generations,
                 evidence=evidence,
             ),
             stop,

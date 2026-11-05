@@ -20,9 +20,31 @@ MACHINE_ROWS = """SELECT m.machine_id,m.display_name,m.last_seen_at,
 
 
 class ProjectionRepository:
-    def __init__(self, connection_factory, *, alert_reader=None):
+    def __init__(self, connection_factory, *, alert_reader=None, generations=False):
         self.connection_factory = connection_factory
         self.alert_reader = alert_reader
+        self.generations = generations
+
+    def _query(self, query):
+        if not self.generations:
+            return query
+        for table, alias in (
+            ("latest_telemetry", "t"),
+            ("latest_processing", "p"),
+            ("latest_valid_prediction", "v"),
+        ):
+            query = query.replace(
+                f"LEFT JOIN {table} {alias} USING(machine_id)",
+                f"LEFT JOIN projection_{table} {alias} ON {alias}.machine_id=m.machine_id "
+                f"AND {alias}.generation_id=(SELECT active_generation FROM projection_control)",
+            )
+        return query
+
+    def _ready(self, connection):
+        if self.generations:
+            from backend.shared.projections.generations import current
+
+            current(connection)
 
     @staticmethod
     def _decode(row):
@@ -52,8 +74,9 @@ class ProjectionRepository:
     def detail(self, machine_id):
         with self.connection_factory() as connection, connection.transaction():
             connection.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+            self._ready(connection)
             row = connection.execute(
-                MACHINE_ROWS + " WHERE m.machine_id=%s", (machine_id,)
+                self._query(MACHINE_ROWS) + " WHERE m.machine_id=%s", (machine_id,)
             ).fetchone()
             if row is None:
                 return None
@@ -65,8 +88,11 @@ class ProjectionRepository:
             raise ValueError("Invalid pagination")
         with self.connection_factory() as connection, connection.transaction():
             connection.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+            self._ready(connection)
             rows = connection.execute(
-                "WITH scoped AS MATERIALIZED (" + MACHINE_ROWS + " WHERE m.machine_id=ANY(%s)), "
+                "WITH scoped AS MATERIALIZED ("
+                + self._query(MACHINE_ROWS)
+                + " WHERE m.machine_id=ANY(%s)), "
                 "filtered AS (SELECT * FROM scoped WHERE (%s::text IS NULL OR state=%s)), "
                 "page AS (SELECT * FROM filtered ORDER BY machine_id LIMIT %s OFFSET %s) "
                 "SELECT total.total,page.* FROM (SELECT count(*) AS total FROM filtered) total "
@@ -89,21 +115,25 @@ class ProjectionRepository:
 
     def check(self):
         with self.connection_factory() as connection:
-            connection.execute("""SELECT m.machine_id FROM machines m
+            self._ready(connection)
+            connection.execute(
+                self._query("""SELECT m.machine_id FROM machines m
                 LEFT JOIN latest_telemetry t USING(machine_id)
                 LEFT JOIN latest_processing p USING(machine_id)
                 LEFT JOIN latest_valid_prediction v USING(machine_id) LIMIT 0""")
+            )
         return True
 
     def live(self, machine_id):
         with self.connection_factory() as connection:
+            self._ready(connection)
             row = connection.execute(
-                """SELECT m.machine_id,t.snapshot AS telemetry,p.snapshot AS processing,
+                self._query("""SELECT m.machine_id,t.snapshot AS telemetry,p.snapshot AS processing,
                 v.snapshot AS prediction,statement_timestamp() AS as_of FROM machines m
                 LEFT JOIN latest_telemetry t USING(machine_id)
                 LEFT JOIN latest_processing p USING(machine_id)
                 LEFT JOIN latest_valid_prediction v USING(machine_id)
-                WHERE m.machine_id=%s""",
+                WHERE m.machine_id=%s"""),
                 (machine_id,),
             ).fetchone()
         if row is None:
