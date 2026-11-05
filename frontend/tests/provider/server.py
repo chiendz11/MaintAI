@@ -65,13 +65,18 @@ def browser_history(factory, token_file, signing_key, issuer):
         base_url="http://127.0.0.1:18036",
         token_file=token_file,
         signer=DelegationSigner(
-            signing_key, kid="m6-fixture", issuer=issuer + "/business", service_subject="m4-browser"
+            signing_key,
+            kid="m6-fixture",
+            issuer=issuer + "/business",
+            service_subject="m4-browser",
         ),
     )
     schemas = HistorySchemas(ROOT / "contracts/v1.3/schemas")
     # Both replicas receive the same fixture key; production keys are explicit config.
     snapshots = MarkerSnapshots(
-        factory, {"fixture": hashlib.sha256(str(token_file).encode()).digest()}, active="fixture"
+        factory,
+        {"fixture": hashlib.sha256(str(token_file).encode()).digest()},
+        active="fixture",
     )
     return HistoryFacade(client, schemas, markers=CompositeCharts(client, schemas, snapshots))
 
@@ -86,6 +91,9 @@ def serve_fixture():
     suffix = uuid4().hex
     m6 = os.environ.get("MAINTAI_M6_INTEGRATION") == "1"
     m7 = os.environ.get("MAINTAI_M7_INTEGRATION") == "1"
+    m8 = os.environ.get("MAINTAI_M8_INTEGRATION") == "1"
+    if m8 and not m6:
+        raise RuntimeError("M8 browser tests require Storage integration")
     if m7 and not m6:
         raise RuntimeError("M7 browser tests require M6 real object storage")
     databases = {
@@ -99,6 +107,8 @@ def serve_fixture():
         name: "m4_" + name + "_" + suffix
         for name in ("reader", "consumer", "api", "processing_reader")
     }
+    if m8:
+        roles["rebuilder"] = "m8_rebuilder_" + suffix
     if m6:
         roles["processing_metadata"] = "m6_metadata_" + suffix
     password = uuid4().hex
@@ -230,7 +240,8 @@ def serve_fixture():
             raise HTTPException(400, "Invalid fixture PKCE exchange")
         return {
             "access_token": signed(
-                "business-test", role="VIEWER" if code["client_id"].endswith("-viewer") else None
+                "business-test",
+                role="VIEWER" if code["client_id"].endswith("-viewer") else None,
             ),
             "token_type": "Bearer",
             "expires_in": 300,
@@ -266,11 +277,16 @@ def serve_fixture():
             [{"machine_id": "M-001", "display_name": "Browser fixture machine"}]
         )
         with business_factory() as connection:
+            if m8:
+                from backend.shared.projections.generations import bootstrap
+
+                bootstrap(connection, writers_drained=True)
             grant_business_permissions(
                 connection,
                 reader_role=roles["reader"],
                 consumer_role=roles["consumer"],
                 api_role=roles["api"],
+                rebuild_role=roles.get("rebuilder"),
             )
         reader_dsn = (
             make_url(dsns["business"])
@@ -399,6 +415,22 @@ def serve_fixture():
                 from copilot import prepare
 
                 m7_env = prepare(app, archive_fixture, Path(temporary))
+            if m8:
+                from rebuild import prepare as prepare_rebuild
+
+                prepare_rebuild(app, business_factory, kafka, archive_fixture)
+                m7_env.update(
+                    {
+                        "BUSINESS_PROJECTION_GENERATIONS_ENABLED": "true",
+                        "BUSINESS_REBUILD_ENABLED": "true",
+                        "BUSINESS_REBUILD_DATABASE_URL": make_url(dsns["business"])
+                        .set(username=roles["rebuilder"], password=password)
+                        .render_as_string(hide_password=False),
+                        "BUSINESS_REBUILD_RAW_BUCKET": archive_fixture.raw_bucket,
+                        "BUSINESS_REBUILD_S3_REGION": "us-east-1",
+                        "BUSINESS_REBUILD_S3_ENDPOINT": "http://127.0.0.1:39000",
+                    }
+                )
             log_path = Path(temporary) / "consumer.log"
             with log_path.open("wb") as log:
                 consumer = subprocess.Popen(
@@ -453,6 +485,7 @@ def serve_fixture():
                 projections = ProjectionRepository(
                     registry.connection_factory,
                     alert_reader=None if alerts is None else alerts.active,
+                    generations=m8,
                 )
                 from backend.shared.copilot.repository import BriefRepository
 
@@ -461,7 +494,7 @@ def serve_fixture():
                     dsn=reader_dsn,
                     settings=SSESettings(channel=channel, alert_channel=alert_channel),
                     alert_repository=alerts,
-                    m7_factory=registry.connection_factory if m7 else None,
+                    m7_factory=registry.connection_factory if m7 or m8 else None,
                 )
                 verifier = IdentityVerifier(
                     issuer=ISSUER,
@@ -483,7 +516,10 @@ def serve_fixture():
                     if m7
                     else None,
                     history=browser_history(
-                        registry.connection_factory, service_token, delegation_key, ISSUER
+                        registry.connection_factory,
+                        service_token,
+                        delegation_key,
+                        ISSUER,
                     )
                     if m6
                     else None,

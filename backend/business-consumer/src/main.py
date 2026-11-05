@@ -12,6 +12,7 @@ def make_handlers(
     notification_channel=None,
     evidence=None,
     alert_channel=None,
+    generations=False,
 ):
     from backend.shared.alerts.notifications import ALERT_CHANNEL
     from backend.shared.alerts.repository import AlertRepository
@@ -29,6 +30,7 @@ def make_handlers(
             settings.group_prefix + profiles[role]["group_id"],
             metrics=metrics,
             notify=Notifier(notification_channel or DEFAULT_CHANNEL),
+            generations=generations,
         )
         for role, builder in (("business-live", telemetry), ("business-prediction", prediction))
     }
