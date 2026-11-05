@@ -5,10 +5,10 @@
   "runtime_id": "training",
   "workload_kind": "WorkflowTask",
   "code_owner": "ml",
-  "implementation_status": "skeleton",
+  "implementation_status": "partial",
   "image_group": "training",
   "image_digest": null,
-  "entrypoint_status": "not_implemented_for_v1.3.2",
+  "entrypoint_status": "local_batch_fit_evaluate",
   "purpose": "Batch training/evaluation trên approved curated dataset, xuất model bundle và drift reference.",
   "source_paths": [
     "ml-service/training",
@@ -25,9 +25,10 @@
   ],
   "boundaries": [
     "Chạy theo task Argo Workflow rồi kết thúc; không phải HTTP Deployment.",
-    "Raw S3 upload/drift/feedback không tự retrain/promote; mlflow_db do MLflow Server sở hữu."
+    "Raw S3 upload/drift/feedback không tự retrain/promote; mlflow_db do MLflow Server sở hữu.",
+    "Local Docker fit/evaluate verified; Argo, curated S3 and automatic release are not verified."
   ],
   "dockerfile": "ml-service/training/Dockerfile",
-  "dockerfile_status": "placeholder",
+  "dockerfile_status": "implemented",
   "implemented_contract_revision": null
 }

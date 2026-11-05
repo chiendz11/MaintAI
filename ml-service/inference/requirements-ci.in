@@ -1,0 +1,6 @@
+# Dependencies trực tiếp cho kiểm thử ML trên Python 3.12.
+# Đây là input dependencies, chưa phải lock đầy đủ.
+-r requirements-serving.txt
+
+httpx==0.28.1
+jsonschema==4.26.0
