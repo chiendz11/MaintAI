@@ -14,7 +14,7 @@ WORKDIR /app
 
 COPY ml-service/training/requirements-batch.lock /opt/maintai/requirements-batch.lock
 
-RUN python -m pip install --no-cache-dir -r /opt/maintai/requirements-batch.lock \
+RUN python -m pip install --no-cache-dir --timeout 120 --retries 5 -r /opt/maintai/requirements-batch.lock \
     && python -m pip check \
     && useradd --uid 10001 --create-home mluser \
     && mkdir -p /app/sensor/data /inputs/ablation /outputs \
