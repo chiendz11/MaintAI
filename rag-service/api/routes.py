@@ -1,15 +1,15 @@
 import logging
+from functools import lru_cache
 from uuid import uuid4
 
-from fastapi import APIRouter
-from fastapi.responses import JSONResponse
-from functools import lru_cache
-from llm_generator.generator import LLMProviderError
-
+from api.fallback import FALLBACK_MESSAGE
 from api.schemas import (
     MaintenanceBriefRequest,
     MaintenanceBriefResponse,
 )
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse
+from llm_generator.generator import LLMProviderError
 
 logger = logging.getLogger(__name__)
 
@@ -88,15 +88,22 @@ def create_maintenance_brief(
 
     except LLMProviderError as error:
         logger.warning(
-            "RAG provider unavailable: request_id=%s reason=%s", request_id, error.reason
+            "RAG provider unavailable: request_id=%s reason=%s",
+            request_id,
+            error.reason,
         )
+
         return error_response(
             status_code=503,
             code="RAG_UNAVAILABLE",
             message="RAG generation provider is unavailable",
             retryable=error.retryable,
             request_id=request_id,
-            details={"dependency": "groq", "reason": error.reason},
+            details={
+                "dependency": "groq",
+                "reason": error.reason,
+                "fallback_message": FALLBACK_MESSAGE,
+            },
         )
 
     except (
@@ -116,6 +123,9 @@ def create_maintenance_brief(
             message="RAG service is unavailable",
             retryable=True,
             request_id=request_id,
+            details={
+                "fallback_message": FALLBACK_MESSAGE,
+            },
         )
 
     except Exception:
@@ -130,4 +140,7 @@ def create_maintenance_brief(
             message="Internal RAG service error",
             retryable=False,
             request_id=request_id,
+            details={
+                "fallback_message": FALLBACK_MESSAGE,
+            },
         )

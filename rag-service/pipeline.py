@@ -1,18 +1,18 @@
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
+from api.fallback import FALLBACK_MESSAGE
 from api.schemas import (
+    GroundedStatus,
     MaintenanceBriefRequest,
     MaintenanceBriefResponse,
-    GroundedStatus,
 )
-
+from citation_validator.validator import CitationValidator
+from llm_generator.generator import get_generator
+from prompt_builder.builder import PromptBuilder
 from query_builder.builder import QueryBuilder
 from vector_retriever.retriever import VectorRetriever
-from prompt_builder.builder import PromptBuilder
-from llm_generator.generator import get_generator
-from citation_validator.validator import CitationValidator
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ class RAGPipeline:
             "brief_id": f"brief_{uuid4().hex}",
             "alert_id": request.alert.alert_id,
             "grounded_status": (GroundedStatus.INSUFFICIENT_EVIDENCE),
-            "summary": ("Chưa đủ bằng chứng để đưa ra hướng dẫn bảo trì."),
+            "summary": FALLBACK_MESSAGE,
             "uncertainty": ("Chưa tìm được tài liệu phù hợp."),
             "checklist": [],
             "citations": [],
@@ -85,7 +85,9 @@ class RAGPipeline:
         citable_documents = [
             doc
             for doc in documents
-            if all(doc.metadata.get(field) not in (None, "") for field in required_fields)
+            if all(
+                doc.metadata.get(field) not in (None, "") for field in required_fields
+            )
         ]
 
         if not citable_documents:
@@ -118,7 +120,7 @@ class RAGPipeline:
             "provider": self.generator.provider,
             "model": self.generator.model,
         }
-        response["generated_at"] = datetime.now(timezone.utc)
+        response["generated_at"] = datetime.now(UTC)
 
         if validation["valid"]:
             response["grounded_status"] = GroundedStatus.GROUNDED
@@ -127,7 +129,7 @@ class RAGPipeline:
 
         else:
             response["grounded_status"] = GroundedStatus.VALIDATION_FAILED
-            response["summary"] = "Không thể xác thực đầy đủ nguồn cho hướng dẫn bảo trì."
+            response["summary"] = FALLBACK_MESSAGE
             response["uncertainty"] = f"Validation failed: {validation['reason']}"
 
         # 8. Kiểm tra contract trước khi trả API

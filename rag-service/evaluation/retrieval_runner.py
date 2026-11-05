@@ -1,6 +1,6 @@
-﻿import argparse
+import argparse
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from evaluation.evaluator import evaluate_retrieval
@@ -30,22 +30,33 @@ def run(dataset_path: str, output_path: str, top_k: int = 5):
         if case_id in seen_ids:
             raise ValueError(f"Duplicate case_id: {case_id}")
         seen_ids.add(case_id)
-
         expected = case["expected_sources"]
-        if not expected:
+        if not isinstance(expected, list) or not expected:
             raise ValueError(f"{case_id}: expected_sources is empty")
 
-        document_ids = {str(s["document_id"]) for s in expected}
+        if not isinstance(case.get("query"), str) or not case["query"].strip():
+            raise ValueError(f"{case_id}: query is empty")
 
-        filters = (
-            {"document_id": next(iter(document_ids))}
-            if len(document_ids) == 1 else None
-        )
+        for source in expected:
+            if not isinstance(source, dict):
+                raise TypeError(f"{case_id}: invalid expected source")
+
+            document_id = source.get("document_id")
+            chunk_id = source.get("chunk_id")
+
+            if (
+                not isinstance(document_id, str)
+                or not document_id.strip()
+                or document_id.startswith("REPLACE_WITH_")
+                or chunk_id is None
+                or not str(chunk_id).strip()
+                or str(chunk_id).startswith("REPLACE_WITH_")
+            ):
+                raise ValueError(f"{case_id}: missing or placeholder expected source")
 
         documents = retriever.search(
             query=case["query"],
             top_k=top_k,
-            filters=filters,
         )
 
         retrieved = [
@@ -56,15 +67,6 @@ def run(dataset_path: str, output_path: str, top_k: int = 5):
             for doc in documents
         ]
 
-        gold = {
-            (str(s["document_id"]), str(s["chunk_id"]))
-            for s in expected
-        }
-        found = {
-            (s["document_id"], s["chunk_id"])
-            for s in retrieved
-        }
-
         metrics = evaluate_retrieval(retrieved, expected)
 
         recall = metrics["recall_at_5"]
@@ -73,10 +75,10 @@ def run(dataset_path: str, output_path: str, top_k: int = 5):
         ndcg = metrics["ndcg_at_5"]
 
         result = {
-        "case_id": case_id,
-        "retrieved_sources": retrieved,
-        "metrics": metrics,
-}
+            "case_id": case_id,
+            "retrieved_sources": retrieved,
+            "metrics": metrics,
+        }
         results.append(result)
 
         print(
@@ -101,7 +103,7 @@ def run(dataset_path: str, output_path: str, top_k: int = 5):
     }
 
     report = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "dataset": dataset_path,
         "top_k": top_k,
         "total_cases": len(results),
@@ -131,5 +133,6 @@ if __name__ == "__main__":
         "--output",
         default="evaluation/retrieval_report.json",
     )
+    parser.add_argument("--top-k", type=int, default=5)
     args = parser.parse_args()
-    run(args.dataset, args.output)
+    run(args.dataset, args.output, args.top_k)
