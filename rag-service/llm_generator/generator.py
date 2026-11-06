@@ -6,7 +6,6 @@ import time
 from functools import lru_cache
 
 import httpx
-
 from llm_generator.config import GROQ_BASE_URL, GroqSettings
 
 
@@ -81,7 +80,9 @@ class LLMGenerator:
             raise ValueError("Prompt must be a non-empty string")
         system = "Use only the supplied maintenance evidence. Do not invent citations or change machine/alert state."
         if structured:
-            system += " Return only a JSON object matching the format requested by the user."
+            system += (
+                " Return only a JSON object matching the format requested by the user."
+            )
         payload = {
             "model": self.model,
             "messages": [
@@ -96,14 +97,20 @@ class LLMGenerator:
             payload["response_format"] = {"type": "json_object"}
         try:
             with self._client(self.settings.timeout_seconds) as client:
-                response = client.post(GROQ_BASE_URL + "/chat/completions", json=payload)
+                response = client.post(
+                    GROQ_BASE_URL + "/chat/completions", json=payload
+                )
                 response.raise_for_status()
         except httpx.TimeoutException:
             raise LLMProviderError("TIMEOUT", retryable=True) from None
         except httpx.HTTPStatusError as error:
             status = error.response.status_code
             if status in {401, 403}:
-                raise LLMProviderError("AUTHENTICATION_FAILED", retryable=False) from None
+                raise LLMProviderError(
+                    "AUTHENTICATION_FAILED", retryable=False
+                ) from None
+            if status == 402:
+                raise LLMProviderError("QUOTA_EXHAUSTED", retryable=False) from None
             if status == 429:
                 raise LLMProviderError("RATE_LIMITED", retryable=True) from None
             if status >= 500:
@@ -135,7 +142,10 @@ class LLMGenerator:
         answer = self._generate(prompt, structured=True)
         try:
             result = json_object(answer)
-            if not isinstance(result.get("summary"), str) or not result["summary"].strip():
+            if (
+                not isinstance(result.get("summary"), str)
+                or not result["summary"].strip()
+            ):
                 raise ValueError("Missing summary")
             if not isinstance(result.get("uncertainty"), str) or not isinstance(
                 result.get("checklist"), list

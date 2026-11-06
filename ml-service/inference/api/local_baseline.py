@@ -82,6 +82,15 @@ ML_MODEL = Gauge(
     registry=METRICS,
 )
 
+SERVICE_ROLE = os.environ.get("SERVICE_ROLE", "champion")
+
+ML_ROLE = Gauge(
+    "maintai_ml_service_role",
+    "Service deployment role (champion or shadow)",
+    ["role"],
+    registry=METRICS,
+)
+
 class StrictBody(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -212,8 +221,9 @@ async def lifespan(app):
         ML_MODEL.labels(
             model_version=metadata["model_version"]
         ).set(1)
+        ML_ROLE.labels(role=SERVICE_ROLE).set(1)
 
-        LOGGER.info("Local baseline loaded: %s", metadata["model_version"])
+        LOGGER.info("Local baseline loaded: %s (role: %s)", metadata["model_version"], SERVICE_ROLE)
 
     except Exception:
         # Giữ model unavailable; không fallback sang artifact khác.
@@ -224,6 +234,7 @@ async def lifespan(app):
     STATE["pipeline"] = None
     STATE["metadata"] = None
     ML_MODEL.clear()
+    ML_ROLE.clear()
 
 
 app = FastAPI(
@@ -267,6 +278,7 @@ async def tracing(request: Request, call_next):
 
     response.headers["X-Request-ID"] = request.state.request_id
     response.headers["X-Correlation-ID"] = request.state.correlation_id
+    response.headers["X-Service-Role"] = SERVICE_ROLE
     return response
 
 def error_response(request, status, code, message, retryable):

@@ -12,8 +12,8 @@ GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 class GroqSettings:
     api_key: str = field(repr=False)
     model: str
-    timeout_seconds: float = 60
-    max_completion_tokens: int = 2048
+    timeout_seconds: float = 15
+    max_completion_tokens: int = 1024
 
     @classmethod
     def from_env(cls):
@@ -38,8 +38,8 @@ class GroqSettings:
         if not model or any(char.isspace() for char in model):
             raise ValueError("GROQ_MODEL must be explicitly configured")
         try:
-            timeout = float(os.getenv("GROQ_TIMEOUT_SECONDS", "60"))
-            tokens = int(os.getenv("GROQ_MAX_COMPLETION_TOKENS", "2048"))
+            timeout = float(os.getenv("GROQ_TIMEOUT_SECONDS", "15"))
+            tokens = int(os.getenv("GROQ_MAX_COMPLETION_TOKENS", "1024"))
         except ValueError:
             raise ValueError("Groq timeout/token budget must be numeric") from None
         if not math.isfinite(timeout) or timeout <= 0:

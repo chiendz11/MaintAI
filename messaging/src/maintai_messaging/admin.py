@@ -1,5 +1,7 @@
 """Local topic bootstrap only; production topic/ACL ownership stays in GitOps."""
 
+import time
+
 from confluent_kafka import KafkaError, KafkaException
 from confluent_kafka.admin import AdminClient, NewTopic
 
@@ -34,11 +36,30 @@ def create_local_topics(settings, *, contracts=None, client=None):
         except KafkaException as exc:
             if exc.args[0].code() != KafkaError.TOPIC_ALREADY_EXISTS:
                 raise
-    metadata = client.list_topics(timeout=10)
-    for name, value in entries.items():
-        topic = metadata.topics.get(name)
-        if topic is None or topic.error or len(topic.partitions) != value["partitions"]:
+    deadline = time.monotonic() + 15
+    while True:
+        metadata = client.list_topics(timeout=10)
+        missing = []
+        mismatched = []
+
+        for name, value in entries.items():
+            topic = metadata.topics.get(name)
+            if topic is None or topic.error:
+                missing.append(name)
+            elif len(topic.partitions) != value["partitions"]:
+                mismatched.append(
+                    f"{name}: expected {value['partitions']}, actual {len(topic.partitions)}"
+                )
+
+        if not missing and not mismatched:
+            break
+
+        if time.monotonic() >= deadline:
             raise ConfigurationError(
-                "Local topic topology differs; no automatic deletion or repartition"
+                "Local topic topology differs; no automatic deletion or repartition. "
+                f"Missing/unavailable: {missing}; partition mismatch: {mismatched}"
             )
+
+        time.sleep(0.5)
+
     return list(entries)
