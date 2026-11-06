@@ -418,3 +418,74 @@ def test_empty_partitions_only_probe_metadata_and_never_allocate_fetch_clients(s
         )
     assert not audit.clients and len(audit.probes) == 1
     audit.close()
+
+
+def test_stale_eof_does_not_stop_before_new_captured_watermark(settings):
+    from confluent_kafka import KafkaError
+
+    eof = SimpleNamespace(code=lambda: KafkaError._PARTITION_EOF)
+    messages = iter(
+        [
+            SimpleNamespace(error=lambda: eof, offset=lambda: 4),
+            SimpleNamespace(error=lambda: None, offset=lambda: 4),
+            SimpleNamespace(error=lambda: None, offset=lambda: 5),
+            SimpleNamespace(error=lambda: eof, offset=lambda: 6),
+        ]
+    )
+
+    class Client:
+        def get_watermark_offsets(self, *args, **kwargs):
+            return 0, 6
+
+        def assign(self, partitions):
+            pass
+
+        def poll(self, timeout):
+            return next(messages)
+
+        def close(self):
+            pass
+
+    audit = KafkaAudit(settings, None, consumer_factory=lambda config: Client())
+    try:
+        assert audit.scan("sensor.readings", 0, 4, limit=100, stop=threading.Event()) == (
+            0,
+            6,
+            [4, 5],
+            6,
+        )
+    finally:
+        audit.close()
+
+
+def test_stale_eof_without_new_records_does_not_fabricate_complete_prefix(settings):
+    from confluent_kafka import KafkaError
+
+    eof = SimpleNamespace(code=lambda: KafkaError._PARTITION_EOF)
+
+    class Client:
+        def get_watermark_offsets(self, *args, **kwargs):
+            return 0, 6
+
+        def assign(self, partitions):
+            pass
+
+        def poll(self, timeout):
+            time.sleep(0.005)
+            return SimpleNamespace(error=lambda: eof, offset=lambda: 4)
+
+        def close(self):
+            pass
+
+    audit = KafkaAudit(
+        replace(settings, catalog_poll_seconds=0.01), None, consumer_factory=lambda config: Client()
+    )
+    try:
+        assert audit.scan("sensor.readings", 0, 4, limit=100, stop=threading.Event()) == (
+            0,
+            6,
+            [],
+            4,
+        )
+    finally:
+        audit.close()
