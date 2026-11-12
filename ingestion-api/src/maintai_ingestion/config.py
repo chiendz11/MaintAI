@@ -9,7 +9,35 @@ from maintai_messaging.config import KafkaSettings
 from maintai_messaging.errors import ConfigurationError
 
 
+INTERNAL_HOSTS = {
+    "localhost",
+    "127.0.0.1",
+    "::1",
+    "kafka",
+    "postgres",
+    "keycloak",
+    "business-api",
+    "business-consumer",
+    "processing-worker",
+    "processing-read-api",
+    "processing-outbox-relay",
+    "ml-service",
+    "ml-service-shadow",
+    "mlflow",
+    "sensor",
+    "simulator-ui",
+    "storage-consumer",
+    "minio",
+    "rag-service",
+    "ingestion-api",
+}
+
+
 def loopback(host: str) -> bool:
+    if not host:
+        return False
+    if host in INTERNAL_HOSTS or host.endswith(".svc.cluster.local") or host.endswith(".local") or host.endswith(".internal"):
+        return True
     return host in {"127.0.0.1", "::1", "localhost"}
 
 
