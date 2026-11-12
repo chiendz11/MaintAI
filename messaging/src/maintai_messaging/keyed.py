@@ -149,11 +149,8 @@ class KeyedConsumerRunner(ConsumerRunner):
         self.rebalances += 1
         self.tokens.update(self.handler.acquire(partitions))
         consumer.assign(partitions)
-        if partitions:
-            consumer.resume(partitions)
-            self.paused -= {(p.topic, p.partition) for p in partitions}
 
-    def _revoked(self, consumer, partitions):
+    def _revoked(self, _consumer, partitions):
         keys = {(p.topic, p.partition) for p in partitions}
         tokens = [self.tokens.pop(key) for key in keys if key in self.tokens]
         # Cancel locally BEFORE DB I/O; acquire in the new owner increments its
@@ -172,7 +169,6 @@ class KeyedConsumerRunner(ConsumerRunner):
         self.ready = deque(key for key in self.ready if self.queues.get(key))
         self.paused -= keys
         self.handler.release(tokens)
-        consumer.unassign()
 
     def _admit(self, record):
         token = self.tokens.get((record.topic, record.partition))
