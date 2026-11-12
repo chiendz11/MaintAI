@@ -51,7 +51,7 @@ export class HistoryClient implements HistoryApi {
   private async bounded<T>(
     signal: AbortSignal,
     operation: (combined: AbortSignal) => Promise<T>,
-    timeout = 12000,
+    timeout = 30000,
   ): Promise<T> {
     const deadline = new AbortController();
     const timer = setTimeout(() => deadline.abort(), timeout);

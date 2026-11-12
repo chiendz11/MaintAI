@@ -46,7 +46,7 @@ class ProcessingHistoryClient:
         output = None
         try:
             download = resource.endswith("/download")
-            async with asyncio.timeout(120 if download else 12):
+            async with asyncio.timeout(120 if download else 30):
                 token = await asyncio.to_thread(self.credentials._token)
                 delegated = await asyncio.to_thread(self.signer.sign, actor)
                 headers = {
@@ -66,7 +66,7 @@ class ProcessingHistoryClient:
                     params=query,
                     content=canonical_json(value) if value is not None else None,
                     headers=headers,
-                    timeout=5,
+                    timeout=120 if download else 30,
                     follow_redirects=False,
                 ) as response:
                     if response.status_code == 504:

@@ -40,7 +40,7 @@ class CompositeCharts:
             raise RegistryFailure(422, "QUERY_TOO_LARGE")
         query.update({"from": start.isoformat(), "to": end.isoformat()})
         try:
-            async with asyncio.timeout(12):
+            async with asyncio.timeout(30):
                 base, markers = None, []
                 internal_cursor = None
                 while True:
@@ -66,7 +66,7 @@ class CompositeCharts:
                     if len(markers) > 100000:
                         raise RegistryFailure(422, "QUERY_TOO_LARGE")
                     next_cursor = page["markers_next_cursor"]
-                    if next_cursor is None:
+                    if next_cursor is None or len(markers) >= 500:
                         break
                     if next_cursor == internal_cursor or not page["markers"]:
                         raise RegistryFailure(503, "DEPENDENCY_UNAVAILABLE")
