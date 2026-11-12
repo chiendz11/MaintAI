@@ -77,7 +77,7 @@ class Settings:
             raise ValueError("Invalid Consumer probe port")
         kafka = KafkaSettings.from_env(env)
         if profile == "local-test":
-            if not loopback(host) or not loopback(database.hostname) or not kafka.local_mode:
+            if not (loopback(host) or host == "0.0.0.0") or not loopback(database.hostname) or not kafka.local_mode:
                 raise ValueError("Local test Consumer requires loopback DB/bind and local Kafka")
         elif kafka.local_mode:
             raise ValueError("Shared Consumer cannot enable local Kafka mode")

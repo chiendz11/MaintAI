@@ -81,7 +81,7 @@ class Settings:
         ipaddress.ip_address(host)
         if not 1 <= port <= 65535:
             raise ValueError("Invalid Processing Read API port")
-        if local and (not loopback(database.hostname) or not loopback(host)):
+        if local and (not loopback(database.hostname) or not (loopback(host) or host == "0.0.0.0")):
             raise ValueError("Local test Processing Read API binds to loopback with a local DB")
         for value in (issuer, jwks):
             url = urlparse(value)
