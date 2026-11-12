@@ -49,6 +49,48 @@ class PredictionAttempt:
     attempts: int
 
 
+INTERNAL_HOSTS = {
+    "localhost",
+    "127.0.0.1",
+    "::1",
+    "kafka",
+    "postgres",
+    "keycloak",
+    "business-api",
+    "business-consumer",
+    "processing-worker",
+    "processing-read-api",
+    "processing-outbox-relay",
+    "ingestion-api",
+    "sensor",
+    "storage-consumer",
+    "ml-service",
+    "ml-service-shadow",
+    "mlflow",
+    "rag-service",
+    "frontend",
+    "simulator-ui",
+    "idp-gateway",
+}
+
+
+def is_loopback(host: str) -> bool:
+    if not host:
+        return False
+    lowered = host.strip().lower()
+    if (
+        lowered in INTERNAL_HOSTS
+        or lowered.endswith(".svc.cluster.local")
+        or lowered.endswith(".local")
+        or lowered.endswith(".internal")
+    ):
+        return True
+    try:
+        return host == "localhost" or ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
 class InferenceClient:
     def __init__(
         self,
@@ -72,10 +114,7 @@ class InferenceClient:
             raise ValueError("ML URL must be an explicit HTTP(S) origin without credentials")
         if url.path not in {"", "/"}:
             raise ValueError("ML base URL must be an origin")
-        try:
-            loopback = url.host == "localhost" or ipaddress.ip_address(url.host).is_loopback
-        except ValueError:
-            loopback = False
+        loopback = is_loopback(url.host)
         if local_fixture and not loopback:
             raise ValueError("Anonymous ML fixture is loopback-only")
         if not bearer_token and not local_fixture:
