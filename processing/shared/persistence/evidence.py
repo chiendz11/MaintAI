@@ -24,15 +24,20 @@ def history_validator():
     )
 
 
-def history_record(row):
+def history_record(row, *, validate=True):
     raw = bytes(row["outcome"])
     if hashlib.sha256(raw).hexdigest() != row["outcome_sha256"]:
         raise ValueError("Persisted outcome checksum mismatch")
-    try:
-        event = default_contracts().decode("inference.results", raw)
-    except ContractViolation as error:
-        raise ValueError("Persisted outcome schema is invalid") from error
-    outcome = event.payload
+    if validate:
+        try:
+            event = default_contracts().decode("inference.results", raw)
+        except ContractViolation as error:
+            raise ValueError("Persisted outcome schema is invalid") from error
+        outcome = event.payload
+        kind = event.kind
+    else:
+        outcome = strict_json(raw)
+        kind = outcome.get("kind")
     for output, column in (
         ("event_id", "event_id"),
         ("result_id", "result_id"),
@@ -55,7 +60,7 @@ def history_record(row):
     ):
         raise ValueError("Owner source timestamp mismatch")
     risk = None
-    if event.kind == "PREDICTION_COMPLETED":
+    if kind == "PREDICTION_COMPLETED":
         for key in (
             "prediction_id",
             "risk_decision_id",
@@ -96,6 +101,6 @@ def history_record(row):
         "raw_ref": None,
         "risk_snapshot": risk,
     }
-    if not history_validator().is_valid(value):
+    if validate and not history_validator().is_valid(value):
         raise ValueError("Owner evidence does not satisfy HistoryRecord")
     return value

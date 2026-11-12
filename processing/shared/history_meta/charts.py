@@ -89,19 +89,19 @@ class Charts:
                     ).format(self.history.meta.table("snapshot_members")),
                     (snapshot["snapshot_id"], last),
                 )
-                while rows := cursor.fetchmany(64):
+                while rows := cursor.fetchmany(256):
                     for row in rows:
                         values = strict_json(bytes(row["markers"]))["items"]
                         if values:
                             markers.extend(values)
                             marker_last = row["ordinal"]
-                        if len(markers) > 100:
+                        if len(markers) > 500:
                             break
-                    if len(markers) > 100:
+                    if len(markers) > 500:
                         break
         next_cursor = None
-        if len(markers) > 100:
-            markers = markers[:100]
+        if len(markers) > 500:
+            markers = markers[:500]
             # Each source member carries at most one deduplicated prediction marker.
             with self.history.meta.factory() as connection:
                 self.history.guard_members(connection, snapshot)
