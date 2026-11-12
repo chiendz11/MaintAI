@@ -56,7 +56,7 @@ def safe_url(value: str, *, local: bool = False) -> bool:
         and not url.password
         and not url.fragment
         and not url.query
-        and (url.scheme == "https" or (local and url.scheme == "http" and loopback(url.hostname)))
+        and (url.scheme == "https" or ((local or loopback(url.hostname)) and url.scheme == "http"))
     )
 
 
