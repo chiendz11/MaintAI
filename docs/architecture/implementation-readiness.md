@@ -409,7 +409,7 @@ riêng context. Offline tool/schema/hash checks có thể chạy; chưa build pl
 images, tạo k3d, validate K8s server hoặc chạy full app E2E. Native MLflow còn chờ
 app image compatibility lock; IdP/TLS/DNS, actual app providers/domain callbacks
 và migrations chưa được tạo thay bằng mocks. Training/Drift job renderer chưa có
-trong local0.1. Xem [local integration](../operations/LOCAL_DEVELOPMENT_K3D.md) và bảng readiness
+trong local0.1. Xem [local integration & demo guide](../operations/LOCAL_DEMO_GUIDE.md) và bảng readiness
 ở folder local. Đây là nền tảng để nhóm tích hợp, không là trạng thái pipeline Ready.
 
 ## 21. Baseline100 máy; scale-ready về kiến trúc

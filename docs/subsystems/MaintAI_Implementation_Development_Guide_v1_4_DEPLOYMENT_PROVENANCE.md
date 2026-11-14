@@ -3584,7 +3584,7 @@ tick full app/load/rollout chỉ vì transport tests pass.
 
 # 54. Chạy tích hợp local bằng k3d — LOCAL-K3D-01
 
-Ngày23/10/2026. Đọc [Local development](../operations/LOCAL_DEVELOPMENT_K3D.md) và
+Ngày23/10/2026 (hợp nhất cập nhật 14/11/2026). Đọc [Local Demo Guide](../operations/LOCAL_DEMO_GUIDE.md) và
 [README MaintAI-k3d](../../../MaintAI-k3d/README.md). Đây là môi trường dev bổ sung,
 không là thay đổi event/API schema hay miễn trừ auth/provenance production.
 

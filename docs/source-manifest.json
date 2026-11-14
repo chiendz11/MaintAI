@@ -3,7 +3,7 @@
   "target_contract_revision": "1.4.0",
   "upstream_target_contract_revision": "1.4.0",
   "imported_on": "2026-10-17",
-  "amended_on": "2026-10-30",
+  "amended_on": "2026-11-14",
   "hash_semantics": "documents contains active paths with current sha256; upstream_sha256 preserves supplied/imported bytes; retired_documents preserves old checksums without active files",
   "documents": [
     {
@@ -15,7 +15,7 @@
     {
       "path": "docs/README.md",
       "source_filename": "README.md",
-      "sha256": "2aab4eda370ed18dbbd3ae4010728af13bf0b12e9c38b1eff5455a159ba6e68d",
+      "sha256": "cf0d24bd70d0a420cabea8224a8765149d537a812cfc1518be080b74d1b913fc",
       "upstream_sha256": "b8f3731050d7cba47d5eecebd8ecfa7457dc4a7c427e9f408a1a22dd89c9b0d7"
     },
     {
@@ -40,7 +40,7 @@
       "path": "docs/architecture/implementation-readiness.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "50c3badc3dcb5555a54f09b1b065c75338020c337038eae0792f9958c49a663f"
+      "sha256": "141bf778d8edd6389a827d310a9fe52d0066151b13d086830fea8387eaf02738"
     },
     {
       "path": "docs/architecture/repository-layout.md",
@@ -60,7 +60,7 @@
       "imported_on": "2026-10-19",
       "source_document_revision": "1.4.0",
       "upstream_sha256": "dcce56143a210b1aa733483c93c73e84cd498fc4521fe03d3e25425ebf5e8c5c",
-      "sha256": "ef4259aee0703ba9db1e63e4e8ff8226518193e5b34bbbeca12b6ca68ad2e5e7"
+      "sha256": "e5d2d8c9dafefcda4c6b313e16944313fc77cb6d8cb0eb3d753a758753126934"
     },
     {
       "path": "docs/architecture/RUNTIME_DATAFLOW.md",
@@ -92,7 +92,7 @@
       "imported_on": "2026-10-19",
       "source_document_revision": "1.4.0",
       "upstream_sha256": "89f141f1a8695a7ce056a99512633ba7e2edd9f2311b7bf935ae94f2ecd6ffcc",
-      "sha256": "83b13dcf81f380f9c1b1578d4e09fd15d78047b3d1e2446501c8479276771684"
+      "sha256": "4285f884f79fb5b75e614dc08fa5a1dcca0a7b95e58aaff1e13149e054bf6ca0"
     },
     {
       "path": "docs/subsystems/IMPLEMENTATION_PLAN.md",
@@ -134,7 +134,7 @@
       "added_on": "2026-10-20",
       "decision_id": "MLFLOW-01",
       "decision_revision": "1.0.0",
-      "sha256": "954a6ba71d1ec3c34f2b022068ba8e7d2f596cbe169bc8949cae4e1206d5aa2b"
+      "sha256": "02ff71cbf22e116f625df3c8e2c65ecd6847a944be5e2031972f215414f2ccd4"
     },
     {
       "path": "docs/reports/SENSOR_IMPLEMENTATION_REPORT.md",
@@ -165,12 +165,6 @@
       "upstream_sha256": null,
       "added_on": "2026-10-23",
       "sha256": "5e2437a49ffc0936353e4bb8b46adbf360224ebf9238466b1321d837fa8ff2f0"
-    },
-    {
-      "path": "docs/operations/LOCAL_DEVELOPMENT_K3D.md",
-      "source_filename": null,
-      "upstream_sha256": null,
-      "sha256": "ba14771c471cc17885ba96988f10ff433f6aad8995644bc2d03bbf61b83047e8"
     },
     {
       "path": "docs/design-basis/01_REQUIREMENTS.md",
@@ -276,7 +270,7 @@
       "sha256": "80fa2f68602a45edabff123fcfde9f850ee89e419a9ee161e471f84c992d4eb6"
     },
     {
-      "path": "docs/design-basis/report/Nh\u00f3m-8_MaintAI_Kien-truc.pdf",
+      "path": "docs/design-basis/report/Nhóm-8_MaintAI_Kien-truc.pdf",
       "source_filename": null,
       "upstream_sha256": null,
       "sha256": "e69bc9ac3cc6e8ff362f070cafaff99788614e62bb8ce59a6a6273fe4645e065"
@@ -325,19 +319,19 @@
       "path": "docs/operations/LOCAL_DEMO_PREPARATION.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "a0748e9d77896ad118623211a3f6f7b528dfcfecf9d8359521d3a886050a7c6d"
+      "sha256": "79104b2d40ef8bc4de2c8a60f1f6409950df9611d9790a1df50e24d84c8ffa73"
     },
     {
       "path": "docs/operations/DEVOPS_FRAMEWORK_AND_OPERATIONS_GUIDE.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "14dc88f18cf371f7cff5e041a3e0720418156c33efef4e7d2fb75006b0f528e7"
+      "sha256": "d1fc66fae2f61ba3afb41d3cc742db8175e298409e1470ad9f06a2acc3d301be"
     },
     {
       "path": "docs/operations/LOCAL_DEMO_GUIDE.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "20f19b349ce2e38027347796f7fce2822fef392b0c1d069c91ec18e87a28c63b"
+      "sha256": "895f7e995924d4beb84d790c235b389ca9270e1a7c6e364e88a5e8ab3406e0fb"
     }
   ],
   "upstream_inherited_contract_revision": "1.3.1",
@@ -366,6 +360,14 @@
       "sha256": "28229d374f8df8abaa2591ba9534531884332f4af3be9b5ab257a9ba7e0e2b1a",
       "retired_on": "2026-10-19",
       "replacement": "docs/README.md"
+    },
+    {
+      "path": "docs/operations/LOCAL_DEVELOPMENT_K3D.md",
+      "source_filename": null,
+      "sha256": "ba14771c471cc17885ba96988f10ff433f6aad8995644bc2d03bbf61b83047e8",
+      "upstream_sha256": null,
+      "retired_on": "2026-11-14",
+      "replacement": "docs/operations/LOCAL_DEMO_GUIDE.md"
     }
   ],
   "latest_imported_on": "2026-10-19",
@@ -424,17 +426,17 @@
       "id": "LOCAL-K3D-01",
       "revision": "1.0.0",
       "adopted_on": "2026-10-23",
-      "document": "docs/LOCAL_DEVELOPMENT_K3D.md",
-      "scope": "Separate local k3d folder/core infrastructure and gated app integration; offline validation only, no cluster/build/E2E or AWS/GitOps activation."
+      "document": "docs/operations/LOCAL_DEMO_GUIDE.md",
+      "scope": "Merged LOCAL-K3D-01 specs and lifecycle/demo operations in Maint-infrastructure + MaintAI-gitops."
     },
     {
       "id": "DESIGN-BASIS-01",
       "revision": "1.2.3",
       "adopted_on": "2026-10-23",
       "document": "docs/design-basis/README.md",
-      "scope": "Self-contained eight-page academic report renamed to Nh\u00f3m-8_MaintAI_Kien-truc.pdf, with all four member names and student IDs on the first page. First-page spacing accommodates the roster; architectural content and the other seven pages are preserved. Two A4 landscape pages retain vector architecture/deployment diagrams. Initial100 machines x1 reading/s and scale-ready design unchanged; no runtime, wire, SQL, default or retention change.",
+      "scope": "Self-contained eight-page academic report renamed to Nhóm-8_MaintAI_Kien-truc.pdf, with all four member names and student IDs on the first page. First-page spacing accommodates the roster; architectural content and the other seven pages are preserved. Two A4 landscape pages retain vector architecture/deployment diagrams. Initial100 machines x1 reading/s and scale-ready design unchanged; no runtime, wire, SQL, default or retention change.",
       "requirements_source": {
-        "filename": "CH\u1ee6 \u0110\u1ec0 3_Requirement.docx",
+        "filename": "CHỦ ĐỀ 3_Requirement.docx",
         "sha256": "349d6f3c20fd338dedc63474e6fc24eec763154ac2f139b7a3627101093105c0",
         "paragraph_reference": "Pxxx counts all w:p elements in document.xml including empty and table paragraphs"
       }

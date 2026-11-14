@@ -262,7 +262,7 @@ Không có Scheduler/Coordinator Deployment mới. Giữ13 long-running workload
 trong local catalog, chưa có renderer batch Training/Drift ở profile0.1. Cloud
 Strimzi/HA/RDS/S3/IAM/ALB/Argo CD không được chứng minh bởi profile này. Private
 kubeconfig/loopback port-forward, owner Secrets và data path tách biệt. Hướng dẫn,
-readiness/activation và giới hạn ở [Local development](../operations/LOCAL_DEVELOPMENT_K3D.md).
+readiness/activation và giới hạn ở [Local development & Demo Guide](../operations/LOCAL_DEMO_GUIDE.md).
 Chưa chạy cluster/build/E2E; không bật production workloads hoặc sửa Terraform.
 
 ## 12. Capacity baseline100 và scale-ready choX>100
