@@ -10,8 +10,39 @@ from backend.shared.notifications import DEFAULT_CHANNEL, Notifier
 from backend.shared.projections.config import RebuildSettings, generations_enabled
 from maintai_messaging.config import KafkaSettings
 
+INTERNAL_HOSTS = {
+    "localhost",
+    "127.0.0.1",
+    "::1",
+    "kafka",
+    "postgres",
+    "keycloak",
+    "business-api",
+    "business-consumer",
+    "processing-worker",
+    "processing-read-api",
+    "processing-outbox-relay",
+    "ml-service",
+    "ml-service-shadow",
+    "mlflow",
+    "sensor",
+    "simulator-ui",
+    "storage-consumer",
+    "minio",
+    "rag-service",
+}
+
 
 def loopback(host):
+    if not host:
+        return False
+    if (
+        host in INTERNAL_HOSTS
+        or host.endswith(".svc.cluster.local")
+        or host.endswith(".local")
+        or host.endswith(".internal")
+    ):
+        return True
     try:
         return host == "localhost" or ipaddress.ip_address(host).is_loopback
     except ValueError:
@@ -50,7 +81,11 @@ class Settings:
             raise ValueError("Invalid Consumer probe port")
         kafka = KafkaSettings.from_env(env)
         if profile == "local-test":
-            if not loopback(host) or not loopback(database.hostname) or not kafka.local_mode:
+            if (
+                not (loopback(host) or host == "0.0.0.0")
+                or not loopback(database.hostname)
+                or not kafka.local_mode
+            ):
                 raise ValueError("Local test Consumer requires loopback DB/bind and local Kafka")
         elif kafka.local_mode:
             raise ValueError("Shared Consumer cannot enable local Kafka mode")

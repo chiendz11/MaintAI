@@ -2,16 +2,18 @@
 
 import asyncio
 import logging
+import os
 import time
 from contextlib import asynccontextmanager
 from importlib.metadata import version
+from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 
 import psycopg
 from backend.shared.projections.views import MachineViewUnavailable
 from business_sse.response import SSEResponse
-from fastapi import FastAPI, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from prometheus_client import generate_latest
@@ -280,6 +282,15 @@ def create_app(
             },
             status_code=200 if healthy else 503,
         )
+
+    @app.get("/.well-known/jwks.json")
+    def delegation_jwks():
+        jwks_file = os.environ.get("BUSINESS_JWKS_FILE", "/history-jwks/jwks.json")
+        if os.path.isfile(jwks_file):
+            return Response(Path(jwks_file).read_text(), media_type="application/json")
+        if history is not None and hasattr(history, "client") and hasattr(history.client, "signer"):
+            return JSONResponse(history.client.signer.jwks())
+        raise HTTPException(status_code=404, detail="JWKS not configured")
 
     if alerts is not None:
         alerts.metrics = metrics.alerts

@@ -84,9 +84,11 @@ class History:
                         query.get("model_version"),
                     ),
                 )
-                while rows := cursor.fetchmany(128):
+                validated_first = False
+                while rows := cursor.fetchmany(512):
                     for row in rows:
-                        value = history_record(row)
+                        value = history_record(row, validate=not validated_first)
+                        validated_first = True
                         markers = []
                         if value["outcome"]["kind"] == "PREDICTION_COMPLETED":
                             markers = [
@@ -149,7 +151,7 @@ class History:
                     or total_bytes > (512 if export else 64) * 1024 * 1024
                 ):
                     raise HistoryError(422, "QUERY_TOO_LARGE")
-                if time.monotonic() - started > 10:
+                if time.monotonic() - started > 15:
                     raise HistoryError(503, "QUERY_TIMEOUT")
                 date = (
                     record["processed_at"] if collection == "PROCESSING" else record["received_at"]
@@ -285,7 +287,7 @@ class History:
             self.guard_members(connection, snapshot)
             with connection.cursor(name="members_" + uuid4().hex) as cursor:
                 cursor.execute(statement, params)
-                while rows := cursor.fetchmany(64):
+                while rows := cursor.fetchmany(256):
                     for row in rows:
                         raw = bytes(row["payload"])
                         if hashlib.sha256(raw).hexdigest() != row["payload_sha256"]:

@@ -120,7 +120,11 @@ class KafkaAudit:
                         self.positions[coordinate] = max(
                             self.positions[coordinate], message.offset()
                         )
-                        break
+                        # EOF is queued by the client. An EOF from an earlier
+                        # fetch does not cover the watermark captured this time.
+                        if self.positions[coordinate] >= high:
+                            break
+                        continue
                     raise ConfigurationError("Kafka catalog audit failed")
                 offset = message.offset()
                 if offset >= base and offset not in pending:
