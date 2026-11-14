@@ -3,6 +3,7 @@ import { DemoHistory } from "./demo-history";
 import type { MachineApi } from "./client";
 import { ApiError } from "./client";
 import { parseLiveSnapshot } from "./codec";
+import { updateFleetSnapshot } from "../realtime/reducers";
 import type { LiveEvent, MachineDetail, MachinePage } from "../types/live";
 
 // Explicit offline fixtures. This driver is never selected after a live failure.
@@ -82,6 +83,7 @@ export class DemoApi extends DemoAlerts implements MachineApi {
     if (!value.latest_valid_prediction && previous)
       value.latest_valid_prediction = previous.latest_valid_prediction;
     this.snapshots.set(machine, value);
+    updateFleetSnapshot(value);
     return value;
   }
   async live(machine: string, _signal: AbortSignal) {

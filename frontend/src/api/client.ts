@@ -6,6 +6,7 @@ import type {
   Feedback,
 } from "../types/alerts";
 import { UnknownOutcome, invalidateAlerts } from "../realtime/alerts";
+import { applyFleetEvent, updateFleetSnapshot } from "../realtime/reducers";
 import {
   decodeEvents,
   parseAlertPage,
@@ -185,6 +186,7 @@ export class BusinessApi implements MachineApi, AlertApi {
     );
     if (value.machine_id !== machine)
       throw new Error("Response machine scope mismatch");
+    updateFleetSnapshot(value);
     return value;
   }
   async detail(machine: string, signal: AbortSignal) {
@@ -357,6 +359,14 @@ export class BusinessApi implements MachineApi, AlertApi {
         }
         if (value.type === "alert.created" || value.type === "alert.updated")
           event(value as AlertEvent);
+        else if (
+          [
+            "telemetry.received",
+            "prediction.completed",
+            "processing.status_changed",
+          ].includes(value.type)
+        )
+          applyFleetEvent(value as LiveEvent);
         else if (
           [
             "brief.ready",
