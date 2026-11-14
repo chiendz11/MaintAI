@@ -119,9 +119,7 @@ và rollout/rollback. [Docs index](docs/README.md) giữ quyết định nhóm 4
 Simulator UI riêng và phân cấp tài liệu. [Readiness](docs/architecture/implementation-readiness.md)
 ghi các khác biệt cần freeze và artifacts chưa có; không coi docs là runtime evidence.
 
-[Local Kubernetes bằng k3d](docs/operations/LOCAL_DEVELOPMENT_K3D.md) có folder hạ tầng riêng
-`../MaintAI-k3d/`: Kafka/DB/MinIO/monitoring và app integration có review gates.
-Chưa tạo cluster/build images/E2E; không thay AWS Terraform hoặc production GitOps.
+[Local Kubernetes bằng k3d](docs/operations/LOCAL_DEMO_GUIDE.md) được quản lý qua `../Maint-infrastructure/` và `../MaintAI-gitops/`: Kafka/DB/MinIO/monitoring và app integration qua Argo CD. Không thay AWS Terraform hoặc production GitOps.
 
 ## PROC-ORDER-01 — Processing concurrency và ordered Outbox
 
