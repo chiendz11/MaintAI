@@ -899,7 +899,7 @@ export function FeatureTrendChart({
       <div
         className="feature-pills"
         role="group"
-        aria-label="Chọn chỉ số vật lý"
+        aria-label="Chọn thông số vật lý"
       >
         {TREND_PILLS.map((pill) => (
           <button
