@@ -11,9 +11,9 @@ flowchart TD
     Hub(["MaintAI Documentation Hub (docs/README.md)"])
 
     subgraph Tier1 ["Phân Hệ 1: Vận Hành & Khởi Động Nhanh (Operations & Quickstart Hub)"]
-        D1["DEVOPS_FRAMEWORK_AND_OPERATIONS_GUIDE.md\n(Khung DevOps 4-Tier & Sổ tay Vận hành chuẩn mực)"]
-        D2["LOCAL_DEMO_GUIDE.md\n(Sổ tay thực chiến khởi động k3d Demo 1-Click bằng Terraform)"]
-        D3["LOCAL_DEVELOPMENT_K3D.md & LOCAL_DEMO_PREPARATION.md\n(Đặc tả kỹ thuật môi trường k3d & Dữ liệu Model/Knowledge)"]
+        D1["DEVOPS_FRAMEWORK_AND_OPERATIONS_GUIDE.md\n(Khung DevOps 4-Tier, CI/CD Rollout Demo & Sổ tay Vận hành)"]
+        D2["LOCAL_DEMO_GUIDE.md\n(Sổ tay k3d Demo 1-Click Terraform, Vòng đời Cụm & LOCAL-K3D-01)"]
+        D3["LOCAL_DEMO_PREPARATION.md\n(LOCAL-DEMO-01: Model Identity, Groq Secret & RAG Knowledge Seed)"]
     end
 
     subgraph Tier2 ["Phân Hệ 2: Cơ Sở Thiết Kế & Nghiệp Vụ (Design Basis & Business Requirements)"]
@@ -76,10 +76,9 @@ Các tài liệu hướng dẫn thực hành triển khai và chạy hệ thốn
 
 | Tài liệu | Vai trò cốt lõi | Đối tượng |
 | :--- | :--- | :--- |
-| **[LOCAL_DEMO_GUIDE.md](operations/LOCAL_DEMO_GUIDE.md)** | **Sổ tay thực chiến khởi động hệ thống demo 1-click** bằng Terraform (`make tf-apply`), Argo CD tự động kéo images từ GHCR và kích hoạt PreSync Migration Hooks. | Tất cả thành viên |
-| **[DEVOPS_FRAMEWORK_AND_OPERATIONS_GUIDE.md](operations/DEVOPS_FRAMEWORK_AND_OPERATIONS_GUIDE.md)** | **Khung chuẩn hóa DevOps toàn diện** cho hệ sinh thái 4-tier repos (`MaintAI`, `MaintAI-gitops`, `Maint-infrastructure`, `MaintAI-system-tests`), cơ chế LocalStack Secrets, Ingress ALB, HPA và Observability. | DevOps, SRE, Platform |
-| **[LOCAL_DEVELOPMENT_K3D.md](operations/LOCAL_DEVELOPMENT_K3D.md)** | Đặc tả kỹ thuật nền tảng cụm k3d local, KRaft Kafka broker và các platform services. | DevOps, Platform |
-| **[LOCAL_DEMO_PREPARATION.md](operations/LOCAL_DEMO_PREPARATION.md)** | Quy trình chuẩn bị dữ liệu mô hình (Model Identity) và seed tri thức vector (Knowledge embedding) cho môi trường demo. | AI Engineer, Platform |
+| **[LOCAL_DEMO_GUIDE.md](operations/LOCAL_DEMO_GUIDE.md)** | **Sổ tay thực chiến khởi động, vòng đời cụm `k3d` và đặc tả `LOCAL-K3D-01`** bằng Terraform (`make tf-apply`), Argo CD PreSync Hooks và E2E Walkthrough. | Tất cả thành viên |
+| **[DEVOPS_FRAMEWORK_AND_OPERATIONS_GUIDE.md](operations/DEVOPS_FRAMEWORK_AND_OPERATIONS_GUIDE.md)** | **Khung chuẩn hóa DevOps 4-tier toàn diện** (`MaintAI`, `MaintAI-gitops`, `Maint-infrastructure`, `MaintAI-system-tests`), LocalStack + ESO, Ingress ALB, HPA, Observability và kịch bản Rolling Update/Rollback CI/CD. | DevOps, SRE, Platform |
+| **[LOCAL_DEMO_PREPARATION.md](operations/LOCAL_DEMO_PREPARATION.md)** | **Quy trình `LOCAL-DEMO-01`** chuẩn bị Model Identity (không MLflow), Groq Secret, seed tri thức pgvector/MiniLM và bounded prefetch SDK 0.3.1. | AI Engineer, Platform |
 
 ---
 

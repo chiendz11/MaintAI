@@ -79,7 +79,7 @@ IAM trong repo infrastructure hiện còn cấp ECR mlflow cho GitOps publisher;
 phải chuyển grant sang app publisher trước khi bật workflow mới, đồng thời kiểm
 app GitHub App actor/installation. Lượt chuyển source ở app/GitOps không thay
 Terraform, không publish, apply hay deploy. Xem README module và GitOps
-`docs/MLFLOW_IMAGE_MIGRATION.md` cho thứ tự thực hiện.
+`docs/handoffs/MLFLOW_IMAGE_MIGRATION.md` cho thứ tự thực hiện.
 
 | Cấu hình mục tiêu | Nơi dùng / quy tắc |
 | --- | --- |

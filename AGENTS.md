@@ -86,7 +86,7 @@ cần triển khai module hoặc chạy toàn bộ app tests chỉ vì tài li�
 - GitOps/hạ tầng được quản lý trong hai repo riêng. Deployment manifests, lịch
   CronJob, Prometheus rules và Grafana dashboards thuộc các repo đó. Compose dành
   riêng cho integration tests có thể nằm trong component tests.
-  Local dev có folder riêng `../MaintAI-k3d/`, xem `docs/operations/LOCAL_DEVELOPMENT_K3D.md`;
+  Local dev được quản lý trong `../Maint-infrastructure/` và `../MaintAI-gitops/`, xem `docs/operations/LOCAL_DEMO_GUIDE.md`;
   không chép Secrets/PLAINTEXT/replication1/image receipts local lên production.
 - Quyết định21/10: source đóng gói MLflow Server/UI, dependency/base pins, local
   Compose và publisher ở `ml-service/mlflow/`; không gộp training/inference images.
