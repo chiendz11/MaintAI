@@ -1,0 +1,81 @@
+name: ML authenticated inference
+
+on:
+  push:
+    branches:
+      - main
+      - feature/ml-service
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ml-auth:
+    name: ML auth and HTTPS image checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Build authenticated inference image
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            -f ml-service/inference/Dockerfile.auth \
+            -t maintai-ml:auth-ci \
+            .
+
+      - name: Check installed dependencies
+        run: |
+          docker run --rm --pull never --network none \
+            --entrypoint python \
+            maintai-ml:auth-ci \
+            -m pip check
+
+      - name: Run auth and real loopback HTTPS tests
+        run: |
+          docker run --rm -i --pull never --network none \
+            --read-only \
+            --tmpfs /tmp:rw,nosuid,nodev,size=64m \
+            --env PYTHONPATH=/app \
+            --mount "type=bind,source=${{ github.workspace }}/ml-service/inference/tests,target=/tests,readonly" \
+            --entrypoint python \
+            maintai-ml:auth-ci - <<'PY'
+          import sys
+          import unittest
+          from pathlib import Path
+
+          patterns = [
+              "test_auth_core.py",
+              "test_auth_runtime.py",
+              "test_auth_http.py",
+              "test_auth_https.py",
+          ]
+
+          total = 0
+          for pattern in patterns:
+              if not (Path("/tests") / pattern).is_file():
+                  raise RuntimeError(f"Missing test file: {pattern}")
+
+              suite = unittest.TestLoader().discover(
+                  start_dir="/tests",
+                  pattern=pattern,
+              )
+              count = suite.countTestCases()
+              if count == 0:
+                  raise RuntimeError(f"No tests discovered: {pattern}")
+
+              print(f"Running {pattern}: {count} tests", flush=True)
+              result = unittest.TextTestRunner(verbosity=2).run(suite)
+              if not result.wasSuccessful() or result.skipped:
+                  sys.exit(1)
+              total += count
+
+          print(f"Auth and HTTPS image tests: PASS ({total} tests)")
+          PY
