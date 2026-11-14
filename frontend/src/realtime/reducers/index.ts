@@ -1,12 +1,134 @@
 import { NumericToken } from "../../api/codec";
+import {
+  evaluatePhysicalHealth,
+  extractTelemetryFeatures,
+  type PhysicalEvaluation,
+  type TelemetryFeatures,
+} from "../../shared/physical-guardrails";
 import type {
   Cursor,
   LiveEvent,
   LiveSnapshot,
   Prediction,
   Processing,
+  ProcessingStatus,
   Telemetry,
 } from "../../types/live";
+
+export type FleetMachineHealth = {
+  machine_id: string;
+  latest_features: TelemetryFeatures;
+  physicalHealth: PhysicalEvaluation;
+  telemetry_accepted_at: string | null;
+  prediction_accepted_at: string | null;
+  processing_status: ProcessingStatus | null;
+  sequence_number: bigint;
+};
+
+const fleetHealthStore = new Map<string, FleetMachineHealth>();
+const fleetListeners = new Set<() => void>();
+
+function notifyFleetListeners() {
+  for (const listener of fleetListeners) listener();
+}
+
+export function subscribeFleetHealth(listener: () => void): () => void {
+  fleetListeners.add(listener);
+  return () => {
+    fleetListeners.delete(listener);
+  };
+}
+
+export function getFleetMachineHealth(
+  machine_id: string,
+): FleetMachineHealth | undefined {
+  return fleetHealthStore.get(machine_id);
+}
+
+export function getAllFleetMachineHealth(): ReadonlyMap<
+  string,
+  FleetMachineHealth
+> {
+  return fleetHealthStore;
+}
+
+export function clearFleetHealthStore(): void {
+  fleetHealthStore.clear();
+  notifyFleetListeners();
+}
+
+export function updateFleetSnapshot(snapshot: LiveSnapshot): void {
+  const existing = fleetHealthStore.get(snapshot.machine_id);
+  const telemetry = snapshot.telemetry;
+  if (
+    telemetry &&
+    (!existing || telemetry.sequence_number >= existing.sequence_number)
+  ) {
+    fleetHealthStore.set(snapshot.machine_id, {
+      machine_id: snapshot.machine_id,
+      latest_features: extractTelemetryFeatures(telemetry.features_raw),
+      physicalHealth: evaluatePhysicalHealth(telemetry.features_raw),
+      telemetry_accepted_at: telemetry.server_accepted_at,
+      prediction_accepted_at:
+        snapshot.latest_valid_prediction?.source_server_accepted_at ??
+        existing?.prediction_accepted_at ??
+        null,
+      processing_status:
+        snapshot.latest_processing?.processing_status ??
+        existing?.processing_status ??
+        null,
+      sequence_number: telemetry.sequence_number,
+    });
+    notifyFleetListeners();
+  } else if (
+    existing &&
+    (snapshot.latest_processing || snapshot.latest_valid_prediction)
+  ) {
+    fleetHealthStore.set(snapshot.machine_id, {
+      ...existing,
+      prediction_accepted_at:
+        snapshot.latest_valid_prediction?.source_server_accepted_at ??
+        existing.prediction_accepted_at,
+      processing_status:
+        snapshot.latest_processing?.processing_status ??
+        existing.processing_status,
+    });
+    notifyFleetListeners();
+  }
+}
+
+export function applyFleetEvent(event: LiveEvent): void {
+  const existing = fleetHealthStore.get(event.machine_id);
+  if (event.type === "telemetry.received") {
+    const telemetry = event.data as Telemetry;
+    if (existing && telemetry.sequence_number < existing.sequence_number)
+      return;
+    fleetHealthStore.set(event.machine_id, {
+      machine_id: event.machine_id,
+      latest_features: extractTelemetryFeatures(telemetry.features_raw),
+      physicalHealth: evaluatePhysicalHealth(telemetry.features_raw),
+      telemetry_accepted_at: telemetry.server_accepted_at,
+      prediction_accepted_at: existing?.prediction_accepted_at ?? null,
+      processing_status: existing?.processing_status ?? null,
+      sequence_number: telemetry.sequence_number,
+    });
+    notifyFleetListeners();
+  } else if (event.type === "processing.status_changed" && existing) {
+    const processing = event.data as Processing;
+    fleetHealthStore.set(event.machine_id, {
+      ...existing,
+      processing_status: processing.processing_status,
+    });
+    notifyFleetListeners();
+  } else if (event.type === "prediction.completed" && existing) {
+    const prediction = event.data as Prediction;
+    fleetHealthStore.set(event.machine_id, {
+      ...existing,
+      prediction_accepted_at: prediction.source_server_accepted_at,
+    });
+    notifyFleetListeners();
+  }
+}
 
 export function emptyLive(machine: string): LiveSnapshot {
   return {
@@ -94,7 +216,7 @@ export function mergeLive(
     }[update.type];
     snapshot = { [key]: update.data };
   } else snapshot = update;
-  return {
+  const merged: LiveSnapshot = {
     ...current,
     telemetry: mergeAxis(
       current.telemetry,
@@ -118,4 +240,6 @@ export function mergeLive(
         ? (snapshot.as_of ?? current.as_of)
         : current.as_of,
   };
+  updateFleetSnapshot(merged);
+  return merged;
 }

@@ -114,3 +114,29 @@ test("mobile keeps source labels readable without horizontal viewport overflow",
     fullPage: true,
   });
 });
+
+test("Physical Guardrails and click-to-plot Feature Trends work in Fleet and Machine views", async ({
+  page,
+}) => {
+  await page.goto("/machines");
+  await expect(
+    page.getByRole("columnheader", { name: "Physical Guardrail" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Chế độ sắp xếp")).toHaveValue("fallback");
+  await page.getByRole("link", { name: "Xem M-001" }).click();
+  await expect(page.getByText("Temp Delta (ΔT)")).toBeVisible();
+  await expect(page.getByText("Est. Power (P)")).toBeVisible();
+  await page.getByRole("button", { name: "📈 View Trend" }).first().click();
+  await expect(
+    page.getByRole("heading", {
+      name: "Physical Feature Trends (Raw Telemetry + Live Stream)",
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("img", { name: "Xu hướng vật lý M6 + Live SSE" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Stacked Overview (All)" }).click();
+  await expect(
+    page.getByRole("button", { name: "Stacked Overview (All)" }),
+  ).toHaveClass(/active/);
+});

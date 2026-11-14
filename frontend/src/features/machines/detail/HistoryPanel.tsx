@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   Chart,
   Collection,
@@ -7,10 +7,91 @@ import type {
   HistoryApi,
   HistoryPage,
   HistoryQuery,
+  ProcessingRecord,
+  RawRecord,
 } from "../../../types/history";
+import type { Telemetry } from "../../../types/live";
 import { ExportUnknown } from "../../../api/history-client";
 import { rawText } from "../../../api/codec";
+import {
+  computeDerivedFeatures,
+  extractTelemetryFeatures,
+  FEATURE_METADATA,
+  type TelemetryFeatures,
+  type TrendFeatureKey,
+} from "../../../shared/physical-guardrails";
 import { Badge, ErrorNotice, date } from "../../../shared/ui";
+
+export type TrendPoint = {
+  event_id: string;
+  timestamp: string;
+  epochMs: number;
+  features: TelemetryFeatures;
+  temp_delta_k: number | null;
+  mechanical_power_w: number | null;
+  isLive: boolean;
+};
+
+export function buildFeatureTrendSeries(
+  historyItems: (ProcessingRecord | RawRecord)[],
+  liveTelemetry: Telemetry[] = [],
+): TrendPoint[] {
+  const byEvent = new Map<string, TrendPoint>();
+
+  for (const item of historyItems) {
+    const isProcessing = "outcome" in item;
+    const eventId = isProcessing ? item.source_event_id : item.event_id;
+    const timestamp = isProcessing
+      ? item.source_server_accepted_at || item.processed_at
+      : item.received_at || item.server_accepted_at;
+    const epochMs = Date.parse(timestamp);
+    if (!eventId || !Number.isFinite(epochMs)) continue;
+    const features = extractTelemetryFeatures(item.features_raw);
+    const hasNumeric =
+      features.air_temperature_k !== undefined ||
+      features.process_temperature_k !== undefined ||
+      features.rotational_speed_rpm !== undefined ||
+      features.torque_nm !== undefined ||
+      features.tool_wear_min !== undefined;
+    if (!hasNumeric) continue;
+    const derived = computeDerivedFeatures(features);
+    byEvent.set(eventId, {
+      event_id: eventId,
+      timestamp,
+      epochMs,
+      features,
+      temp_delta_k: derived.temp_delta_k,
+      mechanical_power_w: derived.mechanical_power_w,
+      isLive: false,
+    });
+  }
+
+  for (const item of liveTelemetry.slice(-30)) {
+    const timestamp = item.received_at || item.server_accepted_at;
+    const epochMs = Date.parse(timestamp);
+    if (!item.event_id || !Number.isFinite(epochMs)) continue;
+    const features = extractTelemetryFeatures(item.features_raw);
+    const hasNumeric =
+      features.air_temperature_k !== undefined ||
+      features.process_temperature_k !== undefined ||
+      features.rotational_speed_rpm !== undefined ||
+      features.torque_nm !== undefined ||
+      features.tool_wear_min !== undefined;
+    if (!hasNumeric) continue;
+    const derived = computeDerivedFeatures(features);
+    byEvent.set(item.event_id, {
+      event_id: item.event_id,
+      timestamp,
+      epochMs,
+      features,
+      temp_delta_k: derived.temp_delta_k,
+      mechanical_power_w: derived.mechanical_power_w,
+      isLive: true,
+    });
+  }
+
+  return [...byEvent.values()].sort((a, b) => a.epochMs - b.epochMs);
+}
 
 function local(value: string) {
   const time = new Date(value);
@@ -30,9 +111,19 @@ function save(blob: Blob, format: "CSV" | "PARQUET") {
 export function HistoryPanel({
   api,
   machine,
+  liveTelemetry = [],
+  selectedFeature = null,
+  onSelectFeature,
+  aiLastSeenAt = null,
+  aiDegraded = false,
 }: {
   api: HistoryApi;
   machine: string;
+  liveTelemetry?: Telemetry[];
+  selectedFeature?: TrendFeatureKey | null;
+  onSelectFeature?: (feature: TrendFeatureKey | null) => void;
+  aiLastSeenAt?: string | null;
+  aiDegraded?: boolean;
 }) {
   const initial = api.defaultRange ?? {
     from: new Date(Date.now() - 3600000).toISOString(),
@@ -66,10 +157,19 @@ export function HistoryPanel({
   const [busy, setBusy] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [trendMode, setTrendMode] = useState<TrendFeatureKey>(
+    selectedFeature ?? "ALL",
+  );
   const controller = useRef<AbortController | null>(null);
   const exporting = useRef<AbortController | null>(null);
   const chartRequest = useRef<AbortController | null>(null);
   const current = pages[index];
+
+  useEffect(() => {
+    if (selectedFeature) {
+      setTrendMode(selectedFeature);
+    }
+  }, [selectedFeature]);
 
   useEffect(() => {
     const request = new AbortController();
@@ -118,6 +218,11 @@ export function HistoryPanel({
       clearTimeout(timer);
     };
   }, [api, job]);
+
+  const trendSeries = useMemo(() => {
+    const allItems = pages.flatMap((page) => page.items);
+    return buildFeatureTrendSeries(allItems, liveTelemetry);
+  }, [pages, liveTelemetry]);
 
   function apply() {
     try {
@@ -288,6 +393,18 @@ export function HistoryPanel({
     }
   }
 
+  function selectTrendPill(mode: TrendFeatureKey) {
+    setTrendMode(mode);
+    onSelectFeature?.(mode);
+  }
+
+  const showFeatureTrends =
+    applied.collection === "RAW" ||
+    collection === "RAW" ||
+    Boolean(selectedFeature) ||
+    aiDegraded ||
+    trendSeries.length > 0;
+
   return (
     <section className="panel history-panel">
       <div className="panel-heading">
@@ -379,6 +496,15 @@ export function HistoryPanel({
       </form>
       <ErrorNotice error={error} />
       {busy && <p role="status">Đang tải lịch sử…</p>}
+      {showFeatureTrends && (
+        <FeatureTrendChart
+          series={trendSeries}
+          mode={trendMode}
+          onSelectMode={selectTrendPill}
+          aiLastSeenAt={aiLastSeenAt}
+          aiDegraded={aiDegraded}
+        />
+      )}
       {current && (
         <>
           <p>
@@ -585,6 +711,480 @@ export function HistoryPanel({
         <HistoryChart value={chart} more={() => void loadChart(true)} />
       )}
     </section>
+  );
+}
+
+const TREND_PILLS: { key: TrendFeatureKey; label: string }[] = [
+  { key: "ALL", label: "Stacked Overview (All)" },
+  { key: "torque_nm", label: "Torque (Nm)" },
+  { key: "rotational_speed_rpm", label: "Speed (RPM)" },
+  { key: "temperatures", label: "Temperatures (K)" },
+  { key: "tool_wear_min", label: "Tool Wear (min)" },
+];
+
+type LaneConfig = {
+  id: string;
+  title: string;
+  unit: string;
+  min: number;
+  max: number;
+  warningLines: number[];
+  criticalLines: number[];
+  lines: {
+    label: string;
+    color: string;
+    getValue: (point: TrendPoint) => number | undefined;
+  }[];
+};
+
+const STACKED_LANES: LaneConfig[] = [
+  {
+    id: "temperatures",
+    title: "Temperatures (Air & Process)",
+    unit: "K",
+    min: 295,
+    max: 316,
+    warningLines: [312],
+    criticalLines: [313],
+    lines: [
+      {
+        label: "Process Temp",
+        color: "#ea580c",
+        getValue: (p) => p.features.process_temperature_k,
+      },
+      {
+        label: "Air Temp",
+        color: "#0284c7",
+        getValue: (p) => p.features.air_temperature_k,
+      },
+    ],
+  },
+  {
+    id: "torque_nm",
+    title: "Torque",
+    unit: "Nm",
+    min: FEATURE_METADATA.torque_nm.min,
+    max: FEATURE_METADATA.torque_nm.max,
+    warningLines: [50],
+    criticalLines: [60],
+    lines: [
+      {
+        label: "Torque",
+        color: "#2563eb",
+        getValue: (p) => p.features.torque_nm,
+      },
+    ],
+  },
+  {
+    id: "rotational_speed_rpm",
+    title: "Rotational Speed",
+    unit: "RPM",
+    min: FEATURE_METADATA.rotational_speed_rpm.min,
+    max: FEATURE_METADATA.rotational_speed_rpm.max,
+    warningLines: [1350, 2200],
+    criticalLines: [1250, 2500],
+    lines: [
+      {
+        label: "Speed",
+        color: "#168b75",
+        getValue: (p) => p.features.rotational_speed_rpm,
+      },
+    ],
+  },
+  {
+    id: "tool_wear_min",
+    title: "Tool Wear",
+    unit: "min",
+    min: FEATURE_METADATA.tool_wear_min.min,
+    max: FEATURE_METADATA.tool_wear_min.max,
+    warningLines: [180],
+    criticalLines: [210],
+    lines: [
+      {
+        label: "Tool Wear",
+        color: "#7c3aed",
+        getValue: (p) => p.features.tool_wear_min,
+      },
+    ],
+  },
+];
+
+function safeX(
+  epochMs: number,
+  minEpoch: number,
+  maxEpoch: number,
+  left: number,
+  right: number,
+): number {
+  if (!Number.isFinite(epochMs)) return (left + right) / 2;
+  if (maxEpoch <= minEpoch) return (left + right) / 2;
+  const ratio = (epochMs - minEpoch) / (maxEpoch - minEpoch);
+  const clamped = Math.max(0, Math.min(1, ratio));
+  return Number((left + clamped * (right - left)).toFixed(2));
+}
+
+function safeY(
+  value: number,
+  minVal: number,
+  maxVal: number,
+  top: number,
+  bottom: number,
+): number {
+  if (!Number.isFinite(value)) return (top + bottom) / 2;
+  if (maxVal <= minVal) return (top + bottom) / 2;
+  const ratio = (value - minVal) / (maxVal - minVal);
+  const clamped = Math.max(0, Math.min(1, ratio));
+  return Number((bottom - clamped * (bottom - top)).toFixed(2));
+}
+
+export function FeatureTrendChart({
+  series,
+  mode,
+  onSelectMode,
+  aiLastSeenAt = null,
+  aiDegraded = false,
+}: {
+  series: TrendPoint[];
+  mode: TrendFeatureKey;
+  onSelectMode: (mode: TrendFeatureKey) => void;
+  aiLastSeenAt?: string | null;
+  aiDegraded?: boolean;
+}) {
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+
+  const minEpoch = series[0]?.epochMs ?? 0;
+  const maxEpoch = series.at(-1)?.epochMs ?? 0;
+  const aiLastEpoch =
+    aiLastSeenAt && Number.isFinite(Date.parse(aiLastSeenAt))
+      ? Date.parse(aiLastSeenAt)
+      : null;
+  const showAiMarker =
+    aiLastEpoch !== null &&
+    series.length > 1 &&
+    aiLastEpoch >= minEpoch &&
+    aiLastEpoch <= maxEpoch;
+
+  const activePoint =
+    hoverIndex !== null && series[hoverIndex]
+      ? series[hoverIndex]
+      : (series.at(-1) ?? null);
+
+  const visibleLanes =
+    mode === "ALL"
+      ? STACKED_LANES
+      : STACKED_LANES.filter((lane) => lane.id === mode);
+
+  const svgHeight = mode === "ALL" ? 340 : 210;
+  const leftX = 48;
+  const rightX = 696;
+
+  return (
+    <div className="feature-trend-section">
+      <div className="feature-trend-header">
+        <div>
+          <h3>Physical Feature Trends (Raw Telemetry + Live Stream)</h3>
+          <p className="hint">
+            Kết hợp dữ liệu lịch sử M6 ({series.filter((p) => !p.isLive).length}{" "}
+            điểm) và đệm Live SSE ({series.filter((p) => p.isLive).length} điểm)
+            để chẩn đoán xu hướng vật lý ngay cả khi nhánh AI gián đoạn.
+          </p>
+        </div>
+        {aiDegraded && (
+          <span className="badge warn">
+            <span className="dot" />
+            Chế độ chẩn đoán vật lý trực tiếp
+          </span>
+        )}
+      </div>
+      <div
+        className="feature-pills"
+        role="group"
+        aria-label="Chọn chỉ số vật lý"
+      >
+        {TREND_PILLS.map((pill) => (
+          <button
+            key={pill.key}
+            type="button"
+            className={`pill-button ${mode === pill.key ? "active" : ""}`}
+            onClick={() => onSelectMode(pill.key)}
+          >
+            {pill.label}
+          </button>
+        ))}
+      </div>
+      {series.length === 0 ? (
+        <p className="hint">
+          Chưa có mẫu dữ liệu cảm biến hợp lệ để vẽ xu hướng.
+        </p>
+      ) : (
+        <>
+          <svg
+            className="history-chart feature-trend-svg"
+            viewBox={`0 0 720 ${svgHeight}`}
+            role="img"
+            aria-label="Xu hướng vật lý M6 + Live SSE"
+          >
+            {visibleLanes.map((lane, laneIdx) => {
+              const laneTop = mode === "ALL" ? 18 + laneIdx * 80 : 24;
+              const laneBottom = mode === "ALL" ? laneTop + 56 : 182;
+
+              // Dynamic range expansion if values exceed nominal bounds
+              const laneValues = series.flatMap((p) =>
+                lane.lines
+                  .map((l) => l.getValue(p))
+                  .filter((v): v is number => v !== undefined),
+              );
+              const minVal = laneValues.length
+                ? Math.min(lane.min, ...laneValues)
+                : lane.min;
+              const maxVal = laneValues.length
+                ? Math.max(lane.max, ...laneValues)
+                : lane.max;
+
+              return (
+                <g key={lane.id}>
+                  <rect
+                    x={leftX}
+                    y={laneTop}
+                    width={rightX - leftX}
+                    height={laneBottom - laneTop}
+                    fill="#f8fafc"
+                    stroke="#e2e8f0"
+                    rx="4"
+                  />
+                  <text
+                    x={leftX + 6}
+                    y={laneTop + 12}
+                    fontSize="10"
+                    fontWeight="600"
+                    fill="#475569"
+                  >
+                    {lane.title} ({lane.unit})
+                  </text>
+                  {lane.warningLines.map((threshold) => {
+                    const y = safeY(
+                      threshold,
+                      minVal,
+                      maxVal,
+                      laneTop,
+                      laneBottom,
+                    );
+                    return (
+                      <line
+                        key={`warn-${threshold}`}
+                        x1={leftX}
+                        y1={y}
+                        x2={rightX}
+                        y2={y}
+                        stroke="#d97706"
+                        strokeWidth="1"
+                        strokeDasharray="4 3"
+                      >
+                        <title>
+                          {`Warning threshold: ${threshold} ${lane.unit}`}
+                        </title>
+                      </line>
+                    );
+                  })}
+                  {lane.criticalLines.map((threshold) => {
+                    const y = safeY(
+                      threshold,
+                      minVal,
+                      maxVal,
+                      laneTop,
+                      laneBottom,
+                    );
+                    return (
+                      <line
+                        key={`crit-${threshold}`}
+                        x1={leftX}
+                        y1={y}
+                        x2={rightX}
+                        y2={y}
+                        stroke="#dc2626"
+                        strokeWidth="1.2"
+                        strokeDasharray="3 3"
+                      >
+                        <title>
+                          {`Critical threshold: ${threshold} ${lane.unit}`}
+                        </title>
+                      </line>
+                    );
+                  })}
+                  {lane.lines.map((lineDef) => {
+                    const coords = series
+                      .map((point, idx) => {
+                        const v = lineDef.getValue(point);
+                        if (v === undefined) return null;
+                        return {
+                          idx,
+                          point,
+                          v,
+                          x: safeX(
+                            point.epochMs,
+                            minEpoch,
+                            maxEpoch,
+                            leftX,
+                            rightX,
+                          ),
+                          y: safeY(v, minVal, maxVal, laneTop, laneBottom),
+                        };
+                      })
+                      .filter(
+                        (
+                          item,
+                        ): item is {
+                          idx: number;
+                          point: TrendPoint;
+                          v: number;
+                          x: number;
+                          y: number;
+                        } => item !== null,
+                      );
+
+                    const polylinePoints =
+                      coords.length === 1
+                        ? `${Math.max(leftX, coords[0].x - 12)},${coords[0].y} ${Math.min(rightX, coords[0].x + 12)},${coords[0].y}`
+                        : coords.map((c) => `${c.x},${c.y}`).join(" ");
+
+                    const latestCoord = coords.at(-1);
+                    return (
+                      <g key={lineDef.label}>
+                        {coords.length > 0 && (
+                          <polyline
+                            points={polylinePoints}
+                            fill="none"
+                            stroke={lineDef.color}
+                            strokeWidth="2"
+                          />
+                        )}
+                        {coords.map((c) => (
+                          <circle
+                            key={`${lineDef.label}-${c.idx}`}
+                            cx={c.x}
+                            cy={c.y}
+                            r={hoverIndex === c.idx ? 4.5 : 2.5}
+                            fill={lineDef.color}
+                            onMouseEnter={() => setHoverIndex(c.idx)}
+                          >
+                            <title>
+                              {`${date(c.point.timestamp)} · ${lineDef.label}: ${c.v} ${lane.unit}`}
+                            </title>
+                          </circle>
+                        ))}
+                        {latestCoord && latestCoord.point.isLive && (
+                          <circle
+                            className="pulsing-dot"
+                            cx={latestCoord.x}
+                            cy={latestCoord.y}
+                            r="5"
+                            fill={lineDef.color}
+                          />
+                        )}
+                      </g>
+                    );
+                  })}
+                </g>
+              );
+            })}
+            {showAiMarker && aiLastEpoch !== null && (
+              <g>
+                <line
+                  x1={safeX(aiLastEpoch, minEpoch, maxEpoch, leftX, rightX)}
+                  y1="14"
+                  x2={safeX(aiLastEpoch, minEpoch, maxEpoch, leftX, rightX)}
+                  y2={svgHeight - 12}
+                  stroke="#b45309"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 2"
+                />
+                <text
+                  x={Math.min(
+                    rightX - 70,
+                    safeX(aiLastEpoch, minEpoch, maxEpoch, leftX, rightX) + 4,
+                  )}
+                  y="14"
+                  fontSize="9"
+                  fontWeight="600"
+                  fill="#b45309"
+                >
+                  AI Last Seen
+                </text>
+              </g>
+            )}
+            {activePoint && (
+              <line
+                x1={safeX(
+                  activePoint.epochMs,
+                  minEpoch,
+                  maxEpoch,
+                  leftX,
+                  rightX,
+                )}
+                y1="16"
+                x2={safeX(
+                  activePoint.epochMs,
+                  minEpoch,
+                  maxEpoch,
+                  leftX,
+                  rightX,
+                )}
+                y2={svgHeight - 14}
+                stroke="#64748b"
+                strokeWidth="1"
+                strokeDasharray="2 2"
+              />
+            )}
+          </svg>
+          {activePoint && (
+            <div className="trend-readout" aria-live="polite">
+              <span>
+                <strong>Thời điểm:</strong> {date(activePoint.timestamp)}{" "}
+                {activePoint.isLive ? "(Live SSE)" : "(M6 Archive)"}
+              </span>
+              <span>
+                <strong>Torque:</strong>{" "}
+                {activePoint.features.torque_nm !== undefined
+                  ? `${activePoint.features.torque_nm.toFixed(1)} Nm`
+                  : "—"}
+              </span>
+              <span>
+                <strong>Speed:</strong>{" "}
+                {activePoint.features.rotational_speed_rpm !== undefined
+                  ? `${Math.round(activePoint.features.rotational_speed_rpm)} RPM`
+                  : "—"}
+              </span>
+              <span>
+                <strong>Temp (Air/Proc/ΔT):</strong>{" "}
+                {activePoint.features.air_temperature_k !== undefined
+                  ? activePoint.features.air_temperature_k.toFixed(1)
+                  : "—"}
+                {" / "}
+                {activePoint.features.process_temperature_k !== undefined
+                  ? activePoint.features.process_temperature_k.toFixed(1)
+                  : "—"}
+                {" / "}
+                {activePoint.temp_delta_k !== null
+                  ? `${activePoint.temp_delta_k.toFixed(1)} K`
+                  : "—"}
+              </span>
+              <span>
+                <strong>Wear:</strong>{" "}
+                {activePoint.features.tool_wear_min !== undefined
+                  ? `${Math.round(activePoint.features.tool_wear_min)} min`
+                  : "—"}
+              </span>
+              <span>
+                <strong>Power:</strong>{" "}
+                {activePoint.mechanical_power_w !== null
+                  ? `${Math.round(activePoint.mechanical_power_w)} W`
+                  : "—"}
+              </span>
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 

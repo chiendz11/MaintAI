@@ -1,16 +1,20 @@
 import { useAlertRefresh } from "../../alerts/useRefresh";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import type { MachineApi } from "../../../api/client";
-import type { MachineDetail } from "../../../types/live";
+import type { MachineDetail, Telemetry } from "../../../types/live";
 import { emptyLive } from "../../../realtime/reducers";
 import { watchMachine, type Connection } from "../../../realtime/sse";
+import { freshness } from "../../../realtime/freshness";
 import type { RuntimeConfig } from "../../../app/config";
+import type { TrendFeatureKey } from "../../../shared/physical-guardrails";
 import { Badge, ErrorNotice } from "../../../shared/ui";
 import { TelemetryCard } from "../live_telemetry/TelemetryCard";
 import { PredictionCard } from "../latest_prediction/PredictionCard";
 import { ProcessingCard } from "../processing_status/ProcessingCard";
 import { HistoryPanel } from "./HistoryPanel";
+
+const MAX_LIVE_BUFFER = 30;
 
 export function MachinePage({
   machine,
@@ -26,6 +30,10 @@ export function MachinePage({
   connection: (value: Connection) => void;
 }) {
   const [value, setValue] = useState(() => emptyLive(machine)),
+    [liveBuffer, setLiveBuffer] = useState<Telemetry[]>([]),
+    [selectedFeature, setSelectedFeature] = useState<TrendFeatureKey | null>(
+      null,
+    ),
     [detail, setDetail] = useState<MachineDetail | null>(null),
     [error, setError] = useState<unknown>(null),
     [metadataError, setMetadataError] = useState(false),
@@ -39,11 +47,29 @@ export function MachinePage({
   }, []);
   useEffect(() => {
     setValue(emptyLive(machine));
+    setLiveBuffer([]);
+    setSelectedFeature(null);
     setError(null);
     setDetail(null);
     setMetadataError(false);
     const stop = watchMachine(api, machine, {
-      state: setValue,
+      state: (snapshot) => {
+        setValue(snapshot);
+        if (snapshot.telemetry) {
+          const incoming = snapshot.telemetry;
+          setLiveBuffer((prev) => {
+            const filtered = prev.filter(
+              (item) => item.event_id !== incoming.event_id,
+            );
+            const next = [...filtered, incoming].sort(
+              (a, b) =>
+                Date.parse(a.received_at || a.server_accepted_at) -
+                Date.parse(b.received_at || b.server_accepted_at),
+            );
+            return next.slice(-MAX_LIVE_BUFFER);
+          });
+        }
+      },
       connection,
       error: setError,
     });
@@ -63,6 +89,29 @@ export function MachinePage({
       });
     return () => request.abort();
   }, [api, machine, revision, alertRevision]);
+
+  const handleSelectFeature = useCallback((feature: TrendFeatureKey) => {
+    setSelectedFeature(feature);
+    setHistoryOpen(true);
+  }, []);
+
+  const predictionStatus = freshness(
+    value.latest_valid_prediction?.source_server_accepted_at,
+    now,
+    config.freshMs,
+    config.staleMs,
+  );
+  const aiDegraded =
+    value.latest_processing?.processing_status === "FAILED" ||
+    predictionStatus === "STALE" ||
+    (Boolean(value.latest_valid_prediction) &&
+      Boolean(value.telemetry) &&
+      value.latest_valid_prediction!.source_event_id !==
+        value.telemetry!.event_id);
+  const aiLastSeenAt =
+    value.latest_valid_prediction?.completed_at ??
+    value.latest_processing?.updated_at ??
+    null;
 
   return (
     <>
@@ -105,6 +154,7 @@ export function MachinePage({
           now={now}
           freshMs={config.freshMs}
           staleMs={config.staleMs}
+          onSelectFeature={handleSelectFeature}
         />
         <PredictionCard
           value={value.latest_valid_prediction}
@@ -122,7 +172,16 @@ export function MachinePage({
         Lịch sử
       </button>
       {historyOpen && api.history && (
-        <HistoryPanel key={machine} api={api.history} machine={machine} />
+        <HistoryPanel
+          key={machine}
+          api={api.history}
+          machine={machine}
+          liveTelemetry={liveBuffer}
+          selectedFeature={selectedFeature}
+          onSelectFeature={setSelectedFeature}
+          aiLastSeenAt={aiLastSeenAt}
+          aiDegraded={aiDegraded}
+        />
       )}
       <p className="snapshot-note">
         REST snapshot:{" "}
