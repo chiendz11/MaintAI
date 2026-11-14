@@ -10,7 +10,6 @@ from pydantic import Field, model_validator
 
 from simulator.config import SimulatorConfig
 
-
 INTERNAL_HOSTS = {
     "localhost",
     "127.0.0.1",
@@ -38,7 +37,12 @@ INTERNAL_HOSTS = {
 def loopback(host: str | None) -> bool:
     if not host:
         return False
-    if host in INTERNAL_HOSTS or host.endswith(".svc.cluster.local") or host.endswith(".local") or host.endswith(".internal"):
+    if (
+        host in INTERNAL_HOSTS
+        or host.endswith(".svc.cluster.local")
+        or host.endswith(".local")
+        or host.endswith(".internal")
+    ):
         return True
     if host == "localhost":
         return True

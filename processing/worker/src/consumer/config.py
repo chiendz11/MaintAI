@@ -18,7 +18,6 @@ from processing.shared.risk_engine.policy import RiskPolicy
 
 from .observability import probe_host
 
-
 INTERNAL_HOSTS = {
     "localhost",
     "127.0.0.1",
@@ -45,7 +44,12 @@ INTERNAL_HOSTS = {
 def loopback(host):
     if not host:
         return False
-    if host in INTERNAL_HOSTS or host.endswith(".svc.cluster.local") or host.endswith(".local") or host.endswith(".internal"):
+    if (
+        host in INTERNAL_HOSTS
+        or host.endswith(".svc.cluster.local")
+        or host.endswith(".local")
+        or host.endswith(".internal")
+    ):
         return True
     try:
         return host == "localhost" or ipaddress.ip_address(host).is_loopback

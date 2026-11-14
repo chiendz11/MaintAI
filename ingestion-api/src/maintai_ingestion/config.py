@@ -8,7 +8,6 @@ from urllib.parse import urlparse
 from maintai_messaging.config import KafkaSettings
 from maintai_messaging.errors import ConfigurationError
 
-
 INTERNAL_HOSTS = {
     "localhost",
     "127.0.0.1",
@@ -36,7 +35,12 @@ INTERNAL_HOSTS = {
 def loopback(host: str) -> bool:
     if not host:
         return False
-    if host in INTERNAL_HOSTS or host.endswith(".svc.cluster.local") or host.endswith(".local") or host.endswith(".internal"):
+    if (
+        host in INTERNAL_HOSTS
+        or host.endswith(".svc.cluster.local")
+        or host.endswith(".local")
+        or host.endswith(".internal")
+    ):
         return True
     return host in {"127.0.0.1", "::1", "localhost"}
 
