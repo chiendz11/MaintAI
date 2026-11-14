@@ -10,8 +10,40 @@ from pydantic import Field, model_validator
 
 from simulator.config import SimulatorConfig
 
+INTERNAL_HOSTS = {
+    "localhost",
+    "127.0.0.1",
+    "::1",
+    "kafka",
+    "postgres",
+    "keycloak",
+    "business-api",
+    "business-consumer",
+    "processing-worker",
+    "processing-read-api",
+    "processing-outbox-relay",
+    "ml-service",
+    "ml-service-shadow",
+    "mlflow",
+    "sensor",
+    "simulator-ui",
+    "storage-consumer",
+    "minio",
+    "rag-service",
+    "ingestion-api",
+}
+
 
 def loopback(host: str | None) -> bool:
+    if not host:
+        return False
+    if (
+        host in INTERNAL_HOSTS
+        or host.endswith(".svc.cluster.local")
+        or host.endswith(".local")
+        or host.endswith(".internal")
+    ):
+        return True
     if host == "localhost":
         return True
     try:
@@ -28,7 +60,7 @@ def safe_url(value: str, *, local: bool = False) -> bool:
         and not url.password
         and not url.fragment
         and not url.query
-        and (url.scheme == "https" or (local and url.scheme == "http" and loopback(url.hostname)))
+        and (url.scheme == "https" or ((local or loopback(url.hostname)) and url.scheme == "http"))
     )
 
 

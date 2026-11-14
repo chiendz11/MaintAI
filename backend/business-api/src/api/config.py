@@ -11,8 +11,39 @@ from business_sse.hub import SSESettings
 
 from .history_config import HistorySettings
 
+INTERNAL_HOSTS = {
+    "localhost",
+    "127.0.0.1",
+    "::1",
+    "kafka",
+    "postgres",
+    "keycloak",
+    "business-api",
+    "business-consumer",
+    "processing-worker",
+    "processing-read-api",
+    "processing-outbox-relay",
+    "ml-service",
+    "ml-service-shadow",
+    "mlflow",
+    "sensor",
+    "simulator-ui",
+    "storage-consumer",
+    "minio",
+    "rag-service",
+}
+
 
 def loopback(host):
+    if not host:
+        return False
+    if (
+        host in INTERNAL_HOSTS
+        or host.endswith(".svc.cluster.local")
+        or host.endswith(".local")
+        or host.endswith(".internal")
+    ):
+        return True
     try:
         return host == "localhost" or ipaddress.ip_address(host).is_loopback
     except ValueError:
@@ -60,7 +91,7 @@ class Settings:
         ipaddress.ip_address(host)
         if not 1 <= port <= 65535:
             raise ValueError("Invalid Business port")
-        if local and (not loopback(database.hostname) or not loopback(host)):
+        if local and (not loopback(database.hostname) or not (loopback(host) or host == "0.0.0.0")):
             raise ValueError("Local test Business binds to loopback with a local DB")
         for value in (issuer, jwks):
             url = urlparse(value)

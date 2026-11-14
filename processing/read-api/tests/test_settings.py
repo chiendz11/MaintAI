@@ -31,7 +31,7 @@ def test_read_api_config_does_not_require_worker_ml_or_kafka_configuration():
         {"PROCESSING_READ_DATABASE_URL": ""},
         {"PROCESSING_READ_OIDC_AUDIENCE": ""},
         {"PROCESSING_READ_PROFILE": "shared"},
-        {"PROCESSING_READ_HOST": "0.0.0.0"},
+        {"PROCESSING_READ_HOST": "8.8.8.8"},
         {"PROCESSING_READ_DATABASE_URL": "postgresql://reader@remote.invalid/test"},
     ],
 )

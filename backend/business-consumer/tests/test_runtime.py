@@ -32,7 +32,7 @@ def test_consumer_settings_need_own_db_and_kafka_without_oidc_or_ml():
     assert settings.kafka.local_mode
     assert "test@" not in repr(settings)
     with pytest.raises(ValueError):
-        Settings.from_env({**env, "BUSINESS_CONSUMER_HOST": "0.0.0.0"})
+        Settings.from_env({**env, "BUSINESS_CONSUMER_HOST": "8.8.8.8"})
     with pytest.raises(ValueError):
         Settings.from_env({**env, "BUSINESS_DATABASE_URL": ""})
 

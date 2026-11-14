@@ -30,7 +30,7 @@ def test_explicit_config_keeps_database_secret_out_of_repr():
         {"BUSINESS_DATABASE_URL": ""},
         {"BUSINESS_OIDC_AUDIENCE": ""},
         {"BUSINESS_MACHINES_CLAIM": ""},
-        {"BUSINESS_HOST": "0.0.0.0"},
+        {"BUSINESS_HOST": "8.8.8.8"},
         {"BUSINESS_PORT": "0"},
         {"BUSINESS_OIDC_JWKS_URL": "http://shared-oidc/jwks"},
     ],
