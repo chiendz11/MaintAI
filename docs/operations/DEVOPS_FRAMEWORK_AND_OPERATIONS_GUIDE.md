@@ -2,7 +2,7 @@
 
 Tài liệu này đóng vai trò là **khung chuẩn hóa (DevOps Framework)**, **sổ tay vận hành kỹ thuật (Engineering Runbook)** và **kịch bản trình diễn CI/CD Rolling Update** cho toàn bộ hệ sinh thái **MaintAI (Predictive Maintenance Platform)**. Framework quy định cách phối hợp giữa 4 repositories, khởi tạo cụm Kubernetes cục bộ (`k3d`) bằng Terraform, đồng bộ khai báo qua GitOps (`Argo CD`), quản lý bí mật (**LocalStack + External Secrets Operator**), mạng nội bộ chuẩn Kubernetes (CoreDNS + `cert-manager`), và luồng tự động hóa CI/CD kết hợp cổng kiểm định độc lập (`MaintAI-system-tests`).
 
-> **Tham chiếu nhanh:** Để xem hướng dẫn thao tác khởi động, Stop/Start và kiểm tra cụm demo `maintai-local` hàng ngày, xem [LOCAL_DEMO_GUIDE.md](LOCAL_DEMO_GUIDE.md).
+> **Tham chiếu nhanh:** Để xem hướng dẫn thao tác khởi động, Stop/Start và kiểm tra cụm demo `maintai-local` hàng ngày, xem [LOCAL_DEMO_GUIDE.md](LOCAL_DEMO_GUIDE.md). Để áp dụng mô hình này cho dự án mới, xem tài liệu Blueprint dùng chung tại [`MaintAI-gitops/docs/architecture/GITOPS_BLUEPRINT.md`](../../../MaintAI-gitops/docs/architecture/GITOPS_BLUEPRINT.md) và [`Maint-infrastructure/docs/architecture/INFRASTRUCTURE_BLUEPRINT.md`](../../../Maint-infrastructure/docs/architecture/INFRASTRUCTURE_BLUEPRINT.md).
 
 ---
 
