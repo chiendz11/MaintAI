@@ -287,7 +287,7 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.pas
 
 | Hiện tượng | Nguyên nhân | Hướng xử lý |
 | :--- | :--- | :--- |
-| `Source differs from reviewed lock` | Code trên máy khác SHA trong `app-source.lock.json` | Chạy `git pull origin main` ở cả 3 repo hoặc đồng bộ lại lockfile bằng commit đã review. |
+| Lỗi sync hoặc image mismatch | Tag image trong `kustomization.yaml` chưa tồn tại hoặc PR Image Updater chưa merge | Kiểm tra PR mở tự động trên `MaintAI-gitops` và kiểm tra workflow `publish-and-deploy.yml` trên GitHub Actions. |
 | Pod `ImagePullBackOff` | Cụm k3d không kéo được image từ GHCR hoặc package bị Private | Kiểm tra kết nối mạng/firewall và trạng thái Public của GHCR package. |
 | Telemetry trên UI không cập nhật | Sensor đang ở trạng thái `PAUSED` | Mở Simulator UI (`http://127.0.0.1:18081`) và bấm **Resume**. |
 | Lỗi đăng nhập Keycloak OIDC | Trình duyệt chưa tin cậy chứng chỉ HTTPS cổng `18490` | Truy cập trực tiếp `https://127.0.0.1:18490` chọn **Proceed** hoặc trust `ca.crt`. |
