@@ -1,8 +1,8 @@
 # MaintAI — Hướng dẫn Khởi động & Vận hành Cụm Demo Local (`k3d` + Terraform + Argo CD)
 
-**Cập nhật:** 14/11/2026 (đồng bộ sau khi merge toàn bộ PR vào nhánh `main`, app commit `e67d42d`)  
-**Môi trường mục tiêu:** Linux (Arch Linux / Ubuntu hoặc tương đương), Docker Engine, `k3d v5.9.0`, `kubectl` (1.34–1.36), Terraform, Argo CD.  
-**Kiến trúc:** Chuẩn **Cloud Production GitOps** & **Pure Declarative Overlays** — Toàn bộ images ứng dụng được build và phân phối qua GitHub Container Registry (`ghcr.io`), giao tiếp nội bộ trực tiếp qua Kubernetes CoreDNS + TLS (`cert-manager`), và Argo CD tự động đồng bộ + chạy PreSync Migration Hooks.
+**Cập nhật:** 15/11/2026 (đồng bộ sau khi chuẩn hóa Pure Declarative GitOps & Production Infrastructure trên nhánh `main`)  
+**Môi trường mục tiêu:** Linux (Arch Linux / Ubuntu hoặc tương đương), Docker Engine, `k3d v5.9.0`, `kubectl` (1.34–1.36), Terraform, Argo CD + Argo CD Image Updater `v1.5.0`.  
+**Kiến trúc:** Chuẩn **Cloud Production GitOps** & **Pure Declarative Overlays** — Toàn bộ images ứng dụng được build và phân phối qua GitHub Container Registry (`ghcr.io`), **Argo CD Image Updater `v1.5.0`** tự mở Pull Request cập nhật tag sang `MaintAI-gitops`, giao tiếp nội bộ trực tiếp qua Kubernetes CoreDNS + TLS (`cert-manager`), và Argo CD tự động đồng bộ + chạy PreSync Migration Hooks.
 
 > [!NOTE]
 > Tài liệu này hợp nhất **Sổ tay Khởi động Demo**, **Quy trình Vận hành Vòng đời Cụm (`k3d` Stop/Start/Zero-Touch Provisioning)** và đặc tả nền tảng **`LOCAL-K3D-01`**. Để tìm hiểu sâu về kiến trúc DevOps 4-tier và kịch bản demo Rolling Update CI/CD, xem [DEVOPS_FRAMEWORK_AND_OPERATIONS_GUIDE.md](DEVOPS_FRAMEWORK_AND_OPERATIONS_GUIDE.md). Để chuẩn bị model identity và dữ liệu tri thức RAG, xem [LOCAL_DEMO_PREPARATION.md](LOCAL_DEMO_PREPARATION.md).
@@ -15,10 +15,11 @@
  ┌────────────────────────────────────────────────────────────────────────┐
  │                      GitHub Actions (Trên Cloud)                       │
  │                                                                        │
- │  MaintAI (main: e67d42d) ──────► Build OCI Images ──► ghcr.io          │
+ │  MaintAI (main) ───────────────► Build OCI Images ──► ghcr.io          │
  │                                                              │         │
- │  Tự động tính Lock SHA & Cập nhật Image Tags ──────────────┐ │         │
- │                                                            ▼ ▼         │
+ │  Argo CD Image Updater v1.5.0 mở PR cập nhật Kustomize ◄────┘         │
+ │      │                                                                 │
+ │      ▼                                                                 │
  │  MaintAI-gitops (Nhánh: main) ───────────────────────────────────────┐ │
  └──────────────────────────────────────────────────────────────┬───────┼─┘
                                                                 │       │
@@ -146,12 +147,11 @@ Nếu muốn tự build/import image local hoặc kiểm soát từng bước th
 cd /home/chienqt/Dev/newBTL/Maint-infrastructure
 
 .venv/bin/python -m localdev up
-.venv/bin/python -m localdev build-platform
-.venv/bin/python -m localdev import-images --component minio --component mc --component dev-tools
-.venv/bin/python -m localdev prepare platform
-# Commit & push MaintAI-gitops/environments/local/platform nếu có diff
 .venv/bin/python -m localdev bootstrap-argocd
+.venv/bin/python -m localdev image-updater-pat --username chiendz11
 .venv/bin/python -m localdev model-identity
+.venv/bin/python -m localdev groq-secret
+.venv/bin/python -m localdev prepare-rag
 .venv/bin/python -m localdev provision
 .venv/bin/python -m localdev activate-ordering --legacy-writers-drained
 ```
