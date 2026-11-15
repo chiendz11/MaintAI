@@ -29,7 +29,7 @@ flowchart TB
 
     subgraph RepoInfras["3. Infrastructure Repo (Maint-infrastructure)"]
         direction TB
-        TF_Local["terraform/local/<br/>(k3d Cluster & Argo CD Bootstrap)"]
+        TF_Local["terraform/local/<br/>(k3d Cluster, Argo CD & Image Updater Bootstrap)"]
         TF_Prod["terraform/platform/<br/>(AWS EKS, MSK Kafka, RDS Multi-AZ, S3, IAM)"]
         LocalManifests["local/manifests/<br/>(LocalStack, ESO, Ingress ALB, cert-manager)"]
     end
@@ -42,7 +42,7 @@ flowchart TB
 
     subgraph K3dCluster["k3d Local Cluster (maintai-local)"]
         direction TB
-        ArgoCD["Argo CD Controller<br/>(maintai-local-{platform,observability,apps})"]
+        ArgoCD["Argo CD + Image Updater v1.5.0<br/>(maintai-local-{platform,observability,apps})"]
         ESO["External Secrets Operator<br/>(ClusterSecretStore: aws-secrets-manager)"]
         LocalStack["LocalStack<br/>(AWS Secrets Manager API :4566)"]
         Ingress["Ingress-NGINX (Class: alb)"]
@@ -50,9 +50,10 @@ flowchart TB
         HPA["HPA Controller<br/>(metrics-server target: 70%)"]
     end
 
-    CD_Workflow -.->|1. Update newTag sha-*| LocalEnv
+    CD_Workflow -->|Push sha-* images| GHCR["GHCR (ghcr.io/chiendz11/maintai-*)"]
+    GHCR -.->|1. Poll & mở PR bump tag| LocalEnv
     CD_Workflow -.->|2. Trigger webhook dispatches| ReleaseGateWorkflow
-    TF_Local -->|Create Cluster & Install Argo CD| K3dCluster
+    TF_Local -->|Create Cluster & Install Argo CD + Image Updater| K3dCluster
     LocalManifests -->|Apply Ingress, LocalStack, ESO, cert-manager| K3dCluster
 
     ArgoCD -->|Reconcile State| LocalEnv
@@ -116,16 +117,18 @@ sequenceDiagram
     participant GH_CI as GitHub Actions CI/CD
     participant GHCR as GitHub Container Registry
     participant GitOpsRepo as MaintAI-gitops (main)
+    participant ImgUpdater as Argo CD Image Updater
     participant SysTests as MaintAI-system-tests (Release Gate)
     participant ArgoCD as Argo CD (k3d Cluster)
     participant K8s as Microservices Pods
 
     Dev->>AppRepo: Merge PR vào nhánh main
     AppRepo->>GH_CI: Kích hoạt publish-and-deploy.yml
-    GH_CI->>GH_CI: Matrix Build Microservices (Multi-Stage Docker)
+    GH_CI->>GH_CI: Matrix Build 12 Microservices (Multi-Stage Docker)
     GH_CI->>GHCR: Push ghcr.io/chiendz11/maintai-*:sha-xxxx
-    GH_CI->>GitOpsRepo: Chạy update_gitops_images.py cập nhật newTag: sha-xxxx
-    GitOpsRepo->>GitOpsRepo: Commit & Push lên nhánh main
+    ImgUpdater->>GHCR: Poll image tag sha-* mới nhất
+    ImgUpdater->>GitOpsRepo: Dùng Fine-grained PAT tạo Pull Request cập nhật kustomization.yaml
+    GitOpsRepo->>GitOpsRepo: GitOps CI (kustomize + kubeconform) pass & merge PR vào main
 
     GH_CI->>SysTests: Bắn webhook repository_dispatch (event: new-image-built)
     activate SysTests
@@ -245,7 +248,7 @@ while true; do curl -s -o /dev/null -w "%{time_total}s - HTTP %{http_code}\n" ht
    cd /home/chienqt/Dev/newBTL/MaintAI
    sed -i 's/<title>MaintAI · Thiết bị<\/title>/<title>MaintAI v2.0 · Live Demo Rollout<\/title>/g' frontend/index.html
    ```
-3. **Đóng gói image & import vào k3d** (hoặc trigger `gh workflow run publish-and-deploy.yml -f target_branch=main -f services=frontend` để kéo từ GHCR):
+3. **Đóng gói image & import vào k3d** (hoặc trigger `gh workflow run publish-and-deploy.yml -f services=frontend` để đẩy lên GHCR cho Argo CD Image Updater mở PR):
    ```bash
    docker build -t ghcr.io/chiendz11/maintai-frontend:v2.0-demo -f frontend/Dockerfile .
    k3d image import ghcr.io/chiendz11/maintai-frontend:v2.0-demo -c maintai-local
