@@ -115,6 +115,20 @@ export function App({
   const running = state.machines.filter(
     (m) => m.stream_state === "RUNNING",
   ).length;
+  const paused = state.machines.filter(
+    (m) => m.stream_state === "PAUSED",
+  ).length;
+  const hasUnresolvedAny = state.journal.some((x) =>
+    ["pending", "unknown"].includes(x.status),
+  );
+  const fleetFresh =
+    session.authenticated &&
+    state.notice?.kind !== "error" &&
+    state.machines.some(
+      (m) => now - (state.observedAt[m.machine_id] ?? 0) < config.staleAfterMs,
+    );
+  const canResumeAll = fleetFresh && paused > 0 && !hasUnresolvedAny;
+  const canPauseAll = fleetFresh && running > 0 && !hasUnresolvedAny;
   const confirmed = state.journal.filter(
     (x) => x.status === "confirmed",
   ).length;
@@ -489,6 +503,30 @@ export function App({
                 <p>Chọn một máy để xem trạng thái và điều khiển.</p>
               </div>
               <div className="machine-tools">
+                <div
+                  className="fleet-actions"
+                  role="group"
+                  aria-label="Điều khiển toàn bộ máy"
+                >
+                  <button
+                    type="button"
+                    className="button primary fleet-btn"
+                    disabled={!canResumeAll}
+                    onClick={() => void controller.commandAll("resume")}
+                  >
+                    <Play size={14} fill="currentColor" />
+                    Chạy tất cả
+                  </button>
+                  <button
+                    type="button"
+                    className="button pause-button fleet-btn"
+                    disabled={!canPauseAll}
+                    onClick={() => void controller.commandAll("pause")}
+                  >
+                    <Pause size={14} fill="currentColor" />
+                    Dừng tất cả
+                  </button>
+                </div>
                 <label className="search-box">
                   <Search size={15} />
                   <input

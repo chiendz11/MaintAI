@@ -318,4 +318,56 @@ describe("Scenario list and drift demo previews", () => {
     });
     expect(resetNormal.type).toBe("M");
   });
+  it("commands only machines needing fleet pause or resume with distinct keys", async () => {
+    const executed: Command[] = [];
+    const fleet: ControlState[] = [
+      {
+        ...fixture,
+        machine_id: "M-001",
+        stream_state: "RUNNING",
+        control_version: 2,
+      },
+      {
+        ...fixture,
+        machine_id: "M-002",
+        stream_state: "PAUSED",
+        control_version: 5,
+      },
+      {
+        ...fixture,
+        machine_id: "M-003",
+        stream_state: "RUNNING",
+        control_version: 7,
+      },
+    ];
+    const api: ControlApi = {
+      list: async () => ({ items: fleet, as_of: new Date().toISOString() }),
+      get: async (id) => fleet.find((m) => m.machine_id === id)!,
+      execute: async (command) => {
+        executed.push(command);
+        const current = fleet.find((m) => m.machine_id === command.machineId)!;
+        return {
+          ...current,
+          stream_state: command.action === "pause" ? "PAUSED" : "RUNNING",
+          control_version: current.control_version + 1,
+        };
+      },
+    };
+    const controller = new SimulatorController(api, memory(), "journal", 20000);
+    await controller.refresh();
+    await controller.commandAll("pause");
+    expect(executed.map((c) => c.machineId).sort()).toEqual(["M-001", "M-003"]);
+    expect(new Set(executed.map((c) => c.id)).size).toBe(2);
+    expect(
+      controller
+        .getSnapshot()
+        .machines.every((m) => m.stream_state === "PAUSED"),
+    ).toBe(true);
+    await controller.commandAll("resume");
+    expect(
+      controller
+        .getSnapshot()
+        .machines.every((m) => m.stream_state === "RUNNING"),
+    ).toBe(true);
+  });
 });

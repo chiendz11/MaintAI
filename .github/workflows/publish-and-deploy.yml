@@ -12,6 +12,7 @@ on:
       - main
     paths:
       - 'backend/**'
+      - 'drift-worker/**'
       - 'processing/**'
       - 'frontend/**'
       - 'ingestion-api/**'
@@ -54,6 +55,11 @@ jobs:
             context: sensor
             dockerfile: sensor/Dockerfile
             image: maintai-sensor
+            build_args: ""
+          - name: drift-worker
+            context: drift-worker
+            dockerfile: drift-worker/Dockerfile
+            image: maintai-drift-worker
             build_args: ""
           - name: business-api
             context: .
