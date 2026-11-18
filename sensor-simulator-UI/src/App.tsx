@@ -62,6 +62,9 @@ const scenarioIcons = {
   degradation: ArrowUpRight,
   critical: TriangleAlert,
   recovery: ArrowDownRight,
+  "gradual-drift": Activity,
+  "sudden-drift": Gauge,
+  "categorical-drift": SlidersHorizontal,
 };
 
 interface DemoReading {

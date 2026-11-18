@@ -867,10 +867,13 @@ input::placeholder {
 .scenario-symbol.recovery {
   color: #41a88f;
 }
-.scenario-symbol.degradation {
+.scenario-symbol.degradation,
+.scenario-symbol.gradual-drift,
+.scenario-symbol.categorical-drift {
   color: #c9a358;
 }
-.scenario-symbol.critical {
+.scenario-symbol.critical,
+.scenario-symbol.sudden-drift {
   color: #cf7d7f;
 }
 .scenario-card strong {

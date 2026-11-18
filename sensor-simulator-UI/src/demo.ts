@@ -132,18 +132,32 @@ export function nextPreview(
         ? 20
         : machine.scenario === "recovery"
           ? -15
-          : 0;
+          : machine.scenario === "gradual-drift"
+            ? 6
+            : machine.scenario === "sudden-drift"
+              ? 15
+              : 0;
+  const nextSeq = base.seq + 1;
+  const type =
+    machine.scenario === "categorical-drift"
+      ? nextSeq % 20 === 0
+        ? "L"
+        : nextSeq % 20 < 4
+          ? "M"
+          : "H"
+      : "M";
   const rpm = Math.max(
     1420,
     Math.min(1980, base.rpm + direction + Math.sin(base.seq * 1.7) * 8),
   );
   return {
     ...base,
-    seq: base.seq + 1,
+    seq: nextSeq,
     rpm: Math.round(rpm),
     torque: +(39 + (rpm - 1520) * 0.055).toFixed(1),
     wear: +(base.wear + 0.1).toFixed(1),
     process: +(308.2 + (rpm - 1520) * 0.008).toFixed(1),
+    type,
     history: [...base.history, rpm].slice(-30),
   };
 }

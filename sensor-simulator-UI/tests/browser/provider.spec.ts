@@ -59,13 +59,27 @@ test("live UI controls the real Sensor provider and survives browser reload", as
         .then((s) => s.scenario),
     )
     .toBe("recovery");
+  await page
+    .getByRole("button", { name: "Kịch bản Gradual Drift", exact: true })
+    .click();
+  await expect
+    .poll(async () =>
+      (
+        await request.get(
+          "http://127.0.0.1:8006/api/v1/simulator/machines/M-001/control",
+        )
+      )
+        .json()
+        .then((s) => s.scenario),
+    )
+    .toBe("gradual-drift");
   await page.reload();
   await expect(page.getByText(/Bởi local-operator/)).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Pause", exact: true }),
   ).toBeDisabled();
   await expect(
-    page.getByRole("button", { name: "Kịch bản Hồi phục", exact: true }),
+    page.getByRole("button", { name: "Kịch bản Gradual Drift", exact: true }),
   ).toHaveClass(/selected/);
   const peer = await request.get(
     "http://127.0.0.1:8006/api/v1/simulator/machines/M-002/control",

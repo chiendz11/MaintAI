@@ -5,7 +5,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, HttpControlApi, parseControl, parseList } from "../src/api";
 import { parseConfig } from "../src/config";
 import { SimulatorController, type StorageLike } from "../src/controller";
-import type { Command, ControlApi, ControlState } from "../src/types";
+import { nextPreview } from "../src/demo";
+import {
+  scenarios,
+  type Command,
+  type ControlApi,
+  type ControlState,
+} from "../src/types";
 
 const fixture: ControlState = JSON.parse(
   readFileSync(
@@ -267,5 +273,49 @@ describe("Public runtime configuration", () => {
         "http://localhost:4174",
       ),
     ).toThrow();
+  });
+});
+
+describe("Scenario list and drift demo previews", () => {
+  it("exposes all seven backend scenarios including drift modes", () => {
+    expect(scenarios.map((s) => s.id)).toEqual([
+      "normal",
+      "degradation",
+      "critical",
+      "recovery",
+      "gradual-drift",
+      "sudden-drift",
+      "categorical-drift",
+    ]);
+  });
+  it("models gradual-drift, sudden-drift and categorical-drift in demo preview", () => {
+    const gradual = nextPreview(undefined, {
+      ...fixture,
+      stream_state: "RUNNING",
+      scenario: "gradual-drift",
+    });
+    const sudden = nextPreview(undefined, {
+      ...fixture,
+      stream_state: "RUNNING",
+      scenario: "sudden-drift",
+    });
+    expect(sudden.rpm).toBeGreaterThan(gradual.rpm);
+    const cat = nextPreview(undefined, {
+      ...fixture,
+      stream_state: "RUNNING",
+      scenario: "categorical-drift",
+    });
+    expect(cat.type).toBe("M");
+    const catH = nextPreview(
+      { ...cat, seq: 3 },
+      { ...fixture, stream_state: "RUNNING", scenario: "categorical-drift" },
+    );
+    expect(catH.type).toBe("H");
+    const resetNormal = nextPreview(catH, {
+      ...fixture,
+      stream_state: "RUNNING",
+      scenario: "normal",
+    });
+    expect(resetNormal.type).toBe("M");
   });
 });

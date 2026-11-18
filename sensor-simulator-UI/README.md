@@ -17,7 +17,7 @@ npm run dev
 
 Mở **http://127.0.0.1:5174**. Mặc định `public/runtime-config.json` chọn `demo`.
 
-- Năm máy giả lập có Pause/Resume, bốn scenario, chọn/tìm/lọc máy, nhật ký lệnh.
+- Năm máy giả lập có Pause/Resume, bảy scenario (4 vận hành + 3 drift), chọn/tìm/lọc máy, nhật ký lệnh.
 - Demo driver lưu control state và command receipts trong `sessionStorage` của
   tab, giữ state qua reload. Dữ liệu này không phải Sensor backend persistence.
 - Preview sáu features, biểu đồ RPM và reading feed là dữ liệu tổng hợp trong
@@ -113,7 +113,7 @@ không tự chuyển sang demo.
 | Scenario        | `PUT /api/v1/simulator/machines/{machine_id}/scenario` |
 
 Mutation gửi `Idempotency-Key` + `expected_control_version`; scenario thêm
-`scenario`. Bốn lựa chọn UX là normal/degradation/critical/recovery; backend vẫn
+`scenario`. Bảy lựa chọn UX gồm 4 kịch bản vận hành (normal/degradation/critical/recovery) và 3 kịch bản kiểm thử drift (gradual-drift/sudden-drift/categorical-drift); backend vẫn
 sở hữu allowlist, có thể trả422 nếu chưa hỗ trợ. Schema cho scenario là string,
 UI không sửa schema để ép provider chấp nhận các kịch bản.
 
