@@ -37,6 +37,13 @@ class DriftConfig(BaseModel):
     database_url: SecretStr | None = Field(default=None, repr=False, exclude=True)
     pushgateway_url: str | None = None
     pushgateway_required: bool = False
+    processing_read_url: str | None = None
+    runtime_dataset_version: str | None = Field(default=None, min_length=1)
+    window_lookback_hours: float = Field(default=24.0, gt=0, le=31 * 24)
+    processing_token_file: Path | None = None
+    oidc_token_url: str | None = None
+    oidc_client_id: str | None = None
+    oidc_client_secret_file: Path | None = None
     metrics_job: str = "maintai-drift-worker"
     environment: str = "local"
     timeout_seconds: float = Field(default=5, gt=0)
@@ -47,6 +54,17 @@ class DriftConfig(BaseModel):
             raise ValueError("minimum_samples cannot exceed window_size")
         if self.pushgateway_required and not self.pushgateway_url:
             raise ValueError("Required Pushgateway needs a URL")
+        oidc_fields = (self.oidc_token_url, self.oidc_client_id, self.oidc_client_secret_file)
+        if any(oidc_fields) and not all(value is not None for value in oidc_fields):
+            raise ValueError(
+                "OIDC credentials require token URL, client ID, and client secret file"
+            )
+        if self.processing_read_url is not None and not (
+            self.processing_token_file is not None or all(oidc_fields)
+        ):
+            raise ValueError(
+                "processing_read_url requires processing_token_file or full OIDC credentials"
+            )
         return self
 
     @classmethod
@@ -80,6 +98,13 @@ class DriftConfig(BaseModel):
             "worker_name": "DRIFT_WORKER_NAME",
             "pushgateway_url": "DRIFT_PUSHGATEWAY_URL",
             "pushgateway_required": "DRIFT_PUSHGATEWAY_REQUIRED",
+            "processing_read_url": "DRIFT_PROCESSING_READ_URL",
+            "runtime_dataset_version": "DRIFT_RUNTIME_DATASET_VERSION",
+            "window_lookback_hours": "DRIFT_WINDOW_LOOKBACK_HOURS",
+            "processing_token_file": "DRIFT_PROCESSING_TOKEN_FILE",
+            "oidc_token_url": "DRIFT_OIDC_TOKEN_URL",
+            "oidc_client_id": "DRIFT_OIDC_CLIENT_ID",
+            "oidc_client_secret_file": "DRIFT_OIDC_CLIENT_SECRET_FILE",
             "environment": "ENVIRONMENT",
         }
         values.update(

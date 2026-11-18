@@ -1,11 +1,13 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from drift_monitor.adapters.processing_api import ProcessingApiError, ProcessingApiWindowSource
 from drift_monitor.config import DriftConfig
 from drift_monitor.logging import log
 from drift_monitor.metrics import push_metrics, render_metrics
-from drift_monitor.models import DriftReport, DriftStatus
+from drift_monitor.models import DriftReport, DriftStatus, RuntimeSample
 from drift_monitor.reference import ReferenceError, load_reference
 from drift_monitor.report import evaluate
 from drift_monitor.repository import Repository
@@ -20,9 +22,13 @@ class RunResult:
 
 
 def run_worker(
-    config: DriftConfig, repository: Repository, *, metrics_file: Path | None = None
+    config: DriftConfig,
+    repository: Repository,
+    *,
+    metrics_file: Path | None = None,
+    window_loader: Callable[[], list[RuntimeSample]] | None = None,
 ) -> RunResult:
-    samples = []
+    samples: list[RuntimeSample] = []
     now = datetime.now(UTC)
     try:
         checkpoint = repository.load_checkpoint(config.worker_name)
@@ -39,10 +45,30 @@ def run_worker(
             )
         except ReferenceError as exc:
             reference_error = str(exc)
+        fetch_error = None
         if reference_error is None:
-            samples = repository.load_window(config.window_size, config.model_version)
+            try:
+                if window_loader is not None:
+                    samples = window_loader()
+                elif config.processing_read_url is not None:
+                    runtime_dataset = config.runtime_dataset_version or config.dataset_version
+                    samples = ProcessingApiWindowSource(config).load_window(
+                        model_version=config.model_version,
+                        dataset_version=runtime_dataset,
+                        window_size=config.window_size,
+                        window_end=now,
+                    )
+                else:
+                    samples = repository.load_window(config.window_size, config.model_version)
+            except ProcessingApiError as exc:
+                log("processing_window_fetch_failed", error_code=exc.code)
+                fetch_error = exc.code
         report = evaluate(
-            config, samples, computed_at=now, reason=reference_error, reference_profile=reference
+            config,
+            samples,
+            computed_at=now,
+            reason=reference_error or fetch_error,
+            reference_profile=reference,
         )
         stored = repository.find_report(report.report_id)
         reused = stored is not None

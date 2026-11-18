@@ -112,7 +112,7 @@ class IdentityVerifier:
         except ReadFailure:
             return False
 
-    def verify(self, authorization):
+    def verify(self, authorization, *, required_roles=("BUSINESS_SERVICE",)):
         if not authorization or len(authorization) > 16384:
             raise ReadFailure(401, "UNAUTHORIZED")
         parts = authorization.split()
@@ -145,7 +145,7 @@ class IdentityVerifier:
         if (
             not isinstance(roles, list)
             or not all(isinstance(r, str) for r in roles)
-            or not set(roles).intersection({"BUSINESS_SERVICE"})
+            or not set(roles).intersection(required_roles)
             or not isinstance(machines, list)
             or not machines
             or not all(isinstance(m, str) and m and m != "*" and "\x00" not in m for m in machines)

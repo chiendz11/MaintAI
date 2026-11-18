@@ -251,6 +251,22 @@ export class SimulatorController {
     this.update({ journal });
     await this.send(entry);
   }
+  async commandAll(action: "pause" | "resume") {
+    const targetState = action === "pause" ? "RUNNING" : "PAUSED";
+    const candidates = this.state.machines.filter(
+      (m) =>
+        m.stream_state === targetState &&
+        !this.active.has(m.machine_id) &&
+        !this.state.journal.some(
+          (x) =>
+            x.machineId === m.machine_id &&
+            ["pending", "unknown"].includes(x.status),
+        ),
+    );
+    await Promise.all(
+      candidates.map((m) => this.command(m.machine_id, action)),
+    );
+  }
   async retry(id: string) {
     const entry = this.state.journal.find(
       (x) => x.id === id && x.status === "unknown",

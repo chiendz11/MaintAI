@@ -343,3 +343,29 @@ test("OIDC login uses code + S256 PKCE with a public client", async ({
   expect(params.has("client_secret")).toBe(false);
   expect(params.has("access_token")).toBe(false);
 });
+
+test("fleet pause all and resume all control only mismatched machines", async ({
+  page,
+}) => {
+  const { mutations } = await live(page);
+  await page.goto("/");
+  await expect(page.locator(".machine-card")).toHaveCount(2);
+
+  const pauseAll = page.getByRole("button", { name: "Dừng tất cả" });
+  const resumeAll = page.getByRole("button", { name: "Chạy tất cả" });
+  await expect(pauseAll).toBeEnabled();
+  await expect(resumeAll).toBeDisabled();
+
+  await pauseAll.click();
+  await expect
+    .poll(() => mutations.filter((m) => m.path === "pause").length)
+    .toBe(2);
+  await expect(pauseAll).toBeDisabled();
+  await expect(resumeAll).toBeEnabled();
+
+  await resumeAll.click();
+  await expect
+    .poll(() => mutations.filter((m) => m.path === "resume").length)
+    .toBe(2);
+  await expect(pauseAll).toBeEnabled();
+});

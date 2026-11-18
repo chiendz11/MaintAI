@@ -2,13 +2,15 @@
 
 import time
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import psycopg
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from processing.shared.history_meta.security import HistoryError
+from processing.shared.persistence.status import InvalidWindowCursorError
 from prometheus_client import generate_latest
 
 from .auth import ReadFailure
@@ -130,6 +132,49 @@ def create_app(repository, verifier, *, history_runtime=None):
             raise ReadFailure(404, "PREDICTION_NOT_FOUND")
         identity.authorize(row["machine_id"])
         return row
+
+    @app.get("/api/v1/internal/runtime-windows")
+    def runtime_windows(
+        request: Request,
+        model_version: str = Query(..., min_length=1),
+        dataset_version: str = Query(..., min_length=1),
+        window_start: str = Query(..., min_length=1),
+        window_end: str = Query(..., min_length=1),
+        before: str | None = Query(None, min_length=1),
+        limit: int = Query(500, ge=1, le=500),
+    ):
+        identity = verifier.verify(
+            request.headers.get("Authorization"),
+            required_roles=("DRIFT_SERVICE", "BUSINESS_SERVICE"),
+        )
+        try:
+            start_dt = datetime.fromisoformat(window_start.replace("Z", "+00:00"))
+            end_dt = datetime.fromisoformat(window_end.replace("Z", "+00:00"))
+            if start_dt.utcoffset() is None or end_dt.utcoffset() is None:
+                raise ValueError("Timezone offset required")
+            start_utc = start_dt.astimezone(UTC)
+            end_utc = end_dt.astimezone(UTC)
+        except ValueError:
+            raise ReadFailure(422, "VALIDATION_FAILED") from None
+        if start_utc >= end_utc:
+            raise ReadFailure(422, "VALIDATION_FAILED")
+        if (end_utc - start_utc).total_seconds() > 31 * 86400:
+            raise ReadFailure(422, "QUERY_TOO_LARGE")
+        try:
+            return repository.runtime_window(
+                machines=identity.machines,
+                model_version=model_version,
+                dataset_version=dataset_version,
+                window_start=start_utc,
+                window_end=end_utc,
+                before=before,
+                limit=limit,
+            )
+        except InvalidWindowCursorError:
+            raise ReadFailure(400, "INVALID_CURSOR") from None
+        except (psycopg.Error, ValueError):
+            request.state.failed_dependency = "processing_db"
+            raise ReadFailure(503, "DEPENDENCY_UNAVAILABLE") from None
 
     @app.get("/health/live")
     def live():
