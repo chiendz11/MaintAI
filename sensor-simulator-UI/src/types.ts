@@ -56,6 +56,24 @@ export const scenarios = [
     caption: "Đưa thông số dần về vùng bình thường.",
     symbol: "recovery",
   },
+  {
+    id: "gradual-drift",
+    label: "Gradual Drift",
+    caption: "Trượt dần mô-men xoắn (+8 Nm) và tốc độ quay (×0.93).",
+    symbol: "gradual-drift",
+  },
+  {
+    id: "sudden-drift",
+    label: "Sudden Drift",
+    caption: "Dịch đột ngột mô-men xoắn (+8 Nm) và tốc độ quay (×0.93).",
+    symbol: "sudden-drift",
+  },
+  {
+    id: "categorical-drift",
+    label: "Categorical Drift",
+    caption: "Lệch phân phối loại sản phẩm (L: 5%, M: 15%, H: 80%).",
+    symbol: "categorical-drift",
+  },
 ] as const;
 export const scenarioLabel = (id: string) =>
   scenarios.find((s) => s.id === id)?.label ?? id;

@@ -115,6 +115,14 @@ test("live sends contract commands and shows unavailable telemetry instead of mo
     expected_control_version: 2,
     scenario: "degradation",
   });
+  await page.getByRole("button", { name: /Kịch bản Gradual Drift/ }).click();
+  await expect(
+    page.getByRole("button", { name: /Kịch bản Gradual Drift/ }),
+  ).toHaveAttribute("aria-pressed", "true");
+  expect(mutations[2].body).toEqual({
+    expected_control_version: 3,
+    scenario: "gradual-drift",
+  });
 });
 
 test("timeout remains unknown after GET and reload; retry keeps the same command", async ({
