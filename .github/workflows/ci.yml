@@ -751,6 +751,24 @@ jobs:
             --tmpfs /tmp:rw,nosuid,nodev,size=256m \
             maintai-training:ci --help
 
+      - name: Run ML automation tests and verify automation image
+        run: |
+          python -m pip install -r ml-service/automation/requirements.lock
+          python -m pip install --no-deps -e ./ml-service/automation
+          PYTHONPATH=ml-service/automation/src:ml-service/training:ml-service/shared/preprocessing \
+            python -m unittest discover -s ml-service/automation/tests -p 'test_*.py' -v
+          docker build \
+            --platform linux/amd64 \
+            -f ml-service/automation/Dockerfile \
+            -t maintai-automation:ci \
+            .
+          docker run --rm --pull never --network none \
+            --entrypoint python maintai-automation:ci \
+            -m pip check
+          docker run --rm --pull never --network none \
+            --read-only \
+            maintai-automation:ci --help
+
   mlflow-source-ci:
     name: MLflow image source and release handoff
     needs: structure

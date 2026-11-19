@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "maintai-automation"
+version = "0.1.0"
+description = "MLOps automation CLI, MinIO artifact fetcher, MLflow registration, and GitOps PR publisher"
+requires-python = ">=3.12"
+dependencies = [
+    "boto3>=1.40",
+    "httpx>=0.28",
+    "jsonschema>=4.23",
+    "PyYAML>=6.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

@@ -32,6 +32,7 @@ INTERNAL_HOSTS = {
     "processing-outbox-relay",
     "ml-service",
     "ml-service-shadow",
+    "ml-service-mirror",
     "mlflow",
     "sensor",
     "simulator-ui",

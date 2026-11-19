@@ -97,6 +97,17 @@ jobs:
             dockerfile: ml-service/inference/Dockerfile
             image: maintai-ml-service
             build_args: ""
+          - name: training
+            context: .
+            dockerfile: ml-service/training/Dockerfile
+            image: maintai-training
+            build_args: |
+              SOURCE_REVISION=${{ github.sha }}
+          - name: automation
+            context: .
+            dockerfile: ml-service/automation/Dockerfile
+            image: maintai-automation
+            build_args: ""
           - name: rag-service
             context: .
             dockerfile: rag-service/Dockerfile
