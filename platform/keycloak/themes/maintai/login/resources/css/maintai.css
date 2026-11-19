@@ -1,0 +1,247 @@
+:root {
+  --keycloak-logo-url: url('../img/maintai-logo.svg');
+  --keycloak-bg-logo-url: url('../img/maintai-bg.svg');
+  --keycloak-logo-height: 54px;
+  --keycloak-logo-width: 310px;
+  --keycloak-card-top-color: #168b75;
+
+  --pf-v5-global--primary-color--100: #168b75;
+  --pf-v5-global--primary-color--200: #107762;
+  --pf-v5-global--link--Color: #168b75;
+  --pf-v5-global--link--Color--hover: #107762;
+  --pf-v5-global--FontFamily--text: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --pf-v5-global--FontFamily--heading: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.login-pf body {
+  background-color: #101e2c;
+  background-image: var(--keycloak-bg-logo-url);
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-attachment: fixed;
+  background-size: cover;
+  color: #223042;
+  font-family: var(--pf-v5-global--FontFamily--text);
+}
+
+.pf-v5-c-login {
+  padding-block: 2.5rem;
+}
+
+.pf-v5-c-login__container {
+  grid-template-columns: 29.5rem;
+  gap: 1.5rem;
+}
+
+@media (max-width: 600px) {
+  .pf-v5-c-login {
+    padding: 1.5rem 1rem;
+  }
+
+  .pf-v5-c-login__container {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.pf-v5-c-login__main {
+  background-color: #ffffff;
+  border-radius: 14px;
+  border: 1px solid rgba(226, 233, 237, 0.25);
+  box-shadow: 0 24px 56px rgba(6, 15, 24, 0.45), 0 4px 14px rgba(6, 15, 24, 0.2);
+  overflow: hidden;
+  position: relative;
+}
+
+.pf-v5-c-login__main::before {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, #168b75 0%, #2cba94 55%, #52d2b0 100%);
+}
+
+.pf-v5-c-login__main-header {
+  border-top: 0;
+  padding: 1.75rem 2rem 0.75rem;
+}
+
+@media (min-width: 768px) {
+  div.pf-v5-c-login__main-header {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 0.75rem;
+  }
+}
+
+#kc-page-title {
+  color: #223042;
+  font-size: 1.35rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.pf-v5-c-login__main-header-utilities #login-select-toggle {
+  --pf-v5-c-form-control--before--BorderBottomWidth: 0;
+  --pf-v5-c-form-control--after--BorderBottomWidth: 0;
+  border: 1px solid #dce3e9;
+  border-radius: 999px;
+  background-color: #f3f6f9;
+  color: #223042;
+  font-size: 0.8125rem;
+  min-height: 32px;
+  padding-inline: 10px 28px;
+}
+
+.pf-v5-c-login__main-body {
+  padding: 1rem 2rem 1.75rem;
+}
+
+.pf-v5-c-form__label-text {
+  color: #263e50;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.pf-v5-c-form-control {
+  --pf-v5-c-form-control--before--BorderBottomWidth: 0;
+  --pf-v5-c-form-control--after--BorderBottomWidth: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background-color: #ffffff;
+  color: #223042;
+  min-height: 44px;
+  padding-inline: 12px;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.pf-v5-c-form-control:hover {
+  border-color: #94a3b8;
+}
+
+.pf-v5-c-form-control:focus-within {
+  border-color: #168b75;
+  box-shadow: 0 0 0 3px rgba(22, 139, 117, 0.16);
+}
+
+.pf-v5-c-form-control.pf-m-error {
+  border-color: #dc2626;
+}
+
+.pf-v5-c-form-control.pf-m-error:focus-within {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.14);
+}
+
+.pf-v5-c-input-group {
+  border-radius: 8px;
+}
+
+.pf-v5-c-input-group .pf-v5-c-form-control {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.pf-v5-c-input-group .pf-v5-c-button.pf-m-control {
+  border: 1px solid #cbd5e1;
+  border-left: 0;
+  border-radius: 0 8px 8px 0;
+  background-color: #f8fafc;
+  color: #536173;
+  min-height: 44px;
+  padding-inline: 13px;
+}
+
+.pf-v5-c-input-group .pf-v5-c-button.pf-m-control:hover {
+  background-color: #eef3f7;
+  color: #223042;
+}
+
+.pf-v5-c-check__input:checked {
+  accent-color: #168b75;
+}
+
+.pf-v5-c-check__label,
+.pf-v5-c-helper-text__item-text a {
+  font-size: 0.84rem;
+}
+
+.pf-v5-c-button.pf-m-primary {
+  --pf-v5-c-button--m-primary--BackgroundColor: #168b75;
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: #107762;
+  --pf-v5-c-button--m-primary--focus--BackgroundColor: #107762;
+  --pf-v5-c-button--m-primary--active--BackgroundColor: #0d6654;
+  background: linear-gradient(180deg, #189981 0%, #168b75 100%);
+  border-radius: 8px;
+  min-height: 44px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: 0 6px 16px rgba(22, 139, 117, 0.24);
+  transition: transform 0.12s ease, box-shadow 0.16s ease, filter 0.16s ease;
+}
+
+.pf-v5-c-button.pf-m-primary:hover {
+  filter: brightness(0.95);
+  box-shadow: 0 8px 20px rgba(16, 119, 98, 0.3);
+}
+
+.pf-v5-c-button.pf-m-primary:active {
+  transform: translateY(1px);
+}
+
+.pf-v5-c-button.pf-m-secondary {
+  border-radius: 8px;
+  min-height: 42px;
+  border-color: #dce3e9;
+  color: #435369;
+  background-color: #ffffff;
+}
+
+.pf-v5-c-alert {
+  border-radius: 8px;
+}
+
+.pf-v5-c-login__main > .pf-v5-c-login__main-footer {
+  padding: 0 2rem 1.5rem;
+}
+
+.maintai-login-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding-top: 1rem;
+  border-top: 1px solid #e6ebf0;
+  text-align: center;
+}
+
+.maintai-client-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.28rem 0.72rem;
+  border-radius: 999px;
+  background-color: #e7f4f0;
+  color: #107762;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.maintai-client-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #168b75;
+}
+
+.maintai-security-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #6b7c8e;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}

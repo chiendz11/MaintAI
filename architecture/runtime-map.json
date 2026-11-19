@@ -26,7 +26,8 @@
     "knowledge_db": "knowledge"
   },
   "platform_runtime_descriptors": [
-    "ml-service/mlflow/runtime.json"
+    "ml-service/mlflow/runtime.json",
+    "platform/keycloak/runtime.json"
   ],
   "platform_owned": [
     "Kafka",

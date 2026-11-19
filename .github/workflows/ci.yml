@@ -776,6 +776,84 @@ jobs:
           python ml-service/mlflow/release.py check-source
           python -m pytest ml-service/mlflow/tests
 
+  keycloak-image-ci:
+    name: Keycloak custom theme and image build
+    needs: structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Validate Keycloak theme assets and runtime descriptor
+        run: |
+          python3 - <<'PY'
+          import json
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          base = Path("platform/keycloak")
+          runtime = json.loads((base / "runtime.json").read_text(encoding="utf-8"))
+          assert runtime["runtime_id"] == "keycloak"
+          theme = base / "themes/maintai/login"
+          for svg in ("resources/img/maintai-logo.svg", "resources/img/maintai-bg.svg"):
+              ET.parse(theme / svg)
+          for prop in ("theme.properties", "messages/messages_vi.properties", "messages/messages_en.properties"):
+              lines = [l.strip() for l in (theme / prop).read_text(encoding="utf-8").splitlines() if l.strip() and not l.strip().startswith("#")]
+              assert all("=" in l for l in lines), f"Malformed properties line in {prop}"
+          for required in ("theme.properties", "footer.ftl", "resources/css/maintai.css"):
+              assert (theme / required).is_file(), f"Missing {required}"
+          print("Validated Keycloak theme assets and runtime.json.")
+          PY
+
+      - name: Build and smoke-verify custom Keycloak image
+        run: |
+          docker build -f platform/keycloak/Dockerfile -t maintai-keycloak:ci platform/keycloak
+          docker run --rm --entrypoint /bin/sh maintai-keycloak:ci -ceu '
+            test -f /opt/keycloak/themes/maintai/login/theme.properties
+            test -f /opt/keycloak/themes/maintai/login/footer.ftl
+            test -f /opt/keycloak/themes/maintai/login/resources/css/maintai.css
+            test -f /opt/keycloak/themes/maintai/login/resources/img/maintai-logo.svg
+            test -f /opt/keycloak/themes/maintai/login/resources/img/maintai-bg.svg
+            test -f /opt/keycloak/themes/maintai/login/messages/messages_vi.properties
+            test -f /opt/keycloak/themes/maintai/login/messages/messages_en.properties
+            /opt/keycloak/bin/kc.sh --version
+          '
+          mkdir -p /tmp/kc-smoke-realm
+          cat <<'JSON' > /tmp/kc-smoke-realm/realm.json
+          {"realm":"maintai-smoke","enabled":true,"loginTheme":"maintai","internationalizationEnabled":true,"supportedLocales":["vi","en"],"defaultLocale":"vi","clients":[{"clientId":"maintai-business-ui","enabled":true,"publicClient":true,"standardFlowEnabled":true,"attributes":{"pkce.code.challenge.method":"S256"},"redirectUris":["http://127.0.0.1:18080/*"]}]}
+          JSON
+          docker run -d --name kc-smoke -p 127.0.0.1:18080:8080 -p 127.0.0.1:19000:9000 \
+            -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
+            -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin \
+            -e KC_HEALTH_ENABLED=true \
+            -e KC_HTTP_ENABLED=true \
+            -v /tmp/kc-smoke-realm:/opt/keycloak/data/import:ro \
+            maintai-keycloak:ci start-dev --import-realm
+          trap 'docker rm -f kc-smoke >/dev/null 2>&1 || true; rm -rf /tmp/kc-smoke-realm' EXIT
+          for _ in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:19000/health/ready >/dev/null 2>&1; then
+              echo "Keycloak start-dev health/ready succeeded"
+              break
+            fi
+            sleep 2
+          done
+          if ! curl -fsS http://127.0.0.1:19000/health/ready; then
+            docker logs kc-smoke 2>&1 | tail -n 80
+            exit 1
+          fi
+          HTML=$(curl -fsSL "http://127.0.0.1:18080/realms/maintai-smoke/protocol/openid-connect/auth?client_id=maintai-business-ui&redirect_uri=http://127.0.0.1:18080/&response_type=code&scope=openid&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256")
+          echo "$HTML" | grep -q "Đăng nhập hệ thống"
+          echo "$HTML" | grep -q "Không gian vận hành MaintAI"
+          CSS_HREF=$(echo "$HTML" | grep -o '/resources/[^"]*maintai\.css' | head -n1)
+          test -n "$CSS_HREF"
+          curl -fsS -o /dev/null "http://127.0.0.1:18080${CSS_HREF}"
+          RES_BASE=$(dirname "$(dirname "$CSS_HREF")")
+          curl -fsS -o /dev/null "http://127.0.0.1:18080${RES_BASE}/img/maintai-logo.svg"
+          curl -fsS -o /dev/null "http://127.0.0.1:18080${RES_BASE}/img/maintai-bg.svg"
+
   processing-ci:
     name: Processing and Business registry checks
     needs: structure
@@ -983,6 +1061,7 @@ jobs:
       - storage-container
       - storage-catalog-integration
       - mlflow-source-ci
+      - keycloak-image-ci
       - component-ci
       - ingestion-ci
       - ingestion-integration

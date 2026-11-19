@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="56" viewBox="0 0 320 56" role="img" aria-label="MaintAI">
+  <defs>
+    <linearGradient id="maintaiMarkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#18c7a6"/>
+      <stop offset="100%" stop-color="#079b91"/>
+    </linearGradient>
+    <filter id="maintaiMarkShadow" x="-15%" y="-15%" width="130%" height="135%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#07121b" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+  <rect x="4" y="8" width="40" height="40" rx="11" fill="url(#maintaiMarkGrad)" filter="url(#maintaiMarkShadow)"/>
+  <g transform="translate(12 16)" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>
+  </g>
+  <text x="58" y="30" font-family="Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Arial, sans-serif" font-size="25" font-weight="700" letter-spacing="-0.6">
+    <tspan fill="#ffffff">Maint</tspan><tspan fill="#52d2b0">AI</tspan>
+  </text>
+  <text x="59" y="45" font-family="Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Arial, sans-serif" font-size="9" font-weight="600" letter-spacing="1.4" fill="#8fa8bc">
+    PREDICTIVE MAINTENANCE · OIDC
+  </text>
+</svg>

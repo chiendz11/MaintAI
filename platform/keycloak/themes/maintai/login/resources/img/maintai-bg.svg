@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <linearGradient id="bgBase" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0c1722"/>
+      <stop offset="52%" stop-color="#101e2c"/>
+      <stop offset="100%" stop-color="#102c3a"/>
+    </linearGradient>
+    <radialGradient id="glowTopRight" cx="78%" cy="18%" r="48%">
+      <stop offset="0%" stop-color="#2cba94" stop-opacity="0.16"/>
+      <stop offset="55%" stop-color="#168b75" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#101e2c" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowBottomLeft" cx="18%" cy="84%" r="44%">
+      <stop offset="0%" stop-color="#52d2b0" stop-opacity="0.12"/>
+      <stop offset="60%" stop-color="#08a88a" stop-opacity="0.03"/>
+      <stop offset="100%" stop-color="#101e2c" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="techGrid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <circle cx="1.5" cy="1.5" r="1" fill="#8fa8bc" fill-opacity="0.12"/>
+    </pattern>
+  </defs>
+  <rect width="1440" height="900" fill="url(#bgBase)"/>
+  <rect width="1440" height="900" fill="url(#techGrid)"/>
+  <rect width="1440" height="900" fill="url(#glowTopRight)"/>
+  <rect width="1440" height="900" fill="url(#glowBottomLeft)"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.18">
+    <path d="M-40 720 L180 720 L235 684 L285 752 L340 622 L395 790 L452 706 L510 720 L930 720 L982 692 L1024 742 L1076 648 L1122 768 L1170 720 L1480 720" stroke="#52d2b0" stroke-width="2"/>
+    <path d="M-40 764 L300 764 L348 738 L392 786 L438 696 L488 802 L536 764 L1480 764" stroke="#2cba94" stroke-width="1.2" opacity="0.6"/>
+  </g>
+</svg>
