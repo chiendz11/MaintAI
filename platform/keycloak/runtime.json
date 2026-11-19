@@ -1,0 +1,27 @@
+{
+  "descriptor_kind": "MaintAIRuntime",
+  "schema_version": "1.0.0",
+  "target_contract_revision": "1.3.2",
+  "runtime_id": "keycloak",
+  "runtime_scope": "platform",
+  "workload_kind": "StatefulSet",
+  "code_owner": "identity-platform",
+  "deployment_owner": "MaintAI-gitops",
+  "implementation_status": "custom_theme_image_built_with_kc_build",
+  "image_group": "keycloak",
+  "image_digest": null,
+  "entrypoint_status": "upstream_keycloak_kc_sh",
+  "purpose": "Keycloak 26.4.0 platform IdP image bundled with the MaintAI custom login theme and pre-built Quarkus artifacts via kc.sh build.",
+  "source_paths": ["platform/keycloak"],
+  "logical_database": "keycloak",
+  "kafka_subscriptions": [],
+  "kafka_publications": [],
+  "interfaces": ["OIDC / OAuth2 PKCE", "JWKS", "PostgreSQL"],
+  "boundaries": [
+    "Keycloak stays a platform identity runtime; application services consume only standard OIDC/JWT/JWKS contracts.",
+    "No client secrets, realm passwords, or environment-specific hostnames are baked into this image; GitOps/infrastructure supply realm config and ExternalSecrets at runtime."
+  ],
+  "dockerfile": "platform/keycloak/Dockerfile",
+  "dockerfile_status": "implemented_upstream_digest_pinned",
+  "implemented_contract_revision": null
+}

@@ -17,6 +17,7 @@ on:
       - 'frontend/**'
       - 'ingestion-api/**'
       - 'ml-service/**'
+      - 'platform/keycloak/**'
       - 'rag-service/**'
       - 'sensor/**'
       - 'sensor-simulator-UI/**'
@@ -100,6 +101,11 @@ jobs:
             context: .
             dockerfile: rag-service/Dockerfile
             image: maintai-rag-service
+            build_args: ""
+          - name: keycloak
+            context: platform/keycloak
+            dockerfile: platform/keycloak/Dockerfile
+            image: maintai-keycloak
             build_args: ""
 
     steps:
