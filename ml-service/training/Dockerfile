@@ -21,10 +21,13 @@ RUN python -m pip install --no-cache-dir --timeout 120 --retries 5 -r /opt/maint
     && chown mluser:mluser /outputs
 
 COPY ml-service/training/model/ /app/ml-service/training/model/
+COPY ml-service/training/maintai_training/ /app/ml-service/training/maintai_training/
 COPY ml-service/training/data_preparation/create_split.py /app/ml-service/training/data_preparation/create_split.py
 COPY ml-service/training/data_preparation/splits/ /app/ml-service/training/data_preparation/splits/
 COPY ml-service/shared/preprocessing/ /app/ml-service/shared/preprocessing/
 COPY contracts/v1.3/schemas/ /app/contracts/v1.3/schemas/
+
+ENV PYTHONPATH=/app/ml-service/training:/app/ml-service/shared/preprocessing
 
 ARG SOURCE_REVISION
 ENV MAINTAI_SOURCE_REVISION=${SOURCE_REVISION}
@@ -34,5 +37,5 @@ RUN python -c "import os,re; revision=os.environ.get('MAINTAI_SOURCE_REVISION','
 
 USER mluser
 
-ENTRYPOINT ["python", "/app/ml-service/training/model/fit_interaction_candidates.py"]
+ENTRYPOINT ["python", "-m", "maintai_training"]
 CMD ["--help"]

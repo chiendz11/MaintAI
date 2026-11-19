@@ -66,6 +66,7 @@ INTERNAL_HOSTS = {
     "storage-consumer",
     "ml-service",
     "ml-service-shadow",
+    "ml-service-mirror",
     "mlflow",
     "rag-service",
     "frontend",
