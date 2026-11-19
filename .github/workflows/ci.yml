@@ -821,11 +821,18 @@ jobs:
             test -f /opt/keycloak/themes/maintai/login/messages/messages_en.properties
             /opt/keycloak/bin/kc.sh --version
           '
+          mkdir -p /tmp/kc-smoke-realm
+          cat <<'JSON' > /tmp/kc-smoke-realm/realm.json
+          {"realm":"maintai-smoke","enabled":true,"loginTheme":"maintai","internationalizationEnabled":true,"supportedLocales":["vi","en"],"defaultLocale":"vi","clients":[{"clientId":"maintai-business-ui","enabled":true,"publicClient":true,"standardFlowEnabled":true,"attributes":{"pkce.code.challenge.method":"S256"},"redirectUris":["http://127.0.0.1:18080/*"]}]}
+          JSON
           docker run -d --name kc-smoke -p 127.0.0.1:18080:8080 -p 127.0.0.1:19000:9000 \
             -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
             -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin \
-            maintai-keycloak:ci start-dev
-          trap 'docker rm -f kc-smoke >/dev/null 2>&1 || true' EXIT
+            -e KC_HEALTH_ENABLED=true \
+            -e KC_HTTP_ENABLED=true \
+            -v /tmp/kc-smoke-realm:/opt/keycloak/data/import:ro \
+            maintai-keycloak:ci start-dev --import-realm
+          trap 'docker rm -f kc-smoke >/dev/null 2>&1 || true; rm -rf /tmp/kc-smoke-realm' EXIT
           for _ in $(seq 1 45); do
             if curl -fsS http://127.0.0.1:19000/health/ready >/dev/null 2>&1; then
               echo "Keycloak start-dev health/ready succeeded"
@@ -833,8 +840,19 @@ jobs:
             fi
             sleep 2
           done
-          curl -fsS http://127.0.0.1:19000/health/ready
-          curl -fsS http://127.0.0.1:18080/realms/master/.well-known/openid-configuration >/dev/null
+          if ! curl -fsS http://127.0.0.1:19000/health/ready; then
+            docker logs kc-smoke 2>&1 | tail -n 80
+            exit 1
+          fi
+          HTML=$(curl -fsSL "http://127.0.0.1:18080/realms/maintai-smoke/protocol/openid-connect/auth?client_id=maintai-business-ui&redirect_uri=http://127.0.0.1:18080/&response_type=code&scope=openid&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256")
+          echo "$HTML" | grep -q "Đăng nhập hệ thống"
+          echo "$HTML" | grep -q "Không gian vận hành MaintAI"
+          CSS_HREF=$(echo "$HTML" | grep -o '/resources/[^"]*maintai\.css' | head -n1)
+          test -n "$CSS_HREF"
+          curl -fsS -o /dev/null "http://127.0.0.1:18080${CSS_HREF}"
+          RES_BASE=$(dirname "$(dirname "$CSS_HREF")")
+          curl -fsS -o /dev/null "http://127.0.0.1:18080${RES_BASE}/img/maintai-logo.svg"
+          curl -fsS -o /dev/null "http://127.0.0.1:18080${RES_BASE}/img/maintai-bg.svg"
 
   processing-ci:
     name: Processing and Business registry checks

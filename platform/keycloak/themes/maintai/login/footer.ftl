@@ -9,7 +9,7 @@
           <#elseif client.clientId == "maintai-simulator-ui">
             ${msg("maintaiClientSimulator")}
           <#else>
-            ${((client.name)!client.clientId)?html}
+            ${(client.name)!client.clientId}
           </#if>
         </span>
       </div>
