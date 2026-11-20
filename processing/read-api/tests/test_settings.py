@@ -40,3 +40,15 @@ def test_read_api_config_fails_closed_for_missing_or_unsafe_settings(changes):
 
     with pytest.raises(ValueError):
         Settings.from_env({**environment(), **changes})
+
+
+def test_read_api_accepts_rfc6761_localhost_subdomain_issuer():
+    from processing_read_api.config import Settings
+
+    settings = Settings.from_env(
+        {
+            **environment(),
+            "PROCESSING_READ_OIDC_ISSUER": "https://auth.maintai.localhost/realms/maintai",
+        }
+    )
+    assert settings.issuer == "https://auth.maintai.localhost/realms/maintai"

@@ -39,6 +39,7 @@ def loopback(host: str) -> bool:
         host in INTERNAL_HOSTS
         or host.endswith(".svc.cluster.local")
         or host.endswith(".local")
+        or host.endswith(".localhost")
         or host.endswith(".internal")
     ):
         return True

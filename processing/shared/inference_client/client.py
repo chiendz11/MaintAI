@@ -83,6 +83,7 @@ def is_loopback(host: str) -> bool:
         lowered in INTERNAL_HOSTS
         or lowered.endswith(".svc.cluster.local")
         or lowered.endswith(".local")
+        or lowered.endswith(".localhost")
         or lowered.endswith(".internal")
     ):
         return True

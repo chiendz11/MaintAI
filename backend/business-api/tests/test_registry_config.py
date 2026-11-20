@@ -84,3 +84,13 @@ def test_processing_oauth_replaces_static_token_file_and_redacts_secret():
     ):
         with pytest.raises(ValueError):
             Settings.from_env({**oauth_env, **bad})
+
+
+def test_local_profile_accepts_rfc6761_localhost_subdomain_issuer():
+    config = Settings.from_env(
+        {
+            **environment(),
+            "BUSINESS_OIDC_ISSUER": "https://auth.maintai.localhost/realms/maintai",
+        }
+    )
+    assert config.issuer == "https://auth.maintai.localhost/realms/maintai"
