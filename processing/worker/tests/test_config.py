@@ -77,3 +77,55 @@ def test_keyed_limits_are_explicit_and_invalid_mode_fails(worker_env):
     assert settings.keyed_limits.max_active_keys == 2
     with pytest.raises(ValueError):
         WorkerSettings.from_env({**worker_env, "PROCESSING_EXECUTION_MODE": "pretend"})
+
+
+def test_registry_oauth_parses_secret_file_and_hides_secret_from_repr(worker_env, tmp_path):
+    secret_file = tmp_path / "client_secret"
+    secret_file.write_text("oauth-super-secret\n", encoding="utf-8")
+    settings = WorkerSettings.from_env(
+        {
+            **worker_env,
+            "BUSINESS_OAUTH_TOKEN_URL": "http://keycloak:8080/realms/maintai/protocol/openid-connect/token",
+            "BUSINESS_OAUTH_CLIENT_ID": "maintai-registry",
+            "BUSINESS_OAUTH_SECRET_FILE": str(secret_file),
+            "BUSINESS_OAUTH_SCOPE": "openid",
+        }
+    )
+    assert settings.registry_oauth is not None
+    assert settings.registry_oauth.client_id == "maintai-registry"
+    assert settings.registry_oauth.scope == "openid"
+    assert "oauth-super-secret" not in repr(settings)
+    assert "oauth-super-secret" not in repr(settings.registry_oauth)
+
+
+def test_registry_oauth_validation_rejects_invalid_combinations(worker_env, tmp_path):
+    secret_file = tmp_path / "client_secret"
+    secret_file.write_text("oauth-secret", encoding="utf-8")
+    empty_file = tmp_path / "empty_secret"
+    empty_file.write_text("   \n", encoding="utf-8")
+    valid_oauth = {
+        "BUSINESS_OAUTH_TOKEN_URL": "http://127.0.0.1:8080/token",
+        "BUSINESS_OAUTH_CLIENT_ID": "maintai-registry",
+        "BUSINESS_OAUTH_SECRET_FILE": str(secret_file),
+    }
+
+    with pytest.raises(ValueError):
+        WorkerSettings.from_env({**worker_env, "BUSINESS_OAUTH_CLIENT_ID": "only-id"})
+    with pytest.raises(ValueError):
+        WorkerSettings.from_env({**worker_env, "BUSINESS_OAUTH_SCOPE": "openid"})
+    with pytest.raises(ValueError):
+        WorkerSettings.from_env(
+            {**worker_env, **valid_oauth, "BUSINESS_BEARER_TOKEN": "static-token"}
+        )
+    with pytest.raises(ValueError):
+        WorkerSettings.from_env(
+            {**worker_env, **valid_oauth, "BUSINESS_OAUTH_TOKEN_URL": "http://shared-kc:8080/token"}
+        )
+    with pytest.raises(ValueError):
+        WorkerSettings.from_env(
+            {**worker_env, **valid_oauth, "BUSINESS_OAUTH_SECRET_FILE": str(tmp_path / "missing")}
+        )
+    with pytest.raises(ValueError):
+        WorkerSettings.from_env(
+            {**worker_env, **valid_oauth, "BUSINESS_OAUTH_SECRET_FILE": str(empty_file)}
+        )
