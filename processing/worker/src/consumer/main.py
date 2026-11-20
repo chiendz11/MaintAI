@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import json
 import logging
+import math
 import os
 import signal
 import sys
@@ -15,10 +16,10 @@ from maintai_messaging.consumer import ConsumerRunner
 from maintai_messaging.contracts import default_contracts
 from maintai_messaging.keyed import KeyedConsumerRunner
 from maintai_messaging.metrics import ProcessingMetrics
-from maintai_messaging.postgres import connect
 from processing.shared.data_quality.machine_registry import HTTPMachineRegistry
 from processing.shared.inference_client.client import InferenceClient
 from processing.shared.persistence.connection import validate_execution_mode
+from processing.shared.persistence.pool import ConnectionPool
 
 from .config import WorkerSettings
 from .handler import KeyedProcessingHandler, ProcessingHandler
@@ -26,19 +27,32 @@ from .observability import RuntimeObservability, monitor_dependencies, start_pro
 
 
 async def run_worker(settings, stop, *, max_records=None):
+    raw_cache_seconds = os.environ.get("PROCESSING_REGISTRY_CACHE_SECONDS", "0")
+    parsed_cache_seconds = float(raw_cache_seconds)
+    if not math.isfinite(parsed_cache_seconds) or parsed_cache_seconds < 0:
+        raise ValueError("PROCESSING_REGISTRY_CACHE_SECONDS must be finite and non-negative")
+    cache_seconds = (
+        int(parsed_cache_seconds) if parsed_cache_seconds.is_integer() else parsed_cache_seconds
+    )
+    pool = ConnectionPool(
+        settings.database_url,
+        size=max(12, settings.keyed_limits.max_active_keys + 4),
+    )
+
     def validate():
-        with connect(settings.database_url) as connection:
+        with pool() as connection:
             validate_execution_mode(connection, ordered=settings.execution_mode == "keyed")
 
-    await asyncio.to_thread(validate)
-    observer = RuntimeObservability("worker", profile=settings.profile, stop=stop)
-    server, probe_thread = start_probe_server(
-        observer, settings.health_port, host=settings.health_host
-    )
-    monitoring = asyncio.create_task(
-        monitor_dependencies(observer, settings.kafka, settings.database_url, stop)
-    )
+    observer = server = probe_thread = monitoring = None
     try:
+        await asyncio.to_thread(validate)
+        observer = RuntimeObservability("worker", profile=settings.profile, stop=stop)
+        server, probe_thread = start_probe_server(
+            observer, settings.health_port, host=settings.health_host
+        )
+        monitoring = asyncio.create_task(
+            monitor_dependencies(observer, settings.kafka, settings.database_url, stop)
+        )
         async with httpx.AsyncClient(trust_env=False) as http:
             registry = HTTPMachineRegistry(
                 http,
@@ -47,6 +61,7 @@ async def run_worker(settings, stop, *, max_records=None):
                 local_fixture=True,
                 bearer_token=settings.registry_token,
                 oauth_credentials=settings.registry_oauth,
+                cache_seconds=cache_seconds,
             )
             ml = InferenceClient(
                 http,
@@ -76,7 +91,7 @@ async def run_worker(settings, stop, *, max_records=None):
                 + contracts.topology["profiles"]["processing"]["group_id"]
             )
             handler = ProcessingHandler(
-                lambda: observer.database_connection(lambda: connect(settings.database_url)),
+                lambda: observer.database_connection(pool),
                 consumer_group=group,
                 validator=settings.validator,
                 registry_lookup=lambda machine_id, **kw: wait_for_http(
@@ -86,6 +101,7 @@ async def run_worker(settings, stop, *, max_records=None):
                 identity_resolver=lambda response: settings.identity_fixture,
                 policy=settings.policy,
                 producer_git_sha=settings.kafka.producer_git_sha,
+                registry_cache_seconds=cache_seconds,
                 contracts=contracts,
                 validation_observer=observer.record_validation,
             )
@@ -147,11 +163,16 @@ async def run_worker(settings, stop, *, max_records=None):
             await asyncio.to_thread(runner.run, stop, max_records=max_records)
     finally:
         stop.set()
-        observer.draining = True
-        monitoring.cancel()
-        await asyncio.gather(monitoring, return_exceptions=True)
-        server.should_exit = True
-        await asyncio.to_thread(probe_thread.join, 5)
+        if observer is not None:
+            observer.draining = True
+        if monitoring is not None:
+            monitoring.cancel()
+            await asyncio.gather(monitoring, return_exceptions=True)
+        if server is not None:
+            server.should_exit = True
+        if probe_thread is not None:
+            await asyncio.to_thread(probe_thread.join, 5)
+        pool.close()
 
 
 def main(argv=None):

@@ -212,6 +212,7 @@ class _FakeConnection:
 
 
 def test_connection_pool_reuses_healthy_connections_and_preserves_tx_semantics(monkeypatch):
+    import psycopg
     from business_consumer import runtime
 
     created = []
@@ -221,7 +222,7 @@ def test_connection_pool_reuses_healthy_connections_and_preserves_tx_semantics(m
         created.append(conn)
         return conn
 
-    monkeypatch.setattr(runtime.psycopg, "connect", fake_connect)
+    monkeypatch.setattr(psycopg, "connect", fake_connect)
     pool = runtime.ConnectionPool("postgresql://test@127.0.0.1/test", size=2)
 
     with pool() as conn:
@@ -249,6 +250,7 @@ def test_connection_pool_reuses_healthy_connections_and_preserves_tx_semantics(m
 
 
 def test_connection_pool_discards_broken_or_stale_connections(monkeypatch):
+    import psycopg
     from business_consumer import runtime
 
     behaviors = [
@@ -264,7 +266,7 @@ def test_connection_pool_discards_broken_or_stale_connections(monkeypatch):
         created.append(conn)
         return conn
 
-    monkeypatch.setattr(runtime.psycopg, "connect", fake_connect)
+    monkeypatch.setattr(psycopg, "connect", fake_connect)
     pool = runtime.ConnectionPool(
         "postgresql://test@127.0.0.1/test", size=1, max_idle_check_seconds=0.0
     )

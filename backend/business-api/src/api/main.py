@@ -5,15 +5,14 @@ import logging
 import sys
 
 import httpx
-import psycopg
 import uvicorn
 from backend.shared.alerts.repository import AlertRepository
+from backend.shared.persistence.pool import ConnectionPool
 from backend.shared.persistence.projections import ProjectionRepository
 from backend.shared.persistence.registry import RegistryRepository
 from backend.shared.service_auth import ServiceOAuthTokenProvider
 from business_processing_client import ProcessingStatusClient
 from business_sse.hub import NotificationHub
-from psycopg.rows import dict_row
 
 from .app import create_app
 from .auth import IdentityVerifier, jwks_fetcher
@@ -24,16 +23,19 @@ from .history_config import build as build_history
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Business REST/SSE snapshots and event status API")
     parser.parse_args(argv)
+    pool = None
     try:
         settings = Settings.from_env()
-        repository = RegistryRepository(
-            lambda: psycopg.connect(
-                settings.database_url,
-                row_factory=dict_row,
-                connect_timeout=2,
-                options="-c statement_timeout=3000",
-            )
+        pool = ConnectionPool(
+            settings.database_url,
+            size=12,
+            connect_timeout=2,
+            options=(
+                "-c statement_timeout=3000 -c lock_timeout=2000 "
+                "-c idle_in_transaction_session_timeout=30000"
+            ),
         )
+        repository = RegistryRepository(pool)
         verifier = IdentityVerifier(
             issuer=settings.issuer,
             audience=settings.audience,
@@ -104,3 +106,6 @@ def main(argv=None):
     except Exception as exc:
         print(f"Business registry failed: {type(exc).__name__}", file=sys.stderr)
         return 1
+    finally:
+        if pool is not None:
+            pool.close()
