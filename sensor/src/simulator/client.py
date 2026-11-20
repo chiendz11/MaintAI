@@ -72,6 +72,7 @@ class BackendClient:
             transport=transport,
             headers={"Accept": "application/json"},
             follow_redirects=False,
+            limits=httpx.Limits(max_connections=64, max_keepalive_connections=32),
         )
         self.max_retries, self.retry_backoff_ms, self.sleep = max_retries, retry_backoff_ms, sleep
         self.credentials, self.observe = credentials, observe

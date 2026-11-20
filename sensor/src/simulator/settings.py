@@ -87,7 +87,7 @@ class RuntimeSettings(SimulatorConfig):
     spool_max_bytes: int = Field(default=32_000_000, ge=1024)
     spool_ttl_seconds: float = Field(default=86400, gt=0)
     retry_max_seconds: float = Field(default=60, ge=1, le=300)
-    send_workers: int = Field(default=4, ge=1, le=32)
+    send_workers: int = Field(default=16, ge=1, le=64)
     initial_state: Literal["RUNNING", "PAUSED"] = "RUNNING"
     max_control_body_bytes: int = Field(default=4096, ge=256, le=65536)
     receipt_max_count: int = Field(default=100000, ge=1)

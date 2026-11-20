@@ -360,3 +360,61 @@ def test_jitter_cannot_exceed_configured_backoff_cap(runtime_settings, monkeypat
         assert next_at - before <= engine.settings.retry_max_seconds + 0.1
     finally:
         engine.close()
+
+
+def test_generate_many_and_due_exclude_machines(runtime_settings):
+    settings = runtime_settings.model_copy(update={"machine_count": 4})
+    engine = SensorEngine(settings)
+    try:
+        engine.store.command(
+            "alice",
+            "p-m2",
+            "M-002",
+            "pause",
+            {"expected_control_version": 0},
+            set(engine.scenarios),
+            100,
+        )
+        events = engine.store.generate_many(
+            ["M-001", "M-002", "M-003", "M-004"],
+            engine.build,
+            max_records=100,
+            max_bytes=1_000_000,
+        )
+        assert [e["machine_id"] for e in events] == ["M-001", "M-003", "M-004"]
+        assert all(e["sequence_number"] == 1 for e in events)
+        rows = engine.store.due(time.time(), 1000, 2, exclude_machines=("M-001",))
+        assert [r["machine_id"] for r in rows] == ["M-003", "M-004"]
+    finally:
+        engine.close()
+
+
+def test_hundred_machine_runtime_sustains_full_rate(runtime_settings):
+    delivered = []
+    lock = __import__("threading").Lock()
+
+    def fast_ack(request):
+        time.sleep(0.01)
+        payload = json.loads(request.content)
+        with lock:
+            delivered.append(payload["machine_id"])
+        return ack(request)
+
+    settings = runtime_settings.model_copy(
+        update={"machine_count": 100, "interval_ms": 1000, "send_workers": 16}
+    )
+    engine = SensorEngine(settings, transport=httpx.MockTransport(fast_ack))
+    try:
+        started = time.monotonic()
+        engine.start()
+        deadline = started + 4.0
+        while time.monotonic() < deadline:
+            if engine.completed >= 100 and len(set(delivered)) == 100:
+                break
+            time.sleep(0.02)
+        elapsed = time.monotonic() - started
+        assert len(set(delivered)) == 100
+        assert engine.completed >= 100
+        assert elapsed < 3.5
+    finally:
+        engine.close()

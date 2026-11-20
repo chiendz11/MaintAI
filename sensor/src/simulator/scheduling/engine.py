@@ -66,6 +66,7 @@ class SensorEngine:
             observe=lambda outcome: self.metrics.attempts.labels(outcome).inc(),
         )
         self.stop_event = threading.Event()
+        self.wake_event = threading.Event()
         self.thread = None
         self.pool = None
         self.inflight = {}
@@ -75,6 +76,7 @@ class SensorEngine:
         self.closed = False
         self.last_tick = time.monotonic()
         self.deadlines = {}
+        self.machine_ids = [row["machine_id"] for row in self.store.list()]
 
     def build(self, machine: dict) -> dict | None:
         cursor = machine["row_cursor"]
@@ -163,24 +165,44 @@ class SensorEngine:
                 future.result()
                 del self.inflight[machine_id]
                 self.completed += 1
+        available = self.settings.send_workers - len(self.inflight)
+        if available <= 0:
+            return
         for row in self.store.due(
-            time.time(), self.settings.spool_ttl_seconds, self.settings.send_workers * 2
+            time.time(),
+            self.settings.spool_ttl_seconds,
+            available,
+            exclude_machines=tuple(self.inflight),
         ):
-            if len(self.inflight) >= self.settings.send_workers:
-                break
-            if row["machine_id"] not in self.inflight:
-                self.inflight[row["machine_id"]] = self.pool.submit(self.deliver, row)
+            machine_id = row["machine_id"]
+            if machine_id not in self.inflight:
+                future = self.pool.submit(self.deliver, row)
+                future.add_done_callback(lambda _: self.wake_event.set())
+                self.inflight[machine_id] = future
 
     def tick(self, *, generate=True):
         now = time.monotonic()
         interval = self.settings.interval_ms / 1000 / self.settings.speed
-        machines = self.store.list()
-        for i, machine in enumerate(machines):
-            machine_id = machine["machine_id"]
-            self.deadlines.setdefault(machine_id, now + i * interval / len(machines))
-            if generate and now >= self.deadlines[machine_id]:
-                self.generate_once(machine_id)
-                self.deadlines[machine_id] = now + interval
+        due_machines = []
+        total = len(self.machine_ids)
+        for i, machine_id in enumerate(self.machine_ids):
+            deadline = self.deadlines.setdefault(machine_id, now + i * interval / total)
+            if generate and now >= deadline:
+                due_machines.append(machine_id)
+                next_deadline = deadline + interval
+                self.deadlines[machine_id] = (
+                    next_deadline if next_deadline > now else now + interval
+                )
+        if due_machines:
+            events = self.store.generate_many(
+                due_machines,
+                self.build,
+                max_records=self.settings.spool_max_records,
+                max_bytes=self.settings.spool_max_bytes,
+            )
+            if events:
+                self.metrics.generated.inc(len(events))
+                self.generated += len(events)
         self.dispatch_once()
         self.last_tick = time.monotonic()
 
@@ -188,6 +210,7 @@ class SensorEngine:
         last_log = 0
         try:
             while not self.stop_event.is_set():
+                self.wake_event.clear()
                 self.tick()
                 if time.monotonic() - last_log >= 30:
                     summary = self.store.summary()
@@ -200,7 +223,8 @@ class SensorEngine:
                         else None,
                     )
                     last_log = time.monotonic()
-                self.stop_event.wait(0.02)
+                if not self.stop_event.is_set():
+                    self.wake_event.wait(0.005)
         except Exception as exc:
             self.fatal = type(exc).__name__
             log("sensor_runtime_failure", error_type=self.fatal)
@@ -225,6 +249,7 @@ class SensorEngine:
         if self.closed:
             return
         self.stop_event.set()
+        self.wake_event.set()
         if self.thread:
             self.thread.join(timeout=10)
             if self.thread.is_alive():
