@@ -7,7 +7,10 @@ from pathlib import Path
 
 import httpx
 import pytest
-from processing.shared.data_quality.machine_registry import HTTPMachineRegistry
+from processing.shared.data_quality.machine_registry import (
+    HTTPMachineRegistry,
+    OAuthClientCredentials,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 DETAIL = json.loads((ROOT / "contracts/v1.3/examples/http/backend/machine-detail.json").read_text())
@@ -127,3 +130,105 @@ def test_encoded_registry_response_cannot_allocate_unbounded_decompression(compr
     assert result.status == "UNAVAILABLE"
     assert result.failure_code == "REGISTRY_INVALID_RESPONSE"
     assert stream.reads == 0
+
+
+def test_oauth_credentials_cached_across_lookups():
+    token_calls = []
+    registry_calls = []
+
+    def handler(request):
+        if request.url.path == "/token":
+            token_calls.append(request.read().decode())
+            return httpx.Response(200, json={"access_token": "tok-1", "expires_in": 300})
+        registry_calls.append((request.url.path, request.headers.get("Authorization")))
+        mid = request.url.path.rsplit("/", 1)[-1]
+        return httpx.Response(200, json={**DETAIL, "machine_id": mid})
+
+    async def run():
+        oauth = OAuthClientCredentials(
+            token_url="http://127.0.0.1:8080/token",
+            client_id="maintai-registry",
+            client_secret="sec",
+        )
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+            registry = HTTPMachineRegistry(
+                http,
+                base_url="http://127.0.0.1:8000",
+                schema_directory=ROOT / "contracts/v1.3/schemas",
+                local_fixture=True,
+                oauth_credentials=oauth,
+            )
+            r1 = await registry.lookup("M-001", correlation_id="corr-1")
+            r2 = await registry.lookup("M-002", correlation_id="corr-2")
+            return r1, r2
+
+    r1, r2 = asyncio.run(run())
+    assert r1.status == "FOUND"
+    assert r2.status == "FOUND"
+    assert len(token_calls) == 1
+    assert "grant_type=client_credentials" in token_calls[0]
+    assert registry_calls == [
+        ("/api/v1/machines/M-001", "Bearer tok-1"),
+        ("/api/v1/machines/M-002", "Bearer tok-1"),
+    ]
+
+
+def test_oauth_credentials_refresh_once_on_401():
+    issued = iter(["tok-stale", "tok-fresh"])
+    auth_headers = []
+
+    def handler(request):
+        if request.url.path == "/token":
+            return httpx.Response(200, json={"access_token": next(issued), "expires_in": 300})
+        auth = request.headers.get("Authorization")
+        auth_headers.append(auth)
+        if auth == "Bearer tok-stale":
+            return httpx.Response(401, json=NOT_FOUND)
+        return httpx.Response(200, json=DETAIL)
+
+    async def run():
+        oauth = OAuthClientCredentials(
+            token_url="http://127.0.0.1:8080/token",
+            client_id="maintai-registry",
+            client_secret="sec",
+        )
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+            registry = HTTPMachineRegistry(
+                http,
+                base_url="http://127.0.0.1:8000",
+                schema_directory=ROOT / "contracts/v1.3/schemas",
+                local_fixture=True,
+                oauth_credentials=oauth,
+            )
+            return await registry.lookup("M-001", correlation_id="corr-1")
+
+    res = asyncio.run(run())
+    assert res.status == "FOUND"
+    assert auth_headers == ["Bearer tok-stale", "Bearer tok-fresh"]
+
+
+def test_oauth_token_endpoint_failure_returns_unavailable():
+    def handler(request):
+        if request.url.path == "/token":
+            return httpx.Response(500, json={"error": "server_error"})
+        raise AssertionError("Registry endpoint should not be called when token fails")
+
+    async def run():
+        oauth = OAuthClientCredentials(
+            token_url="http://127.0.0.1:8080/token",
+            client_id="maintai-registry",
+            client_secret="sec",
+        )
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+            registry = HTTPMachineRegistry(
+                http,
+                base_url="http://127.0.0.1:8000",
+                schema_directory=ROOT / "contracts/v1.3/schemas",
+                local_fixture=True,
+                oauth_credentials=oauth,
+            )
+            return await registry.lookup("M-001", correlation_id="corr-1")
+
+    res = asyncio.run(run())
+    assert res.status == "UNAVAILABLE"
+    assert res.failure_code == "REGISTRY_AUTH_ERROR"

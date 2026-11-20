@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 from maintai_messaging.config import KafkaSettings, KeyedSettings
 from maintai_messaging.contracts import strict_json
 from maintai_messaging.outcomes import ModelIdentity
+from processing.shared.data_quality.machine_registry import OAuthClientCredentials
 from processing.shared.data_quality.validator import FeatureValidator
 from processing.shared.risk_engine.policy import RiskPolicy
 
@@ -72,8 +73,47 @@ class WorkerSettings:
     health_port: int
     health_host: str = "127.0.0.1"
     registry_token: str | None = field(default=None, repr=False)
+    registry_oauth: OAuthClientCredentials | None = field(default=None, repr=False)
     execution_mode: str = "serial"
     keyed_limits: KeyedSettings = field(default_factory=KeyedSettings)
+
+    @staticmethod
+    def _read_registry_oauth(env) -> OAuthClientCredentials | None:
+        token_url = env.get("BUSINESS_OAUTH_TOKEN_URL", "").strip()
+        client_id = env.get("BUSINESS_OAUTH_CLIENT_ID", "").strip()
+        secret_file = env.get("BUSINESS_OAUTH_SECRET_FILE", "").strip()
+        scope = env.get("BUSINESS_OAUTH_SCOPE", "").strip() or None
+        present = [bool(value) for value in (token_url, client_id, secret_file)]
+        if not any(present):
+            if scope is not None:
+                raise ValueError("Incomplete BUSINESS_OAUTH_* configuration for registry auth")
+            return None
+        if not all(present):
+            raise ValueError("Incomplete BUSINESS_OAUTH_* configuration for registry auth")
+        if env.get("BUSINESS_BEARER_TOKEN"):
+            raise ValueError("Specify either BUSINESS_BEARER_TOKEN or BUSINESS_OAUTH_*, not both")
+        parsed = urlparse(token_url)
+        if (
+            parsed.scheme not in {"http", "https"}
+            or not loopback(parsed.hostname)
+            or parsed.username
+            or parsed.password
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError("Fixture Business OAuth token URL must be a loopback HTTP(S) URL")
+        try:
+            client_secret = Path(secret_file).read_text(encoding="utf-8").strip()
+        except OSError as exc:
+            raise ValueError("Business OAuth client secret file could not be read") from exc
+        if not client_secret:
+            raise ValueError("Business OAuth client secret file is empty")
+        return OAuthClientCredentials(
+            token_url=token_url,
+            client_id=client_id,
+            client_secret=client_secret,
+            scope=scope,
+        )
 
     @classmethod
     def from_env(cls, env=None):
@@ -111,6 +151,7 @@ class WorkerSettings:
                 or parsed.path not in {"", "/"}
             ):
                 raise ValueError("Fixture providers must use loopback HTTP(S) origins")
+        registry_oauth = cls._read_registry_oauth(env)
         try:
             schemas = Path(env["PROCESSING_SCHEMA_DIRECTORY"]).resolve()
             for name in ("features", "common", "business", "prediction"):
@@ -145,6 +186,7 @@ class WorkerSettings:
             port,
             health_host=probe_host(env),
             registry_token=env.get("BUSINESS_BEARER_TOKEN"),
+            registry_oauth=registry_oauth,
             execution_mode=mode,
             keyed_limits=KeyedSettings.from_env(env),
         )

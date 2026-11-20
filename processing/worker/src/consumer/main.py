@@ -46,6 +46,7 @@ async def run_worker(settings, stop, *, max_records=None):
                 schema_directory=settings.schema_directory,
                 local_fixture=True,
                 bearer_token=settings.registry_token,
+                oauth_credentials=settings.registry_oauth,
             )
             ml = InferenceClient(
                 http,
