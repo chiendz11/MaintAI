@@ -12,9 +12,10 @@ import threading
 from maintai_messaging.errors import PublishUnavailable
 from maintai_messaging.metrics import OutboxOrderMetrics
 from maintai_messaging.ordering import OrderedOutboxRelay
-from maintai_messaging.postgres import OutboxRelay, connect
+from maintai_messaging.postgres import OutboxRelay
 from maintai_messaging.producer import KafkaPublisher
 from processing.shared.persistence.connection import validate_execution_mode
+from processing.shared.persistence.pool import ConnectionPool
 
 from .config import RelaySettings
 from .observability import RuntimeObservability, monitor_dependencies, start_probe_server
@@ -71,14 +72,16 @@ def create_relay(
 
 
 async def run_relay(settings, stop, *, once=False):
+    pool = ConnectionPool(settings.database_url, size=4)
+
     def validate():
-        with connect(settings.database_url) as connection:
+        with pool() as connection:
             validate_execution_mode(connection, ordered=settings.execution_mode == "ordered")
 
-    await asyncio.to_thread(validate)
-    observer = RuntimeObservability("relay", profile=settings.profile, stop=stop)
-    server = probe_thread = monitoring = None
+    observer = server = probe_thread = monitoring = None
     try:
+        await asyncio.to_thread(validate)
+        observer = RuntimeObservability("relay", profile=settings.profile, stop=stop)
         if not once:
             server, probe_thread = start_probe_server(
                 observer, settings.health_port, host=settings.health_host
@@ -91,7 +94,7 @@ async def run_relay(settings, stop, *, once=False):
         with KafkaPublisher(settings.kafka, "outbox") as publisher:
 
             def connections():
-                return observer.database_connection(lambda: connect(settings.database_url))
+                return observer.database_connection(pool)
 
             metrics = (
                 OutboxOrderMetrics(connections, observer.registry)
@@ -115,13 +118,15 @@ async def run_relay(settings, stop, *, once=False):
                 await asyncio.sleep(settings.poll_interval_seconds)
     finally:
         stop.set()
-        observer.draining = True
+        if observer is not None:
+            observer.draining = True
         if monitoring:
             monitoring.cancel()
             await asyncio.gather(monitoring, return_exceptions=True)
         if server:
             server.should_exit = True
             await asyncio.to_thread(probe_thread.join, 5)
+        pool.close()
 
 
 def main(argv=None):
