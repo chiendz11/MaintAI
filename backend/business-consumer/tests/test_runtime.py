@@ -152,3 +152,138 @@ def test_consumer_settings_accept_processing_oauth_without_static_token_file():
     ):
         with pytest.raises(ValueError):
             Settings.from_env({**base, **invalid})
+
+
+class _FakeConnection:
+    def __init__(self, *, fail_commit=False, fail_idle_check=False):
+        from psycopg.pq import TransactionStatus
+
+        self.closed = False
+        self.broken = False
+        self.fail_commit = fail_commit
+        self.fail_idle_check = fail_idle_check
+        self.commits = 0
+        self.rollbacks = 0
+        self.queries = []
+        self.info = type("Info", (), {"transaction_status": TransactionStatus.IDLE})()
+
+    def execute(self, query):
+        from psycopg.pq import TransactionStatus
+
+        self.queries.append(query)
+        if self.fail_idle_check and query == "SELECT 1":
+            self.broken = True
+            raise RuntimeError("stale connection")
+        self.info.transaction_status = TransactionStatus.INTRANS
+        return self
+
+    def commit(self):
+        from psycopg.pq import TransactionStatus
+
+        if self.fail_commit:
+            self.broken = True
+            raise RuntimeError("commit failed")
+        self.commits += 1
+        self.info.transaction_status = TransactionStatus.IDLE
+
+    def rollback(self):
+        from psycopg.pq import TransactionStatus
+
+        self.rollbacks += 1
+        self.info.transaction_status = TransactionStatus.IDLE
+
+    def transaction(self):
+        from contextlib import contextmanager
+
+        @contextmanager
+        def _tx():
+            try:
+                yield self
+            except BaseException:
+                self.rollback()
+                raise
+            else:
+                self.commit()
+
+        return _tx()
+
+    def close(self):
+        self.closed = True
+
+
+def test_connection_pool_reuses_healthy_connections_and_preserves_tx_semantics(monkeypatch):
+    from business_consumer import runtime
+
+    created = []
+
+    def fake_connect(*_args, **_kwargs):
+        conn = _FakeConnection()
+        created.append(conn)
+        return conn
+
+    monkeypatch.setattr(runtime.psycopg, "connect", fake_connect)
+    pool = runtime.ConnectionPool("postgresql://test@127.0.0.1/test", size=2)
+
+    with pool() as conn:
+        conn.execute("SELECT 1 FROM machines LIMIT 0")
+    assert len(created) == 1
+    assert created[0].commits == 1
+    assert not created[0].closed
+
+    with pytest.raises(RuntimeError, match="boom"), pool() as conn:
+        conn.execute("INSERT INTO telemetry VALUES (1)")
+        raise RuntimeError("boom")
+    assert len(created) == 1
+    assert created[0].rollbacks == 1
+    assert not created[0].closed
+
+    with pool() as conn, conn.transaction():
+        conn.execute("INSERT INTO telemetry VALUES (2)")
+    assert len(created) == 1
+    assert created[0].commits == 2
+
+    pool.close()
+    assert created[0].closed
+    with pytest.raises(RuntimeError, match="closed"), pool():
+        pass
+
+
+def test_connection_pool_discards_broken_or_stale_connections(monkeypatch):
+    from business_consumer import runtime
+
+    behaviors = [
+        {"fail_commit": True},
+        {"fail_idle_check": True},
+        {},
+    ]
+    created = []
+
+    def fake_connect(*_args, **_kwargs):
+        kwargs = behaviors.pop(0) if behaviors else {}
+        conn = _FakeConnection(**kwargs)
+        created.append(conn)
+        return conn
+
+    monkeypatch.setattr(runtime.psycopg, "connect", fake_connect)
+    pool = runtime.ConnectionPool(
+        "postgresql://test@127.0.0.1/test", size=1, max_idle_check_seconds=0.0
+    )
+
+    with pytest.raises(RuntimeError, match="commit failed"), pool() as conn:
+        conn.execute("INSERT INTO telemetry VALUES (1)")
+    assert len(created) == 1
+    assert created[0].closed
+
+    with pool() as conn:
+        conn.execute("SELECT 1 FROM machines LIMIT 0")
+    assert len(created) == 2
+    assert created[1] is conn
+    assert not created[1].closed
+
+    with pool() as conn:
+        assert conn is created[2]
+        assert created[1].closed
+        assert created[1].queries[-1] == "SELECT 1"
+
+    pool.close()
+    assert created[2].closed
