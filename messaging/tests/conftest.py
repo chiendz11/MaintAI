@@ -92,7 +92,7 @@ class ConsumerClient:
     def __init__(self, messages, *, during_wait=None, commit_error=None):
         self.messages, self.during_wait = deque(messages), during_wait
         self.commit_error = commit_error
-        self.commits, self.pauses = [], []
+        self.commits, self.pauses, self.resumes = [], [], []
         self._assignment, self.callbacks = [], {}
         self.paused = self.closed = False
         self.poll_count = 0
@@ -110,8 +110,9 @@ class ConsumerClient:
         self.paused = True
         self.pauses.append(list(partitions))
 
-    def resume(self, _partitions):
+    def resume(self, partitions):
         self.paused = False
+        self.resumes.append(list(partitions))
 
     def poll(self, _timeout):
         self.poll_count += 1

@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
 from backend.shared.copilot.config import origin
+from backend.shared.service_auth import ServiceOAuthConfig
 
 
 def flag(env, name):
@@ -33,9 +34,16 @@ class RebuildSettings:
             "BUSINESS_REBUILD_RAW_BUCKET",
             "BUSINESS_REBUILD_S3_REGION",
             "BUSINESS_PROCESSING_READ_URL",
-            "BUSINESS_PROCESSING_TOKEN_FILE",
         )
-        if not generations_enabled(env) or any(not env.get(name, "").strip() for name in names):
+        has_credential = (
+            bool(env.get("BUSINESS_PROCESSING_TOKEN_FILE", "").strip())
+            or ServiceOAuthConfig.from_env(env, local=local) is not None
+        )
+        if (
+            not generations_enabled(env)
+            or not has_credential
+            or any(not env.get(name, "").strip() for name in names)
+        ):
             raise ValueError(
                 "Rebuild requires generations, separate owner DB, Storage and Processing settings"
             )

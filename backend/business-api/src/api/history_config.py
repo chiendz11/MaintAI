@@ -63,7 +63,7 @@ class HistorySettings:
         return cls(key, kid, issuer, subject, cursors)
 
 
-def build(settings, connection_factory):
+def build(settings, connection_factory, *, token_provider=None):
     config = settings.history
     raw = Path(config.cursor_key_file).read_bytes()
     private = Path(config.signing_key_file).read_bytes()
@@ -87,6 +87,7 @@ def build(settings, connection_factory):
         httpx.AsyncClient(trust_env=False, follow_redirects=False),
         base_url=settings.processing_read_url,
         token_file=settings.processing_token_file,
+        token_provider=token_provider,
         signer=signer,
     )
     return HistoryFacade(client, schemas, markers=CompositeCharts(client, schemas, repository))

@@ -101,6 +101,9 @@ class ConsumerRunner:
         consumer.assign(partitions)
         if self._backpressured:
             consumer.pause(partitions)
+        elif partitions:
+            # librdkafka retains per-partition APP_PAUSE across revoke/assign.
+            consumer.resume(partitions)
 
     def _revoked(self, _consumer, _partitions):
         self._generation += 1

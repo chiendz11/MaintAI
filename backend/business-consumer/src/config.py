@@ -8,45 +8,8 @@ from urllib.parse import urlparse
 from backend.shared.copilot.config import M7Settings
 from backend.shared.notifications import DEFAULT_CHANNEL, Notifier
 from backend.shared.projections.config import RebuildSettings, generations_enabled
+from backend.shared.service_auth import INTERNAL_HOSTS, ServiceOAuthConfig, loopback  # noqa: F401
 from maintai_messaging.config import KafkaSettings
-
-INTERNAL_HOSTS = {
-    "localhost",
-    "127.0.0.1",
-    "::1",
-    "kafka",
-    "postgres",
-    "keycloak",
-    "business-api",
-    "business-consumer",
-    "processing-worker",
-    "processing-read-api",
-    "processing-outbox-relay",
-    "ml-service",
-    "ml-service-shadow",
-    "mlflow",
-    "sensor",
-    "simulator-ui",
-    "storage-consumer",
-    "minio",
-    "rag-service",
-}
-
-
-def loopback(host):
-    if not host:
-        return False
-    if (
-        host in INTERNAL_HOSTS
-        or host.endswith(".svc.cluster.local")
-        or host.endswith(".local")
-        or host.endswith(".internal")
-    ):
-        return True
-    try:
-        return host == "localhost" or ipaddress.ip_address(host).is_loopback
-    except ValueError:
-        return False
 
 
 @dataclass(frozen=True)
@@ -63,6 +26,7 @@ class Settings:
     m7: M7Settings | None = None
     projection_generations: bool = False
     rebuild: RebuildSettings | None = None
+    processing_oauth: ServiceOAuthConfig | None = None
 
     @classmethod
     def from_env(cls, env=None):
@@ -96,11 +60,14 @@ class Settings:
         if alert_channel == channel:
             raise ValueError("Alert and telemetry channels must differ")
         url, token = (
-            env.get("BUSINESS_PROCESSING_READ_URL", ""),
-            env.get("BUSINESS_PROCESSING_TOKEN_FILE", ""),
+            env.get("BUSINESS_PROCESSING_READ_URL", "").strip(),
+            env.get("BUSINESS_PROCESSING_TOKEN_FILE", "").strip(),
         )
-        if bool(url) != bool(token):
-            raise ValueError("Evidence requires both service origin and credential file")
+        local = profile == "local-test"
+        processing_oauth = ServiceOAuthConfig.from_env(env, local=local)
+        has_credential = bool(token) or processing_oauth is not None
+        if bool(url) != has_credential:
+            raise ValueError("Evidence requires both service origin and credentials")
         if profile == "shared" and not url:
             raise ValueError("Shared Alert Consumer requires Processing evidence credentials")
         if url:
@@ -114,10 +81,10 @@ class Settings:
                 or value.fragment
                 or value.path not in {"", "/"}
                 or (profile == "shared" and value.scheme != "https")
-                or (profile == "local-test" and not loopback(value.hostname))
+                or (local and not loopback(value.hostname))
             ):
                 raise ValueError("Invalid Processing evidence origin")
-        m7 = M7Settings.from_env(env, local=profile == "local-test")
+        m7 = M7Settings.from_env(env, local=local)
         return cls(
             database_url,
             kafka,
@@ -129,5 +96,6 @@ class Settings:
             token or None,
             m7,
             generations_enabled(env),
-            RebuildSettings.from_env(env, local=profile == "local-test"),
+            RebuildSettings.from_env(env, local=local),
+            processing_oauth,
         )

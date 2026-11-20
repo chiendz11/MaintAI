@@ -147,8 +147,12 @@ class KeyedConsumerRunner(ConsumerRunner):
     def _assigned(self, consumer, partitions):
         self._generation += 1
         self.rebalances += 1
+        self.paused -= {(p.topic, p.partition) for p in partitions}
         self.tokens.update(self.handler.acquire(partitions))
         consumer.assign(partitions)
+        if partitions:
+            # librdkafka retains per-partition APP_PAUSE across revoke/assign.
+            consumer.resume(partitions)
 
     def _revoked(self, _consumer, partitions):
         keys = {(p.topic, p.partition) for p in partitions}
