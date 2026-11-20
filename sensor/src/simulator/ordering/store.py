@@ -55,7 +55,7 @@ class StateStore:
             os.chmod(path, 0o600)
             self.db.row_factory = sqlite3.Row
             self.db.execute("PRAGMA journal_mode=WAL")
-            self.db.execute("PRAGMA synchronous=FULL")
+            self.db.execute("PRAGMA synchronous=NORMAL")
             self.db.execute("PRAGMA foreign_keys=ON")
             self.db.executescript("""
                 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -74,6 +74,7 @@ class StateStore:
                     error TEXT
                 );
                 CREATE INDEX IF NOT EXISTS spool_due ON spool(status, next_at, id);
+                CREATE INDEX IF NOT EXISTS spool_machine_status_id ON spool(machine_id, status, id);
                 CREATE TABLE IF NOT EXISTS commands (
                     actor TEXT NOT NULL, key TEXT NOT NULL, fingerprint TEXT NOT NULL,
                     response TEXT NOT NULL, created_at REAL NOT NULL,
@@ -224,56 +225,116 @@ class StateStore:
             )
             return response
 
+    def generate_many(
+        self,
+        machines: list[str] | tuple[str, ...],
+        build,
+        *,
+        max_records: int,
+        max_bytes: int,
+        now: float | None = None,
+    ) -> list[dict]:
+        if not machines:
+            return []
+        now = time.time() if now is None else now
+        unique = tuple(dict.fromkeys(machines))
+        placeholders = ",".join("?" for _ in unique)
+        with self.lock:
+            running = self.db.execute(
+                f"SELECT COUNT(*) FROM machines WHERE machine_id IN ({placeholders}) "
+                "AND stream_state='RUNNING'",
+                unique,
+            ).fetchone()[0]
+            if not running:
+                return []
+            with self.transaction() as db:
+                count, size = db.execute(
+                    "SELECT COUNT(*),COALESCE(SUM(size),0) FROM spool"
+                ).fetchone()
+                if count >= max_records:
+                    return []
+                machine_total = db.execute("SELECT COUNT(*) FROM machines").fetchone()[0]
+                rows = {
+                    r["machine_id"]: dict(r)
+                    for r in db.execute(
+                        f"SELECT * FROM machines WHERE machine_id IN ({placeholders})", unique
+                    )
+                }
+                events: list[dict] = []
+                for machine in machines:
+                    if count >= max_records:
+                        break
+                    row = rows.get(machine)
+                    if not row or row["stream_state"] != "RUNNING":
+                        continue
+                    payload = build(dict(row))
+                    if payload is None:
+                        continue
+                    sequence = row["sequence_number"] + 1
+                    payload.update(sequence_number=sequence)
+                    payload.setdefault("event_id", f"evt_{uuid4()}")
+                    payload.setdefault("correlation_id", f"cor_{uuid4()}")
+                    encoded = canonical(payload)
+                    byte_size = len(encoded.encode())
+                    if size + byte_size > max_bytes:
+                        continue
+                    db.execute(
+                        "INSERT INTO spool(event_id,machine_id,payload,size,created_at,next_at) "
+                        "VALUES (?,?,?,?,?,?)",
+                        (payload["event_id"], machine, encoded, byte_size, now, now),
+                    )
+                    db.execute(
+                        "UPDATE machines SET "
+                        "sequence_number=?,row_cursor=row_cursor+?,scenario_step=scenario_step+1 "
+                        "WHERE machine_id=?",
+                        (sequence, machine_total, machine),
+                    )
+                    row["sequence_number"] = sequence
+                    row["row_cursor"] += machine_total
+                    row["scenario_step"] += 1
+                    count += 1
+                    size += byte_size
+                    events.append(payload)
+                return events
+
     def generate(
         self, machine: str, build, *, max_records: int, max_bytes: int, now: float | None = None
     ) -> dict | None:
-        now = time.time() if now is None else now
-        with self.transaction() as db:
-            row = db.execute("SELECT * FROM machines WHERE machine_id=?", (machine,)).fetchone()
-            if not row or row["stream_state"] != "RUNNING":
-                return None
-            count, size = db.execute("SELECT COUNT(*),COALESCE(SUM(size),0) FROM spool").fetchone()
-            if count >= max_records:
-                return None
-            payload = build(dict(row))
-            if payload is None:
-                return None
-            sequence = row["sequence_number"] + 1
-            payload.update(sequence_number=sequence)
-            payload.setdefault("event_id", f"evt_{uuid4()}")
-            payload.setdefault("correlation_id", f"cor_{uuid4()}")
-            encoded = canonical(payload)
-            byte_size = len(encoded.encode())
-            if size + byte_size > max_bytes:
-                return None
-            db.execute(
-                "INSERT INTO spool(event_id,machine_id,payload,size,created_at,next_at) "
-                "VALUES (?,?,?,?,?,?)",
-                (payload["event_id"], machine, encoded, byte_size, now, now),
-            )
-            db.execute(
-                "UPDATE machines SET "
-                "sequence_number=?,row_cursor=row_cursor+?,scenario_step=scenario_step+1 "
-                "WHERE machine_id=?",
-                (sequence, db.execute("SELECT COUNT(*) FROM machines").fetchone()[0], machine),
-            )
-            return payload
+        events = self.generate_many(
+            [machine], build, max_records=max_records, max_bytes=max_bytes, now=now
+        )
+        return events[0] if events else None
 
-    def due(self, now: float, ttl: float, limit: int) -> list[dict]:
+    def due(
+        self,
+        now: float,
+        ttl: float,
+        limit: int,
+        *,
+        exclude_machines: tuple[str, ...] | list[str] = (),
+    ) -> list[dict]:
         with self.transaction() as db:
             db.execute(
                 "UPDATE spool SET status='expired',error='TTL_EXPIRED' WHERE "
                 "status='pending' AND created_at<?",
                 (now - ttl,),
             )
+            excluded = tuple(dict.fromkeys(exclude_machines))
+            clause = ""
+            params: list[object] = [now]
+            if excluded:
+                placeholders = ",".join("?" for _ in excluded)
+                clause = f"AND s.machine_id NOT IN ({placeholders}) "
+                params.extend(excluded)
+            params.append(limit)
             # One oldest pending row per machine; another machine's backoff never blocks this one.
             rows = db.execute(
-                """SELECT s.* FROM spool s WHERE status='pending' AND next_at<=?
+                f"""SELECT s.* FROM spool s WHERE status='pending' AND next_at<=? {clause}
                 AND NOT EXISTS (SELECT 1 FROM spool blocked WHERE blocked.machine_id=s.machine_id
                     AND blocked.status='auth')
                 AND NOT EXISTS (SELECT 1 FROM spool older WHERE older.machine_id=s.machine_id
                     AND older.status='pending' AND older.id<s.id) ORDER BY s.id LIMIT ?""",
-                (now, limit),
+                params,
             )
             return [dict(row) for row in rows]
 
