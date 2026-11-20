@@ -349,3 +349,42 @@ def test_outcomes_use_actual_source_and_provenance_without_calculating_risk(cont
     invalid = factory.invalid([{"field": "features.rotational_speed_rpm", "code": "RANGE"}])
     assert "prediction" not in invalid and "risk_score" not in invalid
     assert factory.unavailable("ML_TIMEOUT", 2)["kind"] == "INFERENCE_UNAVAILABLE"
+
+
+def test_serial_rebalance_resumes_previously_paused_partition(settings, contracts, example):
+    import time
+
+    from confluent_kafka import TopicPartition
+
+    class RebalancingClient(ConsumerClient):
+        def __init__(self, messages):
+            super().__init__(messages)
+            self.rebalanced = False
+
+        def poll(self, timeout):
+            if self.poll_count >= 1 and not self.rebalanced:
+                if not self.commits:
+                    self.poll_count += 1
+                    time.sleep(0.005)
+                    return None
+                self.rebalanced = True
+                part = [TopicPartition(self.topics[0], 0)]
+                self.pause(part)
+                self.callbacks["on_revoke"](self, part)
+                assert self.paused is True
+                self.callbacks["on_assign"](self, part)
+                assert self.paused is False
+            return super().poll(timeout)
+
+    client = RebalancingClient([message(example, offset=0), message(example, offset=1)])
+    runner = ConsumerRunner(
+        settings,
+        "processing",
+        lambda _event, record: DurableReceipt.for_record(record),
+        contracts=contracts,
+        client=client,
+    )
+    assert runner.run(max_records=2) == 2
+    assert len(client.resumes) >= 2
+    assert client.paused is False
+    assert [p.offset for p in client.commits] == [1, 2]

@@ -120,3 +120,35 @@ def test_test_group_bootstrap_discards_partial_offsets_after_transient_leader_er
     bootstrap.prepare_new_test_groups(settings)
     assert len(admin.requests) == 3
     assert {tp.offset for request in admin.requests for tp in request.topic_partitions} == {84}
+
+
+def test_consumer_settings_accept_processing_oauth_without_static_token_file():
+    from business_consumer.config import Settings
+
+    base = {
+        "BUSINESS_DATABASE_URL": "postgresql://test@127.0.0.1/test",
+        "BUSINESS_CONSUMER_PROFILE": "local-test",
+        "BUSINESS_CONSUMER_HOST": "0.0.0.0",
+        "KAFKA_LOCAL_MODE": "true",
+        "KAFKA_SECURITY_PROTOCOL": "PLAINTEXT",
+        "KAFKA_BOOTSTRAP_SERVERS": "kafka:9092",
+        "BUSINESS_PROCESSING_READ_URL": "http://processing-read-api:8004",
+        "BUSINESS_PROCESSING_OAUTH_TOKEN_URL": (
+            "http://keycloak:8080/realms/maintai/protocol/openid-connect/token"
+        ),
+        "BUSINESS_PROCESSING_OAUTH_CLIENT_ID": "maintai-processing",
+        "BUSINESS_PROCESSING_OAUTH_SECRET_FILE": "/credentials/processing/client_secret",
+    }
+    settings = Settings.from_env(base)
+    assert settings.processing_read_url == "http://processing-read-api:8004"
+    assert settings.processing_token_file is None
+    assert settings.processing_oauth is not None
+    assert settings.processing_oauth.client_id == "maintai-processing"
+    for invalid in (
+        {"BUSINESS_PROCESSING_OAUTH_SECRET_FILE": ""},
+        {"BUSINESS_PROCESSING_OAUTH_CLIENT_ID": ""},
+        {"BUSINESS_PROCESSING_OAUTH_TOKEN_URL": "http://public.idp.invalid/token"},
+        {"BUSINESS_PROCESSING_READ_URL": ""},
+    ):
+        with pytest.raises(ValueError):
+            Settings.from_env({**base, **invalid})

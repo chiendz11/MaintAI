@@ -309,3 +309,40 @@ def test_service_startup_failure_signals_already_started_sibling_loops(settings,
     with pytest.raises(ConfigurationError):
         service.serve_consumers(settings, {"business-live": lambda *_: None, "bad": None}, stop)
     assert started.is_set() and stop.is_set()
+
+
+def test_keyed_rebalance_resumes_previously_paused_partition(settings, contracts, example):
+    from confluent_kafka import TopicPartition
+
+    class RebalancingClient(ConsumerClient):
+        def __init__(self, messages):
+            super().__init__(messages)
+            self.rebalanced = False
+
+        def poll(self, timeout):
+            if self.poll_count >= 1 and not self.rebalanced:
+                if not self.commits:
+                    self.poll_count += 1
+                    time.sleep(0.005)
+                    return None
+                self.rebalanced = True
+                part = [TopicPartition(self.topics[0], 0)]
+                self.pause(part)
+                self.callbacks["on_revoke"](self, part)
+                assert self.paused is True
+                self.callbacks["on_assign"](self, part)
+                assert self.paused is False
+            return super().poll(timeout)
+
+    client = RebalancingClient([reading(example, "M-A", 1, 0), reading(example, "M-A", 2, 1)])
+    runner = KeyedConsumerRunner(
+        settings,
+        "processing",
+        FencedFixture(lambda *_: None),
+        contracts=contracts,
+        client=client,
+    )
+    assert runner.run(max_records=2) == 2
+    assert len(client.resumes) >= 2
+    assert client.rebalanced
+    assert [p.offset for p in client.commits] == [1, 2]

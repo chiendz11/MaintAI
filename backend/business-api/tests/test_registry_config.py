@@ -58,3 +58,29 @@ def test_status_dependency_requires_paired_origin_and_credential_file(tmp_path):
     ):
         with pytest.raises(ValueError):
             Settings.from_env({**env, **changes})
+
+
+def test_processing_oauth_replaces_static_token_file_and_redacts_secret():
+    oauth_env = {
+        **environment(),
+        "BUSINESS_PROCESSING_READ_URL": "http://processing-read-api:8004",
+        "BUSINESS_PROCESSING_OAUTH_TOKEN_URL": (
+            "http://keycloak:8080/realms/maintai/protocol/openid-connect/token"
+        ),
+        "BUSINESS_PROCESSING_OAUTH_CLIENT_ID": "maintai-processing",
+        "BUSINESS_PROCESSING_OAUTH_SECRET_FILE": "/credentials/processing/secret-super-sensitive",
+    }
+    config = Settings.from_env(oauth_env)
+    assert config.processing_read_url == "http://processing-read-api:8004"
+    assert config.processing_token_file is None
+    assert config.processing_oauth is not None
+    assert config.processing_oauth.client_id == "maintai-processing"
+    assert "secret-super-sensitive" not in repr(config)
+    for bad in (
+        {"BUSINESS_PROCESSING_OAUTH_SECRET_FILE": ""},
+        {"BUSINESS_PROCESSING_OAUTH_CLIENT_ID": ""},
+        {"BUSINESS_PROCESSING_OAUTH_TOKEN_URL": "http://external-idp.example/token"},
+        {"BUSINESS_PROCESSING_READ_URL": ""},
+    ):
+        with pytest.raises(ValueError):
+            Settings.from_env({**oauth_env, **bad})

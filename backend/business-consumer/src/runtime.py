@@ -18,9 +18,19 @@ def serve(settings, *, stop=None, connection_factory=None):
     factory = connection_factory or (lambda: connect(settings.database_url))
     metrics = Metrics(stop=stop)
     from backend.shared.alerts.evidence import EvidenceClient
+    from backend.shared.service_auth import ServiceOAuthTokenProvider
 
+    token_provider = (
+        ServiceOAuthTokenProvider(settings.processing_oauth)
+        if getattr(settings, "processing_oauth", None)
+        else None
+    )
     evidence = (
-        EvidenceClient(settings.processing_read_url, settings.processing_token_file)
+        EvidenceClient(
+            settings.processing_read_url,
+            settings.processing_token_file,
+            token_provider=token_provider,
+        )
         if settings.processing_read_url
         else None
     )
@@ -51,7 +61,7 @@ def serve(settings, *, stop=None, connection_factory=None):
     if settings.rebuild is not None:
         from backend.shared.projections.runtime import build_runner
 
-        runners.append(build_runner(settings, stop))
+        runners.append(build_runner(settings, stop, token_provider=token_provider))
     rebuild_metrics = None
     if settings.projection_generations:
         from backend.shared.projections.metrics import RebuildMetrics

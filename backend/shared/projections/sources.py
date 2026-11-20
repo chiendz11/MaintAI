@@ -13,6 +13,8 @@ import httpx
 from maintai_messaging.contracts import canonical_json, default_contracts, strict_json
 from maintai_storage.catalog import CatalogReader, validate
 
+from backend.shared.service_auth import resolve_bearer_token
+
 MAX_WIRE = 1024 * 1024
 
 
@@ -32,49 +34,64 @@ def verify(event, member):
 
 
 class OutcomeSource:
-    def __init__(self, origin, token_file, *, transport=None):
-        self.origin, self.token_file, self.transport = (
-            origin.rstrip("/"),
-            Path(token_file),
-            transport,
+    def __init__(self, origin, token_file=None, *, token_provider=None, transport=None):
+        if token_file is None and token_provider is None:
+            raise ValueError("Outcome credential file or OAuth token provider is required")
+        self.origin = origin.rstrip("/")
+        self.token_file = Path(token_file) if token_file is not None else None
+        self.token_provider = token_provider
+        self.transport = transport
+
+    def _token(self, *, force_refresh=False):
+        return resolve_bearer_token(
+            token_file=self.token_file,
+            token_provider=self.token_provider,
+            force_refresh=force_refresh,
         )
 
     async def _read(self, member):
         async with asyncio.timeout(3):
-            with self.token_file.open("rb") as stream:
-                raw = stream.read(16385)
-            token = raw.decode("ascii").strip()
-            if (
-                len(raw) > 16377
-                or not token
-                or not token.isprintable()
-                or any(c.isspace() for c in token)
-            ):
-                raise ValueError("Invalid service credential file")
+            token = await asyncio.to_thread(self._token)
             segment = quote(member["message_id"], safe="")
             if member["message_id"] in {".", ".."}:
                 segment = segment.replace(".", "%2E")
             async with httpx.AsyncClient(
                 transport=self.transport, trust_env=False, timeout=2
             ) as client:
-                async with client.stream(
-                    "GET",
-                    self.origin + "/api/v1/internal/predictions/" + segment,
-                    follow_redirects=False,
-                    headers={"Authorization": "Bearer " + token, "Accept-Encoding": "identity"},
-                ) as response:
-                    if response.status_code in {408, 429} or response.status_code >= 500:
-                        raise SourcePending("Processing original source temporarily unavailable")
-                    if response.status_code != 200:
-                        raise ValueError("Processing original source unavailable or unauthorized")
-                    if response.headers.get("Content-Encoding", "identity") != "identity":
-                        raise ValueError("Unexpected encoded original source")
-                    body = bytearray()
-                    async for chunk in response.aiter_bytes(chunk_size=8192):
-                        if len(body) + len(chunk) > MAX_WIRE:
-                            raise ValueError("Original source exceeds byte budget")
-                        body.extend(chunk)
-                    value = strict_json(bytes(body))
+                body = bytearray()
+                for attempt in range(2 if self.token_provider is not None else 1):
+                    async with client.stream(
+                        "GET",
+                        self.origin + "/api/v1/internal/predictions/" + segment,
+                        follow_redirects=False,
+                        headers={
+                            "Authorization": "Bearer " + token,
+                            "Accept-Encoding": "identity",
+                        },
+                    ) as response:
+                        if (
+                            response.status_code == 401
+                            and self.token_provider is not None
+                            and attempt == 0
+                        ):
+                            token = await asyncio.to_thread(self._token, force_refresh=True)
+                            continue
+                        if response.status_code in {408, 429} or response.status_code >= 500:
+                            raise SourcePending(
+                                "Processing original source temporarily unavailable"
+                            )
+                        if response.status_code != 200:
+                            raise ValueError(
+                                "Processing original source unavailable or unauthorized"
+                            )
+                        if response.headers.get("Content-Encoding", "identity") != "identity":
+                            raise ValueError("Unexpected encoded original source")
+                        async for chunk in response.aiter_bytes(chunk_size=8192):
+                            if len(body) + len(chunk) > MAX_WIRE:
+                                raise ValueError("Original source exceeds byte budget")
+                            body.extend(chunk)
+                        break
+                value = strict_json(bytes(body))
             if value.get("result_id") != member["message_id"] or not isinstance(
                 value.get("outcome"), dict
             ):
@@ -92,6 +109,10 @@ class OutcomeSource:
             return asyncio.run(self._read(member))
         except (httpx.HTTPError, TimeoutError) as exc:
             raise SourcePending("Processing original source temporarily unavailable") from exc
+        except RuntimeError as exc:
+            if isinstance(exc, SourcePending) or self.token_provider is None:
+                raise
+            raise SourcePending("Processing OAuth credential temporarily unavailable") from exc
 
 
 class RawSource:

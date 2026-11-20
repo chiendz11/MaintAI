@@ -10,6 +10,7 @@ import uvicorn
 from backend.shared.alerts.repository import AlertRepository
 from backend.shared.persistence.projections import ProjectionRepository
 from backend.shared.persistence.registry import RegistryRepository
+from backend.shared.service_auth import ServiceOAuthTokenProvider
 from business_processing_client import ProcessingStatusClient
 from business_sse.hub import NotificationHub
 from psycopg.rows import dict_row
@@ -40,12 +41,18 @@ def main(argv=None):
             machines_claim=settings.machines_claim,
             fetch_jwks=jwks_fetcher(settings.jwks_url),
         )
+        token_provider = (
+            ServiceOAuthTokenProvider(settings.processing_oauth)
+            if settings.processing_oauth
+            else None
+        )
         status_client = None
         if settings.processing_read_url:
             status_client = ProcessingStatusClient(
                 httpx.AsyncClient(trust_env=False, follow_redirects=False),
                 base_url=settings.processing_read_url,
                 token_file=settings.processing_token_file,
+                token_provider=token_provider,
             )
         logging.basicConfig(level=logging.INFO, format="%(message)s")
         alerts = AlertRepository(repository.connection_factory, channel=settings.sse.alert_channel)
@@ -72,7 +79,9 @@ def main(argv=None):
                 alerts=alerts,
                 briefs=briefs,
                 monitoring=monitoring,
-                history=build_history(settings, repository.connection_factory)
+                history=build_history(
+                    settings, repository.connection_factory, token_provider=token_provider
+                )
                 if settings.history
                 else None,
                 notifications=NotificationHub(

@@ -7,47 +7,10 @@ from urllib.parse import urlparse
 
 from backend.shared.copilot.config import M7Settings
 from backend.shared.projections.config import generations_enabled
+from backend.shared.service_auth import INTERNAL_HOSTS, ServiceOAuthConfig, loopback  # noqa: F401
 from business_sse.hub import SSESettings
 
 from .history_config import HistorySettings
-
-INTERNAL_HOSTS = {
-    "localhost",
-    "127.0.0.1",
-    "::1",
-    "kafka",
-    "postgres",
-    "keycloak",
-    "business-api",
-    "business-consumer",
-    "processing-worker",
-    "processing-read-api",
-    "processing-outbox-relay",
-    "ml-service",
-    "ml-service-shadow",
-    "mlflow",
-    "sensor",
-    "simulator-ui",
-    "storage-consumer",
-    "minio",
-    "rag-service",
-}
-
-
-def loopback(host):
-    if not host:
-        return False
-    if (
-        host in INTERNAL_HOSTS
-        or host.endswith(".svc.cluster.local")
-        or host.endswith(".local")
-        or host.endswith(".internal")
-    ):
-        return True
-    try:
-        return host == "localhost" or ipaddress.ip_address(host).is_loopback
-    except ValueError:
-        return False
 
 
 @dataclass(frozen=True)
@@ -66,6 +29,7 @@ class Settings:
     history: HistorySettings | None = None
     m7: M7Settings | None = None
     projection_generations: bool = False
+    processing_oauth: ServiceOAuthConfig | None = None
 
     @classmethod
     def from_env(cls, env=None):
@@ -110,8 +74,10 @@ class Settings:
                 raise ValueError("Shared OIDC requires HTTPS")
         processing_url = env.get("BUSINESS_PROCESSING_READ_URL", "").strip()
         processing_token = env.get("BUSINESS_PROCESSING_TOKEN_FILE", "").strip()
-        if bool(processing_url) != bool(processing_token):
-            raise ValueError("Processing status requires both service origin and credential file")
+        processing_oauth = ServiceOAuthConfig.from_env(env, local=local)
+        has_credential = bool(processing_token) or processing_oauth is not None
+        if bool(processing_url) != has_credential:
+            raise ValueError("Processing status requires both service origin and credentials")
         if processing_url:
             url = urlparse(processing_url)
             if (
@@ -142,4 +108,5 @@ class Settings:
             HistorySettings.from_env(env, processing_url=processing_url, local=local),
             M7Settings.from_env(env, local=local),
             generations_enabled(env),
+            processing_oauth,
         )

@@ -12,63 +12,87 @@ import httpx
 from maintai_messaging.contracts import strict_json
 from maintai_messaging.errors import ContractViolation, IdentityConflict
 
+from backend.shared.service_auth import resolve_bearer_token
+
 from .domain import validate_evidence
 
 
 class EvidenceClient:
-    def __init__(self, base_url, token_file, *, transport=None, deadline_seconds=3):
-        self.base_url, self.token_file = base_url.rstrip("/"), Path(token_file)
+    def __init__(
+        self,
+        base_url,
+        token_file=None,
+        *,
+        token_provider=None,
+        transport=None,
+        deadline_seconds=3,
+    ):
+        if token_file is None and token_provider is None:
+            raise ValueError("Evidence credential file or OAuth token provider is required")
+        self.base_url = base_url.rstrip("/")
+        self.token_file = Path(token_file) if token_file is not None else None
+        self.token_provider = token_provider
         self.transport, self.budget = transport, deadline_seconds
         if not 0 < self.budget <= 3:
             raise ValueError("Evidence deadline must not exceed three seconds")
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="alert-evidence")
         self.admission = threading.BoundedSemaphore(1)
 
-    def _token(self):
-        if not self.token_file.is_file():
-            raise ValueError("Service credential must be a regular file")
-        with self.token_file.open("rb") as source:
-            raw = source.read(16385)
-        token = raw.decode("ascii").strip()
-        if (
-            len(raw) > 16377
-            or not token
-            or not token.isprintable()
-            or any(c.isspace() for c in token)
-        ):
-            raise ValueError("Invalid service credential")
-        return token
+    def _token(self, *, force_refresh=False, timeout=None):
+        return resolve_bearer_token(
+            token_file=self.token_file,
+            token_provider=self.token_provider,
+            force_refresh=force_refresh,
+            timeout=timeout,
+        )
 
     async def _fetch(self, signal, deadline):
         async with asyncio.timeout(max(0, deadline - time.monotonic())):
-            token = self._token()
+            token = await asyncio.to_thread(
+                self._token,
+                timeout=min(2, max(0.05, deadline - time.monotonic())),
+            )
             async with httpx.AsyncClient(transport=self.transport, trust_env=False) as client:
 
                 async def get(path):
-                    async with client.stream(
-                        "GET",
-                        self.base_url + path,
-                        follow_redirects=False,
-                        timeout=min(2, max(0.001, deadline - time.monotonic())),
-                        headers={
-                            "Authorization": "Bearer " + token,
-                            "X-Correlation-ID": signal["correlation_id"],
-                            "Accept-Encoding": "identity",
-                        },
-                    ) as response:
-                        if (
-                            response.status_code != 200
-                            or response.headers.get("Content-Encoding", "identity") != "identity"
-                            or response.headers.get("Content-Type", "").split(";")[0]
-                            != "application/json"
-                        ):
-                            raise RuntimeError("Processing evidence unavailable")
-                        raw = bytearray()
-                        async for chunk in response.aiter_bytes():
-                            raw.extend(chunk)
-                            if len(raw) > 262144:
-                                raise ValueError("Evidence response exceeds bound")
-                        return strict_json(bytes(raw))
+                    nonlocal token
+                    for attempt in range(2 if self.token_provider is not None else 1):
+                        async with client.stream(
+                            "GET",
+                            self.base_url + path,
+                            follow_redirects=False,
+                            timeout=min(2, max(0.001, deadline - time.monotonic())),
+                            headers={
+                                "Authorization": "Bearer " + token,
+                                "X-Correlation-ID": signal["correlation_id"],
+                                "Accept-Encoding": "identity",
+                            },
+                        ) as response:
+                            if (
+                                response.status_code == 401
+                                and self.token_provider is not None
+                                and attempt == 0
+                            ):
+                                token = await asyncio.to_thread(
+                                    self._token,
+                                    force_refresh=True,
+                                    timeout=min(2, max(0.05, deadline - time.monotonic())),
+                                )
+                                continue
+                            if (
+                                response.status_code != 200
+                                or response.headers.get("Content-Encoding", "identity")
+                                != "identity"
+                                or response.headers.get("Content-Type", "").split(";")[0]
+                                != "application/json"
+                            ):
+                                raise RuntimeError("Processing evidence unavailable")
+                            raw = bytearray()
+                            async for chunk in response.aiter_bytes():
+                                raw.extend(chunk)
+                                if len(raw) > 262144:
+                                    raise ValueError("Evidence response exceeds bound")
+                            return strict_json(bytes(raw))
 
                 def segment(value):
                     return (

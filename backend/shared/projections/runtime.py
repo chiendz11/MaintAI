@@ -10,7 +10,7 @@ from backend.shared.projections.runner import RebuildRunner
 from backend.shared.projections.sources import OutcomeSource, RawSource
 
 
-def build_runner(settings, stop):
+def build_runner(settings, stop, *, token_provider=None):
     config = settings.rebuild
 
     def factory():
@@ -26,6 +26,10 @@ def build_runner(settings, stop):
     return RebuildRunner(
         repository,
         RawSource(repository, CatalogStore(s3, config.bucket)),
-        OutcomeSource(settings.processing_read_url, settings.processing_token_file),
+        OutcomeSource(
+            settings.processing_read_url,
+            settings.processing_token_file,
+            token_provider=token_provider,
+        ),
         stop,
     )
