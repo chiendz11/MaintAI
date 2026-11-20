@@ -333,11 +333,16 @@ class OrderedOutboxRelay(OutboxRelay):
             require_ordering(connection)
             key = connection.execute(
                 "SELECT k.topic,k.message_key FROM maintai_outbox_keys k "
-                "JOIN maintai_kafka_outbox o ON o.topic=k.topic AND o.message_key=k.message_key "
+                "CROSS JOIN LATERAL ("
+                "SELECT o.created_at FROM maintai_kafka_outbox o "
+                "WHERE o.topic=k.topic AND o.message_key=k.message_key "
                 "AND o.dispatch_seq=k.last_published+1 "
-                "WHERE (k.owner IS NULL OR k.lease_until<clock_timestamp()) "
                 "AND ((o.status='PENDING' AND o.next_attempt_at<=clock_timestamp()) "
                 "OR (o.status='LEASED' AND o.lease_until<clock_timestamp())) "
+                "LIMIT 1"
+                ") o "
+                "WHERE k.last_published<k.last_allocated "
+                "AND (k.owner IS NULL OR k.lease_until<clock_timestamp()) "
                 "ORDER BY o.created_at,k.topic,k.message_key "
                 "LIMIT 1 FOR UPDATE OF k SKIP LOCKED"
             ).fetchone()
