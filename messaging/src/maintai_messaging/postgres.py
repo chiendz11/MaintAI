@@ -174,7 +174,7 @@ class OutboxRelay:
                    SET status=%s, published_at=CASE WHEN %s THEN clock_timestamp() ELSE NULL END,
                        next_attempt_at=clock_timestamp()+(%s * interval '1 second'),
                        lease_owner=NULL, lease_until=NULL, last_error=%s
-                   WHERE topic=%s AND message_id=%s AND status='LEASED'
+                   WHERE topic=%s AND message_id=%s AND COALESCE(status, '')='LEASED'
                      AND lease_owner=%s AND fencing_token=%s
                      AND lease_until>=clock_timestamp() RETURNING message_id""",
             (
