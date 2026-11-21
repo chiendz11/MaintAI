@@ -139,8 +139,9 @@ chỉ là version và hash machine ID; API đọc lại live snapshot và fan-ou
 | BUSINESS_SSE_MAX_CONNECTIONS | 128 mỗi API process |
 | BUSINESS_SSE_CONNECTION_BYTES | 2097152 pending bytes mỗi connection |
 | BUSINESS_SSE_TOTAL_BYTES | 8388608 pending bytes mỗi API process |
+| BUSINESS_SSE_COALESCE_SECONDS | 0.05 (50ms gom notification/máy; vòng `_pump` `min(50ms, max(10ms, coalesce/2))` = 25ms) |
 
-Coalesce tối đa1update/giây/máy; heartbeat15s. Slow client/vượt budget hoặc listener
+Coalesce mặc định 50ms/máy (`BUSINESS_SSE_COALESCE_SECONDS=0.05`, đọc batch `ProjectionRepository.live_many` khi nhiều máy cùng dirty); queue mỗi subscription tối đa 512 frames; heartbeat 15s. Slow client/vượt budget hoặc listener
 mất kết nối sẽ đóng stream để client reconnect và REST resync. Không durable replay
 từ Last-Event-ID; notification mất được phục hồi từ snapshot. Listener connection
 phải nối thẳng PostgreSQL hoặc session pooling, không transaction-pooling LISTEN.

@@ -124,21 +124,14 @@ class ProjectionRepository:
             )
         return True
 
-    def live(self, machine_id):
-        with self.connection_factory() as connection:
-            self._ready(connection)
-            row = connection.execute(
-                self._query("""SELECT m.machine_id,t.snapshot AS telemetry,p.snapshot AS processing,
+    _LIVE_ROWS = """SELECT m.machine_id,t.snapshot AS telemetry,p.snapshot AS processing,
                 v.snapshot AS prediction,statement_timestamp() AS as_of FROM machines m
                 LEFT JOIN latest_telemetry t USING(machine_id)
                 LEFT JOIN latest_processing p USING(machine_id)
-                LEFT JOIN latest_valid_prediction v USING(machine_id)
-                WHERE m.machine_id=%s"""),
-                (machine_id,),
-            ).fetchone()
-        if row is None:
-            return None
+                LEFT JOIN latest_valid_prediction v USING(machine_id)"""
 
+    @staticmethod
+    def _live_snapshot(row):
         def decode(value):
             return json.loads(bytes(value)) if value is not None else None
 
@@ -149,3 +142,26 @@ class ProjectionRepository:
             "latest_valid_prediction": decode(row["prediction"]),
             "as_of": row["as_of"].isoformat(),
         }
+
+    def live(self, machine_id):
+        with self.connection_factory() as connection:
+            self._ready(connection)
+            row = connection.execute(
+                self._query(self._LIVE_ROWS + " WHERE m.machine_id=%s"),
+                (machine_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return self._live_snapshot(row)
+
+    def live_many(self, machine_ids):
+        ids = list(dict.fromkeys(machine_ids))
+        if not ids:
+            return {}
+        with self.connection_factory() as connection:
+            self._ready(connection)
+            rows = connection.execute(
+                self._query(self._LIVE_ROWS + " WHERE m.machine_id=ANY(%s)"),
+                (ids,),
+            ).fetchall()
+        return {row["machine_id"]: self._live_snapshot(row) for row in rows}
