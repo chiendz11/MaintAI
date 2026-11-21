@@ -304,3 +304,5 @@ projection và REST/SSE. Sau đó kiểm alert lifecycle, phân quyền, RAG khi
 archive/history và phục hồi. Khi luồng đã đúng mới đo LOAD-D5, LOAD-N100 và các
 mức LOAD-X. Mỗi kết quả cần ghi rõ input, phiên bản, môi trường và lần chạy để
 người đọc biết phần nào là mục tiêu thiết kế và phần nào đã được xác nhận.
+
+> **Cập nhật trạng thái thực nghiệm local (21/11/2026):** Toàn bộ pipeline tích hợp trên cụm `k3d` đơn nút đã được vận hành và đo kiểm end-to-end tới SSE trình duyệt ở **baseline local 50 máy (`LOAD-L50`, `50 readings/s`)** — xem chi tiết cấu hình cụm và số đo tại [LOCAL_BASELINE_50_MACHINES_REPORT.md](../reports/LOCAL_BASELINE_50_MACHINES_REPORT.md). Đánh giá đầy đủ ở mốc `100 readings/s` trên phần cứng lớn hơn và AWS HA vẫn là hạng mục tách riêng ngoài phạm vi laptop local.

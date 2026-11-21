@@ -49,8 +49,8 @@
 
 > [!IMPORTANT]
 > **Phân biệt phạm vi Local Demo và Production:**
-> - **Baseline 100 máy vs Smoke 5 máy:** Kiến trúc thiết kế ban đầu cho 100 máy × 1 reading/s (`scale-ready` cho $X > 100$ theo [02_ASSUMPTIONS_AND_CAPACITY.md §11](../design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100)); cấu hình mặc định trên laptop sử dụng 5 máy (`M-001`..`M-005`) để trình diễn luồng thực.
-> - **Giới hạn local:** 1 broker không kiểm HA/replication; MinIO không thay AWS IAM/IRSA/KMS; secrets, TLS CA, datasets và receipts nằm trong `Maint-infrastructure/local/.local/` (ngoài Git). Không đưa PLAINTEXT Kafka, replication 1 hoặc marker `not-recorded:local-demo` lên production.
+> - **Baseline thiết kế 100 máy vs Baseline vận hành Local 50 máy vs Smoke 5 máy:** Kiến trúc thiết kế gốc đặt mục tiêu 100 máy × 1 reading/s (`scale-ready` cho $X > 100$ theo [02_ASSUMPTIONS_AND_CAPACITY.md §11](../design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100)). Trên laptop đơn nút 15–16 GiB RAM, **baseline vận hành local chuẩn là 50 máy (`M-001`..`M-050`, `SIM_MACHINE_COUNT=50`, `50 readings/s`)** với cấu hình replica và số đo đã nghiệm thu tại [LOCAL_BASELINE_50_MACHINES_REPORT.md](../reports/LOCAL_BASELINE_50_MACHINES_REPORT.md); profile tối thiểu `5` máy (`M-001`..`M-005`) giữ cho smoke nhanh.
+> - **Giới hạn local & Lưu ý đĩa `/data`:** 1 broker không kiểm HA/replication; MinIO không thay AWS IAM/IRSA/KMS; secrets, TLS CA, datasets và receipts nằm trong `Maint-infrastructure/local/.local/` (ngoài Git). Không đưa PLAINTEXT Kafka, replication 1 hoặc marker `not-recorded:local-demo` lên production. k3s sẽ bật `DiskPressure=True` nếu `/data` vượt ngưỡng `85%` (`<15%` trống), vì vậy nên tạm `Pause` các máy trên Simulator UI khi không theo dõi; nếu đổi `SIM_MACHINE_COUNT` trên PVC `local-sensor-state` cũ cần tách/reset volume do guard `source_identity`.
 
 ---
 
@@ -99,7 +99,7 @@ Kiểm tra file cấu hình private `local/.local/settings.json`:
   "gitops_revision": "main",
   "gitops_checkout": "../MaintAI-gitops",
   "app_checkout": "../MaintAI",
-  "machine_count": 5
+  "machine_count": 50
 }
 ```
 
@@ -113,7 +113,7 @@ Toàn bộ hạ tầng local (`k3d`, LocalStack, ESO, Ingress-NGINX, `cert-manag
 flowchart TD
     A["1. terraform destroy / k3d cluster delete<br/>(Tùy chọn: Xóa cụm cũ nếu làm lại từ đầu)"] --> B["2. terraform apply<br/>(Tạo k3d + LocalStack + ESO + Ingress + cert-manager + Argo CD)"]
     B --> C["3. Argo CD Reconcile (nhánh main)<br/>(Đồng bộ platform, observability, apps)"]
-    C --> D["4. PreSync Migration Hooks<br/>- business-db-migration: Seed M-001..M-005 + Grants<br/>- processing-db-migration: Ordering Activation + History Grants<br/>- rag-knowledge-init: Cache MiniLM + Ingest PDF"]
+    C --> D["4. PreSync Migration Hooks<br/>- business-db-migration: Seed M-001..M-050 (hoặc 5 máy smoke) + Grants<br/>- processing-db-migration: Ordering Activation + History Grants<br/>- rag-knowledge-init: Cache MiniLM + Ingest PDF"]
     D --> E["5. Deployments Ready<br/>(Toàn bộ microservices & Shadow ML Healthy)"]
 ```
 
@@ -169,7 +169,7 @@ kubectl --context k3d-maintai-local -n argocd patch application maintai-local-ap
 
 Khi đồng bộ, Argo CD tự động thực thi:
 1. **PreSync Stage:** Chạy các Kubernetes Jobs:
-   - `business-db-migration`: Chạy `maintai-business-migrate upgrade`, seed 5 máy mẫu (`M-001`..`M-005`) và cấp quyền cho business roles.
+   - `business-db-migration`: Chạy `maintai-business-migrate upgrade`, seed danh sách máy local (`M-001`..`M-050` cho baseline local 50 máy, hoặc `M-001`..`M-005` cho smoke) và cấp quyền cho business roles.
    - `processing-db-migration`: Chạy `maintai-processing-migrate upgrade`, kích hoạt cơ chế FIFO Ordered Processing và cấp quyền `processing_history_meta`.
    - `rag-knowledge-init`: Tải trước embedding model MiniLM vào PVC cache và index tài liệu PDF mẫu vào pgvector.
 2. **Sync Stage:** Pull container images từ `ghcr.io/chiendz11/...` và rollout toàn bộ Pods (`Running`).
@@ -249,7 +249,7 @@ k3d cluster delete maintai-local
 | Giao diện / Dịch vụ | URL trên laptop | Thông tin đăng nhập / Mục đích |
 | :--- | :--- | :--- |
 | **Business Dashboard UI** | `http://127.0.0.1:18080` | Giám sát máy thời gian thực, Cảnh báo (Alerts), Lịch sử M6, Export CSV/Parquet & Graceful Degradation UI |
-| **Simulator Control UI** | `http://127.0.0.1:18081` | Điều khiển 5 máy ảo Sensor (`M-001`..`M-005`): Resume/Pause, đổi Scenario & inject sự cố |
+| **Simulator Control UI** | `http://127.0.0.1:18081` | Điều khiển tối đa 50 máy ảo Sensor (`M-001`..`M-050` theo baseline local): Resume/Pause, đổi Scenario & inject sự cố |
 | **Keycloak IdP** | `https://127.0.0.1:18490` | Tài khoản kỹ thuật viên: `technician` / `technician123` hoặc `administrator` / `admin123` (hoặc trong `local/.local/credentials.json`) |
 | **Grafana Observability** | `http://127.0.0.1:13000` | Metrics Prometheus, Consumer Lag Kafka, Latency & Logs Loki |
 | **Prometheus Server** | `http://127.0.0.1:19090` | Truy vấn metrics time-series trực tiếp |
@@ -275,7 +275,7 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.pas
 
 ## 6. Kịch bản Trình diễn Demo (E2E Walkthrough)
 
-1. **Khởi động Sensor phát Dữ liệu:** Mở **Simulator UI** (`http://127.0.0.1:18081`). Ban đầu cả 5 máy ở trạng thái `PAUSED`. Bấm **Resume** trên `M-001` (hoặc cả 5 máy). Sensor đẩy reading qua `Ingestion API` (HTTP 202) → Kafka `sensor.readings`.
+1. **Khởi động Sensor phát Dữ liệu:** Mở **Simulator UI** (`http://127.0.0.1:18081`). Ban đầu toàn bộ máy (tối đa `50` máy `M-001`..`M-050` ở baseline local, hoặc `5` máy ở smoke) ở trạng thái `PAUSED`. Bấm **Resume** trên `M-001` (hoặc chọn máy muốn chạy). Sensor đẩy reading qua `Ingestion API` (HTTP 202) → Kafka `sensor.readings`.
 2. **Xem Telemetry & Prediction Real-time trên Business UI:** Mở **Business UI** (`http://127.0.0.1:18080`). Các chỉ số (`Air temp`, `Process temp`, `Rotational speed`, `Torque`, `Tool wear`) cập nhật qua SSE; `ml-service` đánh giá rủi ro đồng thời nhân bản traffic sang `ml-service-shadow`.
 3. **Mô phỏng Sự cố & Vòng đời Cảnh báo (Alert Lifecycle):** Trên Simulator UI chọn `M-001` chuyển sang scenario `CRITICAL` / `DEGRADATION`. Trên Business UI mở tab **Alerts** và đăng nhập tài khoản `technician` thực hiện: `ACK` → `START` → nhập ghi chú phản hồi → `RESOLVE`.
 4. **Kiểm chứng Graceful Degradation UI khi AI/Processing gặp sự cố:** Khi luồng inference suy giảm hoặc gián đoạn, giao diện vẫn hiển thị **Physical Guardrails** (cảnh báo ngưỡng vật lý từ telemetry thô và xu hướng cảm biến gần nhất) tách bạch rõ ràng với kết quả dự báo AI hợp lệ gần nhất (`Latest Valid Prediction`).
