@@ -75,6 +75,7 @@ class StateStore:
                 );
                 CREATE INDEX IF NOT EXISTS spool_due ON spool(status, next_at, id);
                 CREATE INDEX IF NOT EXISTS spool_machine_status_id ON spool(machine_id, status, id);
+                CREATE INDEX IF NOT EXISTS spool_pending_created ON spool(status, created_at);
                 CREATE TABLE IF NOT EXISTS commands (
                     actor TEXT NOT NULL, key TEXT NOT NULL, fingerprint TEXT NOT NULL,
                     response TEXT NOT NULL, created_at REAL NOT NULL,
@@ -324,16 +325,21 @@ class StateStore:
             params: list[object] = [now]
             if excluded:
                 placeholders = ",".join("?" for _ in excluded)
-                clause = f"AND s.machine_id NOT IN ({placeholders}) "
+                clause = f"AND m.machine_id NOT IN ({placeholders}) "
                 params.extend(excluded)
             params.append(limit)
             # One oldest pending row per machine; another machine's backoff never blocks this one.
             rows = db.execute(
-                f"""SELECT s.* FROM spool s WHERE status='pending' AND next_at<=? {clause}
-                AND NOT EXISTS (SELECT 1 FROM spool blocked WHERE blocked.machine_id=s.machine_id
+                f"""SELECT s.* FROM machines m
+                JOIN spool s ON s.id = (
+                    SELECT id FROM spool
+                    WHERE machine_id = m.machine_id AND status = 'pending'
+                    ORDER BY id LIMIT 1
+                )
+                WHERE s.next_at<=? {clause}
+                AND NOT EXISTS (SELECT 1 FROM spool blocked WHERE blocked.machine_id=m.machine_id
                     AND blocked.status='auth')
-                AND NOT EXISTS (SELECT 1 FROM spool older WHERE older.machine_id=s.machine_id
-                    AND older.status='pending' AND older.id<s.id) ORDER BY s.id LIMIT ?""",
+                ORDER BY s.id LIMIT ?""",
                 params,
             )
             return [dict(row) for row in rows]
