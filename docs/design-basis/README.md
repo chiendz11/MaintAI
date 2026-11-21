@@ -35,6 +35,8 @@ các thành phần có ranh giới trách nhiệm để tối ưu hoặc tăng n
 số máy lớn hơn 100. Đây là định hướng thiết kế; năng lực phục vụ một mức tải cụ
 thể cần được xác nhận bằng đo đạc trên cấu hình và môi trường tương ứng.
 
+> **Ghi chú vận hành local (21/11/2026):** Trên cụm `k3d` một nút chạy trên máy cá nhân 15–16 GiB RAM, nhóm chốt **baseline vận hành local 50 máy (`M-001`..`M-050`, 50 readings/s)** và đã đo kiểm thực tế từ đầu vào tới SSE trên trình duyệt tại [báo cáo baseline 50 máy](../reports/LOCAL_BASELINE_50_MACHINES_REPORT.md); mốc thiết kế kiến trúc 100 máy (`CAPACITY-BASE100-01`) trong bộ tài liệu này và bản PDF nộp vẫn giữ nguyên cho môi trường đủ tài nguyên.
+
 ## Cấu trúc và thứ tự đọc
 
 | Phần | Nội dung và câu hỏi chính |

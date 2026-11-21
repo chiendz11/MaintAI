@@ -34,8 +34,9 @@ kết quả để tránh lấy một lần chạy nhỏ làm bằng chứng cho 
 
 | ID | Điều kiện | Tổng tải | Mục đích |
 | --- | --- | --- | --- |
-| LOAD-N100 | 100 máy, mỗi máy gửi 1 reading/s. | Trung bình 100 readings/s. | Baseline vận hành ban đầu đã chốt; cần đo năng lực và độ trễ thực tế. |
-| LOAD-D5 | 5 máy, mỗi máy gửi 1 reading/s. | Trung bình 5 readings/s. | Chạy thử nhỏ để kiểm tra các thành phần đã nối đúng; dùng cấu hình khởi đầu của bộ giả lập. |
+| LOAD-N100 | 100 máy, mỗi máy gửi 1 reading/s. | Trung bình 100 readings/s. | Baseline thiết kế kiến trúc ban đầu đã chốt; cần môi trường đủ CPU/RAM để đo năng lực và độ trễ ở 100/s. |
+| LOAD-L50 | 50 máy (`M-001`..`M-050`), mỗi máy gửi 1 reading/s. | Trung bình 50 readings/s. | **Baseline vận hành local đã đo kiểm thực tế** trên cụm `k3d` laptop 15–16 GiB RAM (xem [LOCAL_BASELINE_50_MACHINES_REPORT.md](../reports/LOCAL_BASELINE_50_MACHINES_REPORT.md)). |
+| LOAD-D5 | 5 máy, mỗi máy gửi 1 reading/s. | Trung bình 5 readings/s. | Chạy thử nhỏ để kiểm tra các thành phần đã nối đúng; dùng cấu hình khởi đầu tối thiểu của bộ giả lập. |
 | LOAD-BURST100 | Cả 100 máy gửi trong cùng khoảng 100 ms của mỗi chu kỳ 1 giây. | Trung bình 100 readings/s; trong 0,1 giây nhận dữ liệu, tốc độ tức thời xấp xỉ 1.000 readings/s. | Kiểm tra hàng đợi khi dữ liệu đến dồn, dù tải trung bình không đổi. |
 | LOAD-X | X > 100 máy; tốc độ mỗi máy là r hoặc khác nhau theo từng máy. | R = X × r khi cùng tốc độ; R = Σr_i khi khác tốc độ. | Tính và kiểm chứng khả năng mở rộng theo mục 11. |
 
