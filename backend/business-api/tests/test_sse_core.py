@@ -134,3 +134,45 @@ def test_snapshot_for_another_machine_never_crosses_subscription_scope():
         await hub.stop()
 
     asyncio.run(run())
+
+
+class BatchRepository(Repository):
+    def __init__(self):
+        super().__init__()
+        self.batch_calls = []
+
+    def live_many(self, machines):
+        self.batch_calls.append(list(machines))
+        return {machine: self.live(machine) for machine in machines}
+
+
+def test_sse_settings_defaults_env_override_and_batch_flush_for_50_machine_fleet():
+    default_settings = SSESettings.from_env({})
+    assert default_settings.coalesce_seconds == 0.05
+    overridden = SSESettings.from_env({"BUSINESS_SSE_COALESCE_SECONDS": "0.15"})
+    assert overridden.coalesce_seconds == 0.15
+
+    async def run():
+        repository = BatchRepository()
+        hub = NotificationHub(repository, dsn="unused", settings=SSESettings(coalesce_seconds=0))
+        hub.ready = True
+        machines = [f"M-{index:03d}" for index in range(1, 51)]
+        fleet = hub.subscribe(frozenset(machines), expires_at=time.time() + 60)
+        assert fleet.queue.maxsize == 512
+        for machine in machines:
+            hub.invalidate(machine_key(machine))
+        await hub.flush()
+        assert len(repository.batch_calls) == 1
+        assert set(repository.batch_calls[0]) == set(machines)
+        assert not fleet.closed
+        assert fleet.queue.qsize() == 50
+        received = set()
+        for _ in range(50):
+            frame = await hub.next_frame(fleet, timeout=0.1)
+            payload = json.loads(frame.split(b"data: ", 1)[1])
+            received.add(payload["machine_id"])
+        assert received == set(machines)
+        await hub.stop()
+        assert hub.pending_bytes == 0
+
+    asyncio.run(run())

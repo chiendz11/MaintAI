@@ -25,7 +25,7 @@ class SSESettings:
     max_connections: int = 128
     connection_bytes: int = 2 * 1024 * 1024
     total_bytes: int = 8 * 1024 * 1024
-    coalesce_seconds: float = 1
+    coalesce_seconds: float = 0.05
     heartbeat_seconds: float = 15
     alert_channel: str = ALERT_CHANNEL
 
@@ -37,6 +37,7 @@ class SSESettings:
             max_connections=int(env.get("BUSINESS_SSE_MAX_CONNECTIONS", "128")),
             connection_bytes=int(env.get("BUSINESS_SSE_CONNECTION_BYTES", str(2 * 1024 * 1024))),
             total_bytes=int(env.get("BUSINESS_SSE_TOTAL_BYTES", str(8 * 1024 * 1024))),
+            coalesce_seconds=float(env.get("BUSINESS_SSE_COALESCE_SECONDS", "0.05")),
             alert_channel=env.get("BUSINESS_ALERT_NOTIFY_CHANNEL", ALERT_CHANNEL),
         )
 
@@ -56,7 +57,7 @@ class SSESettings:
 class Subscription:
     machines: dict
     expires_at: float
-    queue: asyncio.Queue = field(default_factory=lambda: asyncio.Queue(maxsize=32))
+    queue: asyncio.Queue = field(default_factory=lambda: asyncio.Queue(maxsize=512))
     hashes: dict = field(default_factory=dict)
     pending: int = 0
     closed: bool = False
@@ -156,16 +157,37 @@ class NotificationHub:
 
     async def flush(self):
         due = [key for key, deadline in self.dirty.items() if deadline <= time.monotonic()]
+        due_entries = []
         for key in due:
             self.dirty.pop(key, None)
             targets = [s for s in self.subscriptions if key in s.machines and not s.closed]
             if not targets:
                 continue
-            machine = targets[0].machines[key]
+            due_entries.append((key, targets, targets[0].machines[key]))
+        if not due_entries:
+            return
+        snapshots_by_machine = None
+        if len(due_entries) > 1 and hasattr(self.repository, "live_many"):
             try:
-                snapshot = await asyncio.wait_for(
-                    asyncio.to_thread(self.repository.live, machine), 5
+                snapshots_by_machine = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        self.repository.live_many, [machine for _, _, machine in due_entries]
+                    ),
+                    5,
                 )
+                if not isinstance(snapshots_by_machine, dict):
+                    raise ValueError("Invalid batch live snapshot result")
+            except (psycopg.Error, ValueError, TimeoutError):
+                self.disconnect_all("OTHER")
+                return
+        for key, targets, machine in due_entries:
+            try:
+                if snapshots_by_machine is not None:
+                    snapshot = snapshots_by_machine.get(machine)
+                else:
+                    snapshot = await asyncio.wait_for(
+                        asyncio.to_thread(self.repository.live, machine), 5
+                    )
                 if snapshot is None or snapshot["machine_id"] != machine:
                     raise ValueError("Subscribed machine is unavailable or mismatched")
                 events = []
@@ -183,7 +205,7 @@ class NotificationHub:
                     events.append((kind, hashlib.sha256(body).digest(), frame))
             except (psycopg.Error, ValueError, TimeoutError):
                 self.disconnect_all("OTHER")
-                continue
+                return
             for subscription in targets:
                 if subscription.closed or subscription.machines.get(key) != machine:
                     continue
@@ -387,12 +409,19 @@ class NotificationHub:
                 self.ready = False
 
     async def _pump(self):
+        interval = min(
+            0.05,
+            max(
+                0.01,
+                self.settings.coalesce_seconds / 2 if self.settings.coalesce_seconds > 0 else 0.01,
+            ),
+        )
         while not self.stopping.is_set():
             await self.flush()
             await self.flush_alerts()
             await self.flush_m7()
             try:
-                await asyncio.wait_for(self.stopping.wait(), 0.05)
+                await asyncio.wait_for(self.stopping.wait(), interval)
             except TimeoutError:
                 pass
 
