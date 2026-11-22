@@ -418,3 +418,99 @@ def test_hundred_machine_runtime_sustains_full_rate(runtime_settings):
         assert elapsed < 3.5
     finally:
         engine.close()
+
+
+def test_engine_supports_custom_plc_data_source_via_protocol(runtime_settings, tmp_path):
+    import hashlib
+    import threading
+
+    from simulator.dataset import DatasetReader
+    from simulator.ordering.store import canonical
+    from simulator.scenarios import ScenarioLoader
+    from simulator.sources import CsvSimulatorSource, DataSource, ReadingSample
+
+    csv_source = CsvSimulatorSource(runtime_settings)
+    scenarios = {
+        p.stem: ScenarioLoader.load(p)
+        for p in sorted(runtime_settings.scenario_path.glob("*.yaml"))
+    }
+    expected_identity = hashlib.sha256(
+        canonical(
+            {
+                "dataset": hashlib.sha256(runtime_settings.dataset_path.read_bytes()).hexdigest(),
+                "scenarios": {
+                    name: value.model_dump(mode="json") for name, value in scenarios.items()
+                },
+                "machines": runtime_settings.machine_count,
+                "seed": runtime_settings.seed,
+                "schema": "1.3.0",
+                "generation_version": "1",
+            }
+        ).encode()
+    ).hexdigest()
+    assert len(csv_source.records) == len(list(DatasetReader(runtime_settings.dataset_path)))
+    assert (
+        csv_source.source_identity(
+            machine_count=runtime_settings.machine_count, seed=runtime_settings.seed
+        )
+        == expected_identity
+    )
+
+    class CustomPlcDataSource:
+        scenarios = {"normal": object()}
+
+        def __init__(self):
+            self.calls = []
+
+        def source_identity(self, *, machine_count: int, seed: int | None) -> str:
+            return f"plc-register-map-v1:{machine_count}:{seed}"
+
+        def read_sample(self, machine: dict) -> ReadingSample | None:
+            self.calls.append((machine["machine_id"], machine["sequence_number"]))
+            return ReadingSample(
+                features={
+                    "product_type": "M",
+                    "air_temperature_k": 299.1,
+                    "process_temperature_k": 309.4,
+                    "rotational_speed_rpm": 1480.0,
+                    "torque_nm": 41.2,
+                    "tool_wear_min": 12.0,
+                },
+                source="AI4I_SIMULATOR",
+            )
+
+    delivered = []
+    lock = threading.Lock()
+
+    def accept(request):
+        with lock:
+            delivered.append(json.loads(request.content))
+        return ack(request)
+
+    source = CustomPlcDataSource()
+    assert isinstance(source, DataSource)
+    settings = runtime_settings.model_copy(
+        update={
+            "machine_count": 2,
+            "interval_ms": 50,
+            "dataset_path": tmp_path / "missing-dataset.csv",
+            "state_path": tmp_path / "plc-state.sqlite3",
+        }
+    )
+    engine = SensorEngine(settings, source=source, transport=httpx.MockTransport(accept))
+    try:
+        assert engine.records == ()
+        assert "normal" in engine.scenarios
+        deadline = time.monotonic() + 2.0
+        while time.monotonic() < deadline and (
+            len(delivered) < 2 or engine.store.summary()["counts"]
+        ):
+            engine.tick(generate=len(source.calls) < 2)
+            time.sleep(0.01)
+        assert len(source.calls) == 2
+        assert {item["machine_id"] for item in delivered} == {"M-001", "M-002"}
+        assert all(item["sequence_number"] == 1 for item in delivered)
+        assert all(item["features"]["product_type"] == "M" for item in delivered)
+        assert not engine.store.summary()["counts"]
+    finally:
+        engine.close()

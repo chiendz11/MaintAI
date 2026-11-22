@@ -1,7 +1,10 @@
 # MaintAI Sensor Simulator 0.3.0
 
-Sensor backend là **một runtime** gồm scheduler, durable spool, HTTP sender,
-Sensor Control API và metrics. Simulator frontend ở `../sensor-simulator-UI/`,
+Sensor backend là **một runtime** theo cấu trúc tách lớp **DataSource ↔ Edge Agent**:
+- **Nguồn thu thập (`src/simulator/sources.py`):** Protocol `DataSource` (`ReadingSample`, `source_identity`, `read_sample`) và triển khai mặc định `CsvSimulatorSource` (đóng gói `DatasetReader` AI4I CSV + `ScenarioLoader`/`ScenarioTransformer`). Nhờ ranh giới Dependency Inversion này, có thể thay bằng adapter PLC thật (Modbus TCP / OPC UA) mà không cần sửa spool hay transport.
+- **Edge Agent (`scheduling/engine.py`, `ordering/store.py`, `client.py`, `control/`):** `SensorEngine` nhận `DataSource` (tự tạo `CsvSimulatorSource` nếu không truyền), đóng gói envelope `SensorRequest 1.3.0`, tăng `sequence_number` nguyên tử vào SQLite WAL `StateStore`, phục vụ 5 Control APIs và gửi HTTP 202 ACK qua `BackendClient` (vẫn chạy cùng một process/Deployment, chưa tách thành microservice riêng).
+
+Simulator frontend ở `../sensor-simulator-UI/`,
 image/release riêng. Sensor không chạy inference, không tạo/resolve Alert và
 không chứa MLflow Server/client.
 
