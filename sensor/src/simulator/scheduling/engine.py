@@ -1,6 +1,5 @@
 """Independent generation and bounded HTTP dispatch inside one Sensor runtime."""
 
-import hashlib
 import json
 import random
 import threading
@@ -10,23 +9,25 @@ from uuid import uuid4
 
 from simulator.client import BackendClient
 from simulator.control.auth import IngestionCredentials
-from simulator.dataset import DatasetReader
 from simulator.fault_injection import FaultInjector, FaultMode
 from simulator.logging import log
 from simulator.metrics import SensorMetrics
-from simulator.ordering.store import StateStore, canonical, utc
-from simulator.scenarios import ScenarioLoader, ScenarioTransformer
+from simulator.ordering.store import StateStore, utc
 from simulator.settings import RuntimeSettings
+from simulator.sources import CsvSimulatorSource, DataSource
 
 
 class SensorEngine:
-    def __init__(self, settings: RuntimeSettings, *, transport=None):
+    def __init__(
+        self,
+        settings: RuntimeSettings,
+        *,
+        transport=None,
+        source: DataSource | None = None,
+    ):
         self.settings = settings
-        self.records = list(DatasetReader(settings.dataset_path))
-        self.scenarios = {
-            p.stem: ScenarioLoader.load(p) for p in sorted(settings.scenario_path.glob("*.yaml"))
-        }
-        if settings.scenario not in self.scenarios:
+        self.source = CsvSimulatorSource(settings) if source is None else source
+        if settings.scenario not in self.source.scenarios:
             raise ValueError("Initial scenario is not in the configured allowlist")
         self.epoch = str(uuid4())
         self.metrics = SensorMetrics()
@@ -35,21 +36,9 @@ class SensorEngine:
         )
         self.store = StateStore(settings.state_path)
         try:
-            identity = hashlib.sha256(
-                canonical(
-                    {
-                        "dataset": hashlib.sha256(settings.dataset_path.read_bytes()).hexdigest(),
-                        "scenarios": {
-                            name: value.model_dump(mode="json")
-                            for name, value in self.scenarios.items()
-                        },
-                        "machines": settings.machine_count,
-                        "seed": settings.seed,
-                        "schema": "1.3.0",
-                        "generation_version": "1",
-                    }
-                ).encode()
-            ).hexdigest()
+            identity = self.source.source_identity(
+                machine_count=settings.machine_count, seed=settings.seed
+            )
             self.store.initialize(
                 settings.machine_count, settings.scenario, settings.initial_state, identity
             )
@@ -78,24 +67,18 @@ class SensorEngine:
         self.deadlines = {}
         self.machine_ids = [row["machine_id"] for row in self.store.list()]
 
+    @property
+    def records(self):
+        return getattr(self.source, "records", ())
+
+    @property
+    def scenarios(self):
+        return self.source.scenarios
+
     def build(self, machine: dict) -> dict | None:
-        cursor = machine["row_cursor"]
-        if not self.settings.loop_dataset and cursor >= len(self.records):
+        sample = self.source.read_sample(machine)
+        if sample is None:
             return None
-        record = self.records[cursor % len(self.records)]
-        scenario = self.scenarios[machine["scenario"]]
-        step = min(machine["scenario_step"], scenario.event_count - 1)
-        # Derive categorical RNG from durable position, never a volatile RNG cursor.
-        seed = int(
-            hashlib.sha256(
-                (
-                    f"{scenario.seed if self.settings.seed is None else self.settings.seed}:"
-                    f"{machine['machine_id']}:{machine['scenario_step']}"
-                ).encode()
-            ).hexdigest()[:16],
-            16,
-        )
-        features, _ = ScenarioTransformer(scenario, seed=seed).apply(record.features, step)
         payload = {
             "schema_version": "1.3.0",
             "stream_epoch": self.epoch,
@@ -103,8 +86,8 @@ class SensorEngine:
             "machine_id": machine["machine_id"],
             "sequence_number": machine["sequence_number"] + 1,
             "received_at": utc(),
-            "source": "AI4I_SIMULATOR",
-            "features": features.model_dump(),
+            "source": sample.source,
+            "features": sample.features,
         }
         return self.injector.apply(payload, machine["sequence_number"]).payload
 
