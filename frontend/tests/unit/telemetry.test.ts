@@ -5,6 +5,7 @@ import { NumericToken } from "../../src/api/codec";
 import { TelemetryCard } from "../../src/features/machines/live_telemetry/TelemetryCard";
 import {
   computeDerivedFeatures,
+  evaluateMetricValue,
   evaluatePhysicalHealth,
 } from "../../src/shared/physical-guardrails";
 import type { Telemetry } from "../../src/types/live";
@@ -83,6 +84,15 @@ it("evaluates NORMAL, WARNING and CRITICAL physical guardrails and derived metri
     temp_delta_k: null,
     mechanical_power_w: null,
   });
+
+  expect(evaluateMetricValue("torque_nm", 49.9)).toBe("NORMAL");
+  expect(evaluateMetricValue("torque_nm", 50.0)).toBe("WARNING");
+  expect(evaluateMetricValue("torque_nm", 60.1)).toBe("CRITICAL");
+  expect(evaluateMetricValue("temp_delta_k", 8.6)).toBe("NORMAL");
+  expect(evaluateMetricValue("temp_delta_k", 8.5)).toBe("WARNING");
+  expect(evaluateMetricValue("temp_delta_k", 7.9)).toBe("CRITICAL");
+  expect(evaluateMetricValue("mechanical_power_w", 3200)).toBe("WARNING");
+  expect(evaluateMetricValue("mechanical_power_w", 9100)).toBe("CRITICAL");
 });
 
 it("renders threshold bars, derived metrics and view-trend buttons in TelemetryCard", () => {

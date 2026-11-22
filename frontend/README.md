@@ -68,7 +68,10 @@ fallback thành HTML của SPA. Các cấu hình production này thuộc GitOps.
 ## Màn hình và trạng thái
 
 - `/machines`: Fleet, state filter, pagination và nhập ID máy.
-- `/machines/{encodedMachineId}`: Detail, metadata và ba panel `/live` độc lập.
+- `/machines/{encodedMachineId}`: Detail, metadata, ba panel `/live` độc lập và biểu đồ xu hướng vật lý **Physical Feature Trends (`FeatureTrendChart`)** đặt trực tiếp bên dưới `live-grid`:
+  - Khởi động ấm ngắn hạn (warm-start): tự neo quanh dấu thời gian hoạt động mới nhất của máy (`server_accepted_at`/`received_at`/`last_seen_at`), tải âm thầm M6 `PROCESSING` (fallback `RAW` nếu rỗng) trong `[anchor - 5 phút, anchor + 5 giây]` (`limit=60`), trộn cùng bộ đệm Live SSE tối đa `60` điểm (`MAX_LIVE_BUFFER = 60`) và cắt các điểm lệch quá `10 phút` so với mốc mới nhất.
+  - Hỗ trợ `8` chế độ (`Stacked Overview (All)` và `7` chỉ số: `Torque`, `Speed`, `Air Temp`, `Process Temp`, `Temp Delta (K)`, `Tool Wear`, `Est. Power (W)`), giữ alias tương thích `"temperatures"`; mọi nút `"📈 View Trend"` trên `TelemetryCard` chuyển thẳng sang tab tương ứng.
+  - Vẽ đầy đủ trục tung (Y ticks + lưới ngang, 5 mức ở chế độ đơn và 3 mức ở chế độ xếp chồng), trục hoành thời gian thực (`HH:mm:ss`), vùng tô nền & nhãn ngưỡng `WARN`/`CRIT` khớp `FEATURE_METADATA`, tô màu từng điểm theo mức `NORMAL`/`WARNING`/`CRITICAL` (`evaluateMetricValue`), tự ngắt nét polyline qua khoảng trống dữ liệu (`gapThresholdMs`) và hiển thị `Min · Avg · Max · Latest`.
 - `/alerts`, `/alerts/{alert_id}`: danh sách/filter, evidence/timeline, lifecycle và feedback.
 - `/auth/callback`: OIDC callback, sau đó trở lại danh sách.
 

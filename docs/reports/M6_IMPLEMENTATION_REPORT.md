@@ -143,3 +143,11 @@ HTTP contracts, immutable Kafka inputs, lint/format và dependency checks đạt
 Python3.11 và GitHub Actions của commit sửa cần được xác nhận khi commit được push;
 kết quả local không thay thế trạng thái remote. Source runtime/schema nghiệp vụ,
 wire protocol, migration và deployment manifests không đổi trong bản sửa này.
+
+## Cập nhật Business UI — Biểu đồ xu hướng vật lý ngắn hạn (`2026-11-22`)
+
+Trên trang chi tiết máy ([`MachinePage.tsx`](../../frontend/src/features/machines/detail/MachinePage.tsx) và [`HistoryPanel.tsx`](../../frontend/src/features/machines/detail/HistoryPanel.tsx)), biểu đồ **Physical Feature Trends (`FeatureTrendChart`)** được nâng cấp và đưa ra hiển thị trực tiếp bên dưới `live-grid` (với `hideTrendChart` tránh trùng lặp khi mở panel `Lịch sử` M6 đầy đủ):
+
+- **Nạp dữ liệu ngắn hạn (warm-start + ring buffer 60 điểm):** Tự động neo quanh mốc hoạt động gần nhất của máy để truy vấn âm thầm M6 `PROCESSING` (hoặc `RAW` nếu chưa có) trong cửa sổ `[anchor - 5 phút, anchor + 5 giây]` (`limit = 60`), hợp nhất theo `event_id` cùng luồng Live SSE (`MAX_LIVE_BUFFER = 60`) và loại các điểm lệch quá `10 phút` trước mốc mới nhất.
+- **Đủ 8 chế độ & trục/ngưỡng hoàn chỉnh:** Bổ sung tab riêng cho toàn bộ 7 chỉ số vật lý/dẫn xuất trên `TelemetryCard` (`Torque`, `Speed`, `Air Temp`, `Process Temp`, `Temp Delta (K)`, `Tool Wear`, `Est. Power (W)`) bên cạnh `Stacked Overview (All)`; bổ sung trục Y (ticks + lưới ngang), trục X thời gian (`HH:mm:ss`), dải tô nền `WARNING`/`CRITICAL` kèm nhãn `WARN`/`CRIT`, màu điểm theo trạng thái (`evaluateMetricValue`), ngắt đoạn `polyline` qua khoảng mất kết nối (`gapThresholdMs`) và dải thống kê `Min · Avg · Max · Latest`.
+- **Kiểm chứng Frontend:** `npm run check`, `npm test` (`9` files, `40` unit tests), `npm run build` và `playwright test tests/browser/ui.spec.ts tests/browser/history.spec.ts` (`8` browser tests, gồm kiểm tra overflow mobile `390×844`) đều đạt local sau khi chỉnh sửa; provider DB/Kafka/k3d live không bị thay đổi hoặc yêu cầu trong lượt kiểm chứng UI này.

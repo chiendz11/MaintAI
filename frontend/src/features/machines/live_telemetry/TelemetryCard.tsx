@@ -151,7 +151,7 @@ export function TelemetryCard({
                       <button
                         type="button"
                         className="trend-link-btn"
-                        onClick={() => onSelectFeature("temperatures")}
+                        onClick={() => onSelectFeature("temp_delta_k")}
                       >
                         📈 View Trend
                       </button>
@@ -179,7 +179,7 @@ export function TelemetryCard({
                       <button
                         type="button"
                         className="trend-link-btn"
-                        onClick={() => onSelectFeature("torque_nm")}
+                        onClick={() => onSelectFeature("mechanical_power_w")}
                       >
                         📈 View Trend
                       </button>

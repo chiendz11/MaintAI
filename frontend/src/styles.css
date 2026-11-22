@@ -1280,6 +1280,36 @@ pre {
 .pulsing-dot {
   animation: pulse-ring 1.8s infinite ease-in-out;
 }
+.feature-trend-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #334155;
+  min-width: 0;
+  max-width: 100%;
+}
+.feature-trend-stats .stat-chip {
+  font-size: 10px;
+  line-height: 1.4;
+}
+.stat-status-critical {
+  color: #dc2626;
+  font-weight: 700;
+}
+.stat-status-warning {
+  color: #d97706;
+  font-weight: 700;
+}
+.stat-status-normal {
+  color: #15803d;
+  font-weight: 600;
+}
 .trend-readout {
   display: flex;
   flex-wrap: wrap;
@@ -1305,5 +1335,10 @@ pre {
   .pill-button {
     font-size: 10px;
     padding: 4px 8px;
+  }
+  .feature-trend-stats {
+    gap: 6px 10px;
+    padding: 7px 10px;
+    font-size: 10px;
   }
 }

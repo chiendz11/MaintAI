@@ -144,4 +144,111 @@ it("renders FeatureTrendChart safely for 0 points, 1 point and hybrid raw + live
   expect(stackedHtml).toContain("AI Last Seen");
   expect(stackedHtml).toContain("pulsing-dot");
   expect(stackedHtml).toContain("63.4 Nm");
+  expect(stackedHtml).toContain("WARN 50");
+  expect(stackedHtml).toContain("CRIT 60");
+  expect(stackedHtml).toContain('fill="#dc2626"');
+  expect(stackedHtml).toContain("trend-x-axis");
+  expect(stackedHtml).toContain("feature-trend-stats");
+});
+
+it("supports all 8 trend modes, axis ticks, shaded threshold bands, gap splitting, and 60-point pruning", () => {
+  const baseMs = Date.parse("2026-10-18T12:00:00Z");
+  const makeTelemetry = (
+    id: string,
+    offsetSec: number,
+    overrides: Partial<Record<string, number>> = {},
+  ) => ({
+    event_id: id,
+    stream_epoch: "epoch-1",
+    sequence_number: BigInt(Math.max(1, offsetSec + 100)),
+    received_at: new Date(baseMs + offsetSec * 1000).toISOString(),
+    server_accepted_at: new Date(baseMs + offsetSec * 1000).toISOString(),
+    validation_status: "VALID" as const,
+    features_raw: {
+      air_temperature_k: overrides.air_temperature_k ?? 298.5,
+      process_temperature_k: overrides.process_temperature_k ?? 309.0,
+      rotational_speed_rpm: overrides.rotational_speed_rpm ?? 1500,
+      torque_nm: overrides.torque_nm ?? 40.0,
+      tool_wear_min: overrides.tool_wear_min ?? 100,
+    },
+  });
+
+  // 1) Old points (>10m before latest) are pruned, and series caps at 60 points.
+  const stale = makeTelemetry("evt-stale", -700);
+  const flood = Array.from({ length: 65 }, (_, i) =>
+    makeTelemetry(`evt-${i}`, i * 2, {
+      torque_nm: i === 64 ? 64.0 : i === 63 ? 54.0 : 40.0,
+      rotational_speed_rpm: i === 64 ? 2600 : 1550,
+    }),
+  );
+  const pruned = buildFeatureTrendSeries([], [stale, ...flood], 60);
+  expect(pruned).toHaveLength(60);
+  expect(pruned.some((p) => p.event_id === "evt-stale")).toBe(false);
+
+  // 2) Single isolated point renders centered dot without a fake polyline segment.
+  const single = buildFeatureTrendSeries([], [makeTelemetry("only-1", 0)], 60);
+  const singleModeHtml = renderToStaticMarkup(
+    createElement(FeatureTrendChart, {
+      series: single,
+      mode: "temp_delta_k",
+      onSelectMode: () => {},
+    }),
+  );
+  expect(singleModeHtml).toContain("Temp Delta (ΔT)");
+  expect(singleModeHtml).toContain("WARN 8.6");
+  expect(singleModeHtml).toContain("CRIT 8");
+  expect(singleModeHtml).not.toContain("<polyline");
+
+  // 3) Gap > 5s splits the polyline into two segments and colors status points individually.
+  const gappedSeries = buildFeatureTrendSeries(
+    [],
+    [
+      makeTelemetry("g-1", 0, { torque_nm: 38.0 }),
+      makeTelemetry("g-2", 2, { torque_nm: 54.0 }),
+      makeTelemetry("g-3", 20, { torque_nm: 64.0 }),
+      makeTelemetry("g-4", 22, { torque_nm: 41.0 }),
+    ],
+    60,
+  );
+  const torqueHtml = renderToStaticMarkup(
+    createElement(FeatureTrendChart, {
+      series: gappedSeries,
+      mode: "torque_nm",
+      onSelectMode: () => {},
+    }),
+  );
+  const polylineCount = (torqueHtml.match(/<polyline/g) ?? []).length;
+  expect(polylineCount).toBe(2);
+  expect(torqueHtml).toContain('fill="#d97706"');
+  expect(torqueHtml).toContain('fill="#dc2626"');
+  expect(torqueHtml).toContain('fill="rgba(217, 119, 6, 0.08)"');
+  expect(torqueHtml).toContain('fill="rgba(220, 38, 38, 0.10)"');
+  expect(torqueHtml).toContain("<strong>Min:</strong>");
+  expect(torqueHtml).toContain("<strong>Avg:</strong>");
+  expect(torqueHtml).toContain("<strong>Max:</strong>");
+  expect(torqueHtml).toContain("<strong>Latest:</strong>");
+
+  // 4) All remaining single-feature modes render cleanly without NaN.
+  for (const mode of [
+    "rotational_speed_rpm",
+    "air_temperature_k",
+    "process_temperature_k",
+    "tool_wear_min",
+    "mechanical_power_w",
+    "temperatures",
+  ] as const) {
+    const html = renderToStaticMarkup(
+      createElement(FeatureTrendChart, {
+        series: gappedSeries,
+        mode,
+        onSelectMode: () => {},
+      }),
+    );
+    expect(html).not.toContain("NaN");
+    expect(html).not.toContain("Infinity");
+    expect(html).toContain("Est. Power (W)");
+    expect(html).toContain("Air Temp (K)");
+    expect(html).toContain("Process Temp (K)");
+    expect(html).toContain("Temp Delta (K)");
+  }
 });
