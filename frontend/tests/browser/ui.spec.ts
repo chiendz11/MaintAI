@@ -126,15 +126,26 @@ test("Physical Guardrails and click-to-plot Feature Trends work in Fleet and Mac
   await page.getByRole("link", { name: "Xem M-001" }).click();
   await expect(page.getByText("Temp Delta (ΔT)")).toBeVisible();
   await expect(page.getByText("Est. Power (P)")).toBeVisible();
-  await page.getByRole("button", { name: "📈 View Trend" }).first().click();
   await expect(
     page.getByRole("heading", {
       name: "Physical Feature Trends (Raw Telemetry + Live Stream)",
     }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "📈 View Trend" }).first().click();
+  await expect(page.getByRole("button", { name: "Air Temp (K)" })).toHaveClass(
+    /active/,
+  );
   await expect(
     page.getByRole("img", { name: "Xu hướng vật lý M6 + Live SSE" }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Temp Delta (K)" }).click();
+  await expect(
+    page.getByRole("button", { name: "Temp Delta (K)" }),
+  ).toHaveClass(/active/);
+  await page.getByRole("button", { name: "Est. Power (W)" }).click();
+  await expect(
+    page.getByRole("button", { name: "Est. Power (W)" }),
+  ).toHaveClass(/active/);
   await page.getByRole("button", { name: "Stacked Overview (All)" }).click();
   await expect(
     page.getByRole("button", { name: "Stacked Overview (All)" }),

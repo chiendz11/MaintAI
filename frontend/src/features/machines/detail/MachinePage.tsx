@@ -1,7 +1,8 @@
 import { useAlertRefresh } from "../../alerts/useRefresh";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import type { MachineApi } from "../../../api/client";
+import type { ProcessingRecord, RawRecord } from "../../../types/history";
 import type { MachineDetail, Telemetry } from "../../../types/live";
 import { emptyLive } from "../../../realtime/reducers";
 import { watchMachine, type Connection } from "../../../realtime/sse";
@@ -12,9 +13,13 @@ import { Badge, ErrorNotice } from "../../../shared/ui";
 import { TelemetryCard } from "../live_telemetry/TelemetryCard";
 import { PredictionCard } from "../latest_prediction/PredictionCard";
 import { ProcessingCard } from "../processing_status/ProcessingCard";
-import { HistoryPanel } from "./HistoryPanel";
+import {
+  buildFeatureTrendSeries,
+  FeatureTrendChart,
+  HistoryPanel,
+} from "./HistoryPanel";
 
-const MAX_LIVE_BUFFER = 30;
+const MAX_LIVE_BUFFER = 60;
 
 export function MachinePage({
   machine,
@@ -31,9 +36,12 @@ export function MachinePage({
 }) {
   const [value, setValue] = useState(() => emptyLive(machine)),
     [liveBuffer, setLiveBuffer] = useState<Telemetry[]>([]),
-    [selectedFeature, setSelectedFeature] = useState<TrendFeatureKey | null>(
-      null,
-    ),
+    [trendMode, setTrendMode] = useState<TrendFeatureKey>("ALL"),
+    [seedItems, setSeedItems] = useState<(ProcessingRecord | RawRecord)[]>([]),
+    [historyPanelItems, setHistoryPanelItems] = useState<
+      (ProcessingRecord | RawRecord)[]
+    >([]),
+    [seedAnchor, setSeedAnchor] = useState<string | null>(null),
     [detail, setDetail] = useState<MachineDetail | null>(null),
     [error, setError] = useState<unknown>(null),
     [metadataError, setMetadataError] = useState(false),
@@ -41,6 +49,7 @@ export function MachinePage({
     [now, setNow] = useState(Date.now());
   const [alertRevision] = useAlertRefresh();
   const [historyOpen, setHistoryOpen] = useState(false);
+  const trendSectionRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
@@ -48,7 +57,10 @@ export function MachinePage({
   useEffect(() => {
     setValue(emptyLive(machine));
     setLiveBuffer([]);
-    setSelectedFeature(null);
+    setTrendMode("ALL");
+    setSeedItems([]);
+    setHistoryPanelItems([]);
+    setSeedAnchor(null);
     setError(null);
     setDetail(null);
     setMetadataError(false);
@@ -90,10 +102,66 @@ export function MachinePage({
     return () => request.abort();
   }, [api, machine, revision, alertRevision]);
 
+  useEffect(() => {
+    if (seedAnchor !== null) return;
+    const candidate =
+      value.telemetry?.server_accepted_at ??
+      value.telemetry?.received_at ??
+      detail?.last_seen_at ??
+      null;
+    if (candidate && Number.isFinite(Date.parse(candidate))) {
+      setSeedAnchor(candidate);
+    }
+  }, [seedAnchor, value.telemetry, detail?.last_seen_at]);
+
+  useEffect(() => {
+    if (!api.history || !seedAnchor) return;
+    const anchorMs = Date.parse(seedAnchor);
+    if (!Number.isFinite(anchorMs)) return;
+    const request = new AbortController();
+    const query = {
+      from: new Date(anchorMs - 5 * 60 * 1000).toISOString(),
+      to: new Date(anchorMs + 5 * 1000).toISOString(),
+      limit: "60",
+    };
+    api.history
+      .page(machine, "PROCESSING", query, request.signal)
+      .then((page) => {
+        if (request.signal.aborted) return null;
+        if (page.items.length > 0) {
+          setSeedItems(page.items);
+          return null;
+        }
+        return api.history!.page(machine, "RAW", query, request.signal);
+      })
+      .then((rawPage) => {
+        if (rawPage && !request.signal.aborted) {
+          setSeedItems(rawPage.items);
+        }
+      })
+      .catch(() => {
+        // Warm start is best-effort; SSE live buffer updates continue uninterrupted.
+      });
+    return () => request.abort();
+  }, [api, machine, revision, seedAnchor]);
+
   const handleSelectFeature = useCallback((feature: TrendFeatureKey) => {
-    setSelectedFeature(feature);
-    setHistoryOpen(true);
+    setTrendMode(feature);
+    trendSectionRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+    });
   }, []);
+
+  const trendSeries = useMemo(
+    () =>
+      buildFeatureTrendSeries(
+        [...seedItems, ...historyPanelItems],
+        liveBuffer,
+        MAX_LIVE_BUFFER,
+      ),
+    [seedItems, historyPanelItems, liveBuffer],
+  );
 
   const predictionStatus = freshness(
     value.latest_valid_prediction?.source_server_accepted_at,
@@ -164,6 +232,15 @@ export function MachinePage({
           staleMs={config.staleMs}
         />
       </div>
+      <div ref={trendSectionRef}>
+        <FeatureTrendChart
+          series={trendSeries}
+          mode={trendMode}
+          onSelectMode={setTrendMode}
+          aiLastSeenAt={aiLastSeenAt}
+          aiDegraded={aiDegraded}
+        />
+      </div>
       <ProcessingCard value={value.latest_processing} />
       <button
         className="button secondary"
@@ -177,10 +254,14 @@ export function MachinePage({
           api={api.history}
           machine={machine}
           liveTelemetry={liveBuffer}
-          selectedFeature={selectedFeature}
-          onSelectFeature={setSelectedFeature}
+          selectedFeature={trendMode}
+          onSelectFeature={(feature) => {
+            if (feature) setTrendMode(feature);
+          }}
           aiLastSeenAt={aiLastSeenAt}
           aiDegraded={aiDegraded}
+          hideTrendChart
+          onItemsLoaded={setHistoryPanelItems}
         />
       )}
       <p className="snapshot-note">

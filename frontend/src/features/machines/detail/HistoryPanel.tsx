@@ -15,12 +15,17 @@ import { ExportUnknown } from "../../../api/history-client";
 import { rawText } from "../../../api/codec";
 import {
   computeDerivedFeatures,
+  evaluateMetricValue,
   extractTelemetryFeatures,
   FEATURE_METADATA,
+  type MetricKey,
+  type PhysicalStatus,
   type TelemetryFeatures,
   type TrendFeatureKey,
 } from "../../../shared/physical-guardrails";
 import { Badge, ErrorNotice, date } from "../../../shared/ui";
+
+const SHORT_TERM_HORIZON_MS = 10 * 60 * 1000;
 
 export type TrendPoint = {
   event_id: string;
@@ -35,6 +40,7 @@ export type TrendPoint = {
 export function buildFeatureTrendSeries(
   historyItems: (ProcessingRecord | RawRecord)[],
   liveTelemetry: Telemetry[] = [],
+  maxPoints = 60,
 ): TrendPoint[] {
   const byEvent = new Map<string, TrendPoint>();
 
@@ -66,7 +72,7 @@ export function buildFeatureTrendSeries(
     });
   }
 
-  for (const item of liveTelemetry.slice(-30)) {
+  for (const item of liveTelemetry.slice(-maxPoints)) {
     const timestamp = item.received_at || item.server_accepted_at;
     const epochMs = Date.parse(timestamp);
     if (!item.event_id || !Number.isFinite(epochMs)) continue;
@@ -90,7 +96,12 @@ export function buildFeatureTrendSeries(
     });
   }
 
-  return [...byEvent.values()].sort((a, b) => a.epochMs - b.epochMs);
+  const sorted = [...byEvent.values()].sort((a, b) => a.epochMs - b.epochMs);
+  if (sorted.length === 0) return [];
+  const latestEpoch = sorted[sorted.length - 1].epochMs;
+  return sorted
+    .filter((point) => latestEpoch - point.epochMs <= SHORT_TERM_HORIZON_MS)
+    .slice(-maxPoints);
 }
 
 function local(value: string) {
@@ -116,6 +127,8 @@ export function HistoryPanel({
   onSelectFeature,
   aiLastSeenAt = null,
   aiDegraded = false,
+  hideTrendChart = false,
+  onItemsLoaded,
 }: {
   api: HistoryApi;
   machine: string;
@@ -124,6 +137,8 @@ export function HistoryPanel({
   onSelectFeature?: (feature: TrendFeatureKey | null) => void;
   aiLastSeenAt?: string | null;
   aiDegraded?: boolean;
+  hideTrendChart?: boolean;
+  onItemsLoaded?: (items: (ProcessingRecord | RawRecord)[]) => void;
 }) {
   const initial = api.defaultRange ?? {
     from: new Date(Date.now() - 3600000).toISOString(),
@@ -223,6 +238,11 @@ export function HistoryPanel({
     const allItems = pages.flatMap((page) => page.items);
     return buildFeatureTrendSeries(allItems, liveTelemetry);
   }, [pages, liveTelemetry]);
+
+  useEffect(() => {
+    if (!onItemsLoaded) return;
+    onItemsLoaded(pages.flatMap((page) => page.items));
+  }, [pages, onItemsLoaded]);
 
   function apply() {
     try {
@@ -496,7 +516,7 @@ export function HistoryPanel({
       </form>
       <ErrorNotice error={error} />
       {busy && <p role="status">Đang tải lịch sử…</p>}
-      {showFeatureTrends && (
+      {!hideTrendChart && showFeatureTrends && (
         <FeatureTrendChart
           series={trendSeries}
           mode={trendMode}
@@ -718,9 +738,19 @@ const TREND_PILLS: { key: TrendFeatureKey; label: string }[] = [
   { key: "ALL", label: "Stacked Overview (All)" },
   { key: "torque_nm", label: "Torque (Nm)" },
   { key: "rotational_speed_rpm", label: "Speed (RPM)" },
-  { key: "temperatures", label: "Temperatures (K)" },
+  { key: "air_temperature_k", label: "Air Temp (K)" },
+  { key: "process_temperature_k", label: "Process Temp (K)" },
+  { key: "temp_delta_k", label: "Temp Delta (K)" },
   { key: "tool_wear_min", label: "Tool Wear (min)" },
+  { key: "mechanical_power_w", label: "Est. Power (W)" },
 ];
+
+type LaneLineDef = {
+  label: string;
+  color: string;
+  metricKey: MetricKey;
+  getValue: (point: TrendPoint) => number | undefined;
+};
 
 type LaneConfig = {
   id: string;
@@ -728,85 +758,181 @@ type LaneConfig = {
   unit: string;
   min: number;
   max: number;
-  warningLines: number[];
-  criticalLines: number[];
-  lines: {
-    label: string;
-    color: string;
-    getValue: (point: TrendPoint) => number | undefined;
-  }[];
+  warningHigh?: number;
+  warningLow?: number;
+  criticalHigh?: number;
+  criticalLow?: number;
+  decimals: number;
+  lines: LaneLineDef[];
 };
 
-const STACKED_LANES: LaneConfig[] = [
-  {
-    id: "temperatures",
-    title: "Temperatures (Air & Process)",
-    unit: "K",
-    min: 295,
-    max: 316,
-    warningLines: [312],
-    criticalLines: [313],
+const TEMPERATURES_LANE: LaneConfig = {
+  id: "temperatures",
+  title: "Temperatures (Air & Process)",
+  unit: "K",
+  min: FEATURE_METADATA.air_temperature_k.min,
+  max: FEATURE_METADATA.process_temperature_k.max,
+  warningHigh: FEATURE_METADATA.process_temperature_k.warningHigh,
+  criticalHigh: FEATURE_METADATA.process_temperature_k.criticalHigh,
+  decimals: 1,
+  lines: [
+    {
+      label: "Process Temp",
+      color: "#ea580c",
+      metricKey: "process_temperature_k",
+      getValue: (p) => p.features.process_temperature_k,
+    },
+    {
+      label: "Air Temp",
+      color: "#0284c7",
+      metricKey: "air_temperature_k",
+      getValue: (p) => p.features.air_temperature_k,
+    },
+  ],
+};
+
+const SINGLE_FEATURE_LANES: Record<
+  Exclude<TrendFeatureKey, "ALL">,
+  LaneConfig
+> = {
+  temperatures: TEMPERATURES_LANE,
+  air_temperature_k: {
+    id: "air_temperature_k",
+    title: "Air Temperature",
+    unit: FEATURE_METADATA.air_temperature_k.unit,
+    min: FEATURE_METADATA.air_temperature_k.min,
+    max: FEATURE_METADATA.air_temperature_k.max,
+    warningHigh: FEATURE_METADATA.air_temperature_k.warningHigh,
+    criticalHigh: FEATURE_METADATA.air_temperature_k.criticalHigh,
+    decimals: 1,
     lines: [
-      {
-        label: "Process Temp",
-        color: "#ea580c",
-        getValue: (p) => p.features.process_temperature_k,
-      },
       {
         label: "Air Temp",
         color: "#0284c7",
+        metricKey: "air_temperature_k",
         getValue: (p) => p.features.air_temperature_k,
       },
     ],
   },
-  {
+  process_temperature_k: {
+    id: "process_temperature_k",
+    title: "Process Temperature",
+    unit: FEATURE_METADATA.process_temperature_k.unit,
+    min: FEATURE_METADATA.process_temperature_k.min,
+    max: FEATURE_METADATA.process_temperature_k.max,
+    warningHigh: FEATURE_METADATA.process_temperature_k.warningHigh,
+    criticalHigh: FEATURE_METADATA.process_temperature_k.criticalHigh,
+    decimals: 1,
+    lines: [
+      {
+        label: "Process Temp",
+        color: "#ea580c",
+        metricKey: "process_temperature_k",
+        getValue: (p) => p.features.process_temperature_k,
+      },
+    ],
+  },
+  temp_delta_k: {
+    id: "temp_delta_k",
+    title: "Temp Delta (ΔT)",
+    unit: FEATURE_METADATA.temp_delta_k.unit,
+    min: FEATURE_METADATA.temp_delta_k.min,
+    max: FEATURE_METADATA.temp_delta_k.max,
+    warningLow: FEATURE_METADATA.temp_delta_k.warningLow,
+    criticalLow: FEATURE_METADATA.temp_delta_k.criticalLow,
+    decimals: 1,
+    lines: [
+      {
+        label: "Temp Delta (ΔT)",
+        color: "#0891b2",
+        metricKey: "temp_delta_k",
+        getValue: (p) => p.temp_delta_k ?? undefined,
+      },
+    ],
+  },
+  torque_nm: {
     id: "torque_nm",
     title: "Torque",
-    unit: "Nm",
+    unit: FEATURE_METADATA.torque_nm.unit,
     min: FEATURE_METADATA.torque_nm.min,
     max: FEATURE_METADATA.torque_nm.max,
-    warningLines: [50],
-    criticalLines: [60],
+    warningHigh: FEATURE_METADATA.torque_nm.warningHigh,
+    criticalHigh: FEATURE_METADATA.torque_nm.criticalHigh,
+    decimals: 1,
     lines: [
       {
         label: "Torque",
         color: "#2563eb",
+        metricKey: "torque_nm",
         getValue: (p) => p.features.torque_nm,
       },
     ],
   },
-  {
+  rotational_speed_rpm: {
     id: "rotational_speed_rpm",
     title: "Rotational Speed",
     unit: "RPM",
     min: FEATURE_METADATA.rotational_speed_rpm.min,
     max: FEATURE_METADATA.rotational_speed_rpm.max,
-    warningLines: [1350, 2200],
-    criticalLines: [1250, 2500],
+    warningLow: FEATURE_METADATA.rotational_speed_rpm.warningLow,
+    warningHigh: FEATURE_METADATA.rotational_speed_rpm.warningHigh,
+    criticalLow: FEATURE_METADATA.rotational_speed_rpm.criticalLow,
+    criticalHigh: FEATURE_METADATA.rotational_speed_rpm.criticalHigh,
+    decimals: 0,
     lines: [
       {
         label: "Speed",
         color: "#168b75",
+        metricKey: "rotational_speed_rpm",
         getValue: (p) => p.features.rotational_speed_rpm,
       },
     ],
   },
-  {
+  tool_wear_min: {
     id: "tool_wear_min",
     title: "Tool Wear",
     unit: "min",
     min: FEATURE_METADATA.tool_wear_min.min,
     max: FEATURE_METADATA.tool_wear_min.max,
-    warningLines: [180],
-    criticalLines: [210],
+    warningHigh: FEATURE_METADATA.tool_wear_min.warningHigh,
+    criticalHigh: FEATURE_METADATA.tool_wear_min.criticalHigh,
+    decimals: 0,
     lines: [
       {
         label: "Tool Wear",
         color: "#7c3aed",
+        metricKey: "tool_wear_min",
         getValue: (p) => p.features.tool_wear_min,
       },
     ],
   },
+  mechanical_power_w: {
+    id: "mechanical_power_w",
+    title: "Est. Mechanical Power (P)",
+    unit: FEATURE_METADATA.mechanical_power_w.unit,
+    min: FEATURE_METADATA.mechanical_power_w.min,
+    max: FEATURE_METADATA.mechanical_power_w.max,
+    warningLow: FEATURE_METADATA.mechanical_power_w.warningLow,
+    warningHigh: FEATURE_METADATA.mechanical_power_w.warningHigh,
+    criticalLow: FEATURE_METADATA.mechanical_power_w.criticalLow,
+    criticalHigh: FEATURE_METADATA.mechanical_power_w.criticalHigh,
+    decimals: 0,
+    lines: [
+      {
+        label: "Est. Power (P)",
+        color: "#4f46e5",
+        metricKey: "mechanical_power_w",
+        getValue: (p) => p.mechanical_power_w ?? undefined,
+      },
+    ],
+  },
+};
+
+const STACKED_LANES: LaneConfig[] = [
+  TEMPERATURES_LANE,
+  SINGLE_FEATURE_LANES.torque_nm,
+  SINGLE_FEATURE_LANES.rotational_speed_rpm,
+  SINGLE_FEATURE_LANES.tool_wear_min,
 ];
 
 function safeX(
@@ -837,6 +963,181 @@ function safeY(
   return Number((bottom - clamped * (bottom - top)).toFixed(2));
 }
 
+function formatStatValue(value: number, decimals: number): string {
+  if (!Number.isFinite(value)) return "—";
+  return decimals === 0
+    ? Math.round(value).toString()
+    : value.toFixed(decimals);
+}
+
+function formatAxisValue(value: number, decimals: number): string {
+  if (!Number.isFinite(value)) return "—";
+  return decimals === 0
+    ? Math.round(value).toString()
+    : Number(value.toFixed(decimals)).toString();
+}
+
+function formatTimeTick(epochMs: number): string {
+  if (!Number.isFinite(epochMs)) return "--:--:--";
+  return new Date(epochMs).toLocaleTimeString("en-GB", {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+function statusPointColor(
+  status: PhysicalStatus,
+  fallbackColor: string,
+): string {
+  if (status === "CRITICAL") return "#dc2626";
+  if (status === "WARNING") return "#d97706";
+  return fallbackColor;
+}
+
+function computeThresholdBands(
+  lane: LaneConfig,
+  minVal: number,
+  maxVal: number,
+  laneTop: number,
+  laneBottom: number,
+): { y: number; height: number; fill: string }[] {
+  const bands: { y: number; height: number; fill: string }[] = [];
+  if (lane.criticalHigh !== undefined) {
+    const yCritHigh = safeY(
+      lane.criticalHigh,
+      minVal,
+      maxVal,
+      laneTop,
+      laneBottom,
+    );
+    if (yCritHigh > laneTop) {
+      bands.push({
+        y: laneTop,
+        height: yCritHigh - laneTop,
+        fill: "rgba(220, 38, 38, 0.10)",
+      });
+    }
+  }
+  if (lane.warningHigh !== undefined) {
+    const yWarnHigh = safeY(
+      lane.warningHigh,
+      minVal,
+      maxVal,
+      laneTop,
+      laneBottom,
+    );
+    const yUpperBound =
+      lane.criticalHigh !== undefined
+        ? safeY(lane.criticalHigh, minVal, maxVal, laneTop, laneBottom)
+        : laneTop;
+    if (yWarnHigh > yUpperBound) {
+      bands.push({
+        y: yUpperBound,
+        height: yWarnHigh - yUpperBound,
+        fill: "rgba(217, 119, 6, 0.08)",
+      });
+    }
+  }
+  if (lane.criticalLow !== undefined) {
+    const yCritLow = safeY(
+      lane.criticalLow,
+      minVal,
+      maxVal,
+      laneTop,
+      laneBottom,
+    );
+    if (laneBottom > yCritLow) {
+      bands.push({
+        y: yCritLow,
+        height: laneBottom - yCritLow,
+        fill: "rgba(220, 38, 38, 0.10)",
+      });
+    }
+  }
+  if (lane.warningLow !== undefined) {
+    const yWarnLow = safeY(
+      lane.warningLow,
+      minVal,
+      maxVal,
+      laneTop,
+      laneBottom,
+    );
+    const yLowerBound =
+      lane.criticalLow !== undefined
+        ? safeY(lane.criticalLow, minVal, maxVal, laneTop, laneBottom)
+        : laneBottom;
+    if (yLowerBound > yWarnLow) {
+      bands.push({
+        y: yWarnLow,
+        height: yLowerBound - yWarnLow,
+        fill: "rgba(217, 119, 6, 0.08)",
+      });
+    }
+  }
+  return bands;
+}
+
+function buildThresholdMarks(
+  lane: LaneConfig,
+  minVal: number,
+  maxVal: number,
+  laneTop: number,
+  laneBottom: number,
+) {
+  const rawMarks: {
+    key: string;
+    threshold: number;
+    y: number;
+    stroke: string;
+    dash: string;
+    strokeWidth: string;
+    label: string;
+    title: string;
+  }[] = [];
+  const warnVals = [lane.warningHigh, lane.warningLow].filter(
+    (v): v is number => v !== undefined,
+  );
+  const critVals = [lane.criticalHigh, lane.criticalLow].filter(
+    (v): v is number => v !== undefined,
+  );
+  for (const threshold of warnVals) {
+    rawMarks.push({
+      key: `warn-${threshold}`,
+      threshold,
+      y: safeY(threshold, minVal, maxVal, laneTop, laneBottom),
+      stroke: "#d97706",
+      dash: "4 3",
+      strokeWidth: "1",
+      label: `WARN ${formatAxisValue(threshold, lane.decimals)}`,
+      title: `Warning threshold: ${threshold} ${lane.unit}`,
+    });
+  }
+  for (const threshold of critVals) {
+    rawMarks.push({
+      key: `crit-${threshold}`,
+      threshold,
+      y: safeY(threshold, minVal, maxVal, laneTop, laneBottom),
+      stroke: "#dc2626",
+      dash: "3 3",
+      strokeWidth: "1.2",
+      label: `CRIT ${formatAxisValue(threshold, lane.decimals)}`,
+      title: `Critical threshold: ${threshold} ${lane.unit}`,
+    });
+  }
+  rawMarks.sort((a, b) => a.y - b.y);
+  let lastLabelY: number | null = null;
+  return rawMarks.map((mark) => {
+    let labelY = Math.max(laneTop + 8, Math.min(laneBottom - 3, mark.y + 3));
+    if (lastLabelY !== null && labelY - lastLabelY < 9) {
+      labelY = Math.min(laneBottom - 2, lastLabelY + 9);
+    }
+    lastLabelY = labelY;
+    return { ...mark, labelY };
+  });
+}
+
 export function FeatureTrendChart({
   series,
   mode,
@@ -854,6 +1155,10 @@ export function FeatureTrendChart({
 
   const minEpoch = series[0]?.epochMs ?? 0;
   const maxEpoch = series.at(-1)?.epochMs ?? 0;
+  const spanMs = Math.max(0, maxEpoch - minEpoch);
+  const gapThresholdMs =
+    spanMs <= 120_000 ? 5000 : Math.max(5000, Math.round(spanMs * 0.35));
+
   const aiLastEpoch =
     aiLastSeenAt && Number.isFinite(Date.parse(aiLastSeenAt))
       ? Date.parse(aiLastSeenAt)
@@ -872,11 +1177,78 @@ export function FeatureTrendChart({
   const visibleLanes =
     mode === "ALL"
       ? STACKED_LANES
-      : STACKED_LANES.filter((lane) => lane.id === mode);
+      : [SINGLE_FEATURE_LANES[mode] ?? TEMPERATURES_LANE];
+  const isSingleLane = visibleLanes.length === 1;
 
-  const svgHeight = mode === "ALL" ? 340 : 210;
-  const leftX = 48;
+  const svgWidth = 760;
+  const svgHeight = isSingleLane ? 236 : 368;
+  const axisY = isSingleLane ? 204 : 336;
+  const topLaneTop = isSingleLane ? 20 : 14;
+  const leftX = 56;
   const rightX = 696;
+
+  const xTicks = useMemo(() => {
+    if (series.length === 0) return [];
+    const tickCount =
+      maxEpoch <= minEpoch ? 1 : Math.min(5, Math.max(2, series.length));
+    if (tickCount === 1) {
+      return [
+        {
+          epochMs: minEpoch,
+          x: (leftX + rightX) / 2,
+          anchor: "middle" as const,
+          label: formatTimeTick(minEpoch),
+        },
+      ];
+    }
+    return Array.from({ length: tickCount }, (_, i) => {
+      const ratio = i / (tickCount - 1);
+      const epochMs = Math.round(minEpoch + ratio * (maxEpoch - minEpoch));
+      const anchor =
+        i === 0
+          ? ("start" as const)
+          : i === tickCount - 1
+            ? ("end" as const)
+            : ("middle" as const);
+      return {
+        epochMs,
+        x: safeX(epochMs, minEpoch, maxEpoch, leftX, rightX),
+        anchor,
+        label: formatTimeTick(epochMs),
+      };
+    });
+  }, [series.length, minEpoch, maxEpoch]);
+
+  const laneStats = useMemo(
+    () =>
+      visibleLanes.flatMap((lane) =>
+        lane.lines.flatMap((lineDef) => {
+          const vals = series
+            .map(lineDef.getValue)
+            .filter((v): v is number => v !== undefined && Number.isFinite(v));
+          if (vals.length === 0) return [];
+          const min = Math.min(...vals);
+          const max = Math.max(...vals);
+          const avg = vals.reduce((sum, v) => sum + v, 0) / vals.length;
+          const latest = vals[vals.length - 1];
+          const status = evaluateMetricValue(lineDef.metricKey, latest);
+          return [
+            {
+              id: `${lane.id}-${lineDef.label}`,
+              label: lineDef.label,
+              unit: lane.unit,
+              decimals: lane.decimals,
+              min,
+              avg,
+              max,
+              latest,
+              status,
+            },
+          ];
+        }),
+      ),
+    [visibleLanes, series],
+  );
 
   return (
     <div className="feature-trend-section">
@@ -920,13 +1292,13 @@ export function FeatureTrendChart({
         <>
           <svg
             className="history-chart feature-trend-svg"
-            viewBox={`0 0 720 ${svgHeight}`}
+            viewBox={`0 0 ${svgWidth} ${svgHeight}`}
             role="img"
             aria-label="Xu hướng vật lý M6 + Live SSE"
           >
             {visibleLanes.map((lane, laneIdx) => {
-              const laneTop = mode === "ALL" ? 18 + laneIdx * 80 : 24;
-              const laneBottom = mode === "ALL" ? laneTop + 56 : 182;
+              const laneTop = isSingleLane ? 20 : 14 + laneIdx * 86;
+              const laneBottom = isSingleLane ? 204 : laneTop + 64;
 
               // Dynamic range expansion if values exceed nominal bounds
               const laneValues = series.flatMap((p) =>
@@ -941,6 +1313,31 @@ export function FeatureTrendChart({
                 ? Math.max(lane.max, ...laneValues)
                 : lane.max;
 
+              const bands = computeThresholdBands(
+                lane,
+                minVal,
+                maxVal,
+                laneTop,
+                laneBottom,
+              );
+              const marks = buildThresholdMarks(
+                lane,
+                minVal,
+                maxVal,
+                laneTop,
+                laneBottom,
+              );
+              const yTickCount = isSingleLane ? 5 : 3;
+              const yTicks = Array.from({ length: yTickCount }, (_, i) => {
+                const ratio = i / (yTickCount - 1);
+                const val = minVal + ratio * (maxVal - minVal);
+                return {
+                  val,
+                  y: safeY(val, minVal, maxVal, laneTop, laneBottom),
+                  isEdge: i === 0 || i === yTickCount - 1,
+                };
+              });
+
               return (
                 <g key={lane.id}>
                   <rect
@@ -952,74 +1349,96 @@ export function FeatureTrendChart({
                     stroke="#e2e8f0"
                     rx="4"
                   />
+                  {bands.map((band, bandIdx) => (
+                    <rect
+                      key={`band-${bandIdx}`}
+                      x={leftX + 0.5}
+                      y={band.y}
+                      width={rightX - leftX - 1}
+                      height={band.height}
+                      fill={band.fill}
+                    />
+                  ))}
+                  {yTicks.map((tick, tickIdx) => (
+                    <g key={`ytick-${tickIdx}`}>
+                      {!tick.isEdge && (
+                        <line
+                          x1={leftX}
+                          y1={tick.y}
+                          x2={rightX}
+                          y2={tick.y}
+                          stroke="#e2e8f0"
+                          strokeWidth="1"
+                          strokeDasharray="2 3"
+                        />
+                      )}
+                      <line
+                        x1={leftX - 4}
+                        y1={tick.y}
+                        x2={leftX}
+                        y2={tick.y}
+                        stroke="#94a3b8"
+                        strokeWidth="1"
+                      />
+                      <text
+                        x={leftX - 7}
+                        y={tick.y + 3}
+                        textAnchor="end"
+                        fontSize="9"
+                        fill="#64748b"
+                      >
+                        {formatAxisValue(tick.val, lane.decimals)}
+                      </text>
+                    </g>
+                  ))}
                   <text
                     x={leftX + 6}
                     y={laneTop + 12}
                     fontSize="10"
                     fontWeight="600"
-                    fill="#475569"
+                    fill="#334155"
                   >
                     {lane.title} ({lane.unit})
                   </text>
-                  {lane.warningLines.map((threshold) => {
-                    const y = safeY(
-                      threshold,
-                      minVal,
-                      maxVal,
-                      laneTop,
-                      laneBottom,
-                    );
-                    return (
+                  {marks.map((mark) => (
+                    <g key={mark.key}>
                       <line
-                        key={`warn-${threshold}`}
                         x1={leftX}
-                        y1={y}
+                        y1={mark.y}
                         x2={rightX}
-                        y2={y}
-                        stroke="#d97706"
-                        strokeWidth="1"
-                        strokeDasharray="4 3"
+                        y2={mark.y}
+                        stroke={mark.stroke}
+                        strokeWidth={mark.strokeWidth}
+                        strokeDasharray={mark.dash}
                       >
-                        <title>
-                          {`Warning threshold: ${threshold} ${lane.unit}`}
-                        </title>
+                        <title>{mark.title}</title>
                       </line>
-                    );
-                  })}
-                  {lane.criticalLines.map((threshold) => {
-                    const y = safeY(
-                      threshold,
-                      minVal,
-                      maxVal,
-                      laneTop,
-                      laneBottom,
-                    );
-                    return (
-                      <line
-                        key={`crit-${threshold}`}
-                        x1={leftX}
-                        y1={y}
-                        x2={rightX}
-                        y2={y}
-                        stroke="#dc2626"
-                        strokeWidth="1.2"
-                        strokeDasharray="3 3"
+                      <text
+                        x={rightX + 4}
+                        y={mark.labelY}
+                        fontSize="8.5"
+                        fontWeight="600"
+                        fill={mark.stroke}
                       >
-                        <title>
-                          {`Critical threshold: ${threshold} ${lane.unit}`}
-                        </title>
-                      </line>
-                    );
-                  })}
+                        {mark.label}
+                      </text>
+                    </g>
+                  ))}
                   {lane.lines.map((lineDef) => {
                     const coords = series
                       .map((point, idx) => {
                         const v = lineDef.getValue(point);
                         if (v === undefined) return null;
+                        const status = evaluateMetricValue(
+                          lineDef.metricKey,
+                          v,
+                        );
                         return {
                           idx,
                           point,
                           v,
+                          status,
+                          pointColor: statusPointColor(status, lineDef.color),
                           x: safeX(
                             point.epochMs,
                             minEpoch,
@@ -1037,38 +1456,64 @@ export function FeatureTrendChart({
                           idx: number;
                           point: TrendPoint;
                           v: number;
+                          status: PhysicalStatus;
+                          pointColor: string;
                           x: number;
                           y: number;
                         } => item !== null,
                       );
 
-                    const polylinePoints =
-                      coords.length === 1
-                        ? `${Math.max(leftX, coords[0].x - 12)},${coords[0].y} ${Math.min(rightX, coords[0].x + 12)},${coords[0].y}`
-                        : coords.map((c) => `${c.x},${c.y}`).join(" ");
+                    const segments: (typeof coords)[] = [];
+                    for (const coord of coords) {
+                      const currentSegment = segments.at(-1);
+                      if (
+                        !currentSegment ||
+                        coord.point.epochMs -
+                          currentSegment[currentSegment.length - 1].point
+                            .epochMs >
+                          gapThresholdMs
+                      ) {
+                        segments.push([coord]);
+                      } else {
+                        currentSegment.push(coord);
+                      }
+                    }
 
                     const latestCoord = coords.at(-1);
                     return (
                       <g key={lineDef.label}>
-                        {coords.length > 0 && (
-                          <polyline
-                            points={polylinePoints}
-                            fill="none"
-                            stroke={lineDef.color}
-                            strokeWidth="2"
-                          />
+                        {segments.map((segment, segIdx) =>
+                          segment.length >= 2 ? (
+                            <polyline
+                              key={`${lineDef.label}-seg-${segIdx}`}
+                              points={segment
+                                .map((c) => `${c.x},${c.y}`)
+                                .join(" ")}
+                              fill="none"
+                              stroke={lineDef.color}
+                              strokeWidth="2"
+                            />
+                          ) : null,
                         )}
                         {coords.map((c) => (
                           <circle
                             key={`${lineDef.label}-${c.idx}`}
                             cx={c.x}
                             cy={c.y}
-                            r={hoverIndex === c.idx ? 4.5 : 2.5}
-                            fill={lineDef.color}
+                            r={
+                              hoverIndex === c.idx
+                                ? 4.5
+                                : coords.length === 1
+                                  ? 4
+                                  : 2.5
+                            }
+                            fill={c.pointColor}
+                            stroke="#ffffff"
+                            strokeWidth="1"
                             onMouseEnter={() => setHoverIndex(c.idx)}
                           >
                             <title>
-                              {`${date(c.point.timestamp)} · ${lineDef.label}: ${c.v} ${lane.unit}`}
+                              {`${date(c.point.timestamp)} · ${lineDef.label}: ${c.v} ${lane.unit} (${c.status})`}
                             </title>
                           </circle>
                         ))}
@@ -1078,7 +1523,7 @@ export function FeatureTrendChart({
                             cx={latestCoord.x}
                             cy={latestCoord.y}
                             r="5"
-                            fill={lineDef.color}
+                            fill={latestCoord.pointColor}
                           />
                         )}
                       </g>
@@ -1087,13 +1532,44 @@ export function FeatureTrendChart({
                 </g>
               );
             })}
+            <g className="trend-x-axis">
+              <line
+                x1={leftX}
+                y1={axisY}
+                x2={rightX}
+                y2={axisY}
+                stroke="#cbd5e1"
+                strokeWidth="1"
+              />
+              {xTicks.map((tick, tickIdx) => (
+                <g key={`xtick-${tickIdx}`}>
+                  <line
+                    x1={tick.x}
+                    y1={axisY}
+                    x2={tick.x}
+                    y2={axisY + 5}
+                    stroke="#94a3b8"
+                    strokeWidth="1"
+                  />
+                  <text
+                    x={tick.x}
+                    y={axisY + 18}
+                    textAnchor={tick.anchor}
+                    fontSize="9.5"
+                    fill="#64748b"
+                  >
+                    {tick.label}
+                  </text>
+                </g>
+              ))}
+            </g>
             {showAiMarker && aiLastEpoch !== null && (
               <g>
                 <line
                   x1={safeX(aiLastEpoch, minEpoch, maxEpoch, leftX, rightX)}
-                  y1="14"
+                  y1={topLaneTop}
                   x2={safeX(aiLastEpoch, minEpoch, maxEpoch, leftX, rightX)}
-                  y2={svgHeight - 12}
+                  y2={axisY}
                   stroke="#b45309"
                   strokeWidth="1.5"
                   strokeDasharray="4 2"
@@ -1103,7 +1579,7 @@ export function FeatureTrendChart({
                     rightX - 70,
                     safeX(aiLastEpoch, minEpoch, maxEpoch, leftX, rightX) + 4,
                   )}
-                  y="14"
+                  y={topLaneTop - 2}
                   fontSize="9"
                   fontWeight="600"
                   fill="#b45309"
@@ -1121,7 +1597,7 @@ export function FeatureTrendChart({
                   leftX,
                   rightX,
                 )}
-                y1="16"
+                y1={topLaneTop}
                 x2={safeX(
                   activePoint.epochMs,
                   minEpoch,
@@ -1129,13 +1605,62 @@ export function FeatureTrendChart({
                   leftX,
                   rightX,
                 )}
-                y2={svgHeight - 14}
+                y2={axisY}
                 stroke="#64748b"
                 strokeWidth="1"
                 strokeDasharray="2 2"
               />
             )}
           </svg>
+          {laneStats.length > 0 && (
+            <div className="feature-trend-stats">
+              {isSingleLane ? (
+                <>
+                  <span>
+                    <strong>Min:</strong>{" "}
+                    {formatStatValue(laneStats[0].min, laneStats[0].decimals)}{" "}
+                    {laneStats[0].unit}
+                  </span>
+                  <span>
+                    <strong>Avg:</strong>{" "}
+                    {formatStatValue(laneStats[0].avg, laneStats[0].decimals)}{" "}
+                    {laneStats[0].unit}
+                  </span>
+                  <span>
+                    <strong>Max:</strong>{" "}
+                    {formatStatValue(laneStats[0].max, laneStats[0].decimals)}{" "}
+                    {laneStats[0].unit}
+                  </span>
+                  <span>
+                    <strong>Latest:</strong>{" "}
+                    <span
+                      className={`stat-status-${laneStats[0].status.toLowerCase()}`}
+                    >
+                      {formatStatValue(
+                        laneStats[0].latest,
+                        laneStats[0].decimals,
+                      )}{" "}
+                      {laneStats[0].unit} ({laneStats[0].status})
+                    </span>
+                  </span>
+                </>
+              ) : (
+                laneStats.map((stat) => (
+                  <span key={stat.id} className="stat-chip">
+                    <strong>{stat.label}:</strong>{" "}
+                    <span
+                      className={`stat-status-${stat.status.toLowerCase()}`}
+                    >
+                      {formatStatValue(stat.latest, stat.decimals)} {stat.unit}
+                    </span>{" "}
+                    (Min {formatStatValue(stat.min, stat.decimals)} · Avg{" "}
+                    {formatStatValue(stat.avg, stat.decimals)} · Max{" "}
+                    {formatStatValue(stat.max, stat.decimals)})
+                  </span>
+                ))
+              )}
+            </div>
+          )}
           {activePoint && (
             <div className="trend-readout" aria-live="polite">
               <span>

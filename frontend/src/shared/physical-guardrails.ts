@@ -24,8 +24,12 @@ export type TrendFeatureKey =
   | "ALL"
   | "torque_nm"
   | "rotational_speed_rpm"
-  | "temperatures"
-  | "tool_wear_min";
+  | "air_temperature_k"
+  | "process_temperature_k"
+  | "temp_delta_k"
+  | "tool_wear_min"
+  | "mechanical_power_w"
+  | "temperatures";
 
 export type FeatureMeta = {
   key: MetricKey;
@@ -51,7 +55,7 @@ export const FEATURE_METADATA: Record<MetricKey, FeatureMeta> = {
     max: 306,
     warningHigh: 303,
     criticalHigh: 304.5,
-    trendKey: "temperatures",
+    trendKey: "air_temperature_k",
   },
   process_temperature_k: {
     key: "process_temperature_k",
@@ -62,7 +66,7 @@ export const FEATURE_METADATA: Record<MetricKey, FeatureMeta> = {
     max: 316,
     warningHigh: 312,
     criticalHigh: 313,
-    trendKey: "temperatures",
+    trendKey: "process_temperature_k",
   },
   rotational_speed_rpm: {
     key: "rotational_speed_rpm",
@@ -108,7 +112,7 @@ export const FEATURE_METADATA: Record<MetricKey, FeatureMeta> = {
     max: 15,
     warningLow: 8.6,
     criticalLow: 8.0,
-    trendKey: "temperatures",
+    trendKey: "temp_delta_k",
   },
   mechanical_power_w: {
     key: "mechanical_power_w",
@@ -121,7 +125,7 @@ export const FEATURE_METADATA: Record<MetricKey, FeatureMeta> = {
     warningHigh: 8500,
     criticalLow: 3000,
     criticalHigh: 9000,
-    trendKey: "torque_nm",
+    trendKey: "mechanical_power_w",
   },
 };
 
@@ -210,6 +214,40 @@ function clampPercent(value: number, min: number, max: number): number {
     4,
     Math.min(100, Math.round(((value - min) / (max - min)) * 100)),
   );
+}
+
+/**
+ * Evaluate a single telemetry metric against FEATURE_METADATA guardrails.
+ * Preserves the exact boundary comparisons used by `evaluatePhysicalHealth`.
+ */
+export function evaluateMetricValue(
+  key: MetricKey,
+  value: number,
+): PhysicalStatus {
+  if (!Number.isFinite(value)) return "NORMAL";
+  const meta = FEATURE_METADATA[key];
+  if (key === "torque_nm" || key === "tool_wear_min") {
+    if (meta.criticalHigh !== undefined && value > meta.criticalHigh) {
+      return "CRITICAL";
+    }
+    if (meta.warningHigh !== undefined && value >= meta.warningHigh) {
+      return "WARNING";
+    }
+    return "NORMAL";
+  }
+  if (
+    (meta.criticalLow !== undefined && value < meta.criticalLow) ||
+    (meta.criticalHigh !== undefined && value > meta.criticalHigh)
+  ) {
+    return "CRITICAL";
+  }
+  if (
+    (meta.warningLow !== undefined && value < meta.warningLow) ||
+    (meta.warningHigh !== undefined && value > meta.warningHigh)
+  ) {
+    return "WARNING";
+  }
+  return "NORMAL";
 }
 
 function escalate(
