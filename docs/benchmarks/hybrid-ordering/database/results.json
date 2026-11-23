@@ -1,0 +1,6063 @@
+{
+  "generated_at": "2026-11-23T05:48:41.693385+00:00",
+  "runs": [
+    {
+      "mode": "baseline",
+      "workload": "A",
+      "run_index": 1,
+      "synchronous_commit": "on",
+      "throughput": {
+        "target_rps": 50.0,
+        "window_sent": 750,
+        "admitted_rps": 50.0,
+        "outcomes_rps": 50.0,
+        "preds_rps": 46.6,
+        "errors": 0
+      },
+      "e2e_ms": {
+        "hot_pred": {
+          "count": 15,
+          "mean": 946.15,
+          "p50": 932.806,
+          "p95": 1715.327,
+          "p99": 1730.207,
+          "max": 1733.927
+        },
+        "bg_pred": {
+          "count": 735,
+          "mean": 1300.0,
+          "p50": 1311.529,
+          "p95": 1964.091,
+          "p99": 2497.203,
+          "max": 3021.922
+        }
+      },
+      "db_metrics": {
+        "phases": {
+          "Baseline_durable_replay": {
+            "pool_wait_ms": {
+              "count": 750,
+              "mean": 0.012,
+              "p50": 0.011,
+              "p95": 0.018,
+              "p99": 0.024,
+              "max": 0.048
+            },
+            "total_ms": {
+              "count": 750,
+              "mean": 7.059,
+              "p50": 5.54,
+              "p95": 17.951,
+              "p99": 26.746,
+              "max": 31.292
+            },
+            "exec_ms": {
+              "count": 750,
+              "mean": 4.707,
+              "p50": 3.468,
+              "p95": 11.779,
+              "p99": 19.98,
+              "max": 27.109
+            },
+            "commit_ms": {
+              "count": 750,
+              "mean": 1.207,
+              "p50": 0.778,
+              "p95": 3.458,
+              "p99": 5.553,
+              "max": 8.245
+            },
+            "stmt_count": {
+              "count": 750,
+              "mean": 5.0,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 5294.595,
+            "sum_commit_ms": 905.619,
+            "sum_exec_ms": 3530.288
+          },
+          "Baseline_tx": {
+            "pool_wait_ms": {
+              "count": 1500,
+              "mean": 0.009,
+              "p50": 0.008,
+              "p95": 0.016,
+              "p99": 0.021,
+              "max": 0.051
+            },
+            "total_ms": {
+              "count": 1500,
+              "mean": 17.328,
+              "p50": 11.731,
+              "p95": 54.313,
+              "p99": 75.222,
+              "max": 92.399
+            },
+            "exec_ms": {
+              "count": 1500,
+              "mean": 13.25,
+              "p50": 8.103,
+              "p95": 43.657,
+              "p99": 61.289,
+              "max": 84.88
+            },
+            "commit_ms": {
+              "count": 1500,
+              "mean": 1.14,
+              "p50": 0.758,
+              "p95": 3.131,
+              "p99": 5.248,
+              "max": 10.54
+            },
+            "stmt_count": {
+              "count": 1500,
+              "mean": 12.737,
+              "p50": 12.5,
+              "p95": 21.0,
+              "p99": 26.0,
+              "max": 26.0
+            },
+            "sum_total_ms": 25991.409,
+            "sum_commit_ms": 1710.646,
+            "sum_exec_ms": 19875.122
+          },
+          "Biz_alert": {
+            "pool_wait_ms": {
+              "count": 71,
+              "mean": 0.012,
+              "p50": 0.011,
+              "p95": 0.017,
+              "p99": 0.019,
+              "max": 0.019
+            },
+            "total_ms": {
+              "count": 71,
+              "mean": 15.193,
+              "p50": 12.436,
+              "p95": 31.218,
+              "p99": 38.662,
+              "max": 41.93
+            },
+            "exec_ms": {
+              "count": 71,
+              "mean": 8.395,
+              "p50": 6.651,
+              "p95": 21.1,
+              "p99": 25.609,
+              "max": 27.602
+            },
+            "commit_ms": {
+              "count": 71,
+              "mean": 1.056,
+              "p50": 0.741,
+              "p95": 2.34,
+              "p99": 5.11,
+              "max": 7.253
+            },
+            "stmt_count": {
+              "count": 71,
+              "mean": 9.887,
+              "p50": 9.0,
+              "p95": 12.0,
+              "p99": 12.0,
+              "max": 12.0
+            },
+            "sum_total_ms": 1078.691,
+            "sum_commit_ms": 74.982,
+            "sum_exec_ms": 596.043
+          },
+          "Biz_live": {
+            "pool_wait_ms": {
+              "count": 712,
+              "mean": 0.013,
+              "p50": 0.012,
+              "p95": 0.019,
+              "p99": 0.028,
+              "max": 0.044
+            },
+            "total_ms": {
+              "count": 712,
+              "mean": 8.898,
+              "p50": 6.279,
+              "p95": 23.78,
+              "p99": 36.852,
+              "max": 55.565
+            },
+            "exec_ms": {
+              "count": 712,
+              "mean": 6.896,
+              "p50": 4.669,
+              "p95": 18.424,
+              "p99": 33.263,
+              "max": 47.782
+            },
+            "commit_ms": {
+              "count": 712,
+              "mean": 0.837,
+              "p50": 0.473,
+              "p95": 2.545,
+              "p99": 3.673,
+              "max": 13.06
+            },
+            "stmt_count": {
+              "count": 712,
+              "mean": 9.909,
+              "p50": 10.0,
+              "p95": 10.0,
+              "p99": 10.0,
+              "max": 10.0
+            },
+            "sum_total_ms": 6335.666,
+            "sum_commit_ms": 596.199,
+            "sum_exec_ms": 4909.606
+          },
+          "Biz_pred": {
+            "pool_wait_ms": {
+              "count": 699,
+              "mean": 0.012,
+              "p50": 0.012,
+              "p95": 0.019,
+              "p99": 0.03,
+              "max": 0.042
+            },
+            "total_ms": {
+              "count": 699,
+              "mean": 9.143,
+              "p50": 6.28,
+              "p95": 24.215,
+              "p99": 43.01,
+              "max": 55.953
+            },
+            "exec_ms": {
+              "count": 699,
+              "mean": 7.126,
+              "p50": 4.743,
+              "p95": 19.719,
+              "p99": 34.22,
+              "max": 46.986
+            },
+            "commit_ms": {
+              "count": 699,
+              "mean": 0.763,
+              "p50": 0.443,
+              "p95": 2.284,
+              "p99": 3.78,
+              "max": 6.588
+            },
+            "stmt_count": {
+              "count": 699,
+              "mean": 10.881,
+              "p50": 11.0,
+              "p95": 11.0,
+              "p99": 11.0,
+              "max": 11.0
+            },
+            "sum_total_ms": 6391.293,
+            "sum_commit_ms": 533.605,
+            "sum_exec_ms": 4980.913
+          },
+          "Relay_claim": {
+            "pool_wait_ms": {
+              "count": 1332,
+              "mean": 0.009,
+              "p50": 0.007,
+              "p95": 0.021,
+              "p99": 0.027,
+              "max": 0.049
+            },
+            "total_ms": {
+              "count": 1332,
+              "mean": 3.771,
+              "p50": 2.44,
+              "p95": 11.236,
+              "p99": 19.092,
+              "max": 30.257
+            },
+            "exec_ms": {
+              "count": 1332,
+              "mean": 2.47,
+              "p50": 1.531,
+              "p95": 7.524,
+              "p99": 13.286,
+              "max": 24.636
+            },
+            "commit_ms": {
+              "count": 1332,
+              "mean": 0.707,
+              "p50": 0.42,
+              "p95": 2.106,
+              "p99": 3.875,
+              "max": 8.644
+            },
+            "stmt_count": {
+              "count": 1332,
+              "mean": 4.233,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 5023.103,
+            "sum_commit_ms": 941.907,
+            "sum_exec_ms": 3289.943
+          },
+          "Relay_finish": {
+            "pool_wait_ms": {
+              "count": 821,
+              "mean": 0.012,
+              "p50": 0.011,
+              "p95": 0.02,
+              "p99": 0.026,
+              "max": 0.045
+            },
+            "total_ms": {
+              "count": 821,
+              "mean": 4.163,
+              "p50": 2.765,
+              "p95": 11.2,
+              "p99": 18.981,
+              "max": 33.069
+            },
+            "exec_ms": {
+              "count": 821,
+              "mean": 2.689,
+              "p50": 1.849,
+              "p95": 7.748,
+              "p99": 11.772,
+              "max": 28.109
+            },
+            "commit_ms": {
+              "count": 821,
+              "mean": 0.767,
+              "p50": 0.451,
+              "p95": 2.422,
+              "p99": 4.092,
+              "max": 6.515
+            },
+            "stmt_count": {
+              "count": 821,
+              "mean": 5.0,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 3417.754,
+            "sum_commit_ms": 629.329,
+            "sum_exec_ms": 2207.583
+          },
+          "StageB_prepare": {
+            "pool_wait_ms": {
+              "count": 750,
+              "mean": 0.007,
+              "p50": 0.006,
+              "p95": 0.01,
+              "p99": 0.014,
+              "max": 0.035
+            },
+            "total_ms": {
+              "count": 750,
+              "mean": 1.886,
+              "p50": 1.35,
+              "p95": 5.607,
+              "p99": 7.851,
+              "max": 20.933
+            },
+            "exec_ms": {
+              "count": 750,
+              "mean": 1.876,
+              "p50": 1.343,
+              "p95": 5.594,
+              "p99": 7.836,
+              "max": 20.918
+            },
+            "commit_ms": {
+              "count": 750,
+              "mean": 0.0,
+              "p50": 0.0,
+              "p95": 0.0,
+              "p99": 0.0,
+              "max": 0.0
+            },
+            "stmt_count": {
+              "count": 750,
+              "mean": 1.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 1.0,
+              "max": 1.0
+            },
+            "sum_total_ms": 1414.769,
+            "sum_commit_ms": 0.0,
+            "sum_exec_ms": 1407.005
+          }
+        },
+        "substeps": {}
+      },
+      "txa_poll_stall_pct": 0.0,
+      "pg_internals": {
+        "wal_delta": {
+          "wal_records": 75959,
+          "wal_bytes": 12312386,
+          "wal_write": 5915,
+          "wal_sync": 5913
+        },
+        "wal_sync_per_sec": 394.2,
+        "wal_bytes_per_sec": 820825.7,
+        "wal_sync_per_outcome": 7.884,
+        "commits_per_outcome": 9.135,
+        "db_deltas": {
+          "proc_db": {
+            "xact_commit": 5329,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 506118,
+            "tup_returned": 511918,
+            "tup_fetched": 363294,
+            "tup_inserted": 4813,
+            "tup_updated": 6557
+          },
+          "biz_db": {
+            "xact_commit": 1522,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 73154,
+            "tup_returned": 14924,
+            "tup_fetched": 14817,
+            "tup_inserted": 2464,
+            "tup_updated": 4971
+          }
+        },
+        "pg_cpu_pct": 36.73,
+        "pg_io_wbytes": 60616704,
+        "pg_io_wios": 11802,
+        "max_active_pg": 0,
+        "max_wait_pg": 1,
+        "wait_events": {},
+        "lock_waits": {}
+      },
+      "explain_plans": {}
+    },
+    {
+      "mode": "baseline",
+      "workload": "A",
+      "run_index": 2,
+      "synchronous_commit": "on",
+      "throughput": {
+        "target_rps": 50.0,
+        "window_sent": 750,
+        "admitted_rps": 50.0,
+        "outcomes_rps": 49.93,
+        "preds_rps": 43.13,
+        "errors": 0
+      },
+      "e2e_ms": {
+        "hot_pred": {
+          "count": 15,
+          "mean": 1710.105,
+          "p50": 1873.619,
+          "p95": 3064.811,
+          "p99": 3228.505,
+          "max": 3269.428
+        },
+        "bg_pred": {
+          "count": 735,
+          "mean": 2103.666,
+          "p50": 1702.125,
+          "p95": 5271.101,
+          "p99": 7981.269,
+          "max": 9554.715
+        }
+      },
+      "db_metrics": {
+        "phases": {
+          "Baseline_durable_replay": {
+            "pool_wait_ms": {
+              "count": 750,
+              "mean": 0.013,
+              "p50": 0.012,
+              "p95": 0.025,
+              "p99": 0.037,
+              "max": 0.056
+            },
+            "total_ms": {
+              "count": 750,
+              "mean": 8.291,
+              "p50": 6.786,
+              "p95": 19.159,
+              "p99": 27.728,
+              "max": 49.863
+            },
+            "exec_ms": {
+              "count": 750,
+              "mean": 5.614,
+              "p50": 4.471,
+              "p95": 13.903,
+              "p99": 19.451,
+              "max": 29.82
+            },
+            "commit_ms": {
+              "count": 750,
+              "mean": 1.307,
+              "p50": 0.874,
+              "p95": 3.603,
+              "p99": 6.287,
+              "max": 12.149
+            },
+            "stmt_count": {
+              "count": 750,
+              "mean": 5.0,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 6218.353,
+            "sum_commit_ms": 980.561,
+            "sum_exec_ms": 4210.201
+          },
+          "Baseline_tx": {
+            "pool_wait_ms": {
+              "count": 1499,
+              "mean": 0.011,
+              "p50": 0.009,
+              "p95": 0.023,
+              "p99": 0.035,
+              "max": 0.089
+            },
+            "total_ms": {
+              "count": 1499,
+              "mean": 20.735,
+              "p50": 13.979,
+              "p95": 61.144,
+              "p99": 91.622,
+              "max": 142.731
+            },
+            "exec_ms": {
+              "count": 1499,
+              "mean": 15.912,
+              "p50": 9.788,
+              "p95": 50.101,
+              "p99": 75.669,
+              "max": 113.32
+            },
+            "commit_ms": {
+              "count": 1499,
+              "mean": 1.286,
+              "p50": 0.88,
+              "p95": 3.774,
+              "p99": 5.924,
+              "max": 15.22
+            },
+            "stmt_count": {
+              "count": 1499,
+              "mean": 12.731,
+              "p50": 4.0,
+              "p95": 21.0,
+              "p99": 26.0,
+              "max": 26.0
+            },
+            "sum_total_ms": 31081.734,
+            "sum_commit_ms": 1926.99,
+            "sum_exec_ms": 23852.774
+          },
+          "Biz_alert": {
+            "pool_wait_ms": {
+              "count": 71,
+              "mean": 0.014,
+              "p50": 0.012,
+              "p95": 0.023,
+              "p99": 0.031,
+              "max": 0.033
+            },
+            "total_ms": {
+              "count": 71,
+              "mean": 19.308,
+              "p50": 16.066,
+              "p95": 42.327,
+              "p99": 54.378,
+              "max": 62.129
+            },
+            "exec_ms": {
+              "count": 71,
+              "mean": 10.497,
+              "p50": 9.031,
+              "p95": 21.358,
+              "p99": 32.118,
+              "max": 37.399
+            },
+            "commit_ms": {
+              "count": 71,
+              "mean": 1.38,
+              "p50": 0.865,
+              "p95": 3.896,
+              "p99": 6.398,
+              "max": 8.387
+            },
+            "stmt_count": {
+              "count": 71,
+              "mean": 9.887,
+              "p50": 9.0,
+              "p95": 12.0,
+              "p99": 12.0,
+              "max": 12.0
+            },
+            "sum_total_ms": 1370.874,
+            "sum_commit_ms": 97.947,
+            "sum_exec_ms": 745.283
+          },
+          "Biz_live": {
+            "pool_wait_ms": {
+              "count": 656,
+              "mean": 0.015,
+              "p50": 0.013,
+              "p95": 0.027,
+              "p99": 0.041,
+              "max": 0.06
+            },
+            "total_ms": {
+              "count": 656,
+              "mean": 10.392,
+              "p50": 7.245,
+              "p95": 27.543,
+              "p99": 41.991,
+              "max": 62.117
+            },
+            "exec_ms": {
+              "count": 656,
+              "mean": 8.136,
+              "p50": 5.355,
+              "p95": 23.113,
+              "p99": 33.47,
+              "max": 48.595
+            },
+            "commit_ms": {
+              "count": 656,
+              "mean": 0.963,
+              "p50": 0.527,
+              "p95": 2.783,
+              "p99": 4.884,
+              "max": 11.98
+            },
+            "stmt_count": {
+              "count": 656,
+              "mean": 9.873,
+              "p50": 10.0,
+              "p95": 10.0,
+              "p99": 10.0,
+              "max": 10.0
+            },
+            "sum_total_ms": 6816.94,
+            "sum_commit_ms": 632.035,
+            "sum_exec_ms": 5336.915
+          },
+          "Biz_pred": {
+            "pool_wait_ms": {
+              "count": 647,
+              "mean": 0.015,
+              "p50": 0.013,
+              "p95": 0.026,
+              "p99": 0.043,
+              "max": 0.085
+            },
+            "total_ms": {
+              "count": 647,
+              "mean": 10.808,
+              "p50": 7.434,
+              "p95": 29.684,
+              "p99": 43.308,
+              "max": 69.457
+            },
+            "exec_ms": {
+              "count": 647,
+              "mean": 8.458,
+              "p50": 5.486,
+              "p95": 24.883,
+              "p99": 35.442,
+              "max": 60.358
+            },
+            "commit_ms": {
+              "count": 647,
+              "mean": 0.961,
+              "p50": 0.537,
+              "p95": 3.062,
+              "p99": 5.48,
+              "max": 10.029
+            },
+            "stmt_count": {
+              "count": 647,
+              "mean": 10.688,
+              "p50": 11.0,
+              "p95": 11.0,
+              "p99": 11.0,
+              "max": 11.0
+            },
+            "sum_total_ms": 6992.468,
+            "sum_commit_ms": 621.934,
+            "sum_exec_ms": 5472.321
+          },
+          "Relay_claim": {
+            "pool_wait_ms": {
+              "count": 1201,
+              "mean": 0.01,
+              "p50": 0.007,
+              "p95": 0.024,
+              "p99": 0.037,
+              "max": 0.076
+            },
+            "total_ms": {
+              "count": 1201,
+              "mean": 4.371,
+              "p50": 2.572,
+              "p95": 13.199,
+              "p99": 21.678,
+              "max": 51.063
+            },
+            "exec_ms": {
+              "count": 1201,
+              "mean": 2.909,
+              "p50": 1.668,
+              "p95": 9.329,
+              "p99": 14.259,
+              "max": 42.16
+            },
+            "commit_ms": {
+              "count": 1201,
+              "mean": 0.797,
+              "p50": 0.45,
+              "p95": 2.518,
+              "p99": 4.987,
+              "max": 8.854
+            },
+            "stmt_count": {
+              "count": 1201,
+              "mean": 4.366,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 5249.529,
+            "sum_commit_ms": 957.785,
+            "sum_exec_ms": 3493.504
+          },
+          "Relay_finish": {
+            "pool_wait_ms": {
+              "count": 820,
+              "mean": 0.015,
+              "p50": 0.013,
+              "p95": 0.026,
+              "p99": 0.035,
+              "max": 0.052
+            },
+            "total_ms": {
+              "count": 820,
+              "mean": 4.682,
+              "p50": 3.179,
+              "p95": 11.941,
+              "p99": 20.992,
+              "max": 41.248
+            },
+            "exec_ms": {
+              "count": 820,
+              "mean": 3.106,
+              "p50": 2.011,
+              "p95": 8.913,
+              "p99": 15.532,
+              "max": 25.81
+            },
+            "commit_ms": {
+              "count": 820,
+              "mean": 0.839,
+              "p50": 0.475,
+              "p95": 2.548,
+              "p99": 4.822,
+              "max": 18.165
+            },
+            "stmt_count": {
+              "count": 820,
+              "mean": 5.0,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 3838.874,
+            "sum_commit_ms": 688.13,
+            "sum_exec_ms": 2546.748
+          },
+          "StageB_prepare": {
+            "pool_wait_ms": {
+              "count": 750,
+              "mean": 0.007,
+              "p50": 0.006,
+              "p95": 0.011,
+              "p99": 0.017,
+              "max": 0.031
+            },
+            "total_ms": {
+              "count": 750,
+              "mean": 2.178,
+              "p50": 1.702,
+              "p95": 5.664,
+              "p99": 9.743,
+              "max": 15.834
+            },
+            "exec_ms": {
+              "count": 750,
+              "mean": 2.166,
+              "p50": 1.69,
+              "p95": 5.649,
+              "p99": 9.723,
+              "max": 15.81
+            },
+            "commit_ms": {
+              "count": 750,
+              "mean": 0.0,
+              "p50": 0.0,
+              "p95": 0.0,
+              "p99": 0.0,
+              "max": 0.0
+            },
+            "stmt_count": {
+              "count": 750,
+              "mean": 1.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 1.0,
+              "max": 1.0
+            },
+            "sum_total_ms": 1633.389,
+            "sum_commit_ms": 0.0,
+            "sum_exec_ms": 1624.344
+          }
+        },
+        "substeps": {}
+      },
+      "txa_poll_stall_pct": 0.0,
+      "pg_internals": {
+        "wal_delta": {
+          "wal_records": 72875,
+          "wal_bytes": 11975327,
+          "wal_write": 5654,
+          "wal_sync": 5652
+        },
+        "wal_sync_per_sec": 376.8,
+        "wal_bytes_per_sec": 798355.1,
+        "wal_sync_per_outcome": 7.546,
+        "commits_per_outcome": 8.83,
+        "db_deltas": {
+          "proc_db": {
+            "xact_commit": 5226,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 226236,
+            "tup_returned": 614951,
+            "tup_fetched": 77488,
+            "tup_inserted": 4775,
+            "tup_updated": 6559
+          },
+          "biz_db": {
+            "xact_commit": 1388,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 69837,
+            "tup_returned": 17036,
+            "tup_fetched": 15673,
+            "tup_inserted": 2350,
+            "tup_updated": 4396
+          }
+        },
+        "pg_cpu_pct": 39.22,
+        "pg_io_wbytes": 58920960,
+        "pg_io_wios": 11398,
+        "max_active_pg": 0,
+        "max_wait_pg": 1,
+        "wait_events": {},
+        "lock_waits": {}
+      },
+      "explain_plans": {}
+    },
+    {
+      "mode": "baseline",
+      "workload": "A",
+      "run_index": 3,
+      "synchronous_commit": "on",
+      "throughput": {
+        "target_rps": 50.0,
+        "window_sent": 750,
+        "admitted_rps": 50.0,
+        "outcomes_rps": 50.27,
+        "preds_rps": 43.4,
+        "errors": 0
+      },
+      "e2e_ms": {
+        "hot_pred": {
+          "count": 15,
+          "mean": 2215.71,
+          "p50": 1941.426,
+          "p95": 3172.044,
+          "p99": 3363.403,
+          "max": 3411.242
+        },
+        "bg_pred": {
+          "count": 735,
+          "mean": 2693.669,
+          "p50": 1961.518,
+          "p95": 7622.752,
+          "p99": 11894.516,
+          "max": 13855.554
+        }
+      },
+      "db_metrics": {
+        "phases": {
+          "Baseline_durable_replay": {
+            "pool_wait_ms": {
+              "count": 750,
+              "mean": 0.013,
+              "p50": 0.012,
+              "p95": 0.023,
+              "p99": 0.029,
+              "max": 0.045
+            },
+            "total_ms": {
+              "count": 750,
+              "mean": 7.535,
+              "p50": 6.192,
+              "p95": 18.027,
+              "p99": 25.772,
+              "max": 35.78
+            },
+            "exec_ms": {
+              "count": 750,
+              "mean": 5.096,
+              "p50": 3.922,
+              "p95": 13.202,
+              "p99": 19.271,
+              "max": 27.301
+            },
+            "commit_ms": {
+              "count": 750,
+              "mean": 1.246,
+              "p50": 0.851,
+              "p95": 3.369,
+              "p99": 5.493,
+              "max": 12.771
+            },
+            "stmt_count": {
+              "count": 750,
+              "mean": 5.0,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 5650.885,
+            "sum_commit_ms": 934.792,
+            "sum_exec_ms": 3821.759
+          },
+          "Baseline_tx": {
+            "pool_wait_ms": {
+              "count": 1505,
+              "mean": 0.011,
+              "p50": 0.01,
+              "p95": 0.021,
+              "p99": 0.026,
+              "max": 0.051
+            },
+            "total_ms": {
+              "count": 1505,
+              "mean": 19.336,
+              "p50": 13.346,
+              "p95": 59.884,
+              "p99": 81.923,
+              "max": 124.441
+            },
+            "exec_ms": {
+              "count": 1505,
+              "mean": 14.795,
+              "p50": 8.817,
+              "p95": 48.772,
+              "p99": 67.937,
+              "max": 101.565
+            },
+            "commit_ms": {
+              "count": 1505,
+              "mean": 1.21,
+              "p50": 0.85,
+              "p95": 3.199,
+              "p99": 4.947,
+              "max": 6.17
+            },
+            "stmt_count": {
+              "count": 1505,
+              "mean": 12.767,
+              "p50": 21.0,
+              "p95": 21.0,
+              "p99": 26.0,
+              "max": 26.0
+            },
+            "sum_total_ms": 29100.822,
+            "sum_commit_ms": 1820.556,
+            "sum_exec_ms": 22266.03
+          },
+          "Biz_alert": {
+            "pool_wait_ms": {
+              "count": 72,
+              "mean": 0.013,
+              "p50": 0.012,
+              "p95": 0.019,
+              "p99": 0.023,
+              "max": 0.024
+            },
+            "total_ms": {
+              "count": 72,
+              "mean": 14.987,
+              "p50": 13.215,
+              "p95": 29.936,
+              "p99": 35.014,
+              "max": 37.903
+            },
+            "exec_ms": {
+              "count": 72,
+              "mean": 8.244,
+              "p50": 7.397,
+              "p95": 16.152,
+              "p99": 22.355,
+              "max": 22.989
+            },
+            "commit_ms": {
+              "count": 72,
+              "mean": 0.959,
+              "p50": 0.843,
+              "p95": 2.101,
+              "p99": 2.445,
+              "max": 2.848
+            },
+            "stmt_count": {
+              "count": 72,
+              "mean": 9.917,
+              "p50": 9.0,
+              "p95": 12.0,
+              "p99": 12.0,
+              "max": 12.0
+            },
+            "sum_total_ms": 1079.037,
+            "sum_commit_ms": 69.056,
+            "sum_exec_ms": 593.551
+          },
+          "Biz_live": {
+            "pool_wait_ms": {
+              "count": 666,
+              "mean": 0.014,
+              "p50": 0.013,
+              "p95": 0.023,
+              "p99": 0.03,
+              "max": 0.041
+            },
+            "total_ms": {
+              "count": 666,
+              "mean": 9.837,
+              "p50": 7.248,
+              "p95": 26.306,
+              "p99": 41.635,
+              "max": 70.763
+            },
+            "exec_ms": {
+              "count": 666,
+              "mean": 7.649,
+              "p50": 5.551,
+              "p95": 20.508,
+              "p99": 32.44,
+              "max": 60.984
+            },
+            "commit_ms": {
+              "count": 666,
+              "mean": 0.934,
+              "p50": 0.516,
+              "p95": 2.797,
+              "p99": 5.533,
+              "max": 7.024
+            },
+            "stmt_count": {
+              "count": 666,
+              "mean": 9.872,
+              "p50": 10.0,
+              "p95": 10.0,
+              "p99": 10.0,
+              "max": 10.0
+            },
+            "sum_total_ms": 6551.743,
+            "sum_commit_ms": 622.312,
+            "sum_exec_ms": 5094.002
+          },
+          "Biz_pred": {
+            "pool_wait_ms": {
+              "count": 651,
+              "mean": 0.014,
+              "p50": 0.013,
+              "p95": 0.024,
+              "p99": 0.031,
+              "max": 0.073
+            },
+            "total_ms": {
+              "count": 651,
+              "mean": 10.337,
+              "p50": 7.605,
+              "p95": 29.015,
+              "p99": 42.375,
+              "max": 91.781
+            },
+            "exec_ms": {
+              "count": 651,
+              "mean": 8.087,
+              "p50": 5.781,
+              "p95": 24.653,
+              "p99": 36.369,
+              "max": 64.501
+            },
+            "commit_ms": {
+              "count": 651,
+              "mean": 0.902,
+              "p50": 0.524,
+              "p95": 2.775,
+              "p99": 5.162,
+              "max": 9.01
+            },
+            "stmt_count": {
+              "count": 651,
+              "mean": 10.728,
+              "p50": 11.0,
+              "p95": 11.0,
+              "p99": 11.0,
+              "max": 11.0
+            },
+            "sum_total_ms": 6729.645,
+            "sum_commit_ms": 587.413,
+            "sum_exec_ms": 5264.628
+          },
+          "Relay_claim": {
+            "pool_wait_ms": {
+              "count": 1209,
+              "mean": 0.01,
+              "p50": 0.007,
+              "p95": 0.022,
+              "p99": 0.03,
+              "max": 0.044
+            },
+            "total_ms": {
+              "count": 1209,
+              "mean": 4.318,
+              "p50": 2.772,
+              "p95": 12.7,
+              "p99": 21.648,
+              "max": 44.862
+            },
+            "exec_ms": {
+              "count": 1209,
+              "mean": 2.865,
+              "p50": 1.782,
+              "p95": 8.476,
+              "p99": 16.41,
+              "max": 25.503
+            },
+            "commit_ms": {
+              "count": 1209,
+              "mean": 0.76,
+              "p50": 0.455,
+              "p95": 2.209,
+              "p99": 4.204,
+              "max": 7.37
+            },
+            "stmt_count": {
+              "count": 1209,
+              "mean": 4.368,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 5220.859,
+            "sum_commit_ms": 918.933,
+            "sum_exec_ms": 3464.039
+          },
+          "Relay_finish": {
+            "pool_wait_ms": {
+              "count": 827,
+              "mean": 0.014,
+              "p50": 0.013,
+              "p95": 0.024,
+              "p99": 0.031,
+              "max": 0.037
+            },
+            "total_ms": {
+              "count": 827,
+              "mean": 4.695,
+              "p50": 3.457,
+              "p95": 12.185,
+              "p99": 21.01,
+              "max": 32.328
+            },
+            "exec_ms": {
+              "count": 827,
+              "mean": 3.126,
+              "p50": 2.185,
+              "p95": 8.826,
+              "p99": 14.666,
+              "max": 23.184
+            },
+            "commit_ms": {
+              "count": 827,
+              "mean": 0.824,
+              "p50": 0.5,
+              "p95": 2.573,
+              "p99": 4.049,
+              "max": 7.876
+            },
+            "stmt_count": {
+              "count": 827,
+              "mean": 5.0,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 3882.727,
+            "sum_commit_ms": 681.19,
+            "sum_exec_ms": 2584.947
+          },
+          "StageB_prepare": {
+            "pool_wait_ms": {
+              "count": 750,
+              "mean": 0.007,
+              "p50": 0.006,
+              "p95": 0.011,
+              "p99": 0.014,
+              "max": 0.029
+            },
+            "total_ms": {
+              "count": 750,
+              "mean": 2.09,
+              "p50": 1.5,
+              "p95": 6.105,
+              "p99": 8.839,
+              "max": 20.919
+            },
+            "exec_ms": {
+              "count": 750,
+              "mean": 2.079,
+              "p50": 1.491,
+              "p95": 6.093,
+              "p99": 8.815,
+              "max": 20.903
+            },
+            "commit_ms": {
+              "count": 750,
+              "mean": 0.0,
+              "p50": 0.0,
+              "p95": 0.0,
+              "p99": 0.0,
+              "max": 0.0
+            },
+            "stmt_count": {
+              "count": 750,
+              "mean": 1.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 1.0,
+              "max": 1.0
+            },
+            "sum_total_ms": 1567.818,
+            "sum_commit_ms": 0.0,
+            "sum_exec_ms": 1558.99
+          }
+        },
+        "substeps": {}
+      },
+      "txa_poll_stall_pct": 0.0,
+      "pg_internals": {
+        "wal_delta": {
+          "wal_records": 73247,
+          "wal_bytes": 11939740,
+          "wal_write": 5664,
+          "wal_sync": 5662
+        },
+        "wal_sync_per_sec": 377.47,
+        "wal_bytes_per_sec": 795982.7,
+        "wal_sync_per_outcome": 7.509,
+        "commits_per_outcome": 8.743,
+        "db_deltas": {
+          "proc_db": {
+            "xact_commit": 5194,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 255835,
+            "tup_returned": 610740,
+            "tup_fetched": 113084,
+            "tup_inserted": 4777,
+            "tup_updated": 6620
+          },
+          "biz_db": {
+            "xact_commit": 1398,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 66291,
+            "tup_returned": 13568,
+            "tup_fetched": 13466,
+            "tup_inserted": 2289,
+            "tup_updated": 4419
+          }
+        },
+        "pg_cpu_pct": 38.36,
+        "pg_io_wbytes": 57860096,
+        "pg_io_wios": 11205,
+        "max_active_pg": 0,
+        "max_wait_pg": 1,
+        "wait_events": {},
+        "lock_waits": {}
+      },
+      "explain_plans": {}
+    },
+    {
+      "mode": "hybrid",
+      "workload": "A",
+      "run_index": 1,
+      "synchronous_commit": "on",
+      "throughput": {
+        "target_rps": 50.0,
+        "window_sent": 750,
+        "admitted_rps": 50.0,
+        "outcomes_rps": 49.87,
+        "preds_rps": 48.53,
+        "errors": 0
+      },
+      "e2e_ms": {
+        "hot_pred": {
+          "count": 15,
+          "mean": 599.018,
+          "p50": 569.793,
+          "p95": 849.241,
+          "p99": 912.468,
+          "max": 928.275
+        },
+        "bg_pred": {
+          "count": 735,
+          "mean": 990.206,
+          "p50": 962.948,
+          "p95": 1454.545,
+          "p99": 1589.403,
+          "max": 1798.925
+        }
+      },
+      "db_metrics": {
+        "phases": {
+          "Biz_alert": {
+            "pool_wait_ms": {
+              "count": 71,
+              "mean": 0.012,
+              "p50": 0.011,
+              "p95": 0.017,
+              "p99": 0.021,
+              "max": 0.025
+            },
+            "total_ms": {
+              "count": 71,
+              "mean": 14.139,
+              "p50": 13.946,
+              "p95": 23.168,
+              "p99": 24.907,
+              "max": 26.378
+            },
+            "exec_ms": {
+              "count": 71,
+              "mean": 7.71,
+              "p50": 7.269,
+              "p95": 13.716,
+              "p99": 15.867,
+              "max": 17.046
+            },
+            "commit_ms": {
+              "count": 71,
+              "mean": 0.93,
+              "p50": 0.766,
+              "p95": 2.014,
+              "p99": 2.536,
+              "max": 2.619
+            },
+            "stmt_count": {
+              "count": 71,
+              "mean": 9.887,
+              "p50": 9.0,
+              "p95": 12.0,
+              "p99": 12.0,
+              "max": 12.0
+            },
+            "sum_total_ms": 1003.898,
+            "sum_commit_ms": 66.043,
+            "sum_exec_ms": 547.403
+          },
+          "Biz_live": {
+            "pool_wait_ms": {
+              "count": 743,
+              "mean": 0.013,
+              "p50": 0.012,
+              "p95": 0.021,
+              "p99": 0.033,
+              "max": 0.09
+            },
+            "total_ms": {
+              "count": 743,
+              "mean": 8.147,
+              "p50": 7.405,
+              "p95": 17.09,
+              "p99": 22.881,
+              "max": 29.162
+            },
+            "exec_ms": {
+              "count": 743,
+              "mean": 6.253,
+              "p50": 5.604,
+              "p95": 14.106,
+              "p99": 18.59,
+              "max": 24.346
+            },
+            "commit_ms": {
+              "count": 743,
+              "mean": 0.838,
+              "p50": 0.565,
+              "p95": 2.195,
+              "p99": 3.141,
+              "max": 6.656
+            },
+            "stmt_count": {
+              "count": 743,
+              "mean": 10.0,
+              "p50": 10.0,
+              "p95": 10.0,
+              "p99": 10.0,
+              "max": 10.0
+            },
+            "sum_total_ms": 6053.255,
+            "sum_commit_ms": 622.362,
+            "sum_exec_ms": 4645.73
+          },
+          "Biz_pred": {
+            "pool_wait_ms": {
+              "count": 728,
+              "mean": 0.013,
+              "p50": 0.013,
+              "p95": 0.021,
+              "p99": 0.032,
+              "max": 0.041
+            },
+            "total_ms": {
+              "count": 728,
+              "mean": 8.665,
+              "p50": 7.853,
+              "p95": 17.303,
+              "p99": 25.439,
+              "max": 29.33
+            },
+            "exec_ms": {
+              "count": 728,
+              "mean": 6.667,
+              "p50": 5.923,
+              "p95": 14.267,
+              "p99": 20.543,
+              "max": 25.267
+            },
+            "commit_ms": {
+              "count": 728,
+              "mean": 0.818,
+              "p50": 0.521,
+              "p95": 2.222,
+              "p99": 3.885,
+              "max": 5.825
+            },
+            "stmt_count": {
+              "count": 728,
+              "mean": 11.0,
+              "p50": 11.0,
+              "p95": 11.0,
+              "p99": 11.0,
+              "max": 11.0
+            },
+            "sum_total_ms": 6308.482,
+            "sum_commit_ms": 595.223,
+            "sum_exec_ms": 4853.647
+          },
+          "Relay_claim": {
+            "pool_wait_ms": {
+              "count": 1395,
+              "mean": 0.017,
+              "p50": 0.007,
+              "p95": 0.021,
+              "p99": 0.027,
+              "max": 10.277
+            },
+            "total_ms": {
+              "count": 1395,
+              "mean": 3.527,
+              "p50": 2.798,
+              "p95": 8.598,
+              "p99": 11.819,
+              "max": 18.383
+            },
+            "exec_ms": {
+              "count": 1395,
+              "mean": 2.272,
+              "p50": 1.695,
+              "p95": 6.03,
+              "p99": 8.152,
+              "max": 11.639
+            },
+            "commit_ms": {
+              "count": 1395,
+              "mean": 0.712,
+              "p50": 0.486,
+              "p95": 1.921,
+              "p99": 3.183,
+              "max": 5.764
+            },
+            "stmt_count": {
+              "count": 1395,
+              "mean": 4.174,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 4919.813,
+            "sum_commit_ms": 993.161,
+            "sum_exec_ms": 3169.366
+          },
+          "Relay_finish": {
+            "pool_wait_ms": {
+              "count": 819,
+              "mean": 0.014,
+              "p50": 0.013,
+              "p95": 0.023,
+              "p99": 0.027,
+              "max": 0.139
+            },
+            "total_ms": {
+              "count": 819,
+              "mean": 4.212,
+              "p50": 3.705,
+              "p95": 8.649,
+              "p99": 11.254,
+              "max": 15.18
+            },
+            "exec_ms": {
+              "count": 819,
+              "mean": 2.778,
+              "p50": 2.377,
+              "p95": 6.135,
+              "p99": 8.122,
+              "max": 11.55
+            },
+            "commit_ms": {
+              "count": 819,
+              "mean": 0.762,
+              "p50": 0.505,
+              "p95": 2.176,
+              "p99": 3.286,
+              "max": 4.756
+            },
+            "stmt_count": {
+              "count": 819,
+              "mean": 5.0,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 3449.269,
+            "sum_commit_ms": 624.249,
+            "sum_exec_ms": 2274.987
+          },
+          "StageB_prepare": {
+            "pool_wait_ms": {
+              "count": 750,
+              "mean": 0.013,
+              "p50": 0.012,
+              "p95": 0.019,
+              "p99": 0.029,
+              "max": 0.048
+            },
+            "total_ms": {
+              "count": 750,
+              "mean": 1.964,
+              "p50": 1.652,
+              "p95": 4.268,
+              "p99": 5.801,
+              "max": 7.136
+            },
+            "exec_ms": {
+              "count": 750,
+              "mean": 1.953,
+              "p50": 1.636,
+              "p95": 4.258,
+              "p99": 5.79,
+              "max": 7.124
+            },
+            "commit_ms": {
+              "count": 750,
+              "mean": 0.0,
+              "p50": 0.0,
+              "p95": 0.0,
+              "p99": 0.0,
+              "max": 0.0
+            },
+            "stmt_count": {
+              "count": 750,
+              "mean": 1.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 1.0,
+              "max": 1.0
+            },
+            "sum_total_ms": 1473.154,
+            "sum_commit_ms": 0.0,
+            "sum_exec_ms": 1464.486
+          },
+          "TxA_admit": {
+            "pool_wait_ms": {
+              "count": 750,
+              "mean": 0.011,
+              "p50": 0.01,
+              "p95": 0.017,
+              "p99": 0.03,
+              "max": 0.072
+            },
+            "total_ms": {
+              "count": 750,
+              "mean": 9.312,
+              "p50": 8.398,
+              "p95": 19.459,
+              "p99": 26.443,
+              "max": 29.583
+            },
+            "exec_ms": {
+              "count": 750,
+              "mean": 7.521,
+              "p50": 6.605,
+              "p95": 15.547,
+              "p99": 22.027,
+              "max": 27.852
+            },
+            "commit_ms": {
+              "count": 750,
+              "mean": 0.883,
+              "p50": 0.58,
+              "p95": 2.482,
+              "p99": 3.874,
+              "max": 5.842
+            },
+            "stmt_count": {
+              "count": 750,
+              "mean": 12.0,
+              "p50": 12.0,
+              "p95": 12.0,
+              "p99": 12.0,
+              "max": 12.0
+            },
+            "sum_total_ms": 6983.901,
+            "sum_commit_ms": 662.56,
+            "sum_exec_ms": 5641.042
+          },
+          "TxC_persist": {
+            "pool_wait_ms": {
+              "count": 748,
+              "mean": 0.012,
+              "p50": 0.012,
+              "p95": 0.02,
+              "p99": 0.028,
+              "max": 0.077
+            },
+            "total_ms": {
+              "count": 748,
+              "mean": 29.708,
+              "p50": 27.17,
+              "p95": 53.948,
+              "p99": 66.058,
+              "max": 81.686
+            },
+            "exec_ms": {
+              "count": 748,
+              "mean": 24.394,
+              "p50": 22.12,
+              "p95": 46.124,
+              "p99": 57.353,
+              "max": 67.43
+            },
+            "commit_ms": {
+              "count": 748,
+              "mean": 0.953,
+              "p50": 0.71,
+              "p95": 2.473,
+              "p99": 3.587,
+              "max": 5.012
+            },
+            "stmt_count": {
+              "count": 748,
+              "mean": 31.475,
+              "p50": 31.0,
+              "p95": 36.0,
+              "p99": 36.0,
+              "max": 36.0
+            },
+            "sum_total_ms": 22221.288,
+            "sum_commit_ms": 712.654,
+            "sum_exec_ms": 18247.078
+          }
+        },
+        "substeps": {
+          "persist_hybrid_fn_ms": {
+            "count": 748,
+            "mean": 23.388,
+            "p50": 21.433,
+            "p95": 43.525,
+            "p99": 53.076,
+            "max": 72.882
+          },
+          "txa_resequencer_admit_ms": {
+            "count": 750,
+            "mean": 5.575,
+            "p50": 4.837,
+            "p95": 12.013,
+            "p99": 16.398,
+            "max": 20.898
+          },
+          "txc_drain_frontier_ms": {
+            "count": 748,
+            "mean": 9.173,
+            "p50": 8.037,
+            "p95": 20.108,
+            "p99": 27.228,
+            "max": 41.75
+          },
+          "txc_record_disposition_ms": {
+            "count": 748,
+            "mean": 1.268,
+            "p50": 0.714,
+            "p95": 4.277,
+            "p99": 7.152,
+            "max": 11.256
+          }
+        }
+      },
+      "txa_poll_stall_pct": 46.56,
+      "pg_internals": {
+        "wal_delta": {
+          "wal_records": 86515,
+          "wal_bytes": 13990481,
+          "wal_write": 5329,
+          "wal_sync": 5327
+        },
+        "wal_sync_per_sec": 355.13,
+        "wal_bytes_per_sec": 932698.7,
+        "wal_sync_per_outcome": 7.122,
+        "commits_per_outcome": 8.283,
+        "db_deltas": {
+          "proc_db": {
+            "xact_commit": 4620,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 374001,
+            "tup_returned": 797221,
+            "tup_fetched": 198741,
+            "tup_inserted": 5545,
+            "tup_updated": 9518
+          },
+          "biz_db": {
+            "xact_commit": 1576,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 76599,
+            "tup_returned": 15611,
+            "tup_fetched": 15505,
+            "tup_inserted": 2551,
+            "tup_updated": 5305
+          }
+        },
+        "pg_cpu_pct": 43.24,
+        "pg_io_wbytes": 57057280,
+        "pg_io_wios": 10493,
+        "max_active_pg": 0,
+        "max_wait_pg": 1,
+        "wait_events": {},
+        "lock_waits": {}
+      },
+      "explain_plans": {}
+    },
+    {
+      "mode": "hybrid",
+      "workload": "A",
+      "run_index": 2,
+      "synchronous_commit": "on",
+      "throughput": {
+        "target_rps": 50.0,
+        "window_sent": 750,
+        "admitted_rps": 35.93,
+        "outcomes_rps": 35.73,
+        "preds_rps": 29.93,
+        "errors": 0
+      },
+      "e2e_ms": {
+        "hot_pred": {
+          "count": 15,
+          "mean": 4777.725,
+          "p50": 5488.896,
+          "p95": 8126.53,
+          "p99": 8302.605,
+          "max": 8346.624
+        },
+        "bg_pred": {
+          "count": 735,
+          "mean": 5565.674,
+          "p50": 5596.45,
+          "p95": 11106.99,
+          "p99": 15294.199,
+          "max": 17124.637
+        }
+      },
+      "db_metrics": {
+        "phases": {
+          "Biz_alert": {
+            "pool_wait_ms": {
+              "count": 53,
+              "mean": 0.021,
+              "p50": 0.021,
+              "p95": 0.03,
+              "p99": 0.033,
+              "max": 0.035
+            },
+            "total_ms": {
+              "count": 53,
+              "mean": 32.37,
+              "p50": 29.183,
+              "p95": 55.377,
+              "p99": 63.74,
+              "max": 70.141
+            },
+            "exec_ms": {
+              "count": 53,
+              "mean": 18.99,
+              "p50": 17.354,
+              "p95": 33.109,
+              "p99": 42.544,
+              "max": 45.276
+            },
+            "commit_ms": {
+              "count": 53,
+              "mean": 1.88,
+              "p50": 1.217,
+              "p95": 4.906,
+              "p99": 5.155,
+              "max": 5.208
+            },
+            "stmt_count": {
+              "count": 53,
+              "mean": 10.189,
+              "p50": 9.0,
+              "p95": 12.0,
+              "p99": 12.0,
+              "max": 12.0
+            },
+            "sum_total_ms": 1715.591,
+            "sum_commit_ms": 99.65,
+            "sum_exec_ms": 1006.465
+          },
+          "Biz_live": {
+            "pool_wait_ms": {
+              "count": 450,
+              "mean": 0.022,
+              "p50": 0.02,
+              "p95": 0.033,
+              "p99": 0.05,
+              "max": 0.175
+            },
+            "total_ms": {
+              "count": 450,
+              "mean": 18.841,
+              "p50": 17.598,
+              "p95": 36.605,
+              "p99": 44.197,
+              "max": 50.999
+            },
+            "exec_ms": {
+              "count": 450,
+              "mean": 14.847,
+              "p50": 13.472,
+              "p95": 30.169,
+              "p99": 36.808,
+              "max": 40.267
+            },
+            "commit_ms": {
+              "count": 450,
+              "mean": 1.834,
+              "p50": 1.278,
+              "p95": 5.014,
+              "p99": 7.048,
+              "max": 13.797
+            },
+            "stmt_count": {
+              "count": 450,
+              "mean": 9.933,
+              "p50": 10.0,
+              "p95": 10.0,
+              "p99": 10.0,
+              "max": 10.0
+            },
+            "sum_total_ms": 8478.279,
+            "sum_commit_ms": 825.109,
+            "sum_exec_ms": 6681.057
+          },
+          "Biz_pred": {
+            "pool_wait_ms": {
+              "count": 449,
+              "mean": 0.024,
+              "p50": 0.022,
+              "p95": 0.037,
+              "p99": 0.045,
+              "max": 0.59
+            },
+            "total_ms": {
+              "count": 449,
+              "mean": 18.577,
+              "p50": 17.119,
+              "p95": 36.38,
+              "p99": 45.456,
+              "max": 51.736
+            },
+            "exec_ms": {
+              "count": 449,
+              "mean": 14.561,
+              "p50": 13.446,
+              "p95": 29.359,
+              "p99": 36.395,
+              "max": 44.061
+            },
+            "commit_ms": {
+              "count": 449,
+              "mean": 1.661,
+              "p50": 1.172,
+              "p95": 4.366,
+              "p99": 6.276,
+              "max": 17.78
+            },
+            "stmt_count": {
+              "count": 449,
+              "mean": 10.109,
+              "p50": 10.0,
+              "p95": 11.0,
+              "p99": 11.0,
+              "max": 11.0
+            },
+            "sum_total_ms": 8340.931,
+            "sum_commit_ms": 745.602,
+            "sum_exec_ms": 6537.886
+          },
+          "Relay_claim": {
+            "pool_wait_ms": {
+              "count": 674,
+              "mean": 0.011,
+              "p50": 0.01,
+              "p95": 0.02,
+              "p99": 0.037,
+              "max": 0.092
+            },
+            "total_ms": {
+              "count": 674,
+              "mean": 8.716,
+              "p50": 7.661,
+              "p95": 18.951,
+              "p99": 25.823,
+              "max": 30.645
+            },
+            "exec_ms": {
+              "count": 674,
+              "mean": 6.116,
+              "p50": 5.179,
+              "p95": 14.219,
+              "p99": 18.83,
+              "max": 25.406
+            },
+            "commit_ms": {
+              "count": 674,
+              "mean": 1.366,
+              "p50": 0.998,
+              "p95": 3.583,
+              "p99": 5.062,
+              "max": 7.517
+            },
+            "stmt_count": {
+              "count": 674,
+              "mean": 4.739,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 5874.76,
+            "sum_commit_ms": 920.862,
+            "sum_exec_ms": 4121.991
+          },
+          "Relay_finish": {
+            "pool_wait_ms": {
+              "count": 585,
+              "mean": 0.023,
+              "p50": 0.021,
+              "p95": 0.035,
+              "p99": 0.049,
+              "max": 0.111
+            },
+            "total_ms": {
+              "count": 585,
+              "mean": 9.246,
+              "p50": 8.169,
+              "p95": 18.588,
+              "p99": 26.865,
+              "max": 40.884
+            },
+            "exec_ms": {
+              "count": 585,
+              "mean": 6.314,
+              "p50": 5.436,
+              "p95": 14.147,
+              "p99": 21.824,
+              "max": 33.811
+            },
+            "commit_ms": {
+              "count": 585,
+              "mean": 1.493,
+              "p50": 1.007,
+              "p95": 4.093,
+              "p99": 7.074,
+              "max": 9.341
+            },
+            "stmt_count": {
+              "count": 585,
+              "mean": 5.0,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 5408.855,
+            "sum_commit_ms": 873.304,
+            "sum_exec_ms": 3693.918
+          },
+          "StageB_prepare": {
+            "pool_wait_ms": {
+              "count": 538,
+              "mean": 0.02,
+              "p50": 0.019,
+              "p95": 0.032,
+              "p99": 0.042,
+              "max": 0.064
+            },
+            "total_ms": {
+              "count": 538,
+              "mean": 3.705,
+              "p50": 3.141,
+              "p95": 8.117,
+              "p99": 10.89,
+              "max": 12.43
+            },
+            "exec_ms": {
+              "count": 538,
+              "mean": 3.687,
+              "p50": 3.122,
+              "p95": 8.091,
+              "p99": 10.864,
+              "max": 12.41
+            },
+            "commit_ms": {
+              "count": 538,
+              "mean": 0.0,
+              "p50": 0.0,
+              "p95": 0.0,
+              "p99": 0.0,
+              "max": 0.0
+            },
+            "stmt_count": {
+              "count": 538,
+              "mean": 1.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 1.0,
+              "max": 1.0
+            },
+            "sum_total_ms": 1993.512,
+            "sum_commit_ms": 0.0,
+            "sum_exec_ms": 1983.681
+          },
+          "TxA_admit": {
+            "pool_wait_ms": {
+              "count": 539,
+              "mean": 0.019,
+              "p50": 0.017,
+              "p95": 0.033,
+              "p99": 0.043,
+              "max": 0.06
+            },
+            "total_ms": {
+              "count": 539,
+              "mean": 19.292,
+              "p50": 17.878,
+              "p95": 37.16,
+              "p99": 52.254,
+              "max": 64.575
+            },
+            "exec_ms": {
+              "count": 539,
+              "mean": 15.856,
+              "p50": 14.508,
+              "p95": 30.78,
+              "p99": 42.587,
+              "max": 57.157
+            },
+            "commit_ms": {
+              "count": 539,
+              "mean": 1.527,
+              "p50": 1.142,
+              "p95": 3.776,
+              "p99": 6.33,
+              "max": 11.692
+            },
+            "stmt_count": {
+              "count": 539,
+              "mean": 12.0,
+              "p50": 12.0,
+              "p95": 12.0,
+              "p99": 12.0,
+              "max": 12.0
+            },
+            "sum_total_ms": 10398.342,
+            "sum_commit_ms": 823.151,
+            "sum_exec_ms": 8546.53
+          },
+          "TxC_persist": {
+            "pool_wait_ms": {
+              "count": 536,
+              "mean": 0.046,
+              "p50": 0.022,
+              "p95": 0.036,
+              "p99": 0.048,
+              "max": 12.196
+            },
+            "total_ms": {
+              "count": 536,
+              "mean": 57.584,
+              "p50": 55.217,
+              "p95": 100.283,
+              "p99": 122.238,
+              "max": 141.299
+            },
+            "exec_ms": {
+              "count": 536,
+              "mean": 47.76,
+              "p50": 45.677,
+              "p95": 85.505,
+              "p99": 103.563,
+              "max": 118.949
+            },
+            "commit_ms": {
+              "count": 536,
+              "mean": 1.769,
+              "p50": 1.35,
+              "p95": 4.292,
+              "p99": 6.352,
+              "max": 11.21
+            },
+            "stmt_count": {
+              "count": 536,
+              "mean": 31.504,
+              "p50": 31.0,
+              "p95": 36.0,
+              "p99": 36.0,
+              "max": 36.0
+            },
+            "sum_total_ms": 30864.893,
+            "sum_commit_ms": 948.305,
+            "sum_exec_ms": 25599.198
+          }
+        },
+        "substeps": {
+          "persist_hybrid_fn_ms": {
+            "count": 536,
+            "mean": 45.232,
+            "p50": 42.909,
+            "p95": 79.055,
+            "p99": 99.989,
+            "max": 110.35
+          },
+          "txa_resequencer_admit_ms": {
+            "count": 539,
+            "mean": 11.488,
+            "p50": 10.403,
+            "p95": 22.863,
+            "p99": 32.484,
+            "max": 48.211
+          },
+          "txc_drain_frontier_ms": {
+            "count": 536,
+            "mean": 18.487,
+            "p50": 17.012,
+            "p95": 37.342,
+            "p99": 44.754,
+            "max": 56.579
+          },
+          "txc_record_disposition_ms": {
+            "count": 537,
+            "mean": 2.372,
+            "p50": 1.287,
+            "p95": 8.735,
+            "p99": 15.418,
+            "max": 24.171
+          }
+        }
+      },
+      "txa_poll_stall_pct": 69.32,
+      "pg_internals": {
+        "wal_delta": {
+          "wal_records": 60887,
+          "wal_bytes": 9767768,
+          "wal_write": 3478,
+          "wal_sync": 3476
+        },
+        "wal_sync_per_sec": 231.73,
+        "wal_bytes_per_sec": 651184.5,
+        "wal_sync_per_outcome": 6.485,
+        "commits_per_outcome": 7.649,
+        "db_deltas": {
+          "proc_db": {
+            "xact_commit": 3082,
+            "xact_rollback": 1,
+            "blks_read": 0,
+            "blks_hit": 787271,
+            "tup_returned": 765180,
+            "tup_fetched": 675511,
+            "tup_inserted": 4046,
+            "tup_updated": 7014
+          },
+          "biz_db": {
+            "xact_commit": 1018,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 59488,
+            "tup_returned": 75179,
+            "tup_fetched": 11957,
+            "tup_inserted": 1858,
+            "tup_updated": 3010
+          }
+        },
+        "pg_cpu_pct": 51.45,
+        "pg_io_wbytes": 37560320,
+        "pg_io_wios": 6860,
+        "max_active_pg": 0,
+        "max_wait_pg": 1,
+        "wait_events": {},
+        "lock_waits": {}
+      },
+      "explain_plans": {}
+    },
+    {
+      "mode": "hybrid",
+      "workload": "A",
+      "run_index": 3,
+      "synchronous_commit": "on",
+      "throughput": {
+        "target_rps": 50.0,
+        "window_sent": 750,
+        "admitted_rps": 38.13,
+        "outcomes_rps": 38.0,
+        "preds_rps": 32.07,
+        "errors": 0
+      },
+      "e2e_ms": {
+        "hot_pred": {
+          "count": 15,
+          "mean": 6692.352,
+          "p50": 6913.657,
+          "p95": 7588.019,
+          "p99": 7606.695,
+          "max": 7611.364
+        },
+        "bg_pred": {
+          "count": 735,
+          "mean": 7716.808,
+          "p50": 7214.935,
+          "p95": 13613.669,
+          "p99": 17088.798,
+          "max": 18012.451
+        }
+      },
+      "db_metrics": {
+        "phases": {
+          "Biz_alert": {
+            "pool_wait_ms": {
+              "count": 58,
+              "mean": 0.019,
+              "p50": 0.018,
+              "p95": 0.028,
+              "p99": 0.031,
+              "max": 0.034
+            },
+            "total_ms": {
+              "count": 58,
+              "mean": 30.714,
+              "p50": 25.705,
+              "p95": 64.757,
+              "p99": 70.398,
+              "max": 71.615
+            },
+            "exec_ms": {
+              "count": 58,
+              "mean": 18.552,
+              "p50": 15.306,
+              "p95": 38.064,
+              "p99": 50.199,
+              "max": 58.721
+            },
+            "commit_ms": {
+              "count": 58,
+              "mean": 1.89,
+              "p50": 1.556,
+              "p95": 4.312,
+              "p99": 5.458,
+              "max": 5.618
+            },
+            "stmt_count": {
+              "count": 58,
+              "mean": 10.603,
+              "p50": 12.0,
+              "p95": 12.0,
+              "p99": 12.0,
+              "max": 12.0
+            },
+            "sum_total_ms": 1781.426,
+            "sum_commit_ms": 109.61,
+            "sum_exec_ms": 1076.03
+          },
+          "Biz_live": {
+            "pool_wait_ms": {
+              "count": 472,
+              "mean": 0.02,
+              "p50": 0.019,
+              "p95": 0.032,
+              "p99": 0.045,
+              "max": 0.069
+            },
+            "total_ms": {
+              "count": 472,
+              "mean": 17.665,
+              "p50": 15.544,
+              "p95": 34.932,
+              "p99": 46.274,
+              "max": 53.166
+            },
+            "exec_ms": {
+              "count": 472,
+              "mean": 13.968,
+              "p50": 12.213,
+              "p95": 29.128,
+              "p99": 39.895,
+              "max": 43.084
+            },
+            "commit_ms": {
+              "count": 472,
+              "mean": 1.622,
+              "p50": 1.158,
+              "p95": 4.393,
+              "p99": 6.27,
+              "max": 8.162
+            },
+            "stmt_count": {
+              "count": 472,
+              "mean": 9.903,
+              "p50": 10.0,
+              "p95": 10.0,
+              "p99": 10.0,
+              "max": 10.0
+            },
+            "sum_total_ms": 8337.822,
+            "sum_commit_ms": 765.677,
+            "sum_exec_ms": 6593.119
+          },
+          "Biz_pred": {
+            "pool_wait_ms": {
+              "count": 481,
+              "mean": 0.022,
+              "p50": 0.02,
+              "p95": 0.036,
+              "p99": 0.045,
+              "max": 0.095
+            },
+            "total_ms": {
+              "count": 481,
+              "mean": 16.699,
+              "p50": 14.862,
+              "p95": 32.89,
+              "p99": 42.211,
+              "max": 48.417
+            },
+            "exec_ms": {
+              "count": 481,
+              "mean": 12.953,
+              "p50": 11.754,
+              "p95": 27.104,
+              "p99": 34.905,
+              "max": 43.198
+            },
+            "commit_ms": {
+              "count": 481,
+              "mean": 1.531,
+              "p50": 1.163,
+              "p95": 3.797,
+              "p99": 6.582,
+              "max": 11.396
+            },
+            "stmt_count": {
+              "count": 481,
+              "mean": 9.534,
+              "p50": 9.0,
+              "p95": 11.0,
+              "p99": 11.0,
+              "max": 11.0
+            },
+            "sum_total_ms": 8032.302,
+            "sum_commit_ms": 736.361,
+            "sum_exec_ms": 6230.541
+          },
+          "Relay_claim": {
+            "pool_wait_ms": {
+              "count": 742,
+              "mean": 0.011,
+              "p50": 0.009,
+              "p95": 0.02,
+              "p99": 0.028,
+              "max": 0.06
+            },
+            "total_ms": {
+              "count": 742,
+              "mean": 7.776,
+              "p50": 6.266,
+              "p95": 17.699,
+              "p99": 24.493,
+              "max": 28.815
+            },
+            "exec_ms": {
+              "count": 742,
+              "mean": 5.373,
+              "p50": 4.245,
+              "p95": 12.899,
+              "p99": 17.911,
+              "max": 25.598
+            },
+            "commit_ms": {
+              "count": 742,
+              "mean": 1.296,
+              "p50": 0.837,
+              "p95": 3.44,
+              "p99": 6.626,
+              "max": 9.761
+            },
+            "stmt_count": {
+              "count": 742,
+              "mean": 4.706,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 5769.657,
+            "sum_commit_ms": 961.431,
+            "sum_exec_ms": 3987.08
+          },
+          "Relay_finish": {
+            "pool_wait_ms": {
+              "count": 633,
+              "mean": 0.022,
+              "p50": 0.02,
+              "p95": 0.033,
+              "p99": 0.042,
+              "max": 0.53
+            },
+            "total_ms": {
+              "count": 633,
+              "mean": 8.34,
+              "p50": 6.943,
+              "p95": 18.266,
+              "p99": 24.806,
+              "max": 30.056
+            },
+            "exec_ms": {
+              "count": 633,
+              "mean": 5.704,
+              "p50": 4.641,
+              "p95": 13.44,
+              "p99": 18.249,
+              "max": 22.293
+            },
+            "commit_ms": {
+              "count": 633,
+              "mean": 1.318,
+              "p50": 0.856,
+              "p95": 3.67,
+              "p99": 6.069,
+              "max": 10.227
+            },
+            "stmt_count": {
+              "count": 633,
+              "mean": 5.0,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 5279.34,
+            "sum_commit_ms": 834.537,
+            "sum_exec_ms": 3610.792
+          },
+          "StageB_prepare": {
+            "pool_wait_ms": {
+              "count": 572,
+              "mean": 0.018,
+              "p50": 0.017,
+              "p95": 0.031,
+              "p99": 0.04,
+              "max": 0.047
+            },
+            "total_ms": {
+              "count": 572,
+              "mean": 3.476,
+              "p50": 2.879,
+              "p95": 8.167,
+              "p99": 10.502,
+              "max": 13.707
+            },
+            "exec_ms": {
+              "count": 572,
+              "mean": 3.459,
+              "p50": 2.864,
+              "p95": 8.148,
+              "p99": 10.487,
+              "max": 13.684
+            },
+            "commit_ms": {
+              "count": 572,
+              "mean": 0.0,
+              "p50": 0.0,
+              "p95": 0.0,
+              "p99": 0.0,
+              "max": 0.0
+            },
+            "stmt_count": {
+              "count": 572,
+              "mean": 1.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 1.0,
+              "max": 1.0
+            },
+            "sum_total_ms": 1988.356,
+            "sum_commit_ms": 0.0,
+            "sum_exec_ms": 1978.486
+          },
+          "TxA_admit": {
+            "pool_wait_ms": {
+              "count": 572,
+              "mean": 0.017,
+              "p50": 0.016,
+              "p95": 0.029,
+              "p99": 0.04,
+              "max": 0.053
+            },
+            "total_ms": {
+              "count": 572,
+              "mean": 18.062,
+              "p50": 16.647,
+              "p95": 38.028,
+              "p99": 50.252,
+              "max": 57.206
+            },
+            "exec_ms": {
+              "count": 572,
+              "mean": 14.898,
+              "p50": 13.672,
+              "p95": 31.356,
+              "p99": 43.741,
+              "max": 50.967
+            },
+            "commit_ms": {
+              "count": 572,
+              "mean": 1.449,
+              "p50": 1.012,
+              "p95": 4.3,
+              "p99": 5.495,
+              "max": 18.756
+            },
+            "stmt_count": {
+              "count": 572,
+              "mean": 12.0,
+              "p50": 12.0,
+              "p95": 12.0,
+              "p99": 12.0,
+              "max": 12.0
+            },
+            "sum_total_ms": 10331.57,
+            "sum_commit_ms": 828.71,
+            "sum_exec_ms": 8521.827
+          },
+          "TxC_persist": {
+            "pool_wait_ms": {
+              "count": 570,
+              "mean": 0.021,
+              "p50": 0.02,
+              "p95": 0.036,
+              "p99": 0.057,
+              "max": 0.093
+            },
+            "total_ms": {
+              "count": 570,
+              "mean": 52.501,
+              "p50": 49.017,
+              "p95": 93.744,
+              "p99": 108.616,
+              "max": 131.134
+            },
+            "exec_ms": {
+              "count": 570,
+              "mean": 43.497,
+              "p50": 40.582,
+              "p95": 80.765,
+              "p99": 92.844,
+              "max": 106.162
+            },
+            "commit_ms": {
+              "count": 570,
+              "mean": 1.669,
+              "p50": 1.21,
+              "p95": 4.656,
+              "p99": 6.475,
+              "max": 10.355
+            },
+            "stmt_count": {
+              "count": 570,
+              "mean": 31.491,
+              "p50": 31.0,
+              "p95": 36.0,
+              "p99": 36.0,
+              "max": 36.0
+            },
+            "sum_total_ms": 29925.575,
+            "sum_commit_ms": 951.321,
+            "sum_exec_ms": 24793.456
+          }
+        },
+        "substeps": {
+          "persist_hybrid_fn_ms": {
+            "count": 570,
+            "mean": 41.441,
+            "p50": 37.734,
+            "p95": 75.692,
+            "p99": 93.897,
+            "max": 114.116
+          },
+          "txa_resequencer_admit_ms": {
+            "count": 572,
+            "mean": 11.043,
+            "p50": 9.598,
+            "p95": 24.535,
+            "p99": 32.724,
+            "max": 41.168
+          },
+          "txc_drain_frontier_ms": {
+            "count": 569,
+            "mean": 16.684,
+            "p50": 15.281,
+            "p95": 34.399,
+            "p99": 44.77,
+            "max": 56.883
+          },
+          "txc_record_disposition_ms": {
+            "count": 570,
+            "mean": 2.105,
+            "p50": 1.198,
+            "p95": 6.683,
+            "p99": 13.585,
+            "max": 17.595
+          }
+        }
+      },
+      "txa_poll_stall_pct": 68.88,
+      "pg_internals": {
+        "wal_delta": {
+          "wal_records": 60059,
+          "wal_bytes": 9725253,
+          "wal_write": 3426,
+          "wal_sync": 3425
+        },
+        "wal_sync_per_sec": 228.33,
+        "wal_bytes_per_sec": 648350.2,
+        "wal_sync_per_outcome": 6.009,
+        "commits_per_outcome": 7.132,
+        "db_deltas": {
+          "proc_db": {
+            "xact_commit": 3041,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 192148,
+            "tup_returned": 582861,
+            "tup_fetched": 61821,
+            "tup_inserted": 4063,
+            "tup_updated": 6969
+          },
+          "biz_db": {
+            "xact_commit": 1024,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 52997,
+            "tup_returned": 16123,
+            "tup_fetched": 12362,
+            "tup_inserted": 1939,
+            "tup_updated": 2690
+          }
+        },
+        "pg_cpu_pct": 47.88,
+        "pg_io_wbytes": 40513536,
+        "pg_io_wios": 7345,
+        "max_active_pg": 0,
+        "max_wait_pg": 0,
+        "wait_events": {},
+        "lock_waits": {}
+      },
+      "explain_plans": {}
+    },
+    {
+      "mode": "baseline",
+      "workload": "C",
+      "run_index": 1,
+      "synchronous_commit": "on",
+      "throughput": {
+        "target_rps": 50.0,
+        "window_sent": 750,
+        "admitted_rps": 36.07,
+        "outcomes_rps": 36.07,
+        "preds_rps": 36.2,
+        "errors": 0
+      },
+      "e2e_ms": {
+        "hot_pred": {
+          "count": 240,
+          "mean": 18760.638,
+          "p50": 18879.954,
+          "p95": 25216.547,
+          "p99": 26230.96,
+          "max": 26264.784
+        },
+        "bg_pred": {
+          "count": 510,
+          "mean": 2259.929,
+          "p50": 536.211,
+          "p95": 14214.105,
+          "p99": 19448.19,
+          "max": 21935.995
+        }
+      },
+      "db_metrics": {
+        "phases": {
+          "Baseline_durable_replay": {
+            "pool_wait_ms": {
+              "count": 541,
+              "mean": 0.013,
+              "p50": 0.013,
+              "p95": 0.02,
+              "p99": 0.027,
+              "max": 0.034
+            },
+            "total_ms": {
+              "count": 541,
+              "mean": 8.678,
+              "p50": 7.091,
+              "p95": 22.099,
+              "p99": 30.699,
+              "max": 36.577
+            },
+            "exec_ms": {
+              "count": 541,
+              "mean": 5.886,
+              "p50": 4.667,
+              "p95": 15.893,
+              "p99": 23.486,
+              "max": 27.964
+            },
+            "commit_ms": {
+              "count": 541,
+              "mean": 1.434,
+              "p50": 0.942,
+              "p95": 4.057,
+              "p99": 6.503,
+              "max": 7.856
+            },
+            "stmt_count": {
+              "count": 541,
+              "mean": 5.0,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 4694.601,
+            "sum_commit_ms": 775.59,
+            "sum_exec_ms": 3184.21
+          },
+          "Baseline_tx": {
+            "pool_wait_ms": {
+              "count": 1082,
+              "mean": 0.011,
+              "p50": 0.01,
+              "p95": 0.019,
+              "p99": 0.025,
+              "max": 0.085
+            },
+            "total_ms": {
+              "count": 1082,
+              "mean": 20.078,
+              "p50": 13.511,
+              "p95": 53.657,
+              "p99": 67.435,
+              "max": 82.207
+            },
+            "exec_ms": {
+              "count": 1082,
+              "mean": 15.373,
+              "p50": 9.181,
+              "p95": 43.59,
+              "p99": 55.891,
+              "max": 69.838
+            },
+            "commit_ms": {
+              "count": 1082,
+              "mean": 1.235,
+              "p50": 0.836,
+              "p95": 3.416,
+              "p99": 5.704,
+              "max": 9.268
+            },
+            "stmt_count": {
+              "count": 1082,
+              "mean": 12.736,
+              "p50": 12.5,
+              "p95": 21.0,
+              "p99": 26.0,
+              "max": 26.0
+            },
+            "sum_total_ms": 21724.094,
+            "sum_commit_ms": 1336.343,
+            "sum_exec_ms": 16633.36
+          },
+          "Biz_alert": {
+            "pool_wait_ms": {
+              "count": 51,
+              "mean": 0.014,
+              "p50": 0.014,
+              "p95": 0.019,
+              "p99": 0.022,
+              "max": 0.025
+            },
+            "total_ms": {
+              "count": 51,
+              "mean": 18.357,
+              "p50": 15.029,
+              "p95": 36.944,
+              "p99": 50.951,
+              "max": 51.36
+            },
+            "exec_ms": {
+              "count": 51,
+              "mean": 9.994,
+              "p50": 8.116,
+              "p95": 20.326,
+              "p99": 36.168,
+              "max": 36.446
+            },
+            "commit_ms": {
+              "count": 51,
+              "mean": 1.177,
+              "p50": 0.702,
+              "p95": 3.182,
+              "p99": 4.046,
+              "max": 4.391
+            },
+            "stmt_count": {
+              "count": 51,
+              "mean": 9.824,
+              "p50": 9.0,
+              "p95": 12.0,
+              "p99": 12.0,
+              "max": 12.0
+            },
+            "sum_total_ms": 936.211,
+            "sum_commit_ms": 60.044,
+            "sum_exec_ms": 509.708
+          },
+          "Biz_live": {
+            "pool_wait_ms": {
+              "count": 730,
+              "mean": 0.015,
+              "p50": 0.014,
+              "p95": 0.024,
+              "p99": 0.036,
+              "max": 0.072
+            },
+            "total_ms": {
+              "count": 730,
+              "mean": 8.441,
+              "p50": 5.24,
+              "p95": 25.188,
+              "p99": 34.256,
+              "max": 42.665
+            },
+            "exec_ms": {
+              "count": 730,
+              "mean": 6.484,
+              "p50": 3.683,
+              "p95": 19.97,
+              "p99": 28.21,
+              "max": 37.433
+            },
+            "commit_ms": {
+              "count": 730,
+              "mean": 0.802,
+              "p50": 0.453,
+              "p95": 2.716,
+              "p99": 4.377,
+              "max": 8.959
+            },
+            "stmt_count": {
+              "count": 730,
+              "mean": 9.453,
+              "p50": 9.0,
+              "p95": 10.0,
+              "p99": 10.0,
+              "max": 10.0
+            },
+            "sum_total_ms": 6161.616,
+            "sum_commit_ms": 585.771,
+            "sum_exec_ms": 4733.2
+          },
+          "Biz_pred": {
+            "pool_wait_ms": {
+              "count": 543,
+              "mean": 0.014,
+              "p50": 0.014,
+              "p95": 0.023,
+              "p99": 0.032,
+              "max": 0.05
+            },
+            "total_ms": {
+              "count": 543,
+              "mean": 9.067,
+              "p50": 6.331,
+              "p95": 23.291,
+              "p99": 35.107,
+              "max": 49.625
+            },
+            "exec_ms": {
+              "count": 543,
+              "mean": 7.004,
+              "p50": 4.539,
+              "p95": 19.043,
+              "p99": 31.027,
+              "max": 44.381
+            },
+            "commit_ms": {
+              "count": 543,
+              "mean": 0.842,
+              "p50": 0.489,
+              "p95": 2.523,
+              "p99": 4.493,
+              "max": 5.473
+            },
+            "stmt_count": {
+              "count": 543,
+              "mean": 9.867,
+              "p50": 10.0,
+              "p95": 11.0,
+              "p99": 11.0,
+              "max": 11.0
+            },
+            "sum_total_ms": 4923.29,
+            "sum_commit_ms": 457.352,
+            "sum_exec_ms": 3803.273
+          },
+          "Relay_claim": {
+            "pool_wait_ms": {
+              "count": 1253,
+              "mean": 0.012,
+              "p50": 0.009,
+              "p95": 0.025,
+              "p99": 0.038,
+              "max": 0.064
+            },
+            "total_ms": {
+              "count": 1253,
+              "mean": 3.586,
+              "p50": 2.095,
+              "p95": 11.414,
+              "p99": 17.814,
+              "max": 30.606
+            },
+            "exec_ms": {
+              "count": 1253,
+              "mean": 2.292,
+              "p50": 1.241,
+              "p95": 7.724,
+              "p99": 12.165,
+              "max": 20.504
+            },
+            "commit_ms": {
+              "count": 1253,
+              "mean": 0.706,
+              "p50": 0.439,
+              "p95": 2.18,
+              "p99": 3.989,
+              "max": 8.207
+            },
+            "stmt_count": {
+              "count": 1253,
+              "mean": 3.945,
+              "p50": 3.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 4493.382,
+            "sum_commit_ms": 884.5,
+            "sum_exec_ms": 2872.183
+          },
+          "Relay_finish": {
+            "pool_wait_ms": {
+              "count": 592,
+              "mean": 0.015,
+              "p50": 0.014,
+              "p95": 0.024,
+              "p99": 0.032,
+              "max": 0.038
+            },
+            "total_ms": {
+              "count": 592,
+              "mean": 4.841,
+              "p50": 3.298,
+              "p95": 13.624,
+              "p99": 19.477,
+              "max": 29.804
+            },
+            "exec_ms": {
+              "count": 592,
+              "mean": 3.196,
+              "p50": 2.044,
+              "p95": 9.583,
+              "p99": 14.352,
+              "max": 22.083
+            },
+            "commit_ms": {
+              "count": 592,
+              "mean": 0.811,
+              "p50": 0.482,
+              "p95": 2.442,
+              "p99": 4.183,
+              "max": 5.15
+            },
+            "stmt_count": {
+              "count": 592,
+              "mean": 5.0,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 2866.024,
+            "sum_commit_ms": 480.016,
+            "sum_exec_ms": 1892.128
+          },
+          "StageB_prepare": {
+            "pool_wait_ms": {
+              "count": 541,
+              "mean": 0.008,
+              "p50": 0.008,
+              "p95": 0.012,
+              "p99": 0.013,
+              "max": 0.049
+            },
+            "total_ms": {
+              "count": 541,
+              "mean": 2.351,
+              "p50": 1.656,
+              "p95": 6.712,
+              "p99": 10.061,
+              "max": 15.845
+            },
+            "exec_ms": {
+              "count": 541,
+              "mean": 2.339,
+              "p50": 1.648,
+              "p95": 6.695,
+              "p99": 10.047,
+              "max": 15.833
+            },
+            "commit_ms": {
+              "count": 541,
+              "mean": 0.0,
+              "p50": 0.0,
+              "p95": 0.0,
+              "p99": 0.0,
+              "max": 0.0
+            },
+            "stmt_count": {
+              "count": 541,
+              "mean": 1.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 1.0,
+              "max": 1.0
+            },
+            "sum_total_ms": 1272.073,
+            "sum_commit_ms": 0.0,
+            "sum_exec_ms": 1265.525
+          }
+        },
+        "substeps": {}
+      },
+      "txa_poll_stall_pct": 0.0,
+      "pg_internals": {
+        "wal_delta": {
+          "wal_records": 55587,
+          "wal_bytes": 8792656,
+          "wal_write": 4799,
+          "wal_sync": 4797
+        },
+        "wal_sync_per_sec": 319.8,
+        "wal_bytes_per_sec": 586177.1,
+        "wal_sync_per_outcome": 8.867,
+        "commits_per_outcome": 10.072,
+        "db_deltas": {
+          "proc_db": {
+            "xact_commit": 4068,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 105392,
+            "tup_returned": 374458,
+            "tup_fetched": 15667,
+            "tup_inserted": 3333,
+            "tup_updated": 4653
+          },
+          "biz_db": {
+            "xact_commit": 1381,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 72152,
+            "tup_returned": 58537,
+            "tup_fetched": 15010,
+            "tup_inserted": 2374,
+            "tup_updated": 3618
+          }
+        },
+        "pg_cpu_pct": 32.09,
+        "pg_io_wbytes": 48730112,
+        "pg_io_wios": 9738,
+        "max_active_pg": 1,
+        "max_wait_pg": 1,
+        "wait_events": {
+          "Client:ClientRead": 137,
+          "Lock:transactionid": 3,
+          "IO:WalSync": 1
+        },
+        "lock_waits": {}
+      },
+      "explain_plans": {}
+    },
+    {
+      "mode": "baseline",
+      "workload": "C",
+      "run_index": 2,
+      "synchronous_commit": "on",
+      "throughput": {
+        "target_rps": 50.0,
+        "window_sent": 750,
+        "admitted_rps": 35.8,
+        "outcomes_rps": 35.73,
+        "preds_rps": 34.8,
+        "errors": 0
+      },
+      "e2e_ms": {
+        "hot_pred": {
+          "count": 240,
+          "mean": 20532.567,
+          "p50": 21233.894,
+          "p95": 27681.341,
+          "p99": 28456.201,
+          "max": 28460.908
+        },
+        "bg_pred": {
+          "count": 510,
+          "mean": 2437.375,
+          "p50": 585.619,
+          "p95": 15984.825,
+          "p99": 20986.614,
+          "max": 22991.231
+        }
+      },
+      "db_metrics": {
+        "phases": {
+          "Baseline_durable_replay": {
+            "pool_wait_ms": {
+              "count": 537,
+              "mean": 0.048,
+              "p50": 0.013,
+              "p95": 0.019,
+              "p99": 0.025,
+              "max": 18.254
+            },
+            "total_ms": {
+              "count": 537,
+              "mean": 9.758,
+              "p50": 8.463,
+              "p95": 22.57,
+              "p99": 27.443,
+              "max": 36.685
+            },
+            "exec_ms": {
+              "count": 537,
+              "mean": 6.625,
+              "p50": 5.652,
+              "p95": 14.752,
+              "p99": 19.681,
+              "max": 25.527
+            },
+            "commit_ms": {
+              "count": 537,
+              "mean": 1.59,
+              "p50": 1.128,
+              "p95": 4.467,
+              "p99": 6.384,
+              "max": 9.998
+            },
+            "stmt_count": {
+              "count": 537,
+              "mean": 5.0,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 5240.137,
+            "sum_commit_ms": 853.785,
+            "sum_exec_ms": 3557.876
+          },
+          "Baseline_tx": {
+            "pool_wait_ms": {
+              "count": 1073,
+              "mean": 0.012,
+              "p50": 0.011,
+              "p95": 0.016,
+              "p99": 0.022,
+              "max": 0.044
+            },
+            "total_ms": {
+              "count": 1073,
+              "mean": 23.601,
+              "p50": 16.776,
+              "p95": 61.494,
+              "p99": 72.379,
+              "max": 92.656
+            },
+            "exec_ms": {
+              "count": 1073,
+              "mean": 18.262,
+              "p50": 11.25,
+              "p95": 51.008,
+              "p99": 60.896,
+              "max": 81.139
+            },
+            "commit_ms": {
+              "count": 1073,
+              "mean": 1.515,
+              "p50": 1.027,
+              "p95": 4.284,
+              "p99": 6.421,
+              "max": 9.271
+            },
+            "stmt_count": {
+              "count": 1073,
+              "mean": 12.73,
+              "p50": 4.0,
+              "p95": 21.0,
+              "p99": 26.0,
+              "max": 26.0
+            },
+            "sum_total_ms": 25324.14,
+            "sum_commit_ms": 1625.214,
+            "sum_exec_ms": 19595.645
+          },
+          "Biz_alert": {
+            "pool_wait_ms": {
+              "count": 51,
+              "mean": 0.014,
+              "p50": 0.014,
+              "p95": 0.017,
+              "p99": 0.027,
+              "max": 0.034
+            },
+            "total_ms": {
+              "count": 51,
+              "mean": 22.806,
+              "p50": 20.077,
+              "p95": 46.261,
+              "p99": 52.301,
+              "max": 56.059
+            },
+            "exec_ms": {
+              "count": 51,
+              "mean": 12.684,
+              "p50": 10.339,
+              "p95": 29.351,
+              "p99": 33.892,
+              "max": 35.737
+            },
+            "commit_ms": {
+              "count": 51,
+              "mean": 1.398,
+              "p50": 1.124,
+              "p95": 3.339,
+              "p99": 5.023,
+              "max": 5.689
+            },
+            "stmt_count": {
+              "count": 51,
+              "mean": 9.824,
+              "p50": 9.0,
+              "p95": 12.0,
+              "p99": 12.0,
+              "max": 12.0
+            },
+            "sum_total_ms": 1163.107,
+            "sum_commit_ms": 71.312,
+            "sum_exec_ms": 646.872
+          },
+          "Biz_live": {
+            "pool_wait_ms": {
+              "count": 659,
+              "mean": 0.014,
+              "p50": 0.014,
+              "p95": 0.02,
+              "p99": 0.028,
+              "max": 0.047
+            },
+            "total_ms": {
+              "count": 659,
+              "mean": 9.93,
+              "p50": 6.247,
+              "p95": 27.143,
+              "p99": 38.654,
+              "max": 51.092
+            },
+            "exec_ms": {
+              "count": 659,
+              "mean": 7.66,
+              "p50": 4.48,
+              "p95": 22.087,
+              "p99": 32.355,
+              "max": 45.222
+            },
+            "commit_ms": {
+              "count": 659,
+              "mean": 1.002,
+              "p50": 0.487,
+              "p95": 3.531,
+              "p99": 5.295,
+              "max": 9.091
+            },
+            "stmt_count": {
+              "count": 659,
+              "mean": 9.429,
+              "p50": 9.0,
+              "p95": 10.0,
+              "p99": 10.0,
+              "max": 10.0
+            },
+            "sum_total_ms": 6544.031,
+            "sum_commit_ms": 660.494,
+            "sum_exec_ms": 5048.104
+          },
+          "Biz_pred": {
+            "pool_wait_ms": {
+              "count": 522,
+              "mean": 0.014,
+              "p50": 0.014,
+              "p95": 0.018,
+              "p99": 0.028,
+              "max": 0.042
+            },
+            "total_ms": {
+              "count": 522,
+              "mean": 10.147,
+              "p50": 7.013,
+              "p95": 26.416,
+              "p99": 33.429,
+              "max": 42.221
+            },
+            "exec_ms": {
+              "count": 522,
+              "mean": 7.767,
+              "p50": 5.154,
+              "p95": 21.145,
+              "p99": 28.129,
+              "max": 39.387
+            },
+            "commit_ms": {
+              "count": 522,
+              "mean": 0.949,
+              "p50": 0.55,
+              "p95": 2.793,
+              "p99": 4.529,
+              "max": 9.793
+            },
+            "stmt_count": {
+              "count": 522,
+              "mean": 9.83,
+              "p50": 10.0,
+              "p95": 10.0,
+              "p99": 10.0,
+              "max": 10.0
+            },
+            "sum_total_ms": 5296.507,
+            "sum_commit_ms": 495.22,
+            "sum_exec_ms": 4054.352
+          },
+          "Relay_claim": {
+            "pool_wait_ms": {
+              "count": 1111,
+              "mean": 0.012,
+              "p50": 0.009,
+              "p95": 0.023,
+              "p99": 0.03,
+              "max": 0.049
+            },
+            "total_ms": {
+              "count": 1111,
+              "mean": 4.373,
+              "p50": 2.444,
+              "p95": 13.649,
+              "p99": 20.707,
+              "max": 28.406
+            },
+            "exec_ms": {
+              "count": 1111,
+              "mean": 2.837,
+              "p50": 1.514,
+              "p95": 9.296,
+              "p99": 14.807,
+              "max": 23.937
+            },
+            "commit_ms": {
+              "count": 1111,
+              "mean": 0.835,
+              "p50": 0.484,
+              "p95": 2.479,
+              "p99": 4.861,
+              "max": 7.759
+            },
+            "stmt_count": {
+              "count": 1111,
+              "mean": 4.057,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 4858.021,
+            "sum_commit_ms": 927.606,
+            "sum_exec_ms": 3152.1
+          },
+          "Relay_finish": {
+            "pool_wait_ms": {
+              "count": 587,
+              "mean": 0.016,
+              "p50": 0.015,
+              "p95": 0.023,
+              "p99": 0.031,
+              "max": 0.124
+            },
+            "total_ms": {
+              "count": 587,
+              "mean": 5.739,
+              "p50": 3.815,
+              "p95": 16.064,
+              "p99": 20.486,
+              "max": 25.179
+            },
+            "exec_ms": {
+              "count": 587,
+              "mean": 3.781,
+              "p50": 2.368,
+              "p95": 11.583,
+              "p99": 14.821,
+              "max": 20.561
+            },
+            "commit_ms": {
+              "count": 587,
+              "mean": 0.954,
+              "p50": 0.543,
+              "p95": 3.208,
+              "p99": 5.548,
+              "max": 7.238
+            },
+            "stmt_count": {
+              "count": 587,
+              "mean": 5.0,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 3368.524,
+            "sum_commit_ms": 560.093,
+            "sum_exec_ms": 2219.406
+          },
+          "StageB_prepare": {
+            "pool_wait_ms": {
+              "count": 537,
+              "mean": 0.008,
+              "p50": 0.008,
+              "p95": 0.012,
+              "p99": 0.018,
+              "max": 0.039
+            },
+            "total_ms": {
+              "count": 537,
+              "mean": 2.821,
+              "p50": 2.16,
+              "p95": 7.493,
+              "p99": 11.919,
+              "max": 14.147
+            },
+            "exec_ms": {
+              "count": 537,
+              "mean": 2.808,
+              "p50": 2.148,
+              "p95": 7.479,
+              "p99": 11.905,
+              "max": 14.133
+            },
+            "commit_ms": {
+              "count": 537,
+              "mean": 0.0,
+              "p50": 0.0,
+              "p95": 0.0,
+              "p99": 0.0,
+              "max": 0.0
+            },
+            "stmt_count": {
+              "count": 537,
+              "mean": 1.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 1.0,
+              "max": 1.0
+            },
+            "sum_total_ms": 1515.089,
+            "sum_commit_ms": 0.0,
+            "sum_exec_ms": 1508.096
+          }
+        },
+        "substeps": {}
+      },
+      "txa_poll_stall_pct": 0.0,
+      "pg_internals": {
+        "wal_delta": {
+          "wal_records": 54117,
+          "wal_bytes": 8595239,
+          "wal_write": 4570,
+          "wal_sync": 4568
+        },
+        "wal_sync_per_sec": 304.53,
+        "wal_bytes_per_sec": 573015.9,
+        "wal_sync_per_outcome": 8.522,
+        "commits_per_outcome": 9.752,
+        "db_deltas": {
+          "proc_db": {
+            "xact_commit": 3926,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 109333,
+            "tup_returned": 359760,
+            "tup_fetched": 19349,
+            "tup_inserted": 3287,
+            "tup_updated": 4535
+          },
+          "biz_db": {
+            "xact_commit": 1301,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 68855,
+            "tup_returned": 46217,
+            "tup_fetched": 14582,
+            "tup_inserted": 2291,
+            "tup_updated": 3333
+          }
+        },
+        "pg_cpu_pct": 33.63,
+        "pg_io_wbytes": 45580288,
+        "pg_io_wios": 9016,
+        "max_active_pg": 0,
+        "max_wait_pg": 1,
+        "wait_events": {},
+        "lock_waits": {}
+      },
+      "explain_plans": {}
+    },
+    {
+      "mode": "baseline",
+      "workload": "C",
+      "run_index": 3,
+      "synchronous_commit": "on",
+      "throughput": {
+        "target_rps": 50.0,
+        "window_sent": 750,
+        "admitted_rps": 36.33,
+        "outcomes_rps": 36.4,
+        "preds_rps": 36.33,
+        "errors": 0
+      },
+      "e2e_ms": {
+        "hot_pred": {
+          "count": 240,
+          "mean": 20882.678,
+          "p50": 20897.607,
+          "p95": 27880.196,
+          "p99": 28594.546,
+          "max": 28617.325
+        },
+        "bg_pred": {
+          "count": 510,
+          "mean": 2551.318,
+          "p50": 579.709,
+          "p95": 17320.151,
+          "p99": 23030.391,
+          "max": 23779.887
+        }
+      },
+      "db_metrics": {
+        "phases": {
+          "Baseline_durable_replay": {
+            "pool_wait_ms": {
+              "count": 545,
+              "mean": 0.013,
+              "p50": 0.013,
+              "p95": 0.019,
+              "p99": 0.026,
+              "max": 0.055
+            },
+            "total_ms": {
+              "count": 545,
+              "mean": 9.804,
+              "p50": 8.326,
+              "p95": 24.969,
+              "p99": 34.356,
+              "max": 40.508
+            },
+            "exec_ms": {
+              "count": 545,
+              "mean": 6.686,
+              "p50": 5.214,
+              "p95": 16.694,
+              "p99": 24.006,
+              "max": 30.545
+            },
+            "commit_ms": {
+              "count": 545,
+              "mean": 1.738,
+              "p50": 1.169,
+              "p95": 4.976,
+              "p99": 8.288,
+              "max": 15.187
+            },
+            "stmt_count": {
+              "count": 545,
+              "mean": 5.0,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 5343.433,
+            "sum_commit_ms": 947.103,
+            "sum_exec_ms": 3643.989
+          },
+          "Baseline_tx": {
+            "pool_wait_ms": {
+              "count": 1091,
+              "mean": 0.011,
+              "p50": 0.011,
+              "p95": 0.016,
+              "p99": 0.023,
+              "max": 0.095
+            },
+            "total_ms": {
+              "count": 1091,
+              "mean": 20.959,
+              "p50": 14.955,
+              "p95": 54.331,
+              "p99": 66.068,
+              "max": 86.572
+            },
+            "exec_ms": {
+              "count": 1091,
+              "mean": 15.932,
+              "p50": 10.076,
+              "p95": 44.417,
+              "p99": 52.732,
+              "max": 74.02
+            },
+            "commit_ms": {
+              "count": 1091,
+              "mean": 1.458,
+              "p50": 0.977,
+              "p95": 4.026,
+              "p99": 6.848,
+              "max": 8.815
+            },
+            "stmt_count": {
+              "count": 1091,
+              "mean": 12.746,
+              "p50": 21.0,
+              "p95": 21.0,
+              "p99": 26.0,
+              "max": 26.0
+            },
+            "sum_total_ms": 22866.125,
+            "sum_commit_ms": 1591.1,
+            "sum_exec_ms": 17381.357
+          },
+          "Biz_alert": {
+            "pool_wait_ms": {
+              "count": 52,
+              "mean": 0.013,
+              "p50": 0.013,
+              "p95": 0.017,
+              "p99": 0.023,
+              "max": 0.027
+            },
+            "total_ms": {
+              "count": 52,
+              "mean": 17.293,
+              "p50": 14.304,
+              "p95": 32.504,
+              "p99": 50.193,
+              "max": 66.414
+            },
+            "exec_ms": {
+              "count": 52,
+              "mean": 9.237,
+              "p50": 7.397,
+              "p95": 21.025,
+              "p99": 36.025,
+              "max": 47.676
+            },
+            "commit_ms": {
+              "count": 52,
+              "mean": 1.414,
+              "p50": 0.723,
+              "p95": 4.808,
+              "p99": 8.873,
+              "max": 9.917
+            },
+            "stmt_count": {
+              "count": 52,
+              "mean": 9.808,
+              "p50": 9.0,
+              "p95": 12.0,
+              "p99": 12.0,
+              "max": 12.0
+            },
+            "sum_total_ms": 899.243,
+            "sum_commit_ms": 73.533,
+            "sum_exec_ms": 480.306
+          },
+          "Biz_live": {
+            "pool_wait_ms": {
+              "count": 704,
+              "mean": 0.014,
+              "p50": 0.013,
+              "p95": 0.02,
+              "p99": 0.028,
+              "max": 0.048
+            },
+            "total_ms": {
+              "count": 704,
+              "mean": 8.979,
+              "p50": 5.756,
+              "p95": 24.389,
+              "p99": 36.354,
+              "max": 50.273
+            },
+            "exec_ms": {
+              "count": 704,
+              "mean": 6.828,
+              "p50": 4.159,
+              "p95": 19.496,
+              "p99": 29.97,
+              "max": 42.307
+            },
+            "commit_ms": {
+              "count": 704,
+              "mean": 0.93,
+              "p50": 0.476,
+              "p95": 2.864,
+              "p99": 4.97,
+              "max": 6.706
+            },
+            "stmt_count": {
+              "count": 704,
+              "mean": 9.423,
+              "p50": 9.0,
+              "p95": 10.0,
+              "p99": 10.0,
+              "max": 10.0
+            },
+            "sum_total_ms": 6321.477,
+            "sum_commit_ms": 654.694,
+            "sum_exec_ms": 4806.97
+          },
+          "Biz_pred": {
+            "pool_wait_ms": {
+              "count": 545,
+              "mean": 0.013,
+              "p50": 0.014,
+              "p95": 0.018,
+              "p99": 0.027,
+              "max": 0.04
+            },
+            "total_ms": {
+              "count": 545,
+              "mean": 9.41,
+              "p50": 6.477,
+              "p95": 25.333,
+              "p99": 31.551,
+              "max": 45.815
+            },
+            "exec_ms": {
+              "count": 545,
+              "mean": 7.181,
+              "p50": 4.659,
+              "p95": 20.418,
+              "p99": 25.673,
+              "max": 36.679
+            },
+            "commit_ms": {
+              "count": 545,
+              "mean": 0.887,
+              "p50": 0.513,
+              "p95": 2.673,
+              "p99": 4.255,
+              "max": 6.285
+            },
+            "stmt_count": {
+              "count": 545,
+              "mean": 9.798,
+              "p50": 10.0,
+              "p95": 10.0,
+              "p99": 10.0,
+              "max": 10.0
+            },
+            "sum_total_ms": 5128.49,
+            "sum_commit_ms": 483.642,
+            "sum_exec_ms": 3913.726
+          },
+          "Relay_claim": {
+            "pool_wait_ms": {
+              "count": 1171,
+              "mean": 0.013,
+              "p50": 0.009,
+              "p95": 0.022,
+              "p99": 0.029,
+              "max": 1.626
+            },
+            "total_ms": {
+              "count": 1171,
+              "mean": 4.023,
+              "p50": 2.327,
+              "p95": 12.79,
+              "p99": 18.461,
+              "max": 27.711
+            },
+            "exec_ms": {
+              "count": 1171,
+              "mean": 2.574,
+              "p50": 1.411,
+              "p95": 8.77,
+              "p99": 13.245,
+              "max": 22.607
+            },
+            "commit_ms": {
+              "count": 1171,
+              "mean": 0.772,
+              "p50": 0.45,
+              "p95": 2.335,
+              "p99": 4.788,
+              "max": 9.552
+            },
+            "stmt_count": {
+              "count": 1171,
+              "mean": 4.02,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 4710.729,
+            "sum_commit_ms": 904.414,
+            "sum_exec_ms": 3014.1
+          },
+          "Relay_finish": {
+            "pool_wait_ms": {
+              "count": 597,
+              "mean": 0.015,
+              "p50": 0.014,
+              "p95": 0.021,
+              "p99": 0.026,
+              "max": 0.045
+            },
+            "total_ms": {
+              "count": 597,
+              "mean": 5.435,
+              "p50": 3.913,
+              "p95": 13.608,
+              "p99": 20.411,
+              "max": 29.714
+            },
+            "exec_ms": {
+              "count": 597,
+              "mean": 3.616,
+              "p50": 2.516,
+              "p95": 9.804,
+              "p99": 14.204,
+              "max": 22.892
+            },
+            "commit_ms": {
+              "count": 597,
+              "mean": 0.896,
+              "p50": 0.516,
+              "p95": 2.706,
+              "p99": 4.684,
+              "max": 7.163
+            },
+            "stmt_count": {
+              "count": 597,
+              "mean": 5.0,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 3244.802,
+            "sum_commit_ms": 535.05,
+            "sum_exec_ms": 2158.71
+          },
+          "StageB_prepare": {
+            "pool_wait_ms": {
+              "count": 545,
+              "mean": 0.008,
+              "p50": 0.008,
+              "p95": 0.012,
+              "p99": 0.014,
+              "max": 0.035
+            },
+            "total_ms": {
+              "count": 545,
+              "mean": 2.79,
+              "p50": 2.011,
+              "p95": 7.814,
+              "p99": 10.606,
+              "max": 13.674
+            },
+            "exec_ms": {
+              "count": 545,
+              "mean": 2.777,
+              "p50": 1.997,
+              "p95": 7.8,
+              "p99": 10.59,
+              "max": 13.658
+            },
+            "commit_ms": {
+              "count": 545,
+              "mean": 0.0,
+              "p50": 0.0,
+              "p95": 0.0,
+              "p99": 0.0,
+              "max": 0.0
+            },
+            "stmt_count": {
+              "count": 545,
+              "mean": 1.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 1.0,
+              "max": 1.0
+            },
+            "sum_total_ms": 1520.651,
+            "sum_commit_ms": 0.0,
+            "sum_exec_ms": 1513.608
+          }
+        },
+        "substeps": {}
+      },
+      "txa_poll_stall_pct": 0.0,
+      "pg_internals": {
+        "wal_delta": {
+          "wal_records": 55336,
+          "wal_bytes": 8759463,
+          "wal_write": 4705,
+          "wal_sync": 4704
+        },
+        "wal_sync_per_sec": 313.6,
+        "wal_bytes_per_sec": 583964.2,
+        "wal_sync_per_outcome": 8.615,
+        "commits_per_outcome": 9.81,
+        "db_deltas": {
+          "proc_db": {
+            "xact_commit": 4012,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 106310,
+            "tup_returned": 368544,
+            "tup_fetched": 15995,
+            "tup_inserted": 3365,
+            "tup_updated": 4654
+          },
+          "biz_db": {
+            "xact_commit": 1344,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 70080,
+            "tup_returned": 53033,
+            "tup_fetched": 14673,
+            "tup_inserted": 2334,
+            "tup_updated": 3407
+          }
+        },
+        "pg_cpu_pct": 32.78,
+        "pg_io_wbytes": 48308224,
+        "pg_io_wios": 9630,
+        "max_active_pg": 0,
+        "max_wait_pg": 1,
+        "wait_events": {},
+        "lock_waits": {}
+      },
+      "explain_plans": {}
+    },
+    {
+      "mode": "hybrid",
+      "workload": "C",
+      "run_index": 1,
+      "synchronous_commit": "on",
+      "throughput": {
+        "target_rps": 50.0,
+        "window_sent": 750,
+        "admitted_rps": 46.6,
+        "outcomes_rps": 46.2,
+        "preds_rps": 47.0,
+        "errors": 0
+      },
+      "e2e_ms": {
+        "hot_pred": {
+          "count": 240,
+          "mean": 4850.787,
+          "p50": 4913.843,
+          "p95": 5638.414,
+          "p99": 5764.4,
+          "max": 5857.91
+        },
+        "bg_pred": {
+          "count": 510,
+          "mean": 991.545,
+          "p50": 873.349,
+          "p95": 2210.024,
+          "p99": 3288.968,
+          "max": 3859.308
+        }
+      },
+      "db_metrics": {
+        "phases": {
+          "Biz_alert": {
+            "pool_wait_ms": {
+              "count": 66,
+              "mean": 0.012,
+              "p50": 0.013,
+              "p95": 0.018,
+              "p99": 0.027,
+              "max": 0.027
+            },
+            "total_ms": {
+              "count": 66,
+              "mean": 18.582,
+              "p50": 15.434,
+              "p95": 41.463,
+              "p99": 53.457,
+              "max": 53.899
+            },
+            "exec_ms": {
+              "count": 66,
+              "mean": 10.454,
+              "p50": 7.847,
+              "p95": 24.783,
+              "p99": 35.461,
+              "max": 41.064
+            },
+            "commit_ms": {
+              "count": 66,
+              "mean": 1.395,
+              "p50": 1.041,
+              "p95": 3.157,
+              "p99": 5.216,
+              "max": 6.177
+            },
+            "stmt_count": {
+              "count": 66,
+              "mean": 9.636,
+              "p50": 9.0,
+              "p95": 12.0,
+              "p99": 12.0,
+              "max": 12.0
+            },
+            "sum_total_ms": 1226.444,
+            "sum_commit_ms": 92.047,
+            "sum_exec_ms": 689.959
+          },
+          "Biz_live": {
+            "pool_wait_ms": {
+              "count": 708,
+              "mean": 0.012,
+              "p50": 0.013,
+              "p95": 0.018,
+              "p99": 0.023,
+              "max": 0.04
+            },
+            "total_ms": {
+              "count": 708,
+              "mean": 8.793,
+              "p50": 6.795,
+              "p95": 20.967,
+              "p99": 27.751,
+              "max": 33.567
+            },
+            "exec_ms": {
+              "count": 708,
+              "mean": 6.805,
+              "p50": 5.107,
+              "p95": 17.317,
+              "p99": 22.903,
+              "max": 30.608
+            },
+            "commit_ms": {
+              "count": 708,
+              "mean": 0.865,
+              "p50": 0.53,
+              "p95": 2.529,
+              "p99": 3.929,
+              "max": 5.779
+            },
+            "stmt_count": {
+              "count": 708,
+              "mean": 9.384,
+              "p50": 9.0,
+              "p95": 10.0,
+              "p99": 10.0,
+              "max": 10.0
+            },
+            "sum_total_ms": 6225.78,
+            "sum_commit_ms": 612.568,
+            "sum_exec_ms": 4818.078
+          },
+          "Biz_pred": {
+            "pool_wait_ms": {
+              "count": 705,
+              "mean": 0.012,
+              "p50": 0.013,
+              "p95": 0.017,
+              "p99": 0.023,
+              "max": 0.037
+            },
+            "total_ms": {
+              "count": 705,
+              "mean": 8.949,
+              "p50": 7.501,
+              "p95": 21.089,
+              "p99": 26.064,
+              "max": 30.632
+            },
+            "exec_ms": {
+              "count": 705,
+              "mean": 6.819,
+              "p50": 5.383,
+              "p95": 16.791,
+              "p99": 21.12,
+              "max": 24.845
+            },
+            "commit_ms": {
+              "count": 705,
+              "mean": 0.886,
+              "p50": 0.559,
+              "p95": 2.502,
+              "p99": 4.659,
+              "max": 7.953
+            },
+            "stmt_count": {
+              "count": 705,
+              "mean": 9.678,
+              "p50": 10.0,
+              "p95": 10.0,
+              "p99": 11.0,
+              "max": 11.0
+            },
+            "sum_total_ms": 6309.294,
+            "sum_commit_ms": 624.722,
+            "sum_exec_ms": 4807.1
+          },
+          "Relay_claim": {
+            "pool_wait_ms": {
+              "count": 1291,
+              "mean": 0.009,
+              "p50": 0.009,
+              "p95": 0.019,
+              "p99": 0.024,
+              "max": 0.04
+            },
+            "total_ms": {
+              "count": 1291,
+              "mean": 3.79,
+              "p50": 2.814,
+              "p95": 9.904,
+              "p99": 14.895,
+              "max": 24.924
+            },
+            "exec_ms": {
+              "count": 1291,
+              "mean": 2.489,
+              "p50": 1.655,
+              "p95": 7.114,
+              "p99": 10.278,
+              "max": 21.257
+            },
+            "commit_ms": {
+              "count": 1291,
+              "mean": 0.709,
+              "p50": 0.454,
+              "p95": 2.112,
+              "p99": 2.882,
+              "max": 4.374
+            },
+            "stmt_count": {
+              "count": 1291,
+              "mean": 4.176,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 4893.432,
+            "sum_commit_ms": 914.756,
+            "sum_exec_ms": 3212.774
+          },
+          "Relay_finish": {
+            "pool_wait_ms": {
+              "count": 759,
+              "mean": 0.013,
+              "p50": 0.013,
+              "p95": 0.02,
+              "p99": 0.028,
+              "max": 0.059
+            },
+            "total_ms": {
+              "count": 759,
+              "mean": 5.03,
+              "p50": 3.767,
+              "p95": 12.734,
+              "p99": 16.53,
+              "max": 23.175
+            },
+            "exec_ms": {
+              "count": 759,
+              "mean": 3.358,
+              "p50": 2.424,
+              "p95": 8.984,
+              "p99": 11.517,
+              "max": 18.756
+            },
+            "commit_ms": {
+              "count": 759,
+              "mean": 0.823,
+              "p50": 0.509,
+              "p95": 2.459,
+              "p99": 4.314,
+              "max": 6.201
+            },
+            "stmt_count": {
+              "count": 759,
+              "mean": 5.0,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 3817.802,
+            "sum_commit_ms": 624.706,
+            "sum_exec_ms": 2548.606
+          },
+          "StageB_prepare": {
+            "pool_wait_ms": {
+              "count": 693,
+              "mean": 0.012,
+              "p50": 0.013,
+              "p95": 0.017,
+              "p99": 0.021,
+              "max": 0.026
+            },
+            "total_ms": {
+              "count": 693,
+              "mean": 2.33,
+              "p50": 1.938,
+              "p95": 5.742,
+              "p99": 8.337,
+              "max": 12.14
+            },
+            "exec_ms": {
+              "count": 693,
+              "mean": 2.318,
+              "p50": 1.929,
+              "p95": 5.727,
+              "p99": 8.322,
+              "max": 12.126
+            },
+            "commit_ms": {
+              "count": 693,
+              "mean": 0.0,
+              "p50": 0.0,
+              "p95": 0.0,
+              "p99": 0.0,
+              "max": 0.0
+            },
+            "stmt_count": {
+              "count": 693,
+              "mean": 1.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 1.0,
+              "max": 1.0
+            },
+            "sum_total_ms": 1614.75,
+            "sum_commit_ms": 0.0,
+            "sum_exec_ms": 1606.396
+          },
+          "TxA_admit": {
+            "pool_wait_ms": {
+              "count": 699,
+              "mean": 0.01,
+              "p50": 0.011,
+              "p95": 0.015,
+              "p99": 0.021,
+              "max": 0.036
+            },
+            "total_ms": {
+              "count": 699,
+              "mean": 10.773,
+              "p50": 8.786,
+              "p95": 24.921,
+              "p99": 34.739,
+              "max": 57.958
+            },
+            "exec_ms": {
+              "count": 699,
+              "mean": 8.871,
+              "p50": 7.207,
+              "p95": 21.189,
+              "p99": 31.369,
+              "max": 55.406
+            },
+            "commit_ms": {
+              "count": 699,
+              "mean": 0.87,
+              "p50": 0.566,
+              "p95": 2.666,
+              "p99": 4.058,
+              "max": 5.647
+            },
+            "stmt_count": {
+              "count": 699,
+              "mean": 12.0,
+              "p50": 12.0,
+              "p95": 12.0,
+              "p99": 12.0,
+              "max": 12.0
+            },
+            "sum_total_ms": 7530.266,
+            "sum_commit_ms": 608.209,
+            "sum_exec_ms": 6200.774
+          },
+          "TxC_persist": {
+            "pool_wait_ms": {
+              "count": 693,
+              "mean": 0.012,
+              "p50": 0.012,
+              "p95": 0.017,
+              "p99": 0.022,
+              "max": 0.031
+            },
+            "total_ms": {
+              "count": 693,
+              "mean": 33.934,
+              "p50": 30.59,
+              "p95": 66.851,
+              "p99": 86.373,
+              "max": 111.402
+            },
+            "exec_ms": {
+              "count": 693,
+              "mean": 27.982,
+              "p50": 25.17,
+              "p95": 57.769,
+              "p99": 75.513,
+              "max": 95.862
+            },
+            "commit_ms": {
+              "count": 693,
+              "mean": 1.038,
+              "p50": 0.72,
+              "p95": 2.861,
+              "p99": 4.583,
+              "max": 7.902
+            },
+            "stmt_count": {
+              "count": 693,
+              "mean": 30.404,
+              "p50": 31.0,
+              "p95": 36.0,
+              "p99": 36.0,
+              "max": 40.0
+            },
+            "sum_total_ms": 23516.292,
+            "sum_commit_ms": 719.269,
+            "sum_exec_ms": 19391.436
+          }
+        },
+        "substeps": {
+          "persist_hybrid_fn_ms": {
+            "count": 693,
+            "mean": 25.878,
+            "p50": 22.92,
+            "p95": 52.5,
+            "p99": 66.927,
+            "max": 75.694
+          },
+          "txa_resequencer_admit_ms": {
+            "count": 699,
+            "mean": 6.64,
+            "p50": 5.099,
+            "p95": 16.071,
+            "p99": 26.383,
+            "max": 50.955
+          },
+          "txc_drain_frontier_ms": {
+            "count": 693,
+            "mean": 9.733,
+            "p50": 8.123,
+            "p95": 23.098,
+            "p99": 31.921,
+            "max": 40.64
+          },
+          "txc_record_disposition_ms": {
+            "count": 693,
+            "mean": 1.397,
+            "p50": 0.839,
+            "p95": 4.585,
+            "p99": 6.594,
+            "max": 13.349
+          }
+        }
+      },
+      "txa_poll_stall_pct": 50.2,
+      "pg_internals": {
+        "wal_delta": {
+          "wal_records": 84095,
+          "wal_bytes": 12573337,
+          "wal_write": 4921,
+          "wal_sync": 4918
+        },
+        "wal_sync_per_sec": 327.87,
+        "wal_bytes_per_sec": 838222.5,
+        "wal_sync_per_outcome": 7.097,
+        "commits_per_outcome": 8.218,
+        "db_deltas": {
+          "proc_db": {
+            "xact_commit": 4145,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 260254,
+            "tup_returned": 1690463,
+            "tup_fetched": 46905,
+            "tup_inserted": 4872,
+            "tup_updated": 8283
+          },
+          "biz_db": {
+            "xact_commit": 1550,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 80470,
+            "tup_returned": 81320,
+            "tup_fetched": 15655,
+            "tup_inserted": 2605,
+            "tup_updated": 3848
+          }
+        },
+        "pg_cpu_pct": 41.16,
+        "pg_io_wbytes": 53231616,
+        "pg_io_wios": 9867,
+        "max_active_pg": 1,
+        "max_wait_pg": 1,
+        "wait_events": {
+          "Client:ClientRead": 143,
+          "IO:WalSync": 1
+        },
+        "lock_waits": {}
+      },
+      "explain_plans": {}
+    },
+    {
+      "mode": "hybrid",
+      "workload": "C",
+      "run_index": 2,
+      "synchronous_commit": "on",
+      "throughput": {
+        "target_rps": 50.0,
+        "window_sent": 750,
+        "admitted_rps": 46.93,
+        "outcomes_rps": 46.2,
+        "preds_rps": 46.67,
+        "errors": 0
+      },
+      "e2e_ms": {
+        "hot_pred": {
+          "count": 240,
+          "mean": 4442.115,
+          "p50": 4803.053,
+          "p95": 5319.217,
+          "p99": 5495.818,
+          "max": 5528.694
+        },
+        "bg_pred": {
+          "count": 510,
+          "mean": 1150.303,
+          "p50": 1076.594,
+          "p95": 1839.753,
+          "p99": 3251.582,
+          "max": 3795.533
+        }
+      },
+      "db_metrics": {
+        "phases": {
+          "Biz_alert": {
+            "pool_wait_ms": {
+              "count": 66,
+              "mean": 0.013,
+              "p50": 0.014,
+              "p95": 0.018,
+              "p99": 0.028,
+              "max": 0.029
+            },
+            "total_ms": {
+              "count": 66,
+              "mean": 17.116,
+              "p50": 15.463,
+              "p95": 31.71,
+              "p99": 40.037,
+              "max": 50.165
+            },
+            "exec_ms": {
+              "count": 66,
+              "mean": 9.226,
+              "p50": 7.635,
+              "p95": 18.478,
+              "p99": 22.885,
+              "max": 26.167
+            },
+            "commit_ms": {
+              "count": 66,
+              "mean": 1.247,
+              "p50": 0.778,
+              "p95": 3.2,
+              "p99": 5.285,
+              "max": 5.575
+            },
+            "stmt_count": {
+              "count": 66,
+              "mean": 9.636,
+              "p50": 9.0,
+              "p95": 12.0,
+              "p99": 12.0,
+              "max": 12.0
+            },
+            "sum_total_ms": 1129.662,
+            "sum_commit_ms": 82.292,
+            "sum_exec_ms": 608.938
+          },
+          "Biz_live": {
+            "pool_wait_ms": {
+              "count": 720,
+              "mean": 0.012,
+              "p50": 0.013,
+              "p95": 0.018,
+              "p99": 0.024,
+              "max": 0.047
+            },
+            "total_ms": {
+              "count": 720,
+              "mean": 8.768,
+              "p50": 6.825,
+              "p95": 20.844,
+              "p99": 28.078,
+              "max": 39.44
+            },
+            "exec_ms": {
+              "count": 720,
+              "mean": 6.699,
+              "p50": 5.073,
+              "p95": 16.476,
+              "p99": 24.232,
+              "max": 35.908
+            },
+            "commit_ms": {
+              "count": 720,
+              "mean": 0.885,
+              "p50": 0.551,
+              "p95": 2.574,
+              "p99": 4.414,
+              "max": 7.407
+            },
+            "stmt_count": {
+              "count": 720,
+              "mean": 9.414,
+              "p50": 9.0,
+              "p95": 10.0,
+              "p99": 10.0,
+              "max": 10.0
+            },
+            "sum_total_ms": 6312.682,
+            "sum_commit_ms": 637.028,
+            "sum_exec_ms": 4823.151
+          },
+          "Biz_pred": {
+            "pool_wait_ms": {
+              "count": 700,
+              "mean": 0.012,
+              "p50": 0.012,
+              "p95": 0.016,
+              "p99": 0.02,
+              "max": 0.042
+            },
+            "total_ms": {
+              "count": 700,
+              "mean": 9.053,
+              "p50": 7.383,
+              "p95": 20.329,
+              "p99": 26.864,
+              "max": 36.174
+            },
+            "exec_ms": {
+              "count": 700,
+              "mean": 6.943,
+              "p50": 5.508,
+              "p95": 16.887,
+              "p99": 23.65,
+              "max": 30.834
+            },
+            "commit_ms": {
+              "count": 700,
+              "mean": 0.865,
+              "p50": 0.541,
+              "p95": 2.611,
+              "p99": 4.072,
+              "max": 5.28
+            },
+            "stmt_count": {
+              "count": 700,
+              "mean": 9.741,
+              "p50": 10.0,
+              "p95": 11.0,
+              "p99": 11.0,
+              "max": 11.0
+            },
+            "sum_total_ms": 6337.284,
+            "sum_commit_ms": 605.252,
+            "sum_exec_ms": 4860.426
+          },
+          "Relay_claim": {
+            "pool_wait_ms": {
+              "count": 1268,
+              "mean": 0.009,
+              "p50": 0.009,
+              "p95": 0.019,
+              "p99": 0.024,
+              "max": 0.052
+            },
+            "total_ms": {
+              "count": 1268,
+              "mean": 4.008,
+              "p50": 2.922,
+              "p95": 10.969,
+              "p99": 15.204,
+              "max": 25.605
+            },
+            "exec_ms": {
+              "count": 1268,
+              "mean": 2.661,
+              "p50": 1.811,
+              "p95": 7.734,
+              "p99": 11.317,
+              "max": 22.147
+            },
+            "commit_ms": {
+              "count": 1268,
+              "mean": 0.741,
+              "p50": 0.458,
+              "p95": 2.169,
+              "p99": 3.378,
+              "max": 5.916
+            },
+            "stmt_count": {
+              "count": 1268,
+              "mean": 4.197,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 5081.929,
+            "sum_commit_ms": 939.489,
+            "sum_exec_ms": 3374.486
+          },
+          "Relay_finish": {
+            "pool_wait_ms": {
+              "count": 760,
+              "mean": 0.013,
+              "p50": 0.013,
+              "p95": 0.02,
+              "p99": 0.027,
+              "max": 0.041
+            },
+            "total_ms": {
+              "count": 760,
+              "mean": 4.959,
+              "p50": 3.548,
+              "p95": 12.694,
+              "p99": 17.613,
+              "max": 27.25
+            },
+            "exec_ms": {
+              "count": 760,
+              "mean": 3.295,
+              "p50": 2.287,
+              "p95": 8.932,
+              "p99": 13.087,
+              "max": 22.065
+            },
+            "commit_ms": {
+              "count": 760,
+              "mean": 0.87,
+              "p50": 0.513,
+              "p95": 2.694,
+              "p99": 4.575,
+              "max": 6.489
+            },
+            "stmt_count": {
+              "count": 760,
+              "mean": 5.0,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 3769.173,
+            "sum_commit_ms": 660.828,
+            "sum_exec_ms": 2503.867
+          },
+          "StageB_prepare": {
+            "pool_wait_ms": {
+              "count": 693,
+              "mean": 0.036,
+              "p50": 0.013,
+              "p95": 0.018,
+              "p99": 0.023,
+              "max": 16.459
+            },
+            "total_ms": {
+              "count": 693,
+              "mean": 2.426,
+              "p50": 2.029,
+              "p95": 5.634,
+              "p99": 7.902,
+              "max": 10.932
+            },
+            "exec_ms": {
+              "count": 693,
+              "mean": 2.414,
+              "p50": 2.016,
+              "p95": 5.62,
+              "p99": 7.877,
+              "max": 10.912
+            },
+            "commit_ms": {
+              "count": 693,
+              "mean": 0.0,
+              "p50": 0.0,
+              "p95": 0.0,
+              "p99": 0.0,
+              "max": 0.0
+            },
+            "stmt_count": {
+              "count": 693,
+              "mean": 1.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 1.0,
+              "max": 1.0
+            },
+            "sum_total_ms": 1681.386,
+            "sum_commit_ms": 0.0,
+            "sum_exec_ms": 1673.19
+          },
+          "TxA_admit": {
+            "pool_wait_ms": {
+              "count": 704,
+              "mean": 0.01,
+              "p50": 0.011,
+              "p95": 0.014,
+              "p99": 0.019,
+              "max": 0.039
+            },
+            "total_ms": {
+              "count": 704,
+              "mean": 11.092,
+              "p50": 9.102,
+              "p95": 26.009,
+              "p99": 33.373,
+              "max": 92.963
+            },
+            "exec_ms": {
+              "count": 704,
+              "mean": 9.246,
+              "p50": 7.388,
+              "p95": 21.862,
+              "p99": 30.924,
+              "max": 83.679
+            },
+            "commit_ms": {
+              "count": 704,
+              "mean": 0.862,
+              "p50": 0.536,
+              "p95": 2.559,
+              "p99": 3.807,
+              "max": 5.17
+            },
+            "stmt_count": {
+              "count": 704,
+              "mean": 12.0,
+              "p50": 12.0,
+              "p95": 12.0,
+              "p99": 12.0,
+              "max": 12.0
+            },
+            "sum_total_ms": 7808.612,
+            "sum_commit_ms": 606.544,
+            "sum_exec_ms": 6508.865
+          },
+          "TxC_persist": {
+            "pool_wait_ms": {
+              "count": 693,
+              "mean": 0.012,
+              "p50": 0.012,
+              "p95": 0.016,
+              "p99": 0.021,
+              "max": 0.028
+            },
+            "total_ms": {
+              "count": 693,
+              "mean": 35.488,
+              "p50": 32.665,
+              "p95": 71.307,
+              "p99": 85.021,
+              "max": 97.102
+            },
+            "exec_ms": {
+              "count": 693,
+              "mean": 29.398,
+              "p50": 27.011,
+              "p95": 61.057,
+              "p99": 72.384,
+              "max": 86.937
+            },
+            "commit_ms": {
+              "count": 693,
+              "mean": 1.139,
+              "p50": 0.81,
+              "p95": 3.05,
+              "p99": 4.645,
+              "max": 6.899
+            },
+            "stmt_count": {
+              "count": 693,
+              "mean": 30.368,
+              "p50": 31.0,
+              "p95": 36.0,
+              "p99": 40.0,
+              "max": 40.0
+            },
+            "sum_total_ms": 24593.215,
+            "sum_commit_ms": 789.275,
+            "sum_exec_ms": 20372.796
+          }
+        },
+        "substeps": {
+          "persist_hybrid_fn_ms": {
+            "count": 693,
+            "mean": 26.937,
+            "p50": 24.782,
+            "p95": 54.632,
+            "p99": 66.296,
+            "max": 70.51
+          },
+          "txa_resequencer_admit_ms": {
+            "count": 704,
+            "mean": 7.036,
+            "p50": 5.437,
+            "p95": 16.919,
+            "p99": 25.572,
+            "max": 76.997
+          },
+          "txc_drain_frontier_ms": {
+            "count": 693,
+            "mean": 10.4,
+            "p50": 8.772,
+            "p95": 25.035,
+            "p99": 34.041,
+            "max": 40.78
+          },
+          "txc_record_disposition_ms": {
+            "count": 693,
+            "mean": 1.492,
+            "p50": 0.846,
+            "p95": 4.972,
+            "p99": 8.771,
+            "max": 12.023
+          }
+        }
+      },
+      "txa_poll_stall_pct": 52.06,
+      "pg_internals": {
+        "wal_delta": {
+          "wal_records": 82578,
+          "wal_bytes": 12414241,
+          "wal_write": 4867,
+          "wal_sync": 4865
+        },
+        "wal_sync_per_sec": 324.33,
+        "wal_bytes_per_sec": 827616.1,
+        "wal_sync_per_outcome": 7.02,
+        "commits_per_outcome": 8.147,
+        "db_deltas": {
+          "proc_db": {
+            "xact_commit": 4103,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 820065,
+            "tup_returned": 820158,
+            "tup_fetched": 720297,
+            "tup_inserted": 4843,
+            "tup_updated": 8198
+          },
+          "biz_db": {
+            "xact_commit": 1543,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 83351,
+            "tup_returned": 99546,
+            "tup_fetched": 15122,
+            "tup_inserted": 2589,
+            "tup_updated": 3898
+          }
+        },
+        "pg_cpu_pct": 41.66,
+        "pg_io_wbytes": 52961280,
+        "pg_io_wios": 9804,
+        "max_active_pg": 0,
+        "max_wait_pg": 2,
+        "wait_events": {},
+        "lock_waits": {}
+      },
+      "explain_plans": {}
+    },
+    {
+      "mode": "hybrid",
+      "workload": "C",
+      "run_index": 3,
+      "synchronous_commit": "on",
+      "throughput": {
+        "target_rps": 50.0,
+        "window_sent": 750,
+        "admitted_rps": 47.6,
+        "outcomes_rps": 46.6,
+        "preds_rps": 44.13,
+        "errors": 0
+      },
+      "e2e_ms": {
+        "hot_pred": {
+          "count": 240,
+          "mean": 4099.79,
+          "p50": 4071.365,
+          "p95": 5441.964,
+          "p99": 5617.53,
+          "max": 5676.527
+        },
+        "bg_pred": {
+          "count": 510,
+          "mean": 1815.375,
+          "p50": 1647.964,
+          "p95": 3197.705,
+          "p99": 5504.156,
+          "max": 6909.109
+        }
+      },
+      "db_metrics": {
+        "phases": {
+          "Biz_alert": {
+            "pool_wait_ms": {
+              "count": 67,
+              "mean": 0.012,
+              "p50": 0.013,
+              "p95": 0.016,
+              "p99": 0.017,
+              "max": 0.017
+            },
+            "total_ms": {
+              "count": 67,
+              "mean": 18.165,
+              "p50": 17.099,
+              "p95": 31.796,
+              "p99": 39.071,
+              "max": 39.38
+            },
+            "exec_ms": {
+              "count": 67,
+              "mean": 10.114,
+              "p50": 9.722,
+              "p95": 17.902,
+              "p99": 24.295,
+              "max": 26.675
+            },
+            "commit_ms": {
+              "count": 67,
+              "mean": 1.229,
+              "p50": 0.934,
+              "p95": 3.006,
+              "p99": 4.111,
+              "max": 4.207
+            },
+            "stmt_count": {
+              "count": 67,
+              "mean": 9.627,
+              "p50": 9.0,
+              "p95": 12.0,
+              "p99": 12.0,
+              "max": 12.0
+            },
+            "sum_total_ms": 1217.051,
+            "sum_commit_ms": 82.359,
+            "sum_exec_ms": 677.614
+          },
+          "Biz_live": {
+            "pool_wait_ms": {
+              "count": 672,
+              "mean": 0.013,
+              "p50": 0.013,
+              "p95": 0.018,
+              "p99": 0.023,
+              "max": 0.032
+            },
+            "total_ms": {
+              "count": 672,
+              "mean": 9.869,
+              "p50": 8.846,
+              "p95": 21.135,
+              "p99": 25.917,
+              "max": 32.332
+            },
+            "exec_ms": {
+              "count": 672,
+              "mean": 7.656,
+              "p50": 6.7,
+              "p95": 16.836,
+              "p99": 21.678,
+              "max": 27.501
+            },
+            "commit_ms": {
+              "count": 672,
+              "mean": 0.936,
+              "p50": 0.611,
+              "p95": 2.581,
+              "p99": 3.963,
+              "max": 7.132
+            },
+            "stmt_count": {
+              "count": 672,
+              "mean": 9.76,
+              "p50": 10.0,
+              "p95": 10.0,
+              "p99": 10.0,
+              "max": 10.0
+            },
+            "sum_total_ms": 6631.735,
+            "sum_commit_ms": 629.076,
+            "sum_exec_ms": 5144.874
+          },
+          "Biz_pred": {
+            "pool_wait_ms": {
+              "count": 662,
+              "mean": 0.013,
+              "p50": 0.013,
+              "p95": 0.018,
+              "p99": 0.023,
+              "max": 0.054
+            },
+            "total_ms": {
+              "count": 662,
+              "mean": 10.102,
+              "p50": 8.622,
+              "p95": 21.337,
+              "p99": 28.535,
+              "max": 37.655
+            },
+            "exec_ms": {
+              "count": 662,
+              "mean": 7.87,
+              "p50": 6.799,
+              "p95": 17.647,
+              "p99": 23.535,
+              "max": 31.24
+            },
+            "commit_ms": {
+              "count": 662,
+              "mean": 0.944,
+              "p50": 0.571,
+              "p95": 2.558,
+              "p99": 4.374,
+              "max": 10.559
+            },
+            "stmt_count": {
+              "count": 662,
+              "mean": 10.069,
+              "p50": 10.0,
+              "p95": 11.0,
+              "p99": 11.0,
+              "max": 11.0
+            },
+            "sum_total_ms": 6687.521,
+            "sum_commit_ms": 624.759,
+            "sum_exec_ms": 5210.156
+          },
+          "Relay_claim": {
+            "pool_wait_ms": {
+              "count": 1224,
+              "mean": 0.01,
+              "p50": 0.009,
+              "p95": 0.019,
+              "p99": 0.026,
+              "max": 0.048
+            },
+            "total_ms": {
+              "count": 1224,
+              "mean": 4.21,
+              "p50": 3.226,
+              "p95": 10.977,
+              "p99": 14.422,
+              "max": 19.721
+            },
+            "exec_ms": {
+              "count": 1224,
+              "mean": 2.832,
+              "p50": 1.997,
+              "p95": 7.835,
+              "p99": 11.96,
+              "max": 16.454
+            },
+            "commit_ms": {
+              "count": 1224,
+              "mean": 0.764,
+              "p50": 0.489,
+              "p95": 2.122,
+              "p99": 3.686,
+              "max": 5.898
+            },
+            "stmt_count": {
+              "count": 1224,
+              "mean": 4.252,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 5153.149,
+            "sum_commit_ms": 934.69,
+            "sum_exec_ms": 3465.932
+          },
+          "Relay_finish": {
+            "pool_wait_ms": {
+              "count": 766,
+              "mean": 0.014,
+              "p50": 0.014,
+              "p95": 0.02,
+              "p99": 0.026,
+              "max": 0.037
+            },
+            "total_ms": {
+              "count": 766,
+              "mean": 5.15,
+              "p50": 4.395,
+              "p95": 11.336,
+              "p99": 15.842,
+              "max": 18.848
+            },
+            "exec_ms": {
+              "count": 766,
+              "mean": 3.47,
+              "p50": 2.814,
+              "p95": 8.675,
+              "p99": 11.691,
+              "max": 13.808
+            },
+            "commit_ms": {
+              "count": 766,
+              "mean": 0.851,
+              "p50": 0.557,
+              "p95": 2.319,
+              "p99": 3.837,
+              "max": 7.973
+            },
+            "stmt_count": {
+              "count": 766,
+              "mean": 5.0,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 3944.779,
+            "sum_commit_ms": 652.116,
+            "sum_exec_ms": 2658.234
+          },
+          "StageB_prepare": {
+            "pool_wait_ms": {
+              "count": 697,
+              "mean": 0.013,
+              "p50": 0.013,
+              "p95": 0.018,
+              "p99": 0.023,
+              "max": 0.039
+            },
+            "total_ms": {
+              "count": 697,
+              "mean": 2.408,
+              "p50": 2.092,
+              "p95": 5.679,
+              "p99": 7.698,
+              "max": 8.967
+            },
+            "exec_ms": {
+              "count": 697,
+              "mean": 2.396,
+              "p50": 2.083,
+              "p95": 5.664,
+              "p99": 7.683,
+              "max": 8.953
+            },
+            "commit_ms": {
+              "count": 697,
+              "mean": 0.0,
+              "p50": 0.0,
+              "p95": 0.0,
+              "p99": 0.0,
+              "max": 0.0
+            },
+            "stmt_count": {
+              "count": 697,
+              "mean": 1.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 1.0,
+              "max": 1.0
+            },
+            "sum_total_ms": 1678.463,
+            "sum_commit_ms": 0.0,
+            "sum_exec_ms": 1670.127
+          },
+          "TxA_admit": {
+            "pool_wait_ms": {
+              "count": 715,
+              "mean": 0.011,
+              "p50": 0.011,
+              "p95": 0.015,
+              "p99": 0.018,
+              "max": 0.044
+            },
+            "total_ms": {
+              "count": 715,
+              "mean": 12.078,
+              "p50": 10.579,
+              "p95": 26.884,
+              "p99": 36.205,
+              "max": 56.944
+            },
+            "exec_ms": {
+              "count": 715,
+              "mean": 10.016,
+              "p50": 8.482,
+              "p95": 23.098,
+              "p99": 33.109,
+              "max": 55.604
+            },
+            "commit_ms": {
+              "count": 715,
+              "mean": 0.944,
+              "p50": 0.597,
+              "p95": 2.609,
+              "p99": 4.422,
+              "max": 6.01
+            },
+            "stmt_count": {
+              "count": 715,
+              "mean": 12.0,
+              "p50": 12.0,
+              "p95": 12.0,
+              "p99": 12.0,
+              "max": 12.0
+            },
+            "sum_total_ms": 8635.414,
+            "sum_commit_ms": 674.97,
+            "sum_exec_ms": 7161.392
+          },
+          "TxC_persist": {
+            "pool_wait_ms": {
+              "count": 699,
+              "mean": 0.012,
+              "p50": 0.012,
+              "p95": 0.016,
+              "p99": 0.019,
+              "max": 0.093
+            },
+            "total_ms": {
+              "count": 699,
+              "mean": 36.268,
+              "p50": 34.933,
+              "p95": 63.852,
+              "p99": 77.998,
+              "max": 101.917
+            },
+            "exec_ms": {
+              "count": 699,
+              "mean": 30.14,
+              "p50": 29.168,
+              "p95": 54.17,
+              "p99": 67.213,
+              "max": 92.073
+            },
+            "commit_ms": {
+              "count": 699,
+              "mean": 1.119,
+              "p50": 0.786,
+              "p95": 2.949,
+              "p99": 4.576,
+              "max": 6.02
+            },
+            "stmt_count": {
+              "count": 699,
+              "mean": 30.298,
+              "p50": 31.0,
+              "p95": 36.0,
+              "p99": 37.0,
+              "max": 40.0
+            },
+            "sum_total_ms": 25351.274,
+            "sum_commit_ms": 782.162,
+            "sum_exec_ms": 21068.042
+          }
+        },
+        "substeps": {
+          "persist_hybrid_fn_ms": {
+            "count": 699,
+            "mean": 27.648,
+            "p50": 26.389,
+            "p95": 50.368,
+            "p99": 59.197,
+            "max": 83.842
+          },
+          "txa_resequencer_admit_ms": {
+            "count": 715,
+            "mean": 7.608,
+            "p50": 6.356,
+            "p95": 18.355,
+            "p99": 30.07,
+            "max": 50.001
+          },
+          "txc_drain_frontier_ms": {
+            "count": 699,
+            "mean": 10.807,
+            "p50": 10.035,
+            "p95": 23.768,
+            "p99": 29.675,
+            "max": 41.26
+          },
+          "txc_record_disposition_ms": {
+            "count": 699,
+            "mean": 1.499,
+            "p50": 0.869,
+            "p95": 5.163,
+            "p99": 8.028,
+            "max": 10.717
+          }
+        }
+      },
+      "txa_poll_stall_pct": 57.57,
+      "pg_internals": {
+        "wal_delta": {
+          "wal_records": 81566,
+          "wal_bytes": 12561367,
+          "wal_write": 4694,
+          "wal_sync": 4691
+        },
+        "wal_sync_per_sec": 312.73,
+        "wal_bytes_per_sec": 837424.5,
+        "wal_sync_per_outcome": 6.711,
+        "commits_per_outcome": 7.854,
+        "db_deltas": {
+          "proc_db": {
+            "xact_commit": 4108,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 393251,
+            "tup_returned": 648859,
+            "tup_fetched": 280414,
+            "tup_inserted": 5117,
+            "tup_updated": 8398
+          },
+          "biz_db": {
+            "xact_commit": 1382,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 63702,
+            "tup_returned": 12970,
+            "tup_fetched": 12827,
+            "tup_inserted": 2250,
+            "tup_updated": 3880
+          }
+        },
+        "pg_cpu_pct": 41.74,
+        "pg_io_wbytes": 52199424,
+        "pg_io_wios": 9584,
+        "max_active_pg": 2,
+        "max_wait_pg": 2,
+        "wait_events": {
+          "Client:ClientRead": 273,
+          "IO:WalSync": 5,
+          "Lock:transactionid": 4
+        },
+        "lock_waits": {}
+      },
+      "explain_plans": {
+        "txa_admission_cursor_lock": [
+          "LockRows  (cost=0.00..1.53 rows=1 width=121) (actual time=0.014..0.019 rows=1 loops=1)",
+          "  Buffers: shared hit=2",
+          "  ->  Seq Scan on processing_admission_cursor  (cost=0.00..1.52 rows=1 width=121) (actual time=0.009..0.013 rows=1 loops=1)",
+          "        Filter: ((consumer_group = 'bench2-abcf611ceda1-processing-v1'::text) AND (machine_id = 'M-001'::text))",
+          "        Rows Removed by Filter: 34",
+          "        Buffers: shared hit=1",
+          "Planning:",
+          "  Buffers: shared hit=42",
+          "Planning Time: 0.111 ms",
+          "Execution Time: 0.039 ms"
+        ],
+        "txa_inbox_lookup": [
+          "Index Scan using maintai_kafka_inbox_pkey on maintai_kafka_inbox  (cost=0.28..8.30 rows=1 width=65) (actual time=0.016..0.017 rows=1 loops=1)",
+          "  Index Cond: ((consumer_group = 'bench2-abcf611ceda1-processing-v1'::text) AND (topic = 'sensor.readings'::text) AND (message_id = 'evt-abcf611ceda1-M-001-99'::text))",
+          "  Buffers: shared hit=3",
+          "Planning:",
+          "  Buffers: shared hit=29",
+          "Planning Time: 0.146 ms",
+          "Execution Time: 0.025 ms"
+        ],
+        "txa_ledger_lookup_by_msgid": [
+          "Index Scan using processing_alert_ledger_consumer_group_topic_message_id_key on processing_alert_ledger  (cost=0.28..8.30 rows=1 width=95) (actual time=0.021..0.022 rows=1 loops=1)",
+          "  Index Cond: ((consumer_group = 'bench2-abcf611ceda1-processing-v1'::text) AND (topic = 'sensor.readings'::text) AND (message_id = 'evt-abcf611ceda1-M-001-99'::text))",
+          "  Buffers: shared hit=3",
+          "Planning:",
+          "  Buffers: shared hit=63",
+          "Planning Time: 0.246 ms",
+          "Execution Time: 0.031 ms"
+        ],
+        "txa_sensor_events_seq_check": [
+          "Limit  (cost=0.00..109.50 rows=1 width=25) (actual time=0.266..0.267 rows=1 loops=1)",
+          "  Buffers: shared hit=92",
+          "  ->  Seq Scan on sensor_events  (cost=0.00..109.50 rows=1 width=25) (actual time=0.266..0.266 rows=1 loops=1)",
+          "        Filter: ((event_id <> 'nonexistent-evt'::text) AND (machine_id = 'M-001'::text) AND (sequence_number = '320'::numeric))",
+          "        Rows Removed by Filter: 999",
+          "        Buffers: shared hit=92",
+          "Planning:",
+          "  Buffers: shared hit=8",
+          "Planning Time: 0.069 ms",
+          "Execution Time: 0.275 ms"
+        ],
+        "txc_drain_frontier_scan": [
+          "LockRows  (cost=86.82..90.82 rows=320 width=888) (actual time=0.599..0.854 rows=320 loops=1)",
+          "  Buffers: shared hit=381",
+          "  ->  Sort  (cost=86.82..87.62 rows=320 width=888) (actual time=0.593..0.628 rows=320 loops=1)",
+          "        Sort Key: admission_seq",
+          "        Sort Method: quicksort  Memory: 139kB",
+          "        Buffers: shared hit=56",
+          "        ->  Seq Scan on processing_alert_ledger  (cost=0.00..73.50 rows=320 width=888) (actual time=0.020..0.428 rows=320 loops=1)",
+          "              Filter: ((admission_seq > '0'::smallint) AND (consumer_group = 'bench2-abcf611ceda1-processing-v1'::text) AND (machine_id = 'M-001'::text))",
+          "              Rows Removed by Filter: 680",
+          "              Buffers: shared hit=56",
+          "Planning:",
+          "  Buffers: shared hit=65",
+          "Planning Time: 0.229 ms",
+          "Execution Time: 0.907 ms"
+        ],
+        "relay_claim_lateral": [
+          "Limit  (cost=194.10..194.11 rows=1 width=94) (actual time=0.025..0.026 rows=0 loops=1)",
+          "  Buffers: shared hit=1",
+          "  ->  LockRows  (cost=194.10..194.39 rows=23 width=94) (actual time=0.025..0.026 rows=0 loops=1)",
+          "        Buffers: shared hit=1",
+          "        ->  Sort  (cost=194.10..194.16 rows=23 width=94) (actual time=0.025..0.025 rows=0 loops=1)",
+          "              Sort Key: o.created_at, k.topic, k.message_key",
+          "              Sort Method: quicksort  Memory: 25kB",
+          "              Buffers: shared hit=1",
+          "              ->  Nested Loop  (cost=0.28..193.99 rows=23 width=94) (actual time=0.016..0.016 rows=0 loops=1)",
+          "                    Buffers: shared hit=1",
+          "                    ->  Seq Scan on maintai_outbox_keys k  (cost=0.00..2.23 rows=23 width=36) (actual time=0.015..0.015 rows=0 loops=1)",
+          "                          Filter: ((last_published < last_allocated) AND ((owner IS NULL) OR (lease_until < clock_timestamp())))",
+          "                          Rows Removed by Filter: 70",
+          "                          Buffers: shared hit=1",
+          "                    ->  Subquery Scan on o  (cost=0.28..8.33 rows=1 width=66) (never executed)",
+          "                          Filter: (((o.status = 'PENDING'::text) AND (o.next_attempt_at <= clock_timestamp())) OR ((o.status = 'LEASED'::text) AND (o.lease_until < clock_timestamp())))",
+          "                          ->  Limit  (cost=0.28..8.30 rows=1 width=34) (never executed)",
+          "                                ->  Index Scan using maintai_outbox_dispatch_order on maintai_kafka_outbox o_1  (cost=0.28..8.30 rows=1 width=34) (never executed)",
+          "                                      Index Cond: ((topic = k.topic) AND (message_key = k.message_key) AND (dispatch_seq = (k.last_published + 1)))",
+          "Planning:",
+          "  Buffers: shared hit=78",
+          "Planning Time: 0.308 ms",
+          "Execution Time: 0.060 ms"
+        ],
+        "_indexes": [
+          "maintai_kafka_outbox: CREATE INDEX maintai_kafka_outbox_pending ON public.maintai_kafka_outbox USING btree (next_attempt_at, created_at) WHERE (status <> 'PUBLISHED'::text)",
+          "maintai_kafka_outbox: CREATE UNIQUE INDEX maintai_kafka_outbox_pkey ON public.maintai_kafka_outbox USING btree (topic, message_id)",
+          "maintai_kafka_outbox: CREATE UNIQUE INDEX maintai_outbox_dispatch_order ON public.maintai_kafka_outbox USING btree (topic, message_key, dispatch_seq) WHERE (dispatch_seq IS NOT NULL)",
+          "processing_admission_cursor: CREATE UNIQUE INDEX processing_admission_cursor_pkey ON public.processing_admission_cursor USING btree (consumer_group, machine_id)",
+          "processing_alert_ledger: CREATE INDEX processing_alert_ledger_blocked ON public.processing_alert_ledger USING btree (consumer_group, machine_id, decided_at) WHERE (disposition = 'BLOCKED'::text)",
+          "processing_alert_ledger: CREATE UNIQUE INDEX processing_alert_ledger_consumer_group_topic_message_id_key ON public.processing_alert_ledger USING btree (consumer_group, topic, message_id)",
+          "processing_alert_ledger: CREATE UNIQUE INDEX processing_alert_ledger_pkey ON public.processing_alert_ledger USING btree (consumer_group, machine_id, admission_seq)",
+          "processing_alert_ledger: CREATE INDEX processing_alert_ledger_unresolved ON public.processing_alert_ledger USING btree (consumer_group, machine_id, admission_seq) WHERE (disposition = ANY (ARRAY['PENDING'::text, 'SIGNAL_READY'::text, 'NO_SIGNAL'::text, 'BLOCKED'::text]))",
+          "sensor_events: CREATE INDEX sensor_events_machine_source_time ON public.sensor_events USING btree (machine_id, source_server_accepted_at DESC, event_id DESC)",
+          "sensor_events: CREATE UNIQUE INDEX sensor_events_pkey ON public.sensor_events USING btree (event_id)"
+        ]
+      }
+    },
+    {
+      "mode": "hybrid",
+      "workload": "A",
+      "run_index": 1,
+      "synchronous_commit": "off",
+      "throughput": {
+        "target_rps": 50.0,
+        "window_sent": 750,
+        "admitted_rps": 49.8,
+        "outcomes_rps": 49.87,
+        "preds_rps": 41.87,
+        "errors": 0
+      },
+      "e2e_ms": {
+        "hot_pred": {
+          "count": 15,
+          "mean": 1956.687,
+          "p50": 2014.651,
+          "p95": 2481.957,
+          "p99": 2515.195,
+          "max": 2523.505
+        },
+        "bg_pred": {
+          "count": 735,
+          "mean": 2501.915,
+          "p50": 1997.865,
+          "p95": 6766.671,
+          "p99": 10516.525,
+          "max": 12065.456
+        }
+      },
+      "db_metrics": {
+        "phases": {
+          "Biz_alert": {
+            "pool_wait_ms": {
+              "count": 72,
+              "mean": 0.013,
+              "p50": 0.013,
+              "p95": 0.017,
+              "p99": 0.031,
+              "max": 0.044
+            },
+            "total_ms": {
+              "count": 72,
+              "mean": 20.182,
+              "p50": 20.62,
+              "p95": 32.212,
+              "p99": 42.925,
+              "max": 47.431
+            },
+            "exec_ms": {
+              "count": 72,
+              "mean": 11.698,
+              "p50": 11.764,
+              "p95": 21.524,
+              "p99": 26.412,
+              "max": 27.159
+            },
+            "commit_ms": {
+              "count": 72,
+              "mean": 1.232,
+              "p50": 0.611,
+              "p95": 4.183,
+              "p99": 5.435,
+              "max": 5.436
+            },
+            "stmt_count": {
+              "count": 72,
+              "mean": 9.958,
+              "p50": 9.0,
+              "p95": 12.0,
+              "p99": 12.0,
+              "max": 12.0
+            },
+            "sum_total_ms": 1453.139,
+            "sum_commit_ms": 88.716,
+            "sum_exec_ms": 842.291
+          },
+          "Biz_live": {
+            "pool_wait_ms": {
+              "count": 657,
+              "mean": 0.013,
+              "p50": 0.013,
+              "p95": 0.018,
+              "p99": 0.023,
+              "max": 0.036
+            },
+            "total_ms": {
+              "count": 657,
+              "mean": 10.457,
+              "p50": 9.579,
+              "p95": 21.626,
+              "p99": 30.755,
+              "max": 45.145
+            },
+            "exec_ms": {
+              "count": 657,
+              "mean": 8.415,
+              "p50": 7.672,
+              "p95": 18.106,
+              "p99": 24.967,
+              "max": 31.453
+            },
+            "commit_ms": {
+              "count": 657,
+              "mean": 0.74,
+              "p50": 0.397,
+              "p95": 2.523,
+              "p99": 4.35,
+              "max": 9.484
+            },
+            "stmt_count": {
+              "count": 657,
+              "mean": 9.947,
+              "p50": 10.0,
+              "p95": 10.0,
+              "p99": 10.0,
+              "max": 10.0
+            },
+            "sum_total_ms": 6870.074,
+            "sum_commit_ms": 485.912,
+            "sum_exec_ms": 5528.613
+          },
+          "Biz_pred": {
+            "pool_wait_ms": {
+              "count": 628,
+              "mean": 0.013,
+              "p50": 0.013,
+              "p95": 0.017,
+              "p99": 0.022,
+              "max": 0.091
+            },
+            "total_ms": {
+              "count": 628,
+              "mean": 11.124,
+              "p50": 10.136,
+              "p95": 23.233,
+              "p99": 32.701,
+              "max": 46.081
+            },
+            "exec_ms": {
+              "count": 628,
+              "mean": 8.967,
+              "p50": 7.847,
+              "p95": 19.45,
+              "p99": 25.611,
+              "max": 39.165
+            },
+            "commit_ms": {
+              "count": 628,
+              "mean": 0.703,
+              "p50": 0.384,
+              "p95": 2.507,
+              "p99": 3.636,
+              "max": 6.237
+            },
+            "stmt_count": {
+              "count": 628,
+              "mean": 10.799,
+              "p50": 11.0,
+              "p95": 11.0,
+              "p99": 11.0,
+              "max": 11.0
+            },
+            "sum_total_ms": 6985.853,
+            "sum_commit_ms": 441.426,
+            "sum_exec_ms": 5631.572
+          },
+          "Relay_claim": {
+            "pool_wait_ms": {
+              "count": 1242,
+              "mean": 0.009,
+              "p50": 0.008,
+              "p95": 0.017,
+              "p99": 0.023,
+              "max": 0.049
+            },
+            "total_ms": {
+              "count": 1242,
+              "mean": 4.268,
+              "p50": 3.189,
+              "p95": 11.346,
+              "p99": 16.101,
+              "max": 24.066
+            },
+            "exec_ms": {
+              "count": 1242,
+              "mean": 2.986,
+              "p50": 2.175,
+              "p95": 8.333,
+              "p99": 11.318,
+              "max": 18.436
+            },
+            "commit_ms": {
+              "count": 1242,
+              "mean": 0.587,
+              "p50": 0.297,
+              "p95": 2.078,
+              "p99": 3.409,
+              "max": 6.28
+            },
+            "stmt_count": {
+              "count": 1242,
+              "mean": 4.317,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 5301.087,
+            "sum_commit_ms": 728.478,
+            "sum_exec_ms": 3707.998
+          },
+          "Relay_finish": {
+            "pool_wait_ms": {
+              "count": 817,
+              "mean": 0.013,
+              "p50": 0.014,
+              "p95": 0.019,
+              "p99": 0.026,
+              "max": 0.341
+            },
+            "total_ms": {
+              "count": 817,
+              "mean": 5.112,
+              "p50": 4.302,
+              "p95": 11.428,
+              "p99": 16.43,
+              "max": 22.416
+            },
+            "exec_ms": {
+              "count": 817,
+              "mean": 3.618,
+              "p50": 2.974,
+              "p95": 8.227,
+              "p99": 12.49,
+              "max": 17.063
+            },
+            "commit_ms": {
+              "count": 817,
+              "mean": 0.603,
+              "p50": 0.32,
+              "p95": 1.992,
+              "p99": 4.154,
+              "max": 7.334
+            },
+            "stmt_count": {
+              "count": 817,
+              "mean": 5.0,
+              "p50": 5.0,
+              "p95": 5.0,
+              "p99": 5.0,
+              "max": 5.0
+            },
+            "sum_total_ms": 4176.192,
+            "sum_commit_ms": 493.019,
+            "sum_exec_ms": 2955.63
+          },
+          "StageB_prepare": {
+            "pool_wait_ms": {
+              "count": 747,
+              "mean": 0.012,
+              "p50": 0.013,
+              "p95": 0.018,
+              "p99": 0.023,
+              "max": 0.026
+            },
+            "total_ms": {
+              "count": 747,
+              "mean": 2.299,
+              "p50": 1.881,
+              "p95": 5.684,
+              "p99": 7.641,
+              "max": 10.891
+            },
+            "exec_ms": {
+              "count": 747,
+              "mean": 2.286,
+              "p50": 1.872,
+              "p95": 5.67,
+              "p99": 7.626,
+              "max": 10.878
+            },
+            "commit_ms": {
+              "count": 747,
+              "mean": 0.0,
+              "p50": 0.0,
+              "p95": 0.0,
+              "p99": 0.0,
+              "max": 0.0
+            },
+            "stmt_count": {
+              "count": 747,
+              "mean": 1.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 1.0,
+              "max": 1.0
+            },
+            "sum_total_ms": 1716.999,
+            "sum_commit_ms": 0.0,
+            "sum_exec_ms": 1708.001
+          },
+          "TxA_admit": {
+            "pool_wait_ms": {
+              "count": 747,
+              "mean": 0.011,
+              "p50": 0.011,
+              "p95": 0.014,
+              "p99": 0.022,
+              "max": 0.041
+            },
+            "total_ms": {
+              "count": 747,
+              "mean": 11.278,
+              "p50": 10.134,
+              "p95": 23.225,
+              "p99": 32.307,
+              "max": 41.079
+            },
+            "exec_ms": {
+              "count": 747,
+              "mean": 9.518,
+              "p50": 8.423,
+              "p95": 20.156,
+              "p99": 28.359,
+              "max": 37.327
+            },
+            "commit_ms": {
+              "count": 747,
+              "mean": 0.641,
+              "p50": 0.389,
+              "p95": 2.045,
+              "p99": 3.62,
+              "max": 7.851
+            },
+            "stmt_count": {
+              "count": 747,
+              "mean": 12.0,
+              "p50": 12.0,
+              "p95": 12.0,
+              "p99": 12.0,
+              "max": 12.0
+            },
+            "sum_total_ms": 8424.327,
+            "sum_commit_ms": 478.528,
+            "sum_exec_ms": 7110.257
+          },
+          "TxC_persist": {
+            "pool_wait_ms": {
+              "count": 748,
+              "mean": 0.012,
+              "p50": 0.012,
+              "p95": 0.016,
+              "p99": 0.022,
+              "max": 0.029
+            },
+            "total_ms": {
+              "count": 748,
+              "mean": 34.783,
+              "p50": 31.436,
+              "p95": 68.517,
+              "p99": 80.062,
+              "max": 126.141
+            },
+            "exec_ms": {
+              "count": 748,
+              "mean": 29.111,
+              "p50": 25.951,
+              "p95": 59.897,
+              "p99": 71.134,
+              "max": 119.373
+            },
+            "commit_ms": {
+              "count": 748,
+              "mean": 0.912,
+              "p50": 0.586,
+              "p95": 2.75,
+              "p99": 5.108,
+              "max": 7.696
+            },
+            "stmt_count": {
+              "count": 748,
+              "mean": 31.481,
+              "p50": 31.0,
+              "p95": 36.0,
+              "p99": 36.0,
+              "max": 36.0
+            },
+            "sum_total_ms": 26018.027,
+            "sum_commit_ms": 682.232,
+            "sum_exec_ms": 21774.991
+          }
+        },
+        "substeps": {
+          "persist_hybrid_fn_ms": {
+            "count": 748,
+            "mean": 27.352,
+            "p50": 24.382,
+            "p95": 54.492,
+            "p99": 64.536,
+            "max": 115.091
+          },
+          "txa_resequencer_admit_ms": {
+            "count": 747,
+            "mean": 7.078,
+            "p50": 6.232,
+            "p95": 14.517,
+            "p99": 22.062,
+            "max": 29.515
+          },
+          "txc_drain_frontier_ms": {
+            "count": 748,
+            "mean": 10.906,
+            "p50": 9.441,
+            "p95": 25.33,
+            "p99": 30.458,
+            "max": 54.779
+          },
+          "txc_record_disposition_ms": {
+            "count": 749,
+            "mean": 1.417,
+            "p50": 0.809,
+            "p95": 4.489,
+            "p99": 8.393,
+            "max": 13.771
+          }
+        }
+      },
+      "txa_poll_stall_pct": 56.16,
+      "pg_internals": {
+        "wal_delta": {
+          "wal_records": 83085,
+          "wal_bytes": 13408785,
+          "wal_write": 88,
+          "wal_sync": 88
+        },
+        "wal_sync_per_sec": 5.87,
+        "wal_bytes_per_sec": 893919.0,
+        "wal_sync_per_outcome": 0.118,
+        "commits_per_outcome": 7.797,
+        "db_deltas": {
+          "proc_db": {
+            "xact_commit": 4455,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 402772,
+            "tup_returned": 816641,
+            "tup_fetched": 223543,
+            "tup_inserted": 5584,
+            "tup_updated": 9581
+          },
+          "biz_db": {
+            "xact_commit": 1377,
+            "xact_rollback": 0,
+            "blks_read": 0,
+            "blks_hit": 66181,
+            "tup_returned": 13476,
+            "tup_fetched": 13370,
+            "tup_inserted": 2255,
+            "tup_updated": 4454
+          }
+        },
+        "pg_cpu_pct": 42.77,
+        "pg_io_wbytes": 14655488,
+        "pg_io_wios": 474,
+        "max_active_pg": 0,
+        "max_wait_pg": 0,
+        "wait_events": {},
+        "lock_waits": {}
+      },
+      "explain_plans": {}
+    }
+  ]
+}
