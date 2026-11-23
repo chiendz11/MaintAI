@@ -102,6 +102,22 @@ def rss_mb() -> float:
     return round((pages * os.sysconf("SC_PAGE_SIZE")) / (1024 * 1024), 2)
 
 
+def read_cpu_throttled_periods() -> int:
+    for path in (
+        Path("/sys/fs/cgroup/cpu.stat"),
+        Path("/sys/fs/cgroup/cpu/cpu.stat"),
+    ):
+        if path.is_file():
+            for line in path.read_text(encoding="utf-8").splitlines():
+                parts = line.split()
+                if len(parts) == 2 and parts[0] == "nr_throttled":
+                    try:
+                        return int(parts[1])
+                    except ValueError:
+                        return 0
+    return 0
+
+
 def upgrade_processing(dsn: str):
     url = make_url(dsn)
     config = Config()
@@ -326,15 +342,16 @@ def build_keyed_limits(args) -> KeyedSettings:
     return KeyedSettings(**kwargs)
 
 
-def workload_rates(workload: str, machines: int) -> dict[str, float]:
+def workload_rates(workload: str, machines: int, *, workload_c_bg: int = 34) -> dict[str, float]:
     ids = [f"M-{i:03d}" for i in range(1, machines + 1)]
     if workload == "A":
         return {m: 1.0 for m in ids}
     if workload == "B":
         return {m: 2.0 for m in ids}
     if workload == "C":
-        rates = {m: 1.0 for m in ids}
-        rates["M-001"] = 16.0
+        rates = {"M-001": 16.0}
+        for i in range(2, 2 + workload_c_bg):
+            rates[f"M-{i:03d}"] = 1.0
         return rates
     raise ValueError(f"Unsupported workload {workload}")
 
@@ -358,7 +375,7 @@ def run_single(args, workload: str, run_idx: int) -> dict:
         activate_processing_ordering(conn, legacy_writers_drained=True)
 
     upgrade_business(biz_dsn)
-    rates = workload_rates(workload, args.machines)
+    rates = workload_rates(workload, args.machines, workload_c_bg=args.workload_c_background_machines)
     with pg_connect(biz_dsn) as conn:
         RegistryRepository(lambda: pg_connect(biz_dsn)).provision(
             [{"machine_id": m, "display_name": f"Benchmark {m}"} for m in sorted(rates)]
@@ -375,11 +392,14 @@ def run_single(args, workload: str, run_idx: int) -> dict:
     captured_offsets = ensure_topics_and_groups(settings, contracts)
 
     limits = build_keyed_limits(args)
-    inflight_budget = getattr(limits, "max_total_inflight", None) or (
-        limits.max_active_keys * getattr(limits, "max_inflight_per_key", 1)
+    inflight_budget = getattr(limits, "effective_max_total_inflight", None) or (
+        getattr(limits, "max_total_inflight", None)
+        or (limits.max_active_keys * getattr(limits, "max_inflight_per_key", 1))
     )
-    proc_pool = ProcessingPool(proc_dsn, size=max(12, min(32, inflight_budget + 4)))
-    biz_pool = BusinessPool(biz_dsn, size=12)
+    proc_pool_size = max(12, min(32, inflight_budget + 4))
+    biz_pool_size = 12
+    proc_pool = ProcessingPool(proc_dsn, size=proc_pool_size)
+    biz_pool = BusinessPool(biz_dsn, size=biz_pool_size)
 
     trace = RunTrace()
     example_completed = json.loads((ROOT / "contracts/kafka/examples/completed.json").read_text())
@@ -423,20 +443,38 @@ def run_single(args, workload: str, run_idx: int) -> dict:
                 trace.persist_end_at[event.message_id] = time.monotonic()
             return res
 
-    app_handler = InstrumentedProcessingHandler(
-        lambda: proc_pool(),
-        consumer_group=proc_group,
-        validator=validator,
-        registry_lookup=lambda _machine_id, **_kw: MachineLookupResult("FOUND", None),
-        predict=ml.predict,
-        identity_resolver=lambda _resp: model_identity,
-        policy=policy,
-        producer_git_sha="a" * 40,
-        registry_cache_seconds=30,
-        contracts=contracts,
-    )
+        def persist_hybrid(self, connection, event, record, prepared, **kwargs):
+            with trace.lock:
+                trace.persist_start_at[event.message_id] = time.monotonic()
+            res = super().persist_hybrid(connection, event, record, prepared, **kwargs)
+            with trace.lock:
+                trace.persist_end_at[event.message_id] = time.monotonic()
+            return res
+
+    app_handler_kwargs = {
+        "consumer_group": proc_group,
+        "validator": validator,
+        "registry_lookup": lambda _machine_id, **_kw: MachineLookupResult("FOUND", None),
+        "predict": ml.predict,
+        "identity_resolver": lambda _resp: model_identity,
+        "policy": policy,
+        "producer_git_sha": "a" * 40,
+        "registry_cache_seconds": 30,
+        "contracts": contracts,
+    }
+    if "hybrid_ordering_enabled" in inspect.signature(ProcessingHandler.__init__).parameters:
+        app_handler_kwargs["hybrid_ordering_enabled"] = args.mode == "hybrid"
+
+    app_handler = InstrumentedProcessingHandler(lambda: proc_pool(), **app_handler_kwargs)
 
     class BenchKeyedHandler(KeyedProcessingHandler):
+        def admit(self, event, record, context):
+            with trace.lock:
+                if event.message_id not in trace.admitted_at:
+                    trace.admitted_at[event.message_id] = time.monotonic()
+                trace.admitted_coords[(record.partition, record.offset)] = event.message_id
+            return super().admit(event, record, context)
+
         def handle(self, event, record, context):
             with trace.lock:
                 if event.message_id not in trace.admitted_at:
@@ -448,7 +486,10 @@ def run_single(args, workload: str, run_idx: int) -> dict:
         with trace.lock:
             trace.errors += 1
 
-    keyed_handler = BenchKeyedHandler(app_handler, on_error=on_err)
+    keyed_kwargs = {"on_error": on_err}
+    if "hybrid_ordering_enabled" in inspect.signature(KeyedProcessingHandler.__init__).parameters:
+        keyed_kwargs["hybrid_ordering_enabled"] = args.mode == "hybrid"
+    keyed_handler = BenchKeyedHandler(app_handler, **keyed_kwargs)
     proc_registry = CollectorRegistry()
     proc_metrics = ProcessingMetrics(proc_registry)
 
@@ -587,6 +628,7 @@ def run_single(args, workload: str, run_idx: int) -> dict:
         t_warmup_end = t_start + args.warmup_seconds
         t_measure_end = t_warmup_end + args.measure_seconds
         total_duration = args.warmup_seconds + args.measure_seconds
+        throttle_start = read_cpu_throttled_periods()
 
         # Sampler thread
         def sampler():
@@ -720,7 +762,7 @@ def run_single(args, workload: str, run_idx: int) -> dict:
 
         producer.flush(10)
         total_sent = len(all_event_ids)
-        # Wait for full drain in Processing + Outbox + Business DB (up to 90s)
+        # Wait for full drain in Processing + Outbox + Alert Ledger + Business DB (up to 90s)
         drain_deadline = time.monotonic() + 90.0
         while time.monotonic() < drain_deadline:
             with pg_connect(proc_dsn) as pconn, pg_connect(biz_dsn) as bconn:
@@ -728,6 +770,17 @@ def run_single(args, workload: str, run_idx: int) -> dict:
                 outbox_rem = pconn.execute(
                     "SELECT count(*) AS n FROM maintai_kafka_outbox WHERE status != 'PUBLISHED'"
                 ).fetchone()["n"]
+                has_ledger_drain = pconn.execute(
+                    "SELECT to_regclass('processing_alert_ledger') IS NOT NULL AS exists"
+                ).fetchone()["exists"]
+                ledger_unresolved = (
+                    pconn.execute(
+                        "SELECT count(*) AS n FROM processing_alert_ledger "
+                        "WHERE disposition NOT IN ('EMITTED','RESOLVED_NO_SIGNAL')"
+                    ).fetchone()["n"]
+                    if has_ledger_drain
+                    else 0
+                )
                 pred_done = bconn.execute(
                     "SELECT count(*) AS n FROM maintai_kafka_inbox WHERE topic='inference.results'"
                 ).fetchone()["n"]
@@ -740,11 +793,14 @@ def run_single(args, workload: str, run_idx: int) -> dict:
             if (
                 proc_done >= total_sent
                 and outbox_rem == 0
+                and ledger_unresolved == 0
                 and pred_done >= total_sent
                 and alert_done >= alert_expected
             ):
                 break
             time.sleep(0.1)
+        throttle_end = read_cpu_throttled_periods()
+        cpu_throttled_periods = max(0, throttle_end - throttle_start)
         time.sleep(0.2)
         stop.set()
         t_worker.join(timeout=10)
@@ -876,8 +932,13 @@ def run_single(args, workload: str, run_idx: int) -> dict:
                     "FROM processing_alert_ledger WHERE decided_at IS NOT NULL AND resolved_at IS NOT NULL"
                 ).fetchall()
                 ledger_frontier_wait_ms = [max(0.0, float(r["wait_ms"])) for r in fw_rows]
+                unresolved_ledger = pconn.execute(
+                    "SELECT count(*) AS n FROM processing_alert_ledger "
+                    "WHERE disposition NOT IN ('EMITTED','RESOLVED_NO_SIGNAL')"
+                ).fetchone()["n"]
             else:
                 ledger_frontier_wait_ms = []
+                unresolved_ledger = 0
 
         return {
             "workload": workload,
@@ -887,13 +948,16 @@ def run_single(args, workload: str, run_idx: int) -> dict:
                 "max_active_keys": args.max_active_keys,
                 "max_inflight_per_key": args.max_inflight_per_key,
                 "max_total_inflight": inflight_budget,
+                "proc_pool_size": proc_pool_size,
+                "biz_pool_size": biz_pool_size,
                 "ml_max_concurrency": args.ml_max_concurrency,
                 "ml_latency_ms": args.ml_latency_ms,
                 "ml_slow_prob": args.ml_slow_prob,
                 "ml_slow_ms": args.ml_slow_ms,
                 "warmup_seconds": args.warmup_seconds,
                 "measure_seconds": args.measure_seconds,
-                "machines": args.machines,
+                "machines": len(rates),
+                "workload_c_background_machines": args.workload_c_background_machines,
             },
             "throughput": {
                 "target_rps": round(sum(rates.values()), 2),
@@ -931,6 +995,7 @@ def run_single(args, workload: str, run_idx: int) -> dict:
                 "max_pg_lock_waits": max((s["pg_lock_waits"] for s in samples), default=0),
                 "mean_cpu_pct": round(statistics.fmean(s["cpu_pct"] for s in samples), 2) if samples else 0.0,
                 "peak_rss_mb": max((s["rss_mb"] for s in samples), default=0.0),
+                "cpu_throttled_periods": cpu_throttled_periods,
                 "frontier_stall_s": round(
                     proc_registry.get_sample_value("maintai_processing_frontier_stall_seconds") or 0.0, 3
                 ),
@@ -943,6 +1008,7 @@ def run_single(args, workload: str, run_idx: int) -> dict:
                 "wrong_latest_sequence": wrong_latest_seq,
                 "alert_sequence_violations": alert_seq_violations,
                 "offset_commit_violations": trace.offset_commit_violations,
+                "unresolved_alert_ledger": unresolved_ledger,
             },
         }
     finally:
@@ -966,6 +1032,7 @@ def main():
     parser.add_argument("--database-url", default="postgresql://maintai_test:maintai_test@127.0.0.1:35432/maintai_processing_test")
     parser.add_argument("--bootstrap-servers", default="127.0.0.1:39092")
     parser.add_argument("--machines", type=int, default=50)
+    parser.add_argument("--workload-c-background-machines", type=int, default=34)
     parser.add_argument("--max-active-keys", type=int, default=8)
     parser.add_argument("--max-inflight-per-key", type=int, default=1)
     parser.add_argument("--max-total-inflight", type=int, default=None)
@@ -1016,11 +1083,13 @@ def main():
                 "errors": r["throughput"]["errors"],
                 "inf_p50_ms": r["latency_ms"]["inference"]["p50"],
                 "inf_p95_ms": r["latency_ms"]["inference"]["p95"],
+                "inf_p99_ms": r["latency_ms"]["inference"]["p99"],
                 "hot_e2e_p50_ms": r["latency_ms"]["hot_machine_pred_e2e"]["p50"],
                 "hot_e2e_p95_ms": r["latency_ms"]["hot_machine_pred_e2e"]["p95"],
                 "hot_e2e_p99_ms": r["latency_ms"]["hot_machine_pred_e2e"]["p99"],
                 "bg_e2e_p50_ms": r["latency_ms"]["background_machine_pred_e2e"]["p50"],
                 "bg_e2e_p95_ms": r["latency_ms"]["background_machine_pred_e2e"]["p95"],
+                "bg_e2e_p99_ms": r["latency_ms"]["background_machine_pred_e2e"]["p99"],
                 "db_tx_p95_ms": r["latency_ms"]["processing_db_tx"]["p95"],
                 "outbox_p95_ms": r["latency_ms"]["db_commit_to_kafka_publish"]["p95"],
                 "alert_p95_ms": r["latency_ms"]["alert_signal_to_alert_creation"]["p95"],
@@ -1031,6 +1100,7 @@ def main():
                 "pg_locks": r["resources_and_queues"]["max_pg_lock_waits"],
                 "cpu_pct": r["resources_and_queues"]["mean_cpu_pct"],
                 "rss_mb": r["resources_and_queues"]["peak_rss_mb"],
+                "cpu_throttled": r["resources_and_queues"]["cpu_throttled_periods"],
                 "correctness_violations": sum(r["correctness"].values()),
             }
         )

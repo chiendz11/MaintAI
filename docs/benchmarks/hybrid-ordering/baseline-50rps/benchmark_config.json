@@ -1,0 +1,23 @@
+{
+  "mode": "baseline",
+  "database_url": "postgresql://maintai_test:maintai_test@127.0.0.1:35432/maintai_processing_test",
+  "bootstrap_servers": "127.0.0.1:39092",
+  "machines": 50,
+  "workload_c_background_machines": 34,
+  "max_active_keys": 8,
+  "max_inflight_per_key": 1,
+  "max_total_inflight": 8,
+  "max_pending_records": 512,
+  "max_pending_per_key": 64,
+  "max_uncommitted_per_partition": 256,
+  "ml_max_concurrency": 12,
+  "ml_latency_ms": 25.0,
+  "ml_jitter_ms": 5.0,
+  "ml_slow_prob": 0.1,
+  "ml_slow_ms": 300.0,
+  "warmup_seconds": 5,
+  "measure_seconds": 15,
+  "runs": 3,
+  "workloads": "A,C",
+  "output_dir": "/home/chienqt/Dev/newBTL/MaintAI/docs/benchmarks/hybrid-ordering/baseline-50rps"
+}
