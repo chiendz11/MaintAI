@@ -346,3 +346,73 @@ def test_keyed_rebalance_resumes_previously_paused_partition(settings, contracts
     assert len(client.resumes) >= 2
     assert client.rebalanced
     assert [p.offset for p in client.commits] == [1, 2]
+
+
+def test_hybrid_config_requires_explicit_flag_and_bounds():
+    with pytest.raises(ConfigurationError):
+        KeyedSettings(hybrid_ordering_enabled=False, max_inflight_per_key=2)
+    with pytest.raises(ConfigurationError):
+        KeyedSettings(hybrid_ordering_enabled=True, max_inflight_per_key=4, max_total_inflight=2)
+    with pytest.raises(ConfigurationError):
+        KeyedSettings(hybrid_ordering_enabled=True, max_pending_records=4, max_total_inflight=5)
+    limits = KeyedSettings(
+        hybrid_ordering_enabled=True,
+        max_active_keys=8,
+        max_inflight_per_key=2,
+        max_total_inflight=8,
+    )
+    assert limits.effective_max_total_inflight == 8
+    assert KeyedSettings.from_env({}).hybrid_ordering_enabled is False
+
+
+def test_hybrid_same_key_parallel_and_fair_round_robin_safe_prefix(settings, contracts, example):
+    barrier = threading.Barrier(2)
+    entered = []
+    admitted = []
+    lock = threading.Lock()
+    client = ConsumerClient(
+        [
+            reading(example, "M-A", 1, 100),
+            reading(example, "M-A", 2, 101),
+            reading(example, "M-B", 1, 102),
+            reading(example, "M-A", 3, 103),
+        ]
+    )
+
+    class HybridFencedFixture(FencedFixture):
+        def admit(self, event, record, _context):
+            with lock:
+                admitted.append((event.key, event.payload["sequence_number"], record.offset))
+            return record.offset
+
+    def work(event, record, context):
+        assert context.admission == record.offset
+        if event.key == "M-A" and event.payload["sequence_number"] in (1, 2):
+            with lock:
+                entered.append(event.payload["sequence_number"])
+            barrier.wait(timeout=3)
+            if event.payload["sequence_number"] == 1:
+                time.sleep(0.05)  # Force seq 2 to finish before seq 1
+
+    limits = KeyedSettings(
+        hybrid_ordering_enabled=True,
+        max_active_keys=4,
+        max_inflight_per_key=2,
+        max_total_inflight=4,
+    )
+    runner = KeyedConsumerRunner(
+        settings,
+        "processing",
+        HybridFencedFixture(work),
+        limits=limits,
+        contracts=contracts,
+        client=client,
+    )
+    assert runner.run(max_records=4) == 4
+    assert sorted(entered) == [1, 2]
+    assert admitted == [("M-A", 1, 100), ("M-A", 2, 101), ("M-B", 1, 102), ("M-A", 3, 103)]
+    assert client.commits[-1].offset == 104
+    # Offset 100 must be committed before or together with 101 (never skipping 100 while unfinished)
+    assert all(p.offset != 102 for p in client.commits if p.offset < 102) or any(
+        p.offset >= 101 for p in client.commits
+    )

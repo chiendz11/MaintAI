@@ -117,5 +117,5 @@ def test_metadata_source_records_are_not_automatically_deleted(migrated_database
         assert connection.execute("SELECT count(*) AS n FROM sensor_events").fetchone()["n"] == 0
         assert (
             connection.execute("SELECT version_num FROM alembic_version").fetchone()["version_num"]
-            == "processing_0004_catalog"
+            == "processing_0005_hybrid_ordering"
         )

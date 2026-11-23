@@ -36,7 +36,7 @@ async def run_worker(settings, stop, *, max_records=None):
     )
     pool = ConnectionPool(
         settings.database_url,
-        size=max(12, settings.keyed_limits.max_active_keys + 4),
+        size=max(12, min(32, settings.keyed_limits.effective_max_total_inflight + 4)),
     )
 
     def validate():
@@ -104,6 +104,8 @@ async def run_worker(settings, stop, *, max_records=None):
                 registry_cache_seconds=cache_seconds,
                 contracts=contracts,
                 validation_observer=observer.record_validation,
+                hybrid_ordering_enabled=settings.keyed_limits.hybrid_ordering_enabled,
+                unavailable_alert_disposition=settings.unavailable_alert_disposition,
             )
 
             def durable(event, record):
@@ -145,17 +147,21 @@ async def run_worker(settings, stop, *, max_records=None):
                     raise
 
             if settings.execution_mode == "keyed":
+                keyed_metrics = ProcessingMetrics(observer.registry)
                 keyed_handler = KeyedProcessingHandler(
                     handler,
                     on_receipt=durable,
                     on_error=lambda: observer.errors.labels("worker").inc(),
+                    hybrid_ordering_enabled=settings.keyed_limits.hybrid_ordering_enabled,
+                    unavailable_alert_disposition=settings.unavailable_alert_disposition,
+                    metrics=keyed_metrics,
                 )
                 runner = KeyedConsumerRunner(
                     settings.kafka,
                     "processing",
                     keyed_handler,
                     limits=settings.keyed_limits,
-                    metrics=ProcessingMetrics(observer.registry),
+                    metrics=keyed_metrics,
                     contracts=contracts,
                 )
             else:

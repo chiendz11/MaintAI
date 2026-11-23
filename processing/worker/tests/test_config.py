@@ -129,3 +129,32 @@ def test_registry_oauth_validation_rejects_invalid_combinations(worker_env, tmp_
         WorkerSettings.from_env(
             {**worker_env, **valid_oauth, "BUSINESS_OAUTH_SECRET_FILE": str(empty_file)}
         )
+
+
+def test_hybrid_ordering_settings_default_safe_and_validated(worker_env):
+    default_cfg = WorkerSettings.from_env(worker_env)
+    assert default_cfg.keyed_limits.hybrid_ordering_enabled is False
+    assert default_cfg.keyed_limits.max_inflight_per_key == 1
+    assert default_cfg.keyed_limits.effective_max_total_inflight == 8
+    assert default_cfg.unavailable_alert_disposition == "BLOCKED"
+
+    hybrid_cfg = WorkerSettings.from_env(
+        {
+            **worker_env,
+            "PROCESSING_EXECUTION_MODE": "keyed",
+            "PROCESSING_HYBRID_ORDERING_ENABLED": "true",
+            "PROCESSING_MAX_ACTIVE_KEYS": "8",
+            "PROCESSING_MAX_INFLIGHT_PER_KEY": "2",
+            "PROCESSING_MAX_TOTAL_INFLIGHT": "8",
+            "PROCESSING_UNAVAILABLE_ALERT_DISPOSITION": "NO_SIGNAL",
+        }
+    )
+    assert hybrid_cfg.keyed_limits.hybrid_ordering_enabled is True
+    assert hybrid_cfg.keyed_limits.max_inflight_per_key == 2
+    assert hybrid_cfg.keyed_limits.effective_max_total_inflight == 8
+    assert hybrid_cfg.unavailable_alert_disposition == "NO_SIGNAL"
+
+    with pytest.raises(ValueError):
+        WorkerSettings.from_env(
+            {**worker_env, "PROCESSING_UNAVAILABLE_ALERT_DISPOSITION": "IGNORE"}
+        )

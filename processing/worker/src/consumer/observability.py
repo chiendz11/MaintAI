@@ -81,6 +81,17 @@ class RuntimeObservability:
             "Oldest unpublished outcome age",
             registry=self.registry,
         )
+        self.alert_resequencer_depth = Gauge(
+            "maintai_processing_alert_resequencer_depth",
+            "Unresolved Alert Resequencer ledger rows by disposition",
+            ["disposition"],
+            registry=self.registry,
+        )
+        self.alert_frontier_stalled = Gauge(
+            "maintai_processing_alert_frontier_stalled_seconds",
+            "Oldest blocked or waiting alert frontier age",
+            registry=self.registry,
+        )
         self.app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
         @self.app.get("/health/live")
@@ -211,6 +222,26 @@ async def monitor_dependencies(observer, settings, database_url, stop, *, relay=
                     observer.age.set(max(0, age))
                 else:
                     conn.execute("SELECT event_id FROM sensor_events LIMIT 0")
+                    if conn.execute(
+                        "SELECT to_regclass('processing_alert_ledger') IS NOT NULL AS present"
+                    ).fetchone()[0]:
+                        rows = conn.execute(
+                            """SELECT disposition, count(*) AS cnt,
+                            COALESCE(MAX(EXTRACT(EPOCH FROM (clock_timestamp() - COALESCE(decided_at, admitted_at)))), 0) AS age_s
+                            FROM processing_alert_ledger
+                            WHERE disposition IN ('PENDING','SIGNAL_READY','NO_SIGNAL','BLOCKED')
+                            GROUP BY disposition"""
+                        ).fetchall()
+                        counts = {d: 0 for d in ("PENDING", "SIGNAL_READY", "NO_SIGNAL", "BLOCKED")}
+                        max_stall = 0.0
+                        for disp, cnt, age_s in rows:
+                            if disp in counts:
+                                counts[disp] = cnt
+                            if disp in ("SIGNAL_READY", "NO_SIGNAL", "BLOCKED"):
+                                max_stall = max(max_stall, float(age_s or 0.0))
+                        for disp, cnt in counts.items():
+                            observer.alert_resequencer_depth.labels(disp).set(cnt)
+                        observer.alert_frontier_stalled.set(max_stall)
                 database = True
         except psycopg.Error as exc:
             observer.record_database_failure(exc)

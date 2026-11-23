@@ -31,11 +31,20 @@ class AlertMetrics:
             registry=registry,
             buckets=(0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60, 120, 300),
         )
+        self.stale = Counter(
+            "maintai_alerts_stale_signals_total",
+            "Ignored stale alert signals protected by source-sequence guard",
+            ["reason"],
+            registry=registry,
+        )
 
     def transition(self, before, after):
         self.transitions.labels(before, after).inc()
 
     def signal(self, disposition, severity, accepted):
+        if disposition in {"STALE_IGNORED", "STALE_AFTER_TERMINAL"}:
+            self.stale.labels(disposition).inc()
+            return
         (self.created if disposition == "CREATED" else self.deduped).labels(severity).inc()
         try:
             stamp = datetime.fromisoformat(accepted)

@@ -61,6 +61,9 @@ class AlertRepository:
     def create_or_dedupe(self, connection, event, evidence):
         signal = event.payload
         validate_evidence(signal, evidence)
+        incoming_outcome = evidence["outcome"]
+        incoming_seq = int(incoming_outcome["sequence_number"])
+        incoming_epoch = incoming_outcome["stream_epoch"]
         machine = connection.execute(
             "SELECT machine_id FROM machines WHERE machine_id=%s FOR UPDATE",
             (signal["machine_id"],),
@@ -89,11 +92,49 @@ class AlertRepository:
         ).fetchone()
         created = row is None
         if created:
+            newer = connection.execute(
+                """SELECT * FROM alerts WHERE machine_id=%s AND severity=%s
+                AND latest_source_sequence IS NOT NULL AND latest_source_sequence>=%s
+                ORDER BY latest_source_sequence DESC,updated_at DESC,alert_id DESC
+                LIMIT 1 FOR UPDATE""",
+                (signal["machine_id"], signal["severity"], incoming_seq),
+            ).fetchone()
+            if newer is not None:
+                newer_seq = int(newer["latest_source_sequence"])
+                newer_event_id = json.loads(bytes(newer["latest_metadata"]))["event_id"]
+                if incoming_seq < newer_seq:
+                    stale_disposition = (
+                        "STALE_AFTER_TERMINAL"
+                        if newer["status"] in ("RESOLVED", "FALSE_ALERT")
+                        else "STALE_IGNORED"
+                    )
+                    connection.execute(
+                        """INSERT INTO alert_signal_links(signal_id,alert_id,identity_sha256,result_id,
+                        source_event_id,disposition,recorded_at) VALUES(%s,%s,%s,%s,%s,%s,%s)""",
+                        (
+                            event.message_id,
+                            newer["alert_id"],
+                            event.identity_sha256,
+                            evidence["result_id"],
+                            signal["event_id"],
+                            stale_disposition,
+                            decision,
+                        ),
+                    )
+                    return stale_disposition, newer["severity"], evidence["source_server_accepted_at"]
+                if newer_event_id != signal["event_id"] or newer["latest_source_stream_epoch"] not in (
+                    None,
+                    incoming_epoch,
+                ):
+                    raise IdentityConflict(
+                        "Conflicting source event or stream_epoch at alert sequence"
+                    )
             identifier = "alt_" + uuid4().hex
             row = connection.execute(
                 """INSERT INTO alerts(alert_id,machine_id,severity,status,risk_score,model_version,
                 policy_version,source_event_id,prediction_id,created_at,updated_at,latest_signal_id,
-                latest_metadata) VALUES(%s,%s,%s,'OPEN',%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING *""",
+                latest_metadata,latest_source_sequence,latest_source_stream_epoch)
+                VALUES(%s,%s,%s,'OPEN',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING *""",
                 (
                     identifier,
                     signal["machine_id"],
@@ -107,6 +148,8 @@ class AlertRepository:
                     decision,
                     event.message_id,
                     canonical_json(signal),
+                    incoming_seq,
+                    incoming_epoch,
                 ),
             ).fetchone()
             raw = canonical_json(evidence)
@@ -117,10 +160,54 @@ class AlertRepository:
             )
             audit.record(connection, identifier, None, "OPEN", None, {}, decision)
         else:
+            effective_event_id = json.loads(bytes(row["latest_metadata"]))["event_id"]
+            effective_seq = (
+                int(row["latest_source_sequence"])
+                if row.get("latest_source_sequence") is not None
+                else None
+            )
+            if effective_seq is None:
+                inbox_src = connection.execute(
+                    "SELECT sequence_number FROM business_source_inbox "
+                    "WHERE source_event_id=%s LIMIT 1",
+                    (effective_event_id,),
+                ).fetchone()
+                if inbox_src is not None:
+                    effective_seq = int(inbox_src["sequence_number"])
+            if effective_seq is not None:
+                if incoming_seq < effective_seq:
+                    connection.execute(
+                        """INSERT INTO alert_signal_links(signal_id,alert_id,identity_sha256,result_id,
+                        source_event_id,disposition,recorded_at) VALUES(%s,%s,%s,%s,%s,%s,%s)""",
+                        (
+                            event.message_id,
+                            row["alert_id"],
+                            event.identity_sha256,
+                            evidence["result_id"],
+                            signal["event_id"],
+                            "STALE_IGNORED",
+                            decision,
+                        ),
+                    )
+                    return "STALE_IGNORED", row["severity"], evidence["source_server_accepted_at"]
+                if incoming_seq == effective_seq and (
+                    effective_event_id != signal["event_id"]
+                    or row.get("latest_source_stream_epoch") not in (None, incoming_epoch)
+                ):
+                    raise IdentityConflict(
+                        "Conflicting source event or stream_epoch at active alert sequence"
+                    )
             connection.execute(
-                "UPDATE alerts SET updated_at=%s,latest_signal_id=%s,latest_metadata=%s "
-                "WHERE alert_id=%s",
-                (decision, event.message_id, canonical_json(signal), row["alert_id"]),
+                "UPDATE alerts SET updated_at=%s,latest_signal_id=%s,latest_metadata=%s,"
+                "latest_source_sequence=%s,latest_source_stream_epoch=%s WHERE alert_id=%s",
+                (
+                    decision,
+                    event.message_id,
+                    canonical_json(signal),
+                    incoming_seq,
+                    incoming_epoch,
+                    row["alert_id"],
+                ),
             )
         disposition = "CREATED" if created else "DEDUPLICATED"
         connection.execute(

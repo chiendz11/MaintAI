@@ -443,10 +443,10 @@ def run_single(args, workload: str, run_idx: int) -> dict:
                 trace.persist_end_at[event.message_id] = time.monotonic()
             return res
 
-        def persist_hybrid(self, connection, event, record, prepared, **kwargs):
+        def persist_hybrid(self, connection, event, record, outbox, prepared, **kwargs):
             with trace.lock:
                 trace.persist_start_at[event.message_id] = time.monotonic()
-            res = super().persist_hybrid(connection, event, record, prepared, **kwargs)
+            res = super().persist_hybrid(connection, event, record, outbox, prepared, **kwargs)
             with trace.lock:
                 trace.persist_end_at[event.message_id] = time.monotonic()
             return res
@@ -1020,6 +1020,16 @@ def run_single(args, workload: str, run_idx: int) -> dict:
         producer.flush(5)
         proc_pool.close()
         biz_pool.close()
+        try:
+            admin = AdminClient(settings.client_config())
+            hi_futs = admin.list_offsets(
+                {TopicPartition(t, p): OffsetSpec.latest() for t in ("sensor.readings", "inference.results", "alert.signals") for p in range(12)}
+            )
+            del_tps = [TopicPartition(tp.topic, tp.partition, fut.result(timeout=5).offset) for tp, fut in hi_futs.items()]
+            for fut in admin.delete_records(del_tps).values():
+                fut.result(timeout=5)
+        except Exception:
+            pass
         with pg_connect(args.database_url) as conn:
             conn.autocommit = True
             conn.execute(sql.SQL("DROP DATABASE IF EXISTS {} WITH (FORCE)").format(sql.Identifier(proc_db)))

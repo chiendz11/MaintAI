@@ -3,7 +3,7 @@
 - **Trạng thái:** Proposed / Phase 0 Approved Architecture
 - **Ngày:** 2026-11-23
 - **Baseline Commit:** `MaintAI@57169209bd959156e1c923c79b672b4d98a871ce` · `MaintAI-gitops@09a382b03b87900b2859c8d0de56cb6a97dfafac`
-- **Tài liệu liên quan:** [PROC-ORDER-01](../subsystems/PROCESSING_CONCURRENCY_AND_ORDERING.md) · [Implementation Report](../reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) · [Local 50-Machine Baseline Report](../reports/LOCAL_BASELINE_50_MACHINES_REPORT.md)
+- **Tài liệu liên quan:** [PROC-ORDER-01](../subsystems/PROCESSING_CONCURRENCY_AND_ORDERING.md) · [Implementation Report](../reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md) · [Baseline 50 RPS Report](../benchmarks/hybrid-ordering/baseline-50rps/REPORT.md) · [Candidate 50 RPS Report](../benchmarks/hybrid-ordering/candidate-50rps/REPORT.md) · [Comparison 50 RPS](../benchmarks/hybrid-ordering/COMPARISON_50RPS.md) · [Rollback Runbook](../operations/HYBRID_ORDERING_ROLLBACK_RUNBOOK.md)
 
 ---
 
@@ -181,3 +181,10 @@ Tất cả các tham số `KeyedSettings` là **giới hạn trên mỗi `proces
 | **Duplicate delivery ở một Kafka offset mới hơn** | Dù `record.offset` mới lớn hơn `last_admitted_offset`, Stage A phát hiện `identity_sha256` trùng với `event_id` đã admit trong ledger/inbox → tái sử dụng kết quả/admission cũ, **không** đánh lỗi `IdentityConflict` nhầm vì sequence đã xử lý trước đó. Ngược lại nếu cùng `event_id` nhưng `identity_sha256` khác, hoặc `event_id` chưa từng thấy mà `sequence_number <= last_admitted_sequence` → **fail closed (`IdentityConflict`)** và ghi `processing_conflicts`. |
 | **Worker rebalance / stale worker hoàn thành ML muộn** | Partition revoke set `token.cancelled` trong RAM ngay lập tức và hạ `active=FALSE`; owner mới tăng `maintai_processing_assignments.generation` trong DB. Dù stale worker giữ HTTP response cũ cố chạy TxC, `_fence()` kiểm `(owner, generation)` bằng `FOR SHARE` thấy không khớp → raise `LeaseLost`, TxC rollback sạch, offset cũ không bao giờ được commit. |
 | **Sequence gaps & `stream_epoch` thay đổi** | Gap giữa `101` và `105` (do rejection ở Ingestion hoặc source gap) là **hoàn toàn hợp lệ**: `processing_alert_ledger` đánh số nguồn liên tục theo **`admission_seq`** (thứ tự nhận từ Kafka partition: `1, 2, 3...`), không phụ thuộc `sequence_number + 1`. `AlertResequencer` mở frontier theo `admission_seq`, không bao giờ đợi `102, 103, 104`. Mọi so sánh thứ tự dùng `NUMERIC sequence_number` (tăng bền vững qua các `stream_epoch`); `stream_epoch` chỉ là opaque lineage, **không bao giờ** sort theo chuỗi UUID hay timestamp. |
+
+---
+
+## 4. Xác minh Dependency của Risk Engine & Phạm vi Rollout
+
+- **Kiểm chứng Risk Decision (`processing/shared/risk_engine/engine.py`):** Hàm `evaluate_risk(*, failure_probability, policy)` chỉ phụ thuộc hoàn toàn vào `failure_probability` của từng reading đơn lẻ và `RiskPolicy` bất biến (`demo-risk-v1`, không có rolling window, hysteresis, hay cross-event state). Do đó Risk Decision an toàn chạy song song theo reading; phần chuyển trạng thái stateful thực sự nằm ở **Alert Lifecycle (`AlertRepository`)**, được bảo vệ nối tiếp qua `AlertResequencer` + `alerts.latest_source_sequence`.
+- **Kết quả đối chiếu thực nghiệm 50 RPS ([COMPARISON_50RPS.md](../benchmarks/hybrid-ordering/COMPARISON_50RPS.md)):** Giữ cờ `PROCESSING_HYBRID_ORDERING_ENABLED=false` (`per_key=1`) làm mặc định an toàn vì Workload C (`Hot Machine`) giảm ~71% p95 nhưng Workload A (`50×1 RPS`) chịu overhead `TxA + TxC` trên đơn-PG `synchronous_commit=on`. Chỉ bật `PROCESSING_HYBRID_ORDERING_ENABLED=true` khi workload có hot machine hoặc sau validation đa-pod `k3d`.

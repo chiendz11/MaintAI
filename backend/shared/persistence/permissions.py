@@ -78,7 +78,22 @@ def grant_business_permissions(
                 "alert_notifications",
             ),
         )
-        grant(consumer_role, "UPDATE (updated_at,latest_signal_id,latest_metadata)", ("alerts",))
+        if (
+            connection.execute(
+                """SELECT 1 FROM information_schema.columns
+                WHERE table_schema=current_schema() AND table_name='alerts'
+                  AND column_name='latest_source_sequence'"""
+            ).fetchone()
+            is not None
+        ):
+            grant(
+                consumer_role,
+                "UPDATE (updated_at,latest_signal_id,latest_metadata,"
+                "latest_source_sequence,latest_source_stream_epoch)",
+                ("alerts",),
+            )
+        else:
+            grant(consumer_role, "UPDATE (updated_at,latest_signal_id,latest_metadata)", ("alerts",))
         if api_role is not None:
             grant(api_role, "SELECT", ("machines", *projections, *tables))
             grant(api_role, "UPDATE (updated_at)", ("machines",))

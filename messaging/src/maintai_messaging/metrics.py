@@ -16,6 +16,14 @@ class ProcessingMetrics:
         from prometheus_client import Counter, Gauge, Histogram
 
         self.active = Gauge("maintai_processing_active_keys", "Active keys", registry=registry)
+        self.inflight = Gauge(
+            "maintai_processing_inflight_tasks", "Active inflight tasks", registry=registry
+        )
+        self.max_per_key_inflight = Gauge(
+            "maintai_processing_max_per_key_inflight",
+            "Maximum active tasks for any single key",
+            registry=registry,
+        )
         self.queue = Gauge(
             "maintai_processing_queue_records", "Retained receipts", ["state"], registry=registry
         )
@@ -44,11 +52,29 @@ class ProcessingMetrics:
             registry=registry,
             buckets=(0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60, 120, 300),
         )
+        self.admission_seconds = Histogram(
+            "maintai_processing_admission_seconds",
+            "Stage A durable admission duration",
+            registry=registry,
+            buckets=(0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1),
+        )
+        self.persist_seconds = Histogram(
+            "maintai_processing_persist_seconds",
+            "Stage C out-of-order persist and frontier drain duration",
+            registry=registry,
+            buckets=(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2),
+        )
+        self.alert_dispositions = Counter(
+            "maintai_processing_alert_dispositions_total",
+            "Committed alert ledger dispositions",
+            ["disposition"],
+            registry=registry,
+        )
         self.blocked_since = {}
 
     def update(self, runner, entries, draining):
         now = time.monotonic()
-        active = {id(item[1]) for item in runner.active.values()}
+        active = {id(item[1]) for items in runner.active.values() for item in items}
         states = dict.fromkeys(("FETCHED", "QUEUED", "IN_FLIGHT", "COMPLETED_WAITING_COMMIT"), 0)
         for entry in entries:
             state = (
@@ -60,6 +86,10 @@ class ProcessingMetrics:
         for state, count in states.items():
             self.queue.labels(state=state).set(count)
         self.active.set(len(runner.active))
+        self.inflight.set(len(active))
+        self.max_per_key_inflight.set(
+            max((len(items) for items in runner.active.values()), default=0)
+        )
         self.bytes.set(sum(e.size for e in entries))
         self.uncommitted.set(len(entries))
         holes = {}

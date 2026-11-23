@@ -60,6 +60,13 @@ def loopback(host):
         return False
 
 
+def _unavailable_disposition(env) -> str:
+    value = env.get("PROCESSING_UNAVAILABLE_ALERT_DISPOSITION", "BLOCKED").strip().upper()
+    if value not in {"BLOCKED", "NO_SIGNAL"}:
+        raise ValueError("PROCESSING_UNAVAILABLE_ALERT_DISPOSITION must be BLOCKED or NO_SIGNAL")
+    return value
+
+
 @dataclass(frozen=True)
 class WorkerSettings:
     profile: str
@@ -77,6 +84,7 @@ class WorkerSettings:
     registry_oauth: OAuthClientCredentials | None = field(default=None, repr=False)
     execution_mode: str = "serial"
     keyed_limits: KeyedSettings = field(default_factory=KeyedSettings)
+    unavailable_alert_disposition: str = "BLOCKED"
 
     @staticmethod
     def _read_registry_oauth(env) -> OAuthClientCredentials | None:
@@ -190,4 +198,5 @@ class WorkerSettings:
             registry_oauth=registry_oauth,
             execution_mode=mode,
             keyed_limits=KeyedSettings.from_env(env),
+            unavailable_alert_disposition=_unavailable_disposition(env),
         )

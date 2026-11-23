@@ -24,6 +24,9 @@ class KeyedSettings:
     resume_low_watermark: float = 0.5
     handler_timeout_seconds: float = 15
     drain_timeout_seconds: float = 30
+    hybrid_ordering_enabled: bool = False
+    max_inflight_per_key: int = 1
+    max_total_inflight: int | None = None
 
     def __post_init__(self):
         for name in (
@@ -32,9 +35,25 @@ class KeyedSettings:
             "max_pending_bytes",
             "max_pending_per_key",
             "max_uncommitted_per_partition",
+            "max_inflight_per_key",
         ):
             if not isinstance(getattr(self, name), int) or getattr(self, name) < 1:
                 raise ConfigurationError("Keyed capacity settings must be positive integers")
+        if not isinstance(self.hybrid_ordering_enabled, bool):
+            raise ConfigurationError("PROCESSING_HYBRID_ORDERING_ENABLED must be boolean")
+        if not self.hybrid_ordering_enabled and self.max_inflight_per_key > 1:
+            raise ConfigurationError(
+                "PROCESSING_MAX_INFLIGHT_PER_KEY > 1 requires PROCESSING_HYBRID_ORDERING_ENABLED=true"
+            )
+        if self.max_total_inflight is not None:
+            if not isinstance(self.max_total_inflight, int) or self.max_total_inflight < 1:
+                raise ConfigurationError("PROCESSING_MAX_TOTAL_INFLIGHT must be a positive integer")
+            if self.max_total_inflight > self.max_pending_records:
+                raise ConfigurationError("Total inflight budget cannot exceed the receipt budget")
+            if self.max_inflight_per_key > self.max_total_inflight:
+                raise ConfigurationError(
+                    "Per-key inflight budget cannot exceed total inflight budget"
+                )
         if self.max_active_keys > self.max_pending_records:
             raise ConfigurationError("Active keys cannot exceed the receipt budget")
         if not 0 < self.resume_low_watermark < 1:
@@ -42,6 +61,14 @@ class KeyedSettings:
         for value in (self.handler_timeout_seconds, self.drain_timeout_seconds):
             if not math.isfinite(value) or not 0 < value <= 120:
                 raise ConfigurationError("Keyed deadlines must be finite and at most 120 seconds")
+
+    @property
+    def effective_max_total_inflight(self) -> int:
+        if self.max_total_inflight is not None:
+            return min(self.max_total_inflight, self.max_pending_records)
+        if self.hybrid_ordering_enabled:
+            return min(self.max_active_keys * self.max_inflight_per_key, self.max_pending_records)
+        return self.max_active_keys
 
     @classmethod
     def from_env(cls, env=None):
@@ -52,9 +79,15 @@ class KeyedSettings:
             "max_pending_bytes": "PROCESSING_MAX_PENDING_BYTES",
             "max_pending_per_key": "PROCESSING_MAX_PENDING_PER_KEY",
             "max_uncommitted_per_partition": "PROCESSING_MAX_UNCOMMITTED_PER_PARTITION",
+            "max_inflight_per_key": "PROCESSING_MAX_INFLIGHT_PER_KEY",
         }
         defaults = cls()
         values = {key: int(env.get(name, getattr(defaults, key))) for key, name in integers.items()}
+        values["hybrid_ordering_enabled"] = flag(
+            env.get("PROCESSING_HYBRID_ORDERING_ENABLED", "false")
+        )
+        raw_total = env.get("PROCESSING_MAX_TOTAL_INFLIGHT", "").strip()
+        values["max_total_inflight"] = int(raw_total) if raw_total else None
         for key, name in {
             "resume_low_watermark": "PROCESSING_RESUME_LOW_WATERMARK",
             "handler_timeout_seconds": "PROCESSING_HANDLER_TIMEOUT_SECONDS",

@@ -90,6 +90,7 @@ class Assignment:
 class WorkContext:
     assignment: Assignment
     deadline: float
+    admission: object = None
 
     def check(self):
         if self.assignment.cancelled.is_set():

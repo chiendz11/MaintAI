@@ -1,18 +1,20 @@
 """Durable Processing callback and conflict audit, without direct Kafka publish."""
 
 import hashlib
+import time
 from dataclasses import dataclass
 
 from maintai_messaging.consumer import DurableReceipt
 from maintai_messaging.contracts import canonical_json, default_contracts
 from maintai_messaging.errors import ConfigurationError, IdentityConflict
 from maintai_messaging.metrics import observe_safely
-from maintai_messaging.ordering import KeyedTransactionalHandler
+from maintai_messaging.ordering import KeyedTransactionalHandler, OrderedOutbox
 from maintai_messaging.outcomes import OutcomeFactory
 from maintai_messaging.postgres import TransactionalHandler
 from processing.shared.events.outcomes import completed_outcome
 from processing.shared.outbox.adapter import enqueue_outcome_and_signal
 from processing.shared.persistence.repository import ProcessingRepository
+from processing.shared.persistence.resequencer import AlertResequencer
 
 
 class RegistryUnavailable(RuntimeError):
@@ -43,6 +45,8 @@ class ProcessingHandler:
         registry_cache_seconds=0,
         contracts=None,
         validation_observer=None,
+        hybrid_ordering_enabled=False,
+        unavailable_alert_disposition="BLOCKED",
     ):
         self.connection_factory, self.consumer_group = connection_factory, consumer_group
         self.validator, self.registry_lookup, self.predict = validator, registry_lookup, predict
@@ -50,7 +54,12 @@ class ProcessingHandler:
         self.producer_git_sha = producer_git_sha
         self.validation_observer = validation_observer
         self.contracts = contracts or default_contracts()
+        self.hybrid_ordering_enabled = bool(hybrid_ordering_enabled)
+        if unavailable_alert_disposition not in {"BLOCKED", "NO_SIGNAL"}:
+            raise ValueError("unavailable_alert_disposition must be BLOCKED or NO_SIGNAL")
+        self.unavailable_alert_disposition = unavailable_alert_disposition
         self.repository = ProcessingRepository(self.contracts)
+        self.resequencer = AlertResequencer()
         # Identify the complete rule composition, including the mandatory registry
         # check and configured cache semantics, rather than claiming feature-only DQ.
         self.ruleset_sha256 = hashlib.sha256(
@@ -177,7 +186,7 @@ class ProcessingHandler:
             outcome, risk, inference_ms, should_alert=bool(risk and risk.should_create_alert)
         )
 
-    def _terminal(self, connection, event, record):
+    def _terminal_core(self, connection, event, record, *, allow_ledger_signal=False):
         row = connection.execute(
             """SELECT e.payload_hash,e.processing_status,p.outcome,
             p.outcome_sha256,r.should_alert FROM sensor_events e
@@ -195,31 +204,68 @@ class ProcessingHandler:
         if hashlib.sha256(raw).hexdigest() != row["outcome_sha256"]:
             raise IdentityConflict("Stored outcome checksum differs")
         outcome = self.contracts.decode("inference.results", raw, writer=True).payload
-        expected = [("inference.results", outcome)]
+        res_encoded = self.contracts.encode("inference.results", outcome)
+        res_saved = connection.execute(
+            "SELECT payload,payload_sha256 FROM maintai_kafka_outbox "
+            "WHERE topic=%s AND message_id=%s",
+            ("inference.results", res_encoded.message_id),
+        ).fetchone()
+        if (
+            res_saved is None
+            or bytes(res_saved["payload"]) != res_encoded.wire_bytes
+            or res_saved["payload_sha256"] != hashlib.sha256(res_encoded.wire_bytes).hexdigest()
+        ):
+            raise IdentityConflict("Terminal result lacks immutable required outbox evidence")
         if row["should_alert"]:
             signal = self._factory(event, record).alert_signal(outcome)
             if signal is None:
                 raise IdentityConflict("Durable alert eligibility has no valid signal")
-            expected.append(("alert.signals", signal))
-        for topic, payload in expected:
-            encoded = self.contracts.encode(topic, payload)
-            saved = connection.execute(
+            sig_encoded = self.contracts.encode("alert.signals", signal)
+            sig_sha = hashlib.sha256(sig_encoded.wire_bytes).hexdigest()
+            sig_saved = connection.execute(
                 "SELECT payload,payload_sha256 FROM maintai_kafka_outbox "
                 "WHERE topic=%s AND message_id=%s",
-                (topic, encoded.message_id),
+                ("alert.signals", sig_encoded.message_id),
             ).fetchone()
-            if (
-                saved is None
-                or bytes(saved["payload"]) != encoded.wire_bytes
-                or saved["payload_sha256"] != hashlib.sha256(encoded.wire_bytes).hexdigest()
-            ):
-                raise IdentityConflict("Terminal result lacks immutable required outbox evidence")
+            outbox_ok = (
+                sig_saved is not None
+                and bytes(sig_saved["payload"]) == sig_encoded.wire_bytes
+                and sig_saved["payload_sha256"] == sig_sha
+            )
+            if not outbox_ok:
+                if not allow_ledger_signal:
+                    raise IdentityConflict("Terminal result lacks immutable required outbox evidence")
+                ledger_sig = connection.execute(
+                    "SELECT signal_payload,signal_sha256 FROM processing_alert_ledger "
+                    "WHERE topic=%s AND message_id=%s AND signal_id=%s "
+                    "AND disposition IN ('SIGNAL_READY','EMITTED') LIMIT 1",
+                    (event.topic, event.message_id, sig_encoded.message_id),
+                ).fetchone()
+                if (
+                    ledger_sig is None
+                    or ledger_sig["signal_payload"] is None
+                    or bytes(ledger_sig["signal_payload"]) != sig_encoded.wire_bytes
+                    or ledger_sig["signal_sha256"] != sig_sha
+                ):
+                    raise IdentityConflict(
+                        "Terminal alert eligibility lacks outbox or ledger evidence"
+                    )
         return PreparedOutcome(outcome, cached=True, should_alert=bool(row["should_alert"]))
+
+    def _terminal(self, connection, event, record):
+        return self._terminal_core(connection, event, record, allow_ledger_signal=False)
+
+    def _terminal_hybrid(self, connection, event, record):
+        return self._terminal_core(connection, event, record, allow_ledger_signal=True)
 
     def prepare(self, event, record, context):
         context.check()
         with self.connection_factory() as connection:
-            cached = self._terminal(connection, event, record)
+            cached = (
+                self._terminal_hybrid(connection, event, record)
+                if self.hybrid_ordering_enabled
+                else self._terminal(connection, event, record)
+            )
         prepared = cached if cached is not None else self._prepare_business(event, record)
         context.check()
         return prepared
@@ -283,12 +329,99 @@ class ProcessingHandler:
                 raise ValueError("Cached policy requests an invalid signal")
             outbox.enqueue(connection, "alert.signals", signal)
 
+    def persist_hybrid(
+        self,
+        connection,
+        event,
+        record,
+        outbox,
+        prepared,
+        *,
+        admission,
+        unavailable_alert_disposition=None,
+    ):
+        sequence = event.payload["sequence_number"]
+        connection.execute(
+            "SELECT pg_advisory_xact_lock(hashtext(%s), hashtext(%s))",
+            (event.key, str(sequence)),
+        )
+        conflict_seq = connection.execute(
+            "SELECT event_id FROM sensor_events WHERE machine_id=%s AND sequence_number=%s "
+            "AND event_id <> %s LIMIT 1",
+            (event.key, sequence, event.message_id),
+        ).fetchone()
+        if conflict_seq is not None:
+            raise IdentityConflict("Source sequence already belongs to a different event")
+        claimed = self.repository.claim(
+            connection,
+            event,
+            record,
+            ruleset_version=self.validator.version,
+            ruleset_sha256=self.ruleset_sha256,
+        )
+        if not claimed:
+            prepared = self._terminal_hybrid(connection, event, record)
+        elif prepared.cached:
+            raise IdentityConflict("A previously durable owner result disappeared")
+        else:
+            self.repository.persist(
+                connection,
+                event,
+                prepared.outcome,
+                risk=prepared.risk,
+                inference_ms=prepared.inference_ms,
+            )
+        disposition = None
+        drain_summary = None
+        if admission is not None and admission.admission_seq is not None:
+            disposition = self.resequencer.record_disposition(
+                connection,
+                consumer_group=self.consumer_group,
+                machine_id=event.key,
+                admission_seq=admission.admission_seq,
+                outcome=prepared.outcome,
+                should_alert=prepared.should_alert,
+                factory=self._factory(event, record),
+                contracts=self.contracts,
+                unavailable_alert_disposition=(
+                    unavailable_alert_disposition or self.unavailable_alert_disposition
+                ),
+            )
+            drain_summary = self.resequencer.drain_frontier(
+                connection,
+                consumer_group=self.consumer_group,
+                machine_id=event.key,
+                topic=record.topic,
+                source_partition=record.partition,
+                contracts=self.contracts,
+            )
+        outbox.enqueue(connection, "inference.results", prepared.outcome)
+        return disposition, drain_summary
+
 
 class KeyedProcessingHandler(KeyedTransactionalHandler):
     """Owner preparation/persistence plugged into the SDK fencing protocol."""
 
-    def __init__(self, application, *, on_receipt=None, on_error=None):
+    def __init__(
+        self,
+        application,
+        *,
+        on_receipt=None,
+        on_error=None,
+        hybrid_ordering_enabled=None,
+        unavailable_alert_disposition=None,
+        metrics=None,
+    ):
         self.application, self.on_receipt, self.on_error = application, on_receipt, on_error
+        self.hybrid_ordering_enabled = (
+            application.hybrid_ordering_enabled
+            if hybrid_ordering_enabled is None
+            else bool(hybrid_ordering_enabled)
+        )
+        self.unavailable_alert_disposition = (
+            unavailable_alert_disposition or application.unavailable_alert_disposition
+        )
+        self.metrics = metrics
         super().__init__(
             application.connection_factory,
             application.consumer_group,
@@ -297,12 +430,50 @@ class KeyedProcessingHandler(KeyedTransactionalHandler):
             contracts=application.contracts,
         )
 
-    def _durable_replay(self, event, record, context):
+    def _validate_coordinates(self, event, record, context):
+        token = context.assignment
+        if (
+            event.topic != "sensor.readings"
+            or event.wire_bytes != record.value
+            or event.topic != record.topic
+            or record.key != event.key.encode()
+            or (token.group, token.topic, token.partition)
+            != (self.consumer_group, record.topic, record.partition)
+        ):
+            raise IdentityConflict("Work/fence coordinates do not identify this reading")
+
+    def admit(self, event, record, context):
+        try:
+            self._validate_coordinates(event, record, context)
+            with self.connection_factory() as connection, connection.transaction():
+                self._fence(connection, context)
+                ticket = self.application.resequencer.admit(
+                    connection,
+                    consumer_group=self.consumer_group,
+                    event=event,
+                    record=record,
+                )
+            return ticket
+        except Exception as exc:
+            if isinstance(exc, IdentityConflict):
+                with self.application.connection_factory() as connection, connection.transaction():
+                    self.application.repository.record_conflict(
+                        connection, event, record, consumer_group=self.consumer_group
+                    )
+            if self.on_error:
+                observe_safely(self.on_error)
+            raise
+
+    def _durable_replay(self, event, record, context, *, allow_ledger_signal=False):
         # Verify exact owner identity BEFORE the SDK's per-group sequence gate.
         # The pinned SDK fence is retained in the same receipt transaction.
         with self.connection_factory() as connection, connection.transaction():
             self._fence(connection, context)
-            terminal = self.application._terminal(connection, event, record)
+            terminal = (
+                self.application._terminal_hybrid(connection, event, record)
+                if allow_ledger_signal
+                else self.application._terminal(connection, event, record)
+            )
             if terminal is None:
                 if self._duplicate(connection, event):
                     raise IdentityConflict("SDK receipt has no owner terminal result")
@@ -326,21 +497,96 @@ class KeyedProcessingHandler(KeyedTransactionalHandler):
             context.check()
         return DurableReceipt.for_record(record)
 
+    def _handle_hybrid(self, event, record, context):
+        source_identity = canonical_json(event.payload)
+        ticket = context.admission
+        if ticket is None:
+            ticket = self.admit(event, record, context)
+        if ticket.legacy_terminal:
+            receipt = self._durable_replay(event, record, context, allow_ledger_signal=True)
+            if receipt is None:
+                raise IdentityConflict("Legacy terminal ticket lacks owner evidence")
+            return receipt
+
+        prepared = self.prepare(event, record, context)
+        context.check()
+        if canonical_json(event.payload) != source_identity:
+            raise IdentityConflict("Prepare mutated the immutable source reading")
+
+        persist_started = time.monotonic()
+        disposition = None
+        with self.connection_factory() as connection, connection.transaction():
+            self._fence(connection, context)
+            self.application.resequencer._ensure_admission_cursor(
+                connection,
+                consumer_group=self.consumer_group,
+                machine_id=event.key,
+                topic=record.topic,
+                partition=record.partition,
+            )
+            if self._duplicate(connection, event):
+                self.application._terminal_hybrid(connection, event, record)
+                if ticket.admission_seq is not None:
+                    self.application.resequencer.drain_frontier(
+                        connection,
+                        consumer_group=self.consumer_group,
+                        machine_id=event.key,
+                        topic=record.topic,
+                        source_partition=record.partition,
+                        contracts=self.contracts,
+                    )
+                context.check()
+            else:
+                connection.execute(
+                    "INSERT INTO maintai_kafka_inbox "
+                    "(consumer_group,topic,message_id,identity_sha256,source_partition,"
+                    "source_offset,schema_version) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                    (
+                        self.consumer_group,
+                        event.topic,
+                        event.message_id,
+                        event.identity_sha256,
+                        record.partition,
+                        record.offset,
+                        event.schema_version,
+                    ),
+                )
+                outbox = OrderedOutbox(event, self.contracts)
+                disposition, _ = self.application.persist_hybrid(
+                    connection,
+                    event,
+                    record,
+                    outbox,
+                    prepared,
+                    admission=ticket,
+                    unavailable_alert_disposition=self.unavailable_alert_disposition,
+                )
+                if canonical_json(event.payload) != source_identity:
+                    raise IdentityConflict("Persist mutated the immutable source reading")
+                outbox.validate()
+                context.check()
+
+        persist_elapsed = time.monotonic() - persist_started
+        if self.metrics:
+            if hasattr(self.metrics, "persist_seconds"):
+                observe_safely(
+                    lambda: self.metrics.persist_seconds.observe(persist_elapsed)
+                )
+            if disposition and hasattr(self.metrics, "alert_dispositions"):
+                observe_safely(
+                    lambda d=disposition: self.metrics.alert_dispositions.labels(d).inc()
+                )
+        return DurableReceipt.for_record(record)
+
     def handle(self, event, record, context):
         try:
-            token = context.assignment
-            if (
-                event.topic != "sensor.readings"
-                or event.wire_bytes != record.value
-                or event.topic != record.topic
-                or record.key != event.key.encode()
-                or (token.group, token.topic, token.partition)
-                != (self.consumer_group, record.topic, record.partition)
-            ):
-                raise IdentityConflict("Work/fence coordinates do not identify this reading")
-            receipt = self._durable_replay(event, record, context)
-            if receipt is None:
-                receipt = super().handle(event, record, context)
+            self._validate_coordinates(event, record, context)
+            if self.hybrid_ordering_enabled:
+                receipt = self._handle_hybrid(event, record, context)
+            else:
+                receipt = self._durable_replay(event, record, context)
+                if receipt is None:
+                    receipt = super().handle(event, record, context)
         except Exception as exc:
             if isinstance(exc, IdentityConflict):
                 with self.application.connection_factory() as connection, connection.transaction():

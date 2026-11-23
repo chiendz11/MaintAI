@@ -69,6 +69,7 @@ class Entry:
     admitted_at: float
     size: int
     done: bool = False
+    admission: object = None
 
     @property
     def key(self):
@@ -140,9 +141,13 @@ class KeyedConsumerRunner(ConsumerRunner):
         self.ledger = OffsetCoordinator()
         self.queues = defaultdict(deque)
         self.ready = deque()
+        self.ready_set = set()
         self.active = {}
         self.paused = set()
         self.snapshot = {}
+
+    def _total_active(self):
+        return sum(len(items) for items in self.active.values())
 
     def _assigned(self, consumer, partitions):
         self._generation += 1
@@ -171,6 +176,7 @@ class KeyedConsumerRunner(ConsumerRunner):
             else:
                 del self.queues[key]
         self.ready = deque(key for key in self.ready if self.queues.get(key))
+        self.ready_set = set(self.ready)
         self.paused -= keys
         self.handler.release(tokens)
 
@@ -196,41 +202,70 @@ class KeyedConsumerRunner(ConsumerRunner):
             sum(e.size for e in pending) + size > self.limits.max_pending_bytes
         ):
             raise ConsumerFailed("Fetched reserve exhausted; stop safely without skipping")
-        entry = Entry(record, event, token, time.monotonic(), size)
+        admission = None
+        if self.limits.hybrid_ordering_enabled and callable(getattr(self.handler, "admit", None)):
+            admit_ctx = WorkContext(token, time.monotonic() + self.limits.handler_timeout_seconds)
+            started = time.monotonic()
+            try:
+                admission = self.handler.admit(event, record, admit_ctx)
+            except Exception as exc:
+                if token.cancelled.is_set():
+                    if self.metrics:
+                        observe_safely(lambda: self.metrics.stale.labels(stage="ADMIT").inc())
+                    return
+                if self.metrics and isinstance(exc, LeaseLost):
+                    observe_safely(lambda: self.metrics.stale.labels(stage="DB_FENCE").inc())
+                raise ConsumerFailed("Hybrid admission failed; no unsafe prefix committed") from exc
+            if self.metrics and hasattr(self.metrics, "admission_seconds"):
+                elapsed = time.monotonic() - started
+                observe_safely(lambda elapsed=elapsed: self.metrics.admission_seconds.observe(elapsed))
+        entry = Entry(record, event, token, time.monotonic(), size, admission=admission)
         self.ledger.admit(entry)
-        queue = self.queues[event.key]
-        queue.append(entry)
-        if len(queue) == 1 and event.key not in self.active:
+        self.queues[event.key].append(entry)
+        if event.key not in self.ready_set:
             self.ready.append(event.key)
+            self.ready_set.add(event.key)
 
     def _collect(self):
-        for key, (future, entry, context) in list(self.active.items()):
-            if not future.done():
-                if time.monotonic() >= context.deadline:
-                    raise ConsumerFailed("Handler deadline exceeded; fence and replay")
-                continue
-            del self.active[key]
-            try:
-                receipt = future.result()
-            except Exception as exc:
-                if not entry.assignment.cancelled.is_set():
-                    if self.metrics and isinstance(exc, LeaseLost):
-                        observe_safely(lambda: self.metrics.stale.labels(stage="DB_FENCE").inc())
-                    raise ConsumerFailed(
-                        "Keyed handler failed; no unsafe prefix committed"
-                    ) from exc
-                if self.metrics:
-                    observe_safely(lambda: self.metrics.stale.labels(stage="HANDLER").inc())
-            else:
-                if entry.assignment.cancelled.is_set():
+        for key in list(self.active):
+            items = self.active[key]
+            kept = []
+            finished_any = False
+            for future, entry, context in items:
+                if not future.done():
+                    if time.monotonic() >= context.deadline:
+                        raise ConsumerFailed("Handler deadline exceeded; fence and replay")
+                    kept.append((future, entry, context))
+                    continue
+                finished_any = True
+                try:
+                    receipt = future.result()
+                except Exception as exc:
+                    if not entry.assignment.cancelled.is_set():
+                        if self.metrics and isinstance(exc, LeaseLost):
+                            observe_safely(
+                                lambda: self.metrics.stale.labels(stage="DB_FENCE").inc()
+                            )
+                        raise ConsumerFailed(
+                            "Keyed handler failed; no unsafe prefix committed"
+                        ) from exc
                     if self.metrics:
                         observe_safely(lambda: self.metrics.stale.labels(stage="HANDLER").inc())
-                elif receipt != DurableReceipt.for_record(entry.record):
-                    raise ConsumerFailed("Keyed handler did not provide durable receipt")
                 else:
-                    entry.done = True
-            if self.queues.get(key):
+                    if entry.assignment.cancelled.is_set():
+                        if self.metrics:
+                            observe_safely(lambda: self.metrics.stale.labels(stage="HANDLER").inc())
+                    elif receipt != DurableReceipt.for_record(entry.record):
+                        raise ConsumerFailed("Keyed handler did not provide durable receipt")
+                    else:
+                        entry.done = True
+            if kept:
+                self.active[key] = kept
+            else:
+                del self.active[key]
+            if finished_any and self.queues.get(key) and key not in self.ready_set:
                 self.ready.append(key)
+                self.ready_set.add(key)
 
     def _commit(self):
         for partition, entries in self.ledger.candidates():
@@ -248,23 +283,45 @@ class KeyedConsumerRunner(ConsumerRunner):
             self.processed += len(entries)
 
     def _dispatch(self, executor):
-        while self.ready and len(self.active) < self.limits.max_active_keys:
+        per_key_cap = self.limits.max_inflight_per_key if self.limits.hybrid_ordering_enabled else 1
+        total_cap = self.limits.effective_max_total_inflight
+        unproductive = 0
+        while self.ready and self._total_active() < total_cap and unproductive < len(self.ready):
             key = self.ready.popleft()
-            if key in self.active or not self.queues.get(key):
+            self.ready_set.discard(key)
+            queue = self.queues.get(key)
+            if not queue:
+                unproductive = 0
                 continue
-            entry = self.queues[key].popleft()
-            if not self.queues[key]:
+            key_active = len(self.active.get(key, ()))
+            can_open_key = key_active > 0 or len(self.active) < self.limits.max_active_keys
+            if key_active >= per_key_cap or not can_open_key:
+                self.ready.append(key)
+                self.ready_set.add(key)
+                unproductive += 1
+                continue
+            entry = queue.popleft()
+            if not queue:
                 del self.queues[key]
+            else:
+                self.ready.append(key)
+                self.ready_set.add(key)
             if entry.assignment.cancelled.is_set():
+                unproductive = 0
                 continue
             context = WorkContext(
-                entry.assignment, time.monotonic() + self.limits.handler_timeout_seconds
+                entry.assignment,
+                time.monotonic() + self.limits.handler_timeout_seconds,
+                admission=entry.admission,
             )
-            self.active[key] = (
-                executor.submit(self.handler.handle, entry.event, entry.record, context),
-                entry,
-                context,
+            self.active.setdefault(key, []).append(
+                (
+                    executor.submit(self.handler.handle, entry.event, entry.record, context),
+                    entry,
+                    context,
+                )
             )
+            unproductive = 0
             if self.metrics:
                 observe_safely(
                     lambda entry=entry: self.metrics.queue_wait.observe(
@@ -301,6 +358,8 @@ class KeyedConsumerRunner(ConsumerRunner):
                 self.paused.remove(key)
         self.snapshot = {
             "active_keys": len(self.active),
+            "active_inflight": self._total_active(),
+            "max_per_key_inflight": max((len(v) for v in self.active.values()), default=0),
             "pending_records": count,
             "pending_bytes": size,
             "paused_partitions": len(self.paused),
@@ -312,7 +371,7 @@ class KeyedConsumerRunner(ConsumerRunner):
         stop = stop or threading.Event()
         if max_records is not None and max_records < 1:
             raise ConfigurationError("max_records must be positive")
-        executor = DaemonExecutor(self.limits.max_active_keys)
+        executor = DaemonExecutor(self.limits.effective_max_total_inflight)
         draining_at = None
         try:
             self.client.subscribe(
@@ -353,6 +412,8 @@ class KeyedConsumerRunner(ConsumerRunner):
                     self.tokens.clear()
                     self.ledger.drop(list(self.ledger.partitions))
                     self.queues.clear()
+                    self.ready.clear()
+                    self.ready_set.clear()
                     self.active.clear()
                     self.paused.clear()
                     if self.metrics:

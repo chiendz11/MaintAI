@@ -103,6 +103,17 @@ def grant_processing_permissions(connection, *, reader_role, worker_role, relay_
             "processing_source_cursor",
         ),
     )
+    if (
+        connection.execute("SELECT to_regclass('processing_admission_cursor') AS name").fetchone()[
+            "name"
+        ]
+        is not None
+    ):
+        grant(
+            worker_role,
+            "SELECT, INSERT, UPDATE",
+            ("processing_admission_cursor", "processing_alert_ledger"),
+        )
     grant(relay_role, "SELECT, UPDATE", ("maintai_outbox_keys",))
     for role in (worker_role, relay_role):
         # SDK uses FOR SHARE to serialize activation against active transactions.
