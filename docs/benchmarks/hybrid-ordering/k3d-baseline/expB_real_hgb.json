@@ -1,0 +1,1830 @@
+{
+  "generated_at": "2026-11-23T07:27:36.045840+00:00",
+  "runs": [
+    {
+      "label": "baseline-hgb-shadow-wlA-pk1",
+      "mode": "baseline",
+      "ml_target": "hgb-shadow",
+      "workload": "A",
+      "run_index": 1,
+      "stream_epoch": "k3d-bench-c6266256",
+      "config": {
+        "mode": "baseline",
+        "ml_target": "hgb-shadow",
+        "ml_url": "http://ml-service-shadow:8001",
+        "hybrid_enabled": false,
+        "per_key": 1,
+        "max_total_inflight": 8,
+        "biz_commit_batch_size": 1,
+        "worker_replicas": 6,
+        "relay_replicas": 2,
+        "biz_replicas": 4,
+        "ingestion_replicas": 2,
+        "ml_champion_replicas": 2,
+        "ml_shadow_replicas": 2
+      },
+      "ingestion": {
+        "total_sent": 1000,
+        "window_sent": 750,
+        "sent_rps": 50.0,
+        "status_counts": {
+          "202": 1000
+        },
+        "errors_sample": [],
+        "http_latency_ms": {
+          "count": 750,
+          "mean": 7.307,
+          "p50": 7.101,
+          "p95": 8.569,
+          "p99": 11.524,
+          "max": 24.148
+        }
+      },
+      "throughput": {
+        "drained": true,
+        "drain_seconds": 0.349,
+        "last_counts": {
+          "pr_done": 1000,
+          "ob_pend": 0,
+          "ledger_pend": 0,
+          "biz_pred_delta": 1000,
+          "biz_alert_delta": 100,
+          "proc_alert_delta": 100
+        },
+        "proc_outcomes_total": 1000,
+        "proc_outcomes_win_rps": 50.07,
+        "biz_pred_total": 1000,
+        "biz_pred_win_rps": 50.0,
+        "outcome_kinds": {
+          "PREDICTION_COMPLETED": 1000
+        },
+        "alert_dispositions": {},
+        "alerts_created_or_updated": 50,
+        "alert_signal_links": {
+          "DEDUPLICATED": 50,
+          "CREATED": 50
+        }
+      },
+      "latency_ms": {
+        "accept_to_proc": {
+          "count": 750,
+          "mean": 18.879,
+          "p50": 18.136,
+          "p95": 22.987,
+          "p99": 31.399,
+          "max": 84.758
+        },
+        "hot_accept_to_proc": {
+          "count": 15,
+          "mean": 20.259,
+          "p50": 19.875,
+          "p95": 22.971,
+          "p99": 23.602,
+          "max": 23.76
+        },
+        "bg_accept_to_proc": {
+          "count": 735,
+          "mean": 18.851,
+          "p50": 18.096,
+          "p95": 22.959,
+          "p99": 31.433,
+          "max": 84.758
+        },
+        "proc_to_outbox": {
+          "count": 750,
+          "mean": 18.145,
+          "p50": 17.715,
+          "p95": 24.259,
+          "p99": 27.007,
+          "max": 49.433
+        },
+        "outbox_to_biz_pred": {
+          "count": 750,
+          "mean": 1.238,
+          "p50": 1.12,
+          "p95": 1.872,
+          "p99": 3.3,
+          "max": 19.325
+        },
+        "hot_e2e_accept_to_biz": {
+          "count": 15,
+          "mean": 39.829,
+          "p50": 40.309,
+          "p95": 45.863,
+          "p99": 46.071,
+          "max": 46.123
+        },
+        "bg_e2e_accept_to_biz": {
+          "count": 735,
+          "mean": 38.23,
+          "p50": 37.248,
+          "p95": 46.232,
+          "p99": 58.896,
+          "max": 136.42
+        }
+      },
+      "kafka_max_lag": {
+        "local-processing-v1": 0,
+        "local-business-prediction-v1": 0,
+        "local-business-live-v1": 0,
+        "local-business-alert-v1": 0
+      },
+      "pg": {
+        "proc_stat_delta": {
+          "xact_commit": 9999,
+          "xact_rollback": 1,
+          "blks_read": 1,
+          "blks_hit": 402087,
+          "tup_inserted": 9991,
+          "tup_updated": 8454,
+          "tup_fetched": 93561
+        },
+        "biz_stat_delta": {
+          "xact_commit": 2236,
+          "xact_rollback": 10,
+          "blks_read": 0,
+          "blks_hit": 148976,
+          "tup_inserted": 3341,
+          "tup_updated": 6819,
+          "tup_fetched": 33728
+        },
+        "proc_conns_peak": 33,
+        "proc_active_peak": 1,
+        "biz_conns_peak": 27,
+        "biz_active_peak": 1
+      },
+      "k8s_resources": {
+        "business-api": {
+          "pods": 1,
+          "cpu_m_mean": 10.7,
+          "cpu_m_peak": 39,
+          "mem_mi_mean": 75.0,
+          "mem_mi_peak": 76
+        },
+        "business-consumer": {
+          "pods": 4,
+          "cpu_m_mean": 235.0,
+          "cpu_m_peak": 374,
+          "mem_mi_mean": 276.3,
+          "mem_mi_peak": 298
+        },
+        "grafana": {
+          "pods": 1,
+          "cpu_m_mean": 3.0,
+          "cpu_m_peak": 3,
+          "mem_mi_mean": 105.0,
+          "mem_mi_peak": 105
+        },
+        "ingestion-api": {
+          "pods": 2,
+          "cpu_m_mean": 37.4,
+          "cpu_m_peak": 236,
+          "mem_mi_mean": 162.7,
+          "mem_mi_peak": 163
+        },
+        "kafka": {
+          "pods": 1,
+          "cpu_m_mean": 38.9,
+          "cpu_m_peak": 217,
+          "mem_mi_mean": 1032.0,
+          "mem_mi_peak": 1036
+        },
+        "keycloak": {
+          "pods": 1,
+          "cpu_m_mean": 8.3,
+          "cpu_m_peak": 14,
+          "mem_mi_mean": 521.0,
+          "mem_mi_peak": 522
+        },
+        "loki": {
+          "pods": 1,
+          "cpu_m_mean": 5.3,
+          "cpu_m_peak": 6,
+          "mem_mi_mean": 120.9,
+          "mem_mi_peak": 121
+        },
+        "minio": {
+          "pods": 1,
+          "cpu_m_mean": 84.4,
+          "cpu_m_peak": 272,
+          "mem_mi_mean": 462.4,
+          "mem_mi_peak": 479
+        },
+        "ml-service": {
+          "pods": 2,
+          "cpu_m_mean": 6.0,
+          "cpu_m_peak": 6,
+          "mem_mi_mean": 249.0,
+          "mem_mi_peak": 249
+        },
+        "ml-service-mirror": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 13.0,
+          "mem_mi_peak": 13
+        },
+        "ml-service-shadow": {
+          "pods": 2,
+          "cpu_m_mean": 86.2,
+          "cpu_m_peak": 461,
+          "mem_mi_mean": 262.5,
+          "mem_mi_peak": 263
+        },
+        "postgres": {
+          "pods": 1,
+          "cpu_m_mean": 179.4,
+          "cpu_m_peak": 452,
+          "mem_mi_mean": 481.5,
+          "mem_mi_peak": 531
+        },
+        "processing-outbox-relay": {
+          "pods": 2,
+          "cpu_m_mean": 173.0,
+          "cpu_m_peak": 327,
+          "mem_mi_mean": 176.8,
+          "mem_mi_peak": 179
+        },
+        "processing-read-api": {
+          "pods": 1,
+          "cpu_m_mean": 8.8,
+          "cpu_m_peak": 105,
+          "mem_mi_mean": 102.0,
+          "mem_mi_peak": 103
+        },
+        "processing-worker": {
+          "pods": 6,
+          "cpu_m_mean": 496.0,
+          "cpu_m_peak": 785,
+          "mem_mi_mean": 470.7,
+          "mem_mi_peak": 520
+        },
+        "prometheus": {
+          "pods": 1,
+          "cpu_m_mean": 5.9,
+          "cpu_m_peak": 9,
+          "mem_mi_mean": 72.3,
+          "mem_mi_peak": 73
+        },
+        "promtail-n6qbg": {
+          "pods": 1,
+          "cpu_m_mean": 11.7,
+          "cpu_m_peak": 26,
+          "mem_mi_mean": 46.0,
+          "mem_mi_peak": 47
+        },
+        "pushgateway": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 18.8,
+          "mem_mi_peak": 19
+        },
+        "storage-consumer": {
+          "pods": 1,
+          "cpu_m_mean": 124.3,
+          "cpu_m_peak": 151,
+          "mem_mi_mean": 94.3,
+          "mem_mi_peak": 95
+        }
+      },
+      "invariants": {
+        "wrong_latest_sequence": 0,
+        "stale_lvp_lt_exp": 0,
+        "stuck_ledger_rows": 0,
+        "pending_outbox_after_drain": 0,
+        "duplicate_active_alerts": 0,
+        "proc_conflicts_delta": 0,
+        "biz_conflicts_delta": 0,
+        "bad_unavailable_downgrade": 0,
+        "unexpected_pod_restarts": {},
+        "oom_killed_delta": 0,
+        "total_violations": 0
+      },
+      "chaos": {
+        "events": [],
+        "recovery_seconds": null
+      }
+    },
+    {
+      "label": "baseline-hgb-shadow-wlA-pk1",
+      "mode": "baseline",
+      "ml_target": "hgb-shadow",
+      "workload": "A",
+      "run_index": 2,
+      "stream_epoch": "k3d-bench-2c7cd392",
+      "config": {
+        "mode": "baseline",
+        "ml_target": "hgb-shadow",
+        "ml_url": "http://ml-service-shadow:8001",
+        "hybrid_enabled": false,
+        "per_key": 1,
+        "max_total_inflight": 8,
+        "biz_commit_batch_size": 1,
+        "worker_replicas": 6,
+        "relay_replicas": 2,
+        "biz_replicas": 4,
+        "ingestion_replicas": 2,
+        "ml_champion_replicas": 2,
+        "ml_shadow_replicas": 2
+      },
+      "ingestion": {
+        "total_sent": 1000,
+        "window_sent": 750,
+        "sent_rps": 50.0,
+        "status_counts": {
+          "202": 1000
+        },
+        "errors_sample": [],
+        "http_latency_ms": {
+          "count": 750,
+          "mean": 8.001,
+          "p50": 7.603,
+          "p95": 10.946,
+          "p99": 13.598,
+          "max": 25.858
+        }
+      },
+      "throughput": {
+        "drained": true,
+        "drain_seconds": 0.348,
+        "last_counts": {
+          "pr_done": 1000,
+          "ob_pend": 0,
+          "ledger_pend": 0,
+          "biz_pred_delta": 1000,
+          "biz_alert_delta": 100,
+          "proc_alert_delta": 100
+        },
+        "proc_outcomes_total": 1000,
+        "proc_outcomes_win_rps": 50.0,
+        "biz_pred_total": 1000,
+        "biz_pred_win_rps": 50.07,
+        "outcome_kinds": {
+          "PREDICTION_COMPLETED": 1000
+        },
+        "alert_dispositions": {},
+        "alerts_created_or_updated": 50,
+        "alert_signal_links": {
+          "DEDUPLICATED": 100
+        }
+      },
+      "latency_ms": {
+        "accept_to_proc": {
+          "count": 750,
+          "mean": 21.8,
+          "p50": 19.839,
+          "p95": 32.217,
+          "p99": 45.573,
+          "max": 65.931
+        },
+        "hot_accept_to_proc": {
+          "count": 15,
+          "mean": 23.815,
+          "p50": 21.043,
+          "p95": 31.319,
+          "p99": 31.494,
+          "max": 31.538
+        },
+        "bg_accept_to_proc": {
+          "count": 735,
+          "mean": 21.758,
+          "p50": 19.779,
+          "p95": 32.557,
+          "p99": 45.668,
+          "max": 65.931
+        },
+        "proc_to_outbox": {
+          "count": 750,
+          "mean": 19.436,
+          "p50": 18.868,
+          "p95": 28.041,
+          "p99": 34.961,
+          "max": 50.309
+        },
+        "outbox_to_biz_pred": {
+          "count": 750,
+          "mean": 1.391,
+          "p50": 1.243,
+          "p95": 2.145,
+          "p99": 6.35,
+          "max": 11.091
+        },
+        "hot_e2e_accept_to_biz": {
+          "count": 15,
+          "mean": 45.408,
+          "p50": 42.548,
+          "p95": 61.947,
+          "p99": 69.697,
+          "max": 71.634
+        },
+        "bg_e2e_accept_to_biz": {
+          "count": 735,
+          "mean": 42.569,
+          "p50": 40.404,
+          "p95": 61.22,
+          "p99": 74.77,
+          "max": 113.224
+        }
+      },
+      "kafka_max_lag": {
+        "local-processing-v1": 0,
+        "local-business-prediction-v1": 0,
+        "local-business-live-v1": 0,
+        "local-business-alert-v1": 0
+      },
+      "pg": {
+        "proc_stat_delta": {
+          "xact_commit": 9841,
+          "xact_rollback": 2,
+          "blks_read": 5515,
+          "blks_hit": 409477,
+          "tup_inserted": 10012,
+          "tup_updated": 8576,
+          "tup_fetched": 86864
+        },
+        "biz_stat_delta": {
+          "xact_commit": 2171,
+          "xact_rollback": 2,
+          "blks_read": 0,
+          "blks_hit": 146822,
+          "tup_inserted": 3219,
+          "tup_updated": 6914,
+          "tup_fetched": 47733
+        },
+        "proc_conns_peak": 33,
+        "proc_active_peak": 1,
+        "biz_conns_peak": 27,
+        "biz_active_peak": 1
+      },
+      "k8s_resources": {
+        "business-api": {
+          "pods": 1,
+          "cpu_m_mean": 34.3,
+          "cpu_m_peak": 39,
+          "mem_mi_mean": 76.0,
+          "mem_mi_peak": 76
+        },
+        "business-consumer": {
+          "pods": 4,
+          "cpu_m_mean": 430.1,
+          "cpu_m_peak": 505,
+          "mem_mi_mean": 298.4,
+          "mem_mi_peak": 299
+        },
+        "grafana": {
+          "pods": 1,
+          "cpu_m_mean": 3.0,
+          "cpu_m_peak": 3,
+          "mem_mi_mean": 105.0,
+          "mem_mi_peak": 105
+        },
+        "ingestion-api": {
+          "pods": 2,
+          "cpu_m_mean": 216.3,
+          "cpu_m_peak": 236,
+          "mem_mi_mean": 162.0,
+          "mem_mi_peak": 162
+        },
+        "kafka": {
+          "pods": 1,
+          "cpu_m_mean": 197.3,
+          "cpu_m_peak": 217,
+          "mem_mi_mean": 1035.6,
+          "mem_mi_peak": 1036
+        },
+        "keycloak": {
+          "pods": 1,
+          "cpu_m_mean": 9.7,
+          "cpu_m_peak": 14,
+          "mem_mi_mean": 522.0,
+          "mem_mi_peak": 522
+        },
+        "loki": {
+          "pods": 1,
+          "cpu_m_mean": 6.0,
+          "cpu_m_peak": 6,
+          "mem_mi_mean": 119.7,
+          "mem_mi_peak": 122
+        },
+        "minio": {
+          "pods": 1,
+          "cpu_m_mean": 283.1,
+          "cpu_m_peak": 298,
+          "mem_mi_mean": 461.7,
+          "mem_mi_peak": 464
+        },
+        "ml-service": {
+          "pods": 2,
+          "cpu_m_mean": 5.4,
+          "cpu_m_peak": 6,
+          "mem_mi_mean": 249.4,
+          "mem_mi_peak": 250
+        },
+        "ml-service-mirror": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 13.0,
+          "mem_mi_peak": 13
+        },
+        "ml-service-shadow": {
+          "pods": 2,
+          "cpu_m_mean": 449.4,
+          "cpu_m_peak": 461,
+          "mem_mi_mean": 261.6,
+          "mem_mi_peak": 262
+        },
+        "postgres": {
+          "pods": 1,
+          "cpu_m_mean": 452.0,
+          "cpu_m_peak": 452,
+          "mem_mi_mean": 531.0,
+          "mem_mi_peak": 531
+        },
+        "processing-outbox-relay": {
+          "pods": 2,
+          "cpu_m_mean": 317.1,
+          "cpu_m_peak": 327,
+          "mem_mi_mean": 177.1,
+          "mem_mi_peak": 178
+        },
+        "processing-read-api": {
+          "pods": 1,
+          "cpu_m_mean": 76.3,
+          "cpu_m_peak": 105,
+          "mem_mi_mean": 103.0,
+          "mem_mi_peak": 103
+        },
+        "processing-worker": {
+          "pods": 6,
+          "cpu_m_mean": 729.3,
+          "cpu_m_peak": 785,
+          "mem_mi_mean": 520.0,
+          "mem_mi_peak": 520
+        },
+        "prometheus": {
+          "pods": 1,
+          "cpu_m_mean": 3.6,
+          "cpu_m_peak": 4,
+          "mem_mi_mean": 73.0,
+          "mem_mi_peak": 73
+        },
+        "promtail-n6qbg": {
+          "pods": 1,
+          "cpu_m_mean": 29.0,
+          "cpu_m_peak": 33,
+          "mem_mi_mean": 47.4,
+          "mem_mi_peak": 48
+        },
+        "pushgateway": {
+          "pods": 1,
+          "cpu_m_mean": 0.4,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 19.4,
+          "mem_mi_peak": 20
+        },
+        "storage-consumer": {
+          "pods": 1,
+          "cpu_m_mean": 331.0,
+          "cpu_m_peak": 571,
+          "mem_mi_mean": 95.0,
+          "mem_mi_peak": 95
+        }
+      },
+      "invariants": {
+        "wrong_latest_sequence": 0,
+        "stale_lvp_lt_exp": 0,
+        "stuck_ledger_rows": 0,
+        "pending_outbox_after_drain": 0,
+        "duplicate_active_alerts": 0,
+        "proc_conflicts_delta": 0,
+        "biz_conflicts_delta": 0,
+        "bad_unavailable_downgrade": 0,
+        "unexpected_pod_restarts": {},
+        "oom_killed_delta": 0,
+        "total_violations": 0
+      },
+      "chaos": {
+        "events": [],
+        "recovery_seconds": null
+      }
+    },
+    {
+      "label": "baseline-hgb-shadow-wlA-pk1",
+      "mode": "baseline",
+      "ml_target": "hgb-shadow",
+      "workload": "A",
+      "run_index": 3,
+      "stream_epoch": "k3d-bench-467c3ae2",
+      "config": {
+        "mode": "baseline",
+        "ml_target": "hgb-shadow",
+        "ml_url": "http://ml-service-shadow:8001",
+        "hybrid_enabled": false,
+        "per_key": 1,
+        "max_total_inflight": 8,
+        "biz_commit_batch_size": 1,
+        "worker_replicas": 6,
+        "relay_replicas": 2,
+        "biz_replicas": 4,
+        "ingestion_replicas": 2,
+        "ml_champion_replicas": 2,
+        "ml_shadow_replicas": 2
+      },
+      "ingestion": {
+        "total_sent": 1000,
+        "window_sent": 750,
+        "sent_rps": 50.0,
+        "status_counts": {
+          "202": 1000
+        },
+        "errors_sample": [],
+        "http_latency_ms": {
+          "count": 750,
+          "mean": 7.249,
+          "p50": 7.161,
+          "p95": 8.35,
+          "p99": 9.448,
+          "max": 13.046
+        }
+      },
+      "throughput": {
+        "drained": true,
+        "drain_seconds": 0.354,
+        "last_counts": {
+          "pr_done": 1000,
+          "ob_pend": 0,
+          "ledger_pend": 0,
+          "biz_pred_delta": 1000,
+          "biz_alert_delta": 100,
+          "proc_alert_delta": 100
+        },
+        "proc_outcomes_total": 1000,
+        "proc_outcomes_win_rps": 50.0,
+        "biz_pred_total": 1000,
+        "biz_pred_win_rps": 49.93,
+        "outcome_kinds": {
+          "PREDICTION_COMPLETED": 1000
+        },
+        "alert_dispositions": {},
+        "alerts_created_or_updated": 50,
+        "alert_signal_links": {
+          "DEDUPLICATED": 100
+        }
+      },
+      "latency_ms": {
+        "accept_to_proc": {
+          "count": 750,
+          "mean": 19.008,
+          "p50": 18.221,
+          "p95": 25.112,
+          "p99": 31.18,
+          "max": 37.071
+        },
+        "hot_accept_to_proc": {
+          "count": 15,
+          "mean": 21.602,
+          "p50": 20.841,
+          "p95": 27.279,
+          "p99": 35.113,
+          "max": 37.071
+        },
+        "bg_accept_to_proc": {
+          "count": 735,
+          "mean": 18.955,
+          "p50": 18.187,
+          "p95": 25.103,
+          "p99": 31.174,
+          "max": 35.065
+        },
+        "proc_to_outbox": {
+          "count": 750,
+          "mean": 17.771,
+          "p50": 17.233,
+          "p95": 24.12,
+          "p99": 26.66,
+          "max": 31.042
+        },
+        "outbox_to_biz_pred": {
+          "count": 750,
+          "mean": 1.194,
+          "p50": 1.129,
+          "p95": 1.755,
+          "p99": 2.923,
+          "max": 7.162
+        },
+        "hot_e2e_accept_to_biz": {
+          "count": 15,
+          "mean": 41.773,
+          "p50": 41.118,
+          "p95": 50.444,
+          "p99": 54.954,
+          "max": 56.081
+        },
+        "bg_e2e_accept_to_biz": {
+          "count": 735,
+          "mean": 37.896,
+          "p50": 37.238,
+          "p95": 46.8,
+          "p99": 51.391,
+          "max": 61.535
+        }
+      },
+      "kafka_max_lag": {
+        "local-processing-v1": 0,
+        "local-business-prediction-v1": 0,
+        "local-business-live-v1": 0,
+        "local-business-alert-v1": 0
+      },
+      "pg": {
+        "proc_stat_delta": {
+          "xact_commit": 9735,
+          "xact_rollback": 2,
+          "blks_read": 0,
+          "blks_hit": 376498,
+          "tup_inserted": 10025,
+          "tup_updated": 8387,
+          "tup_fetched": 80240
+        },
+        "biz_stat_delta": {
+          "xact_commit": 2217,
+          "xact_rollback": 2,
+          "blks_read": 0,
+          "blks_hit": 143191,
+          "tup_inserted": 3272,
+          "tup_updated": 7049,
+          "tup_fetched": 47074
+        },
+        "proc_conns_peak": 33,
+        "proc_active_peak": 1,
+        "biz_conns_peak": 27,
+        "biz_active_peak": 1
+      },
+      "k8s_resources": {
+        "business-api": {
+          "pods": 1,
+          "cpu_m_mean": 36.5,
+          "cpu_m_peak": 40,
+          "mem_mi_mean": 76.0,
+          "mem_mi_peak": 76
+        },
+        "business-consumer": {
+          "pods": 4,
+          "cpu_m_mean": 574.2,
+          "cpu_m_peak": 601,
+          "mem_mi_mean": 302.9,
+          "mem_mi_peak": 306
+        },
+        "grafana": {
+          "pods": 1,
+          "cpu_m_mean": 3.0,
+          "cpu_m_peak": 3,
+          "mem_mi_mean": 105.0,
+          "mem_mi_peak": 105
+        },
+        "ingestion-api": {
+          "pods": 2,
+          "cpu_m_mean": 235.0,
+          "cpu_m_peak": 253,
+          "mem_mi_mean": 163.4,
+          "mem_mi_peak": 164
+        },
+        "kafka": {
+          "pods": 1,
+          "cpu_m_mean": 203.3,
+          "cpu_m_peak": 216,
+          "mem_mi_mean": 1013.7,
+          "mem_mi_peak": 1035
+        },
+        "keycloak": {
+          "pods": 1,
+          "cpu_m_mean": 2.5,
+          "cpu_m_peak": 4,
+          "mem_mi_mean": 522.0,
+          "mem_mi_peak": 522
+        },
+        "loki": {
+          "pods": 1,
+          "cpu_m_mean": 6.8,
+          "cpu_m_peak": 7,
+          "mem_mi_mean": 129.1,
+          "mem_mi_peak": 136
+        },
+        "minio": {
+          "pods": 1,
+          "cpu_m_mean": 269.9,
+          "cpu_m_peak": 298,
+          "mem_mi_mean": 417.4,
+          "mem_mi_peak": 464
+        },
+        "ml-service": {
+          "pods": 2,
+          "cpu_m_mean": 4.5,
+          "cpu_m_peak": 6,
+          "mem_mi_mean": 251.0,
+          "mem_mi_peak": 257
+        },
+        "ml-service-mirror": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 13.0,
+          "mem_mi_peak": 13
+        },
+        "ml-service-shadow": {
+          "pods": 4,
+          "cpu_m_mean": 890.2,
+          "cpu_m_peak": 1053,
+          "mem_mi_mean": 472.0,
+          "mem_mi_peak": 538
+        },
+        "postgres": {
+          "pods": 1,
+          "cpu_m_mean": 553.7,
+          "cpu_m_peak": 598,
+          "mem_mi_mean": 543.8,
+          "mem_mi_peak": 559
+        },
+        "processing-outbox-relay": {
+          "pods": 2,
+          "cpu_m_mean": 304.0,
+          "cpu_m_peak": 320,
+          "mem_mi_mean": 176.8,
+          "mem_mi_peak": 178
+        },
+        "processing-read-api": {
+          "pods": 1,
+          "cpu_m_mean": 48.5,
+          "cpu_m_peak": 53,
+          "mem_mi_mean": 103.7,
+          "mem_mi_peak": 104
+        },
+        "processing-worker": {
+          "pods": 6,
+          "cpu_m_mean": 727.0,
+          "cpu_m_peak": 754,
+          "mem_mi_mean": 521.6,
+          "mem_mi_peak": 523
+        },
+        "prometheus": {
+          "pods": 1,
+          "cpu_m_mean": 3.0,
+          "cpu_m_peak": 3,
+          "mem_mi_mean": 73.0,
+          "mem_mi_peak": 73
+        },
+        "promtail-n6qbg": {
+          "pods": 1,
+          "cpu_m_mean": 38.0,
+          "cpu_m_peak": 40,
+          "mem_mi_mean": 46.5,
+          "mem_mi_peak": 48
+        },
+        "pushgateway": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 20.0,
+          "mem_mi_peak": 20
+        },
+        "storage-consumer": {
+          "pods": 1,
+          "cpu_m_mean": 563.9,
+          "cpu_m_peak": 571,
+          "mem_mi_mean": 95.8,
+          "mem_mi_peak": 96
+        }
+      },
+      "invariants": {
+        "wrong_latest_sequence": 0,
+        "stale_lvp_lt_exp": 0,
+        "stuck_ledger_rows": 0,
+        "pending_outbox_after_drain": 0,
+        "duplicate_active_alerts": 0,
+        "proc_conflicts_delta": 0,
+        "biz_conflicts_delta": 0,
+        "bad_unavailable_downgrade": 0,
+        "unexpected_pod_restarts": {},
+        "oom_killed_delta": 0,
+        "total_violations": 0
+      },
+      "chaos": {
+        "events": [],
+        "recovery_seconds": null
+      }
+    },
+    {
+      "label": "baseline-hgb-shadow-wlC-pk1",
+      "mode": "baseline",
+      "ml_target": "hgb-shadow",
+      "workload": "C",
+      "run_index": 1,
+      "stream_epoch": "k3d-bench-b54b8a2d",
+      "config": {
+        "mode": "baseline",
+        "ml_target": "hgb-shadow",
+        "ml_url": "http://ml-service-shadow:8001",
+        "hybrid_enabled": false,
+        "per_key": 1,
+        "max_total_inflight": 8,
+        "biz_commit_batch_size": 1,
+        "worker_replicas": 6,
+        "relay_replicas": 2,
+        "biz_replicas": 4,
+        "ingestion_replicas": 2,
+        "ml_champion_replicas": 2,
+        "ml_shadow_replicas": 2
+      },
+      "ingestion": {
+        "total_sent": 1000,
+        "window_sent": 750,
+        "sent_rps": 50.0,
+        "status_counts": {
+          "202": 1000
+        },
+        "errors_sample": [],
+        "http_latency_ms": {
+          "count": 750,
+          "mean": 8.071,
+          "p50": 7.539,
+          "p95": 9.932,
+          "p99": 12.148,
+          "max": 97.267
+        }
+      },
+      "throughput": {
+        "drained": true,
+        "drain_seconds": 0.067,
+        "last_counts": {
+          "pr_done": 1000,
+          "ob_pend": 0,
+          "ledger_pend": 0,
+          "biz_pred_delta": 1000,
+          "biz_alert_delta": 100,
+          "proc_alert_delta": 100
+        },
+        "proc_outcomes_total": 1000,
+        "proc_outcomes_win_rps": 50.0,
+        "biz_pred_total": 1000,
+        "biz_pred_win_rps": 50.0,
+        "outcome_kinds": {
+          "PREDICTION_COMPLETED": 1000
+        },
+        "alert_dispositions": {},
+        "alerts_created_or_updated": 35,
+        "alert_signal_links": {
+          "DEDUPLICATED": 100
+        }
+      },
+      "latency_ms": {
+        "accept_to_proc": {
+          "count": 750,
+          "mean": 22.966,
+          "p50": 20.75,
+          "p95": 34.712,
+          "p99": 43.615,
+          "max": 120.596
+        },
+        "hot_accept_to_proc": {
+          "count": 240,
+          "mean": 24.858,
+          "p50": 22.832,
+          "p95": 34.855,
+          "p99": 69.21,
+          "max": 94.13
+        },
+        "bg_accept_to_proc": {
+          "count": 510,
+          "mean": 22.076,
+          "p50": 20.291,
+          "p95": 34.572,
+          "p99": 39.993,
+          "max": 120.596
+        },
+        "proc_to_outbox": {
+          "count": 750,
+          "mean": 18.535,
+          "p50": 18.131,
+          "p95": 24.939,
+          "p99": 28.635,
+          "max": 36.438
+        },
+        "outbox_to_biz_pred": {
+          "count": 750,
+          "mean": 1.983,
+          "p50": 1.222,
+          "p95": 7.475,
+          "p99": 11.986,
+          "max": 29.829
+        },
+        "hot_e2e_accept_to_biz": {
+          "count": 240,
+          "mean": 45.891,
+          "p50": 43.431,
+          "p95": 60.784,
+          "p99": 92.205,
+          "max": 115.187
+        },
+        "bg_e2e_accept_to_biz": {
+          "count": 510,
+          "mean": 42.352,
+          "p50": 40.246,
+          "p95": 56.34,
+          "p99": 65.14,
+          "max": 158.209
+        }
+      },
+      "kafka_max_lag": {
+        "local-processing-v1": 0,
+        "local-business-prediction-v1": 0,
+        "local-business-live-v1": 0,
+        "local-business-alert-v1": 0
+      },
+      "pg": {
+        "proc_stat_delta": {
+          "xact_commit": 9865,
+          "xact_rollback": 2,
+          "blks_read": 9,
+          "blks_hit": 407879,
+          "tup_inserted": 12594,
+          "tup_updated": 8758,
+          "tup_fetched": 76691
+        },
+        "biz_stat_delta": {
+          "xact_commit": 2151,
+          "xact_rollback": 2,
+          "blks_read": 0,
+          "blks_hit": 143736,
+          "tup_inserted": 3301,
+          "tup_updated": 6955,
+          "tup_fetched": 44462
+        },
+        "proc_conns_peak": 32,
+        "proc_active_peak": 1,
+        "biz_conns_peak": 27,
+        "biz_active_peak": 1
+      },
+      "k8s_resources": {
+        "business-api": {
+          "pods": 1,
+          "cpu_m_mean": 30.3,
+          "cpu_m_peak": 36,
+          "mem_mi_mean": 76.4,
+          "mem_mi_peak": 77
+        },
+        "business-consumer": {
+          "pods": 4,
+          "cpu_m_mean": 523.7,
+          "cpu_m_peak": 530,
+          "mem_mi_mean": 304.7,
+          "mem_mi_peak": 306
+        },
+        "grafana": {
+          "pods": 1,
+          "cpu_m_mean": 2.4,
+          "cpu_m_peak": 3,
+          "mem_mi_mean": 105.4,
+          "mem_mi_peak": 106
+        },
+        "ingestion-api": {
+          "pods": 2,
+          "cpu_m_mean": 197.9,
+          "cpu_m_peak": 207,
+          "mem_mi_mean": 162.0,
+          "mem_mi_peak": 162
+        },
+        "kafka": {
+          "pods": 1,
+          "cpu_m_mean": 178.7,
+          "cpu_m_peak": 185,
+          "mem_mi_mean": 1007.6,
+          "mem_mi_peak": 1008
+        },
+        "keycloak": {
+          "pods": 1,
+          "cpu_m_mean": 3.0,
+          "cpu_m_peak": 3,
+          "mem_mi_mean": 522.0,
+          "mem_mi_peak": 522
+        },
+        "loki": {
+          "pods": 1,
+          "cpu_m_mean": 6.6,
+          "cpu_m_peak": 7,
+          "mem_mi_mean": 136.9,
+          "mem_mi_peak": 138
+        },
+        "minio": {
+          "pods": 1,
+          "cpu_m_mean": 262.0,
+          "cpu_m_peak": 262,
+          "mem_mi_mean": 401.0,
+          "mem_mi_peak": 401
+        },
+        "ml-service": {
+          "pods": 2,
+          "cpu_m_mean": 4.0,
+          "cpu_m_peak": 4,
+          "mem_mi_mean": 258.7,
+          "mem_mi_peak": 261
+        },
+        "ml-service-mirror": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 13.0,
+          "mem_mi_peak": 13
+        },
+        "ml-service-shadow": {
+          "pods": 4,
+          "cpu_m_mean": 631.3,
+          "cpu_m_peak": 729,
+          "mem_mi_mean": 538.0,
+          "mem_mi_peak": 538
+        },
+        "postgres": {
+          "pods": 1,
+          "cpu_m_mean": 429.3,
+          "cpu_m_peak": 471,
+          "mem_mi_mean": 564.1,
+          "mem_mi_peak": 571
+        },
+        "processing-outbox-relay": {
+          "pods": 2,
+          "cpu_m_mean": 317.4,
+          "cpu_m_peak": 320,
+          "mem_mi_mean": 178.0,
+          "mem_mi_peak": 178
+        },
+        "processing-read-api": {
+          "pods": 1,
+          "cpu_m_mean": 133.3,
+          "cpu_m_peak": 267,
+          "mem_mi_mean": 103.0,
+          "mem_mi_peak": 103
+        },
+        "processing-worker": {
+          "pods": 6,
+          "cpu_m_mean": 698.1,
+          "cpu_m_peak": 721,
+          "mem_mi_mean": 523.0,
+          "mem_mi_peak": 523
+        },
+        "prometheus": {
+          "pods": 1,
+          "cpu_m_mean": 3.0,
+          "cpu_m_peak": 3,
+          "mem_mi_mean": 73.0,
+          "mem_mi_peak": 73
+        },
+        "promtail-n6qbg": {
+          "pods": 1,
+          "cpu_m_mean": 34.3,
+          "cpu_m_peak": 36,
+          "mem_mi_mean": 47.0,
+          "mem_mi_peak": 47
+        },
+        "pushgateway": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 20.0,
+          "mem_mi_peak": 20
+        },
+        "storage-consumer": {
+          "pods": 1,
+          "cpu_m_mean": 563.4,
+          "cpu_m_peak": 572,
+          "mem_mi_mean": 95.6,
+          "mem_mi_peak": 96
+        }
+      },
+      "invariants": {
+        "wrong_latest_sequence": 0,
+        "stale_lvp_lt_exp": 0,
+        "stuck_ledger_rows": 0,
+        "pending_outbox_after_drain": 0,
+        "duplicate_active_alerts": 0,
+        "proc_conflicts_delta": 0,
+        "biz_conflicts_delta": 0,
+        "bad_unavailable_downgrade": 0,
+        "unexpected_pod_restarts": {},
+        "oom_killed_delta": 0,
+        "total_violations": 0
+      },
+      "chaos": {
+        "events": [],
+        "recovery_seconds": null
+      }
+    },
+    {
+      "label": "baseline-hgb-shadow-wlC-pk1",
+      "mode": "baseline",
+      "ml_target": "hgb-shadow",
+      "workload": "C",
+      "run_index": 2,
+      "stream_epoch": "k3d-bench-ec99819f",
+      "config": {
+        "mode": "baseline",
+        "ml_target": "hgb-shadow",
+        "ml_url": "http://ml-service-shadow:8001",
+        "hybrid_enabled": false,
+        "per_key": 1,
+        "max_total_inflight": 8,
+        "biz_commit_batch_size": 1,
+        "worker_replicas": 6,
+        "relay_replicas": 2,
+        "biz_replicas": 4,
+        "ingestion_replicas": 2,
+        "ml_champion_replicas": 2,
+        "ml_shadow_replicas": 2
+      },
+      "ingestion": {
+        "total_sent": 1000,
+        "window_sent": 750,
+        "sent_rps": 50.0,
+        "status_counts": {
+          "202": 1000
+        },
+        "errors_sample": [],
+        "http_latency_ms": {
+          "count": 750,
+          "mean": 7.47,
+          "p50": 7.297,
+          "p95": 9.148,
+          "p99": 10.917,
+          "max": 12.964
+        }
+      },
+      "throughput": {
+        "drained": true,
+        "drain_seconds": 0.07,
+        "last_counts": {
+          "pr_done": 1000,
+          "ob_pend": 0,
+          "ledger_pend": 0,
+          "biz_pred_delta": 1000,
+          "biz_alert_delta": 100,
+          "proc_alert_delta": 100
+        },
+        "proc_outcomes_total": 1000,
+        "proc_outcomes_win_rps": 50.0,
+        "biz_pred_total": 1000,
+        "biz_pred_win_rps": 50.0,
+        "outcome_kinds": {
+          "PREDICTION_COMPLETED": 1000
+        },
+        "alert_dispositions": {},
+        "alerts_created_or_updated": 35,
+        "alert_signal_links": {
+          "DEDUPLICATED": 100
+        }
+      },
+      "latency_ms": {
+        "accept_to_proc": {
+          "count": 750,
+          "mean": 21.497,
+          "p50": 19.957,
+          "p95": 30.508,
+          "p99": 35.68,
+          "max": 43.851
+        },
+        "hot_accept_to_proc": {
+          "count": 240,
+          "mean": 23.077,
+          "p50": 22.2,
+          "p95": 30.952,
+          "p99": 35.171,
+          "max": 35.479
+        },
+        "bg_accept_to_proc": {
+          "count": 510,
+          "mean": 20.754,
+          "p50": 19.486,
+          "p95": 30.1,
+          "p99": 36.323,
+          "max": 43.851
+        },
+        "proc_to_outbox": {
+          "count": 750,
+          "mean": 17.763,
+          "p50": 17.398,
+          "p95": 24.003,
+          "p99": 27.613,
+          "max": 33.929
+        },
+        "outbox_to_biz_pred": {
+          "count": 750,
+          "mean": 1.806,
+          "p50": 1.149,
+          "p95": 7.006,
+          "p99": 10.999,
+          "max": 15.362
+        },
+        "hot_e2e_accept_to_biz": {
+          "count": 240,
+          "mean": 42.991,
+          "p50": 42.186,
+          "p95": 54.063,
+          "p99": 58.186,
+          "max": 61.106
+        },
+        "bg_e2e_accept_to_biz": {
+          "count": 510,
+          "mean": 40.16,
+          "p50": 38.514,
+          "p95": 51.029,
+          "p99": 58.51,
+          "max": 65.796
+        }
+      },
+      "kafka_max_lag": {
+        "local-processing-v1": 0,
+        "local-business-prediction-v1": 0,
+        "local-business-live-v1": 0,
+        "local-business-alert-v1": 0
+      },
+      "pg": {
+        "proc_stat_delta": {
+          "xact_commit": 9892,
+          "xact_rollback": 0,
+          "blks_read": 3221,
+          "blks_hit": 393678,
+          "tup_inserted": 10220,
+          "tup_updated": 8612,
+          "tup_fetched": 80505
+        },
+        "biz_stat_delta": {
+          "xact_commit": 2179,
+          "xact_rollback": 1,
+          "blks_read": 0,
+          "blks_hit": 123907,
+          "tup_inserted": 3270,
+          "tup_updated": 6996,
+          "tup_fetched": 21983
+        },
+        "proc_conns_peak": 33,
+        "proc_active_peak": 1,
+        "biz_conns_peak": 26,
+        "biz_active_peak": 1
+      },
+      "k8s_resources": {
+        "business-api": {
+          "pods": 1,
+          "cpu_m_mean": 33.0,
+          "cpu_m_peak": 36,
+          "mem_mi_mean": 76.3,
+          "mem_mi_peak": 77
+        },
+        "business-consumer": {
+          "pods": 4,
+          "cpu_m_mean": 579.9,
+          "cpu_m_peak": 601,
+          "mem_mi_mean": 304.4,
+          "mem_mi_peak": 305
+        },
+        "grafana": {
+          "pods": 1,
+          "cpu_m_mean": 2.2,
+          "cpu_m_peak": 3,
+          "mem_mi_mean": 105.2,
+          "mem_mi_peak": 106
+        },
+        "ingestion-api": {
+          "pods": 2,
+          "cpu_m_mean": 212.5,
+          "cpu_m_peak": 233,
+          "mem_mi_mean": 162.0,
+          "mem_mi_peak": 163
+        },
+        "kafka": {
+          "pods": 1,
+          "cpu_m_mean": 193.2,
+          "cpu_m_peak": 197,
+          "mem_mi_mean": 1007.8,
+          "mem_mi_peak": 1009
+        },
+        "keycloak": {
+          "pods": 1,
+          "cpu_m_mean": 2.3,
+          "cpu_m_peak": 3,
+          "mem_mi_mean": 522.0,
+          "mem_mi_peak": 522
+        },
+        "loki": {
+          "pods": 1,
+          "cpu_m_mean": 6.1,
+          "cpu_m_peak": 9,
+          "mem_mi_mean": 141.5,
+          "mem_mi_peak": 152
+        },
+        "minio": {
+          "pods": 1,
+          "cpu_m_mean": 266.3,
+          "cpu_m_peak": 268,
+          "mem_mi_mean": 401.0,
+          "mem_mi_peak": 401
+        },
+        "ml-service": {
+          "pods": 2,
+          "cpu_m_mean": 4.8,
+          "cpu_m_peak": 5,
+          "mem_mi_mean": 261.9,
+          "mem_mi_peak": 265
+        },
+        "ml-service-mirror": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 13.0,
+          "mem_mi_peak": 13
+        },
+        "ml-service-shadow": {
+          "pods": 4,
+          "cpu_m_mean": 567.1,
+          "cpu_m_peak": 594,
+          "mem_mi_mean": 538.7,
+          "mem_mi_peak": 539
+        },
+        "postgres": {
+          "pods": 1,
+          "cpu_m_mean": 519.0,
+          "cpu_m_peak": 548,
+          "mem_mi_mean": 582.9,
+          "mem_mi_peak": 656
+        },
+        "processing-outbox-relay": {
+          "pods": 2,
+          "cpu_m_mean": 310.0,
+          "cpu_m_peak": 319,
+          "mem_mi_mean": 178.0,
+          "mem_mi_peak": 178
+        },
+        "processing-read-api": {
+          "pods": 1,
+          "cpu_m_mean": 498.3,
+          "cpu_m_peak": 606,
+          "mem_mi_mean": 103.0,
+          "mem_mi_peak": 103
+        },
+        "processing-worker": {
+          "pods": 6,
+          "cpu_m_mean": 750.3,
+          "cpu_m_peak": 767,
+          "mem_mi_mean": 523.1,
+          "mem_mi_peak": 526
+        },
+        "prometheus": {
+          "pods": 1,
+          "cpu_m_mean": 3.0,
+          "cpu_m_peak": 4,
+          "mem_mi_mean": 73.0,
+          "mem_mi_peak": 73
+        },
+        "promtail-n6qbg": {
+          "pods": 1,
+          "cpu_m_mean": 36.0,
+          "cpu_m_peak": 36,
+          "mem_mi_mean": 47.0,
+          "mem_mi_peak": 47
+        },
+        "pushgateway": {
+          "pods": 1,
+          "cpu_m_mean": 0.3,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 20.0,
+          "mem_mi_peak": 20
+        },
+        "storage-consumer": {
+          "pods": 1,
+          "cpu_m_mean": 600.6,
+          "cpu_m_peak": 613,
+          "mem_mi_mean": 95.0,
+          "mem_mi_peak": 96
+        }
+      },
+      "invariants": {
+        "wrong_latest_sequence": 0,
+        "stale_lvp_lt_exp": 0,
+        "stuck_ledger_rows": 0,
+        "pending_outbox_after_drain": 0,
+        "duplicate_active_alerts": 0,
+        "proc_conflicts_delta": 0,
+        "biz_conflicts_delta": 0,
+        "bad_unavailable_downgrade": 0,
+        "unexpected_pod_restarts": {},
+        "oom_killed_delta": 0,
+        "total_violations": 0
+      },
+      "chaos": {
+        "events": [],
+        "recovery_seconds": null
+      }
+    },
+    {
+      "label": "baseline-hgb-shadow-wlC-pk1",
+      "mode": "baseline",
+      "ml_target": "hgb-shadow",
+      "workload": "C",
+      "run_index": 3,
+      "stream_epoch": "k3d-bench-29781d02",
+      "config": {
+        "mode": "baseline",
+        "ml_target": "hgb-shadow",
+        "ml_url": "http://ml-service-shadow:8001",
+        "hybrid_enabled": false,
+        "per_key": 1,
+        "max_total_inflight": 8,
+        "biz_commit_batch_size": 1,
+        "worker_replicas": 6,
+        "relay_replicas": 2,
+        "biz_replicas": 4,
+        "ingestion_replicas": 2,
+        "ml_champion_replicas": 2,
+        "ml_shadow_replicas": 2
+      },
+      "ingestion": {
+        "total_sent": 1000,
+        "window_sent": 750,
+        "sent_rps": 50.0,
+        "status_counts": {
+          "202": 1000
+        },
+        "errors_sample": [],
+        "http_latency_ms": {
+          "count": 750,
+          "mean": 7.608,
+          "p50": 7.315,
+          "p95": 9.476,
+          "p99": 12.1,
+          "max": 33.565
+        }
+      },
+      "throughput": {
+        "drained": true,
+        "drain_seconds": 0.074,
+        "last_counts": {
+          "pr_done": 1000,
+          "ob_pend": 0,
+          "ledger_pend": 0,
+          "biz_pred_delta": 1000,
+          "biz_alert_delta": 100,
+          "proc_alert_delta": 100
+        },
+        "proc_outcomes_total": 1000,
+        "proc_outcomes_win_rps": 50.0,
+        "biz_pred_total": 1000,
+        "biz_pred_win_rps": 50.0,
+        "outcome_kinds": {
+          "PREDICTION_COMPLETED": 1000
+        },
+        "alert_dispositions": {},
+        "alerts_created_or_updated": 35,
+        "alert_signal_links": {
+          "DEDUPLICATED": 100
+        }
+      },
+      "latency_ms": {
+        "accept_to_proc": {
+          "count": 750,
+          "mean": 22.208,
+          "p50": 20.477,
+          "p95": 31.917,
+          "p99": 38.829,
+          "max": 76.292
+        },
+        "hot_accept_to_proc": {
+          "count": 240,
+          "mean": 23.663,
+          "p50": 22.368,
+          "p95": 31.372,
+          "p99": 46.746,
+          "max": 76.292
+        },
+        "bg_accept_to_proc": {
+          "count": 510,
+          "mean": 21.523,
+          "p50": 19.916,
+          "p95": 32.15,
+          "p99": 38.69,
+          "max": 70.712
+        },
+        "proc_to_outbox": {
+          "count": 750,
+          "mean": 18.11,
+          "p50": 17.591,
+          "p95": 24.147,
+          "p99": 28.166,
+          "max": 35.3
+        },
+        "outbox_to_biz_pred": {
+          "count": 750,
+          "mean": 1.834,
+          "p50": 1.168,
+          "p95": 7.075,
+          "p99": 10.779,
+          "max": 14.65
+        },
+        "hot_e2e_accept_to_biz": {
+          "count": 240,
+          "mean": 44.238,
+          "p50": 43.266,
+          "p95": 55.282,
+          "p99": 66.376,
+          "max": 105.638
+        },
+        "bg_e2e_accept_to_biz": {
+          "count": 510,
+          "mean": 41.164,
+          "p50": 39.556,
+          "p95": 52.943,
+          "p99": 59.319,
+          "max": 94.318
+        }
+      },
+      "kafka_max_lag": {
+        "local-processing-v1": 0,
+        "local-business-prediction-v1": 0,
+        "local-business-live-v1": 0,
+        "local-business-alert-v1": 0
+      },
+      "pg": {
+        "proc_stat_delta": {
+          "xact_commit": 9807,
+          "xact_rollback": 2,
+          "blks_read": 0,
+          "blks_hit": 365885,
+          "tup_inserted": 9817,
+          "tup_updated": 8449,
+          "tup_fetched": 75081
+        },
+        "biz_stat_delta": {
+          "xact_commit": 2207,
+          "xact_rollback": 1,
+          "blks_read": 0,
+          "blks_hit": 125006,
+          "tup_inserted": 3276,
+          "tup_updated": 7058,
+          "tup_fetched": 22060
+        },
+        "proc_conns_peak": 32,
+        "proc_active_peak": 1,
+        "biz_conns_peak": 26,
+        "biz_active_peak": 1
+      },
+      "k8s_resources": {
+        "business-api": {
+          "pods": 1,
+          "cpu_m_mean": 32.1,
+          "cpu_m_peak": 34,
+          "mem_mi_mean": 76.6,
+          "mem_mi_peak": 77
+        },
+        "business-consumer": {
+          "pods": 4,
+          "cpu_m_mean": 517.6,
+          "cpu_m_peak": 525,
+          "mem_mi_mean": 303.8,
+          "mem_mi_peak": 305
+        },
+        "grafana": {
+          "pods": 1,
+          "cpu_m_mean": 2.0,
+          "cpu_m_peak": 2,
+          "mem_mi_mean": 105.4,
+          "mem_mi_peak": 106
+        },
+        "ingestion-api": {
+          "pods": 2,
+          "cpu_m_mean": 222.3,
+          "cpu_m_peak": 233,
+          "mem_mi_mean": 162.6,
+          "mem_mi_peak": 163
+        },
+        "kafka": {
+          "pods": 1,
+          "cpu_m_mean": 172.8,
+          "cpu_m_peak": 177,
+          "mem_mi_mean": 1009.0,
+          "mem_mi_peak": 1009
+        },
+        "keycloak": {
+          "pods": 1,
+          "cpu_m_mean": 3.0,
+          "cpu_m_peak": 3,
+          "mem_mi_mean": 521.6,
+          "mem_mi_peak": 522
+        },
+        "loki": {
+          "pods": 1,
+          "cpu_m_mean": 7.5,
+          "cpu_m_peak": 9,
+          "mem_mi_mean": 152.0,
+          "mem_mi_peak": 152
+        },
+        "minio": {
+          "pods": 1,
+          "cpu_m_mean": 262.0,
+          "cpu_m_peak": 262,
+          "mem_mi_mean": 401.0,
+          "mem_mi_peak": 401
+        },
+        "ml-service": {
+          "pods": 2,
+          "cpu_m_mean": 5.0,
+          "cpu_m_peak": 5,
+          "mem_mi_mean": 265.4,
+          "mem_mi_peak": 266
+        },
+        "ml-service-mirror": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 13.0,
+          "mem_mi_peak": 13
+        },
+        "ml-service-shadow": {
+          "pods": 4,
+          "cpu_m_mean": 498.6,
+          "cpu_m_peak": 506,
+          "mem_mi_mean": 538.0,
+          "mem_mi_peak": 538
+        },
+        "postgres": {
+          "pods": 1,
+          "cpu_m_mean": 503.0,
+          "cpu_m_peak": 548,
+          "mem_mi_mean": 635.8,
+          "mem_mi_peak": 656
+        },
+        "processing-outbox-relay": {
+          "pods": 2,
+          "cpu_m_mean": 321.3,
+          "cpu_m_peak": 325,
+          "mem_mi_mean": 178.0,
+          "mem_mi_peak": 178
+        },
+        "processing-read-api": {
+          "pods": 1,
+          "cpu_m_mean": 39.4,
+          "cpu_m_peak": 40,
+          "mem_mi_mean": 103.0,
+          "mem_mi_peak": 103
+        },
+        "processing-worker": {
+          "pods": 6,
+          "cpu_m_mean": 657.3,
+          "cpu_m_peak": 674,
+          "mem_mi_mean": 525.6,
+          "mem_mi_peak": 526
+        },
+        "prometheus": {
+          "pods": 1,
+          "cpu_m_mean": 3.6,
+          "cpu_m_peak": 4,
+          "mem_mi_mean": 73.0,
+          "mem_mi_peak": 73
+        },
+        "promtail-n6qbg": {
+          "pods": 1,
+          "cpu_m_mean": 34.6,
+          "cpu_m_peak": 35,
+          "mem_mi_mean": 47.0,
+          "mem_mi_peak": 47
+        },
+        "pushgateway": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 20.0,
+          "mem_mi_peak": 20
+        },
+        "storage-consumer": {
+          "pods": 1,
+          "cpu_m_mean": 561.6,
+          "cpu_m_peak": 569,
+          "mem_mi_mean": 95.6,
+          "mem_mi_peak": 96
+        }
+      },
+      "invariants": {
+        "wrong_latest_sequence": 0,
+        "stale_lvp_lt_exp": 0,
+        "stuck_ledger_rows": 0,
+        "pending_outbox_after_drain": 0,
+        "duplicate_active_alerts": 0,
+        "proc_conflicts_delta": 0,
+        "biz_conflicts_delta": 0,
+        "bad_unavailable_downgrade": 0,
+        "unexpected_pod_restarts": {},
+        "oom_killed_delta": 0,
+        "total_violations": 0
+      },
+      "chaos": {
+        "events": [],
+        "recovery_seconds": null
+      }
+    }
+  ]
+}
