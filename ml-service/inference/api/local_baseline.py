@@ -13,6 +13,7 @@ from typing import Literal
 from uuid import uuid4
 
 import joblib
+import numpy as np
 import pandas as pd
 import sklearn
 from fastapi import FastAPI, Request
@@ -42,7 +43,146 @@ FEATURES = [
     "tool_wear_min",
 ]
 
-STATE = {"pipeline": None, "metadata": None}
+DERIVED_FEATURES = [
+    "temperature_difference_k",
+    "mechanical_power_w",
+    "wear_torque_interaction",
+]
+
+STATE = {"pipeline": None, "metadata": None, "fast_path": None}
+TWO_PI_OVER_60 = 2.0 * math.pi / 60.0
+ALL_FEATURE_INDEX = {
+    "air_temperature_k": 0,
+    "process_temperature_k": 1,
+    "rotational_speed_rpm": 2,
+    "torque_nm": 3,
+    "tool_wear_min": 4,
+    "temperature_difference_k": 5,
+    "mechanical_power_w": 6,
+    "wear_torque_interaction": 7,
+}
+
+
+class _FastInferencePath:
+    """Thread-safe zero-DataFrame NumPy preprocessing + predict_proba fast path."""
+
+    def __init__(self, pipeline, *, interactions_enabled: bool, total_cols: int, segments: list, estimator):
+        self.pipeline = pipeline
+        self.interactions_enabled = interactions_enabled
+        self.total_cols = total_cols
+        self.segments = segments
+        self.estimator = estimator
+
+    def predict_proba_single(self, features: "Features") -> float:
+        air = float(features.air_temperature_k)
+        proc = float(features.process_temperature_k)
+        rpm = float(features.rotational_speed_rpm)
+        torque = float(features.torque_nm)
+        wear = float(features.tool_wear_min)
+        if self.interactions_enabled:
+            td = proc - air
+            mp = torque * rpm * TWO_PI_OVER_60
+            wt = wear * torque
+            if not (math.isfinite(td) and math.isfinite(mp) and math.isfinite(wt)):
+                raise ValueError("Derived features overflowed or became non-finite.")
+            vals = (air, proc, rpm, torque, wear, td, mp, wt)
+        else:
+            vals = (air, proc, rpm, torque, wear)
+
+        x = np.zeros((1, self.total_cols), dtype=np.float64)
+        for kind, offset, spec in self.segments:
+            if kind == "ohe":
+                cat_idx = spec.get(features.product_type)
+                if cat_idx is None:
+                    raise ValueError("Invalid product_type.")
+                x[0, offset + cat_idx] = 1.0
+            else:
+                col_indices, mean, scale = spec
+                for j, vidx in enumerate(col_indices):
+                    val = vals[vidx]
+                    if mean is not None:
+                        val -= mean[j]
+                    if scale is not None:
+                        val /= scale[j]
+                    x[0, offset + j] = val
+        probs = self.estimator.predict_proba(x)
+        return float(probs[0, 1])
+
+
+def _build_verified_fast_path(pipeline) -> _FastInferencePath | None:
+    steps = getattr(pipeline, "steps", None)
+    if not steps or len(steps) < 2:
+        return None
+    step_idx = 0
+    interactions_enabled = False
+    first_name, first_obj = steps[0]
+    if first_name == "interactions" or type(first_obj).__name__ == "SensorInteractions":
+        enabled = getattr(first_obj, "enabled", None)
+        if type(enabled) is not bool:
+            return None
+        interactions_enabled = enabled
+        step_idx += 1
+    if len(steps) - step_idx != 2:
+        return None
+    _, ct = steps[step_idx]
+    _, estimator = steps[step_idx + 1]
+    transformers = getattr(ct, "transformers_", None)
+    if not transformers or not hasattr(estimator, "predict_proba"):
+        return None
+    allowed_num = set(FEATURES[1:]) | (set(DERIVED_FEATURES) if interactions_enabled else set())
+    offset = 0
+    segments = []
+    for t_name, trans, cols in transformers:
+        if trans == "drop" or cols is None or len(cols) == 0:
+            continue
+        cols_list = list(cols)
+        if cols_list == ["product_type"] and hasattr(trans, "categories_") and getattr(trans, "drop", None) is None:
+            cats = trans.categories_
+            if len(cats) != 1:
+                return None
+            cat_map = {str(c): idx for idx, c in enumerate(cats[0])}
+            segments.append(("ohe", offset, cat_map))
+            offset += len(cats[0])
+        elif all(c in allowed_num for c in cols_list):
+            if trans == "passthrough" or (type(trans).__name__ == "FunctionTransformer" and getattr(trans, "func", None) is None and getattr(trans, "inverse_func", None) is None):
+                mean = None
+                scale = None
+            elif hasattr(trans, "mean_") or hasattr(trans, "scale_"):
+                raw_mean = getattr(trans, "mean_", None)
+                raw_scale = getattr(trans, "scale_", None)
+                mean = [float(v) for v in raw_mean] if raw_mean is not None else None
+                scale = [float(v) for v in raw_scale] if raw_scale is not None else None
+            else:
+                return None
+            col_indices = [ALL_FEATURE_INDEX[c] for c in cols_list]
+            segments.append(("num", offset, (col_indices, mean, scale)))
+            offset += len(cols_list)
+        else:
+            return None
+
+    candidate = _FastInferencePath(
+        pipeline,
+        interactions_enabled=interactions_enabled,
+        total_cols=offset,
+        segments=segments,
+        estimator=estimator,
+    )
+    probes = [
+        {"product_type": "L", "air_temperature_k": 297.2, "process_temperature_k": 307.9, "rotational_speed_rpm": 1412.0, "torque_nm": 51.4, "tool_wear_min": 42.0},
+        {"product_type": "M", "air_temperature_k": 298.1, "process_temperature_k": 308.6, "rotational_speed_rpm": 1551.0, "torque_nm": 42.8, "tool_wear_min": 108.0},
+        {"product_type": "H", "air_temperature_k": 301.4, "process_temperature_k": 311.1, "rotational_speed_rpm": 1340.0, "torque_nm": 64.5, "tool_wear_min": 215.0},
+    ]
+    for p in probes:
+        ref = float(pipeline.predict_proba(pd.DataFrame([p], columns=FEATURES))[0, 1])
+        fast = candidate.predict_proba_single(Features(**p))
+        if not math.isfinite(fast) or abs(ref - fast) > 1e-12:
+            LOGGER.warning("Fast inference path parity check failed (diff=%s); falling back to DataFrame pipeline", abs(ref - fast))
+            return None
+    # Warm up estimator code paths before reporting ready
+    probe_f = Features(**probes[1])
+    for _ in range(10):
+        candidate.predict_proba_single(probe_f)
+    return candidate
 
 # Registry riêng để các module test import API độc lập không trùng metrics.
 METRICS = CollectorRegistry()
@@ -119,6 +259,7 @@ async def lifespan(app):
     # Mỗi lần khởi động phải kiểm tra và load lại từ đầu.
     STATE["pipeline"] = None
     STATE["metadata"] = None
+    STATE["fast_path"] = None
 
     ML_MODEL.clear()
 
@@ -215,15 +356,22 @@ async def lifespan(app):
             raise ValueError("Startup probabilities do not sum to one")
 
         # Chỉ công bố ready sau khi tất cả kiểm tra thành công.
+        fast_path = _build_verified_fast_path(pipeline)
         STATE["pipeline"] = pipeline
         STATE["metadata"] = metadata
+        STATE["fast_path"] = fast_path
 
         ML_MODEL.labels(
             model_version=metadata["model_version"]
         ).set(1)
         ML_ROLE.labels(role=SERVICE_ROLE).set(1)
 
-        LOGGER.info("Local baseline loaded: %s (role: %s)", metadata["model_version"], SERVICE_ROLE)
+        LOGGER.info(
+            "Local baseline loaded: %s (role: %s, fast_path: %s)",
+            metadata["model_version"],
+            SERVICE_ROLE,
+            fast_path is not None,
+        )
 
     except Exception:
         # Giữ model unavailable; không fallback sang artifact khác.
@@ -233,6 +381,7 @@ async def lifespan(app):
 
     STATE["pipeline"] = None
     STATE["metadata"] = None
+    STATE["fast_path"] = None
     ML_MODEL.clear()
     ML_ROLE.clear()
 
@@ -360,11 +509,15 @@ def predict(body: PredictionRequest, request: Request):
     start = perf_counter()
 
     try:
-        frame = pd.DataFrame(
-            [body.features.model_dump()],
-            columns=FEATURES,
-        )
-        probability = float(pipeline.predict_proba(frame)[0, 1])
+        fast_path = STATE.get("fast_path")
+        if fast_path is not None and fast_path.pipeline is pipeline:
+            probability = fast_path.predict_proba_single(body.features)
+        else:
+            frame = pd.DataFrame(
+                [body.features.model_dump()],
+                columns=FEATURES,
+            )
+            probability = float(pipeline.predict_proba(frame)[0, 1])
 
         if not math.isfinite(probability) or not 0 <= probability <= 1:
             raise ValueError("Model returned invalid probability")

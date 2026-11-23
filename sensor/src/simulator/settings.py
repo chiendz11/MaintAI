@@ -89,6 +89,8 @@ class RuntimeSettings(SimulatorConfig):
     retry_max_seconds: float = Field(default=60, ge=1, le=300)
     send_workers: int = Field(default=16, ge=1, le=64)
     initial_state: Literal["RUNNING", "PAUSED"] = "RUNNING"
+    sampling_mode: Literal["staggered", "synchronized", "burst"] = "staggered"
+    burst_trace_path: Path | None = None
     max_control_body_bytes: int = Field(default=4096, ge=256, le=65536)
     receipt_max_count: int = Field(default=100000, ge=1)
 
@@ -128,6 +130,13 @@ class RuntimeSettings(SimulatorConfig):
         for name in cls.model_fields.keys() - SimulatorConfig.model_fields.keys():
             env = os.environ.get(f"SIM_{name.upper()}")
             if env is not None:
-                values[name] = json.loads(env) if name == "cors_origins" else env
+                if name == "cors_origins":
+                    values[name] = json.loads(env)
+                elif name == "sampling_mode":
+                    values[name] = env.strip().lower()
+                elif name == "burst_trace_path" and env == "":
+                    values[name] = None
+                else:
+                    values[name] = env
         values.update({k: v for k, v in (overrides or {}).items() if v is not None})
         return cls.model_validate(values)

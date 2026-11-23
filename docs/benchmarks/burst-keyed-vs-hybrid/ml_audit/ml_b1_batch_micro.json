@@ -1,0 +1,77 @@
+{
+  "max_abs_diff": 0.0,
+  "results": [
+    {
+      "batch_size": 1,
+      "iters": 300,
+      "dataframe_pipeline": {
+        "batch_mean_ms": 5.2332,
+        "batch_p50_ms": 5.1637,
+        "batch_p95_ms": 5.8,
+        "per_sample_mean_ms": 5.2332,
+        "throughput_samples_per_sec": 191.09
+      },
+      "numpy_fastpath": {
+        "batch_mean_ms": 2.0192,
+        "batch_p50_ms": 1.9754,
+        "batch_p95_ms": 2.2846,
+        "per_sample_mean_ms": 2.0192,
+        "throughput_samples_per_sec": 495.24
+      }
+    },
+    {
+      "batch_size": 4,
+      "iters": 300,
+      "dataframe_pipeline": {
+        "batch_mean_ms": 5.1462,
+        "batch_p50_ms": 5.0555,
+        "batch_p95_ms": 5.865,
+        "per_sample_mean_ms": 1.2865,
+        "throughput_samples_per_sec": 777.27
+      },
+      "numpy_fastpath": {
+        "batch_mean_ms": 1.8005,
+        "batch_p50_ms": 1.7565,
+        "batch_p95_ms": 2.0293,
+        "per_sample_mean_ms": 0.4501,
+        "throughput_samples_per_sec": 2221.64
+      }
+    },
+    {
+      "batch_size": 8,
+      "iters": 300,
+      "dataframe_pipeline": {
+        "batch_mean_ms": 5.2608,
+        "batch_p50_ms": 5.1238,
+        "batch_p95_ms": 6.1317,
+        "per_sample_mean_ms": 0.6576,
+        "throughput_samples_per_sec": 1520.67
+      },
+      "numpy_fastpath": {
+        "batch_mean_ms": 1.8222,
+        "batch_p50_ms": 1.7907,
+        "batch_p95_ms": 2.0389,
+        "per_sample_mean_ms": 0.2278,
+        "throughput_samples_per_sec": 4390.33
+      }
+    },
+    {
+      "batch_size": 16,
+      "iters": 300,
+      "dataframe_pipeline": {
+        "batch_mean_ms": 5.3436,
+        "batch_p50_ms": 5.1822,
+        "batch_p95_ms": 6.2116,
+        "per_sample_mean_ms": 0.334,
+        "throughput_samples_per_sec": 2994.24
+      },
+      "numpy_fastpath": {
+        "batch_mean_ms": 2.1629,
+        "batch_p50_ms": 2.1122,
+        "batch_p95_ms": 2.5985,
+        "per_sample_mean_ms": 0.1352,
+        "throughput_samples_per_sec": 7397.44
+      }
+    }
+  ]
+}

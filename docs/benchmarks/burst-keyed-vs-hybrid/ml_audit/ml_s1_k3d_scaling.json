@@ -1,0 +1,2620 @@
+{
+  "runs": [
+    {
+      "preset": "A1",
+      "run_index": 1,
+      "stream_epoch": "7903fbee-4d94-404d-b8e9-2d8b4cffa7ae",
+      "config": {
+        "preset": "A1",
+        "scheduler": "keyed_fifo",
+        "hybrid_enabled": false,
+        "active_keys": 16,
+        "per_key": 1,
+        "max_total_inflight": 16,
+        "commit_batch_size": 16,
+        "commit_max_wait_ms": 25,
+        "worker_replicas": 6,
+        "relay_replicas": 2,
+        "biz_replicas": 4,
+        "ingestion_replicas": 2,
+        "ml_shadow_replicas": 1,
+        "ml_shadow_image": "maintai-ml-bench:hgb-opt",
+        "ml_shadow_resources": {
+          "limits": {
+            "memory": "1Gi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          }
+        },
+        "ml_shadow_args": null,
+        "worker_image": "maintai-local/processing-worker:hybrid-bench"
+      },
+      "window": {
+        "warmup_seconds": 15,
+        "measure_seconds": 60,
+        "complete_cycles": 61,
+        "expected_window_readings": 3050,
+        "total_sent": 3800,
+        "status_counts": {
+          "202": 3800
+        },
+        "drained": true,
+        "drain_seconds": 1.152,
+        "last_counts": {
+          "pr_done": 3800,
+          "ob_pend": 0,
+          "ledger_pend": 0,
+          "biz_done": 3800,
+          "biz_alert_delta": 138,
+          "proc_alert_delta": 138
+        },
+        "sse_total_captured": 3800,
+        "sse_window_matched": 3050,
+        "sse_window_coverage_pct": 100.0,
+        "sse_probe_stats": {
+          "eventCounts": {
+            "telemetry.received": 7434,
+            "prediction.completed": 3850,
+            "processing.status_changed": 7434,
+            "alert.created": 45,
+            "alert.updated": 93
+          },
+          "uniquePredictionEvents": 3850,
+          "duplicateSuppressed": 0,
+          "reconnects": 0,
+          "streamError": null,
+          "closedAt": "2026-11-23T20:51:40.772Z"
+        }
+      },
+      "throughput": {
+        "sent_rps": 50.0,
+        "outcome_kinds": {
+          "PREDICTION_COMPLETED": 3800
+        },
+        "alert_dispositions": {},
+        "alerts_created_or_updated": 45,
+        "kafka_partitions_used": 12
+      },
+      "latency_ms": {
+        "sample_to_edge_spool": {
+          "count": 3050,
+          "mean": 5.005,
+          "p50": 4.983,
+          "p95": 6.863,
+          "p99": 7.502,
+          "max": 7.502,
+          "min": 3.234
+        },
+        "edge_to_ingestion_ack": {
+          "count": 3050,
+          "mean": 171.359,
+          "p50": 180.202,
+          "p95": 269.311,
+          "p99": 349.848,
+          "max": 388.864,
+          "min": 16.073
+        },
+        "sample_to_ingestion_ack": {
+          "count": 3050,
+          "mean": 176.364,
+          "p50": 185.158,
+          "p95": 274.62,
+          "p99": 354.554,
+          "max": 393.315,
+          "min": 21.509
+        },
+        "kafka_arrival_spread_per_cycle": {
+          "count": 61,
+          "mean": 225.115,
+          "p50": 220.0,
+          "p95": 296.0,
+          "p99": 343.0,
+          "max": 367,
+          "min": 151
+        },
+        "ack_spread_per_cycle": {
+          "count": 61,
+          "mean": 210.497,
+          "p50": 203.414,
+          "p95": 277.025,
+          "p99": 333.158,
+          "max": 352.184,
+          "min": 103.251
+        },
+        "kafka_to_hybrid_admit": {
+          "count": 0,
+          "mean": null,
+          "p50": null,
+          "p95": null,
+          "p99": null,
+          "max": null,
+          "min": null
+        },
+        "ml_inference_server": {
+          "count": 3050,
+          "mean": 46.307,
+          "p50": 34.364,
+          "p95": 122.986,
+          "p99": 176.112,
+          "max": 304.115,
+          "min": 3.393
+        },
+        "ml_completed_to_proc_db": {
+          "count": 3050,
+          "mean": 60.278,
+          "p50": 58.538,
+          "p95": 118.188,
+          "p99": 146.762,
+          "max": 193.377,
+          "min": 2.803
+        },
+        "ack_to_proc_db": {
+          "count": 3050,
+          "mean": 269.787,
+          "p50": 311.198,
+          "p95": 411.024,
+          "p99": 448.802,
+          "max": 599.667,
+          "min": 14.868
+        },
+        "proc_db_to_outbox": {
+          "count": 3050,
+          "mean": 55.62,
+          "p50": 48.979,
+          "p95": 108.629,
+          "p99": 136.479,
+          "max": 226.696,
+          "min": 13.324
+        },
+        "outbox_to_business_db": {
+          "count": 3050,
+          "mean": 4.88,
+          "p50": 1.94,
+          "p95": 16.682,
+          "p99": 29.574,
+          "max": 70.103,
+          "min": 0.0
+        },
+        "business_db_to_browser_sse": {
+          "count": 3050,
+          "mean": 74.247,
+          "p50": 74.571,
+          "p95": 98.643,
+          "p99": 118.089,
+          "max": 160.373,
+          "min": 9.124
+        },
+        "sample_to_business_db": {
+          "count": 3050,
+          "mean": 438.321,
+          "p50": 494.807,
+          "p95": 647.733,
+          "p99": 700.155,
+          "max": 752.149,
+          "min": 46.917
+        },
+        "sample_to_browser_sse_ui": {
+          "count": 3050,
+          "mean": 512.569,
+          "p50": 566.403,
+          "p95": 726.376,
+          "p99": 779.784,
+          "max": 812.988,
+          "min": 72.653
+        }
+      },
+      "cycle_metrics_ms": {
+        "first_prediction_biz_db": {
+          "count": 61,
+          "mean": 75.177,
+          "p50": 73.926,
+          "p95": 101.336,
+          "p99": 116.306,
+          "max": 116.826,
+          "min": 46.917
+        },
+        "last_prediction_biz_db": {
+          "count": 61,
+          "mean": 633.682,
+          "p50": 626.317,
+          "p95": 726.455,
+          "p99": 748.163,
+          "max": 752.149,
+          "min": 549.81
+        },
+        "spread_50_machines_biz_db": {
+          "count": 61,
+          "mean": 558.505,
+          "p50": 549.111,
+          "p95": 638.535,
+          "p99": 661.964,
+          "max": 678.223,
+          "min": 466.556
+        },
+        "first_prediction_browser_ui": {
+          "count": 61,
+          "mean": 110.031,
+          "p50": 101.02,
+          "p95": 187.584,
+          "p99": 206.015,
+          "max": 209.055,
+          "min": 72.653
+        },
+        "cycle_completion_browser_ui": {
+          "count": 61,
+          "mean": 704.244,
+          "p50": 691.241,
+          "p95": 802.88,
+          "p99": 812.276,
+          "max": 812.988,
+          "min": 613.923
+        },
+        "spread_50_machines_browser_ui": {
+          "count": 61,
+          "mean": 594.213,
+          "p50": 589.0,
+          "p95": 685.0,
+          "p99": 706.2,
+          "max": 714.0,
+          "min": 441.0
+        }
+      },
+      "prometheus_deltas": {
+        "histograms_ms": {
+          "maintai_processing_queue_wait_seconds": {
+            "count": 3046,
+            "mean_ms": 0.42,
+            "p50_ms": 25.0,
+            "p95_ms": 47.5,
+            "p99_ms": 49.5
+          },
+          "maintai_processing_ml_seconds": {
+            "count": 3050,
+            "mean_ms": 193.178,
+            "p50_ms": 184.119,
+            "p95_ms": 453.335,
+            "p99_ms": 490.667
+          },
+          "maintai_processing_admission_seconds": {
+            "count": 0,
+            "mean_ms": null,
+            "p50_ms": null,
+            "p95_ms": null,
+            "p99_ms": null
+          },
+          "maintai_processing_persist_seconds": {
+            "count": 0,
+            "mean_ms": null,
+            "p50_ms": null,
+            "p95_ms": null,
+            "p99_ms": null
+          },
+          "maintai_ml_inference_duration_seconds": {
+            "count": 3045,
+            "mean_ms": 59.778,
+            "p50_ms": 48.922,
+            "p95_ms": 209.02,
+            "p99_ms": 243.622
+          }
+        },
+        "ml_pod_distribution": {
+          "ml-service-shadow-795bbdf7bc-pbst5": {
+            "SUCCESS": 3045.0,
+            "count": 3045,
+            "mean_ms": 59.778,
+            "p50_ms": 48.922,
+            "p95_ms": 209.02,
+            "p99_ms": 243.622
+          }
+        }
+      },
+      "processing_runtime_gauges": {
+        "active_keys_peak": 35,
+        "inflight_tasks_peak": 35,
+        "max_per_key_inflight_peak": 1,
+        "paused_partitions_peak": 0,
+        "queued_records_peak": 0.0
+      },
+      "kafka_max_lag": {
+        "local-processing-v1": 0,
+        "local-business-prediction-v1": 0,
+        "local-business-live-v1": 0,
+        "local-business-alert-v1": 0
+      },
+      "cgroup_v2": {
+        "window_seconds": 62.373,
+        "host_cpu_pct": 49.04,
+        "by_app": {
+          "ml-service-shadow": {
+            "pods": 1,
+            "cpu_cores": 0.4893,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ms": 0.0,
+            "throttled_ratio_pct": 0.0
+          },
+          "processing-worker": {
+            "pods": 6,
+            "cpu_cores": 1.1774,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ms": 0.0,
+            "throttled_ratio_pct": 0.0
+          }
+        },
+        "by_pod": {
+          "ml-service-shadow-795bbdf7bc-pbst5": {
+            "app": "ml-service-shadow",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.4893,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 146.23
+          },
+          "processing-worker-859b85b47b-bs5gk": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.1664,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 101.39
+          },
+          "processing-worker-859b85b47b-gfhtw": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.1627,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 90.61
+          },
+          "processing-worker-859b85b47b-rckvv": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.1429,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 88.71
+          },
+          "processing-worker-859b85b47b-sdv88": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.187,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 89.16
+          },
+          "processing-worker-859b85b47b-vpbc8": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.2394,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 89.45
+          },
+          "processing-worker-859b85b47b-xrzkc": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.279,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 89.73
+          }
+        }
+      },
+      "kubectl_top": {
+        "business-api": {
+          "pods": 2,
+          "cpu_m_mean": 152.3,
+          "cpu_m_peak": 425,
+          "mem_mi_mean": 129.6,
+          "mem_mi_peak": 173
+        },
+        "business-consumer": {
+          "pods": 4,
+          "cpu_m_mean": 476.0,
+          "cpu_m_peak": 685,
+          "mem_mi_mean": 307.9,
+          "mem_mi_peak": 310
+        },
+        "frontend": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 13.0,
+          "mem_mi_peak": 13
+        },
+        "grafana": {
+          "pods": 1,
+          "cpu_m_mean": 3.2,
+          "cpu_m_peak": 4,
+          "mem_mi_mean": 102.4,
+          "mem_mi_peak": 103
+        },
+        "ingestion-api": {
+          "pods": 2,
+          "cpu_m_mean": 262.5,
+          "cpu_m_peak": 375,
+          "mem_mi_mean": 162.1,
+          "mem_mi_peak": 163
+        },
+        "kafka": {
+          "pods": 1,
+          "cpu_m_mean": 153.6,
+          "cpu_m_peak": 217,
+          "mem_mi_mean": 1000.8,
+          "mem_mi_peak": 1008
+        },
+        "keycloak": {
+          "pods": 1,
+          "cpu_m_mean": 4.6,
+          "cpu_m_peak": 11,
+          "mem_mi_mean": 547.8,
+          "mem_mi_peak": 548
+        },
+        "loki": {
+          "pods": 1,
+          "cpu_m_mean": 6.7,
+          "cpu_m_peak": 9,
+          "mem_mi_mean": 135.1,
+          "mem_mi_peak": 151
+        },
+        "minio": {
+          "pods": 1,
+          "cpu_m_mean": 189.0,
+          "cpu_m_peak": 284,
+          "mem_mi_mean": 373.6,
+          "mem_mi_peak": 391
+        },
+        "ml-service": {
+          "pods": 2,
+          "cpu_m_mean": 6.0,
+          "cpu_m_peak": 6,
+          "mem_mi_mean": 238.9,
+          "mem_mi_peak": 242
+        },
+        "ml-service-mirror": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 13.0,
+          "mem_mi_peak": 13
+        },
+        "ml-service-shadow": {
+          "pods": 1,
+          "cpu_m_mean": 345.3,
+          "cpu_m_peak": 497,
+          "mem_mi_mean": 134.8,
+          "mem_mi_peak": 141
+        },
+        "mlflow": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 558.0,
+          "mem_mi_peak": 558
+        },
+        "postgres": {
+          "pods": 1,
+          "cpu_m_mean": 541.2,
+          "cpu_m_peak": 790,
+          "mem_mi_mean": 853.4,
+          "mem_mi_peak": 906
+        },
+        "processing-outbox-relay": {
+          "pods": 2,
+          "cpu_m_mean": 314.9,
+          "cpu_m_peak": 395,
+          "mem_mi_mean": 177.5,
+          "mem_mi_peak": 180
+        },
+        "processing-read-api": {
+          "pods": 1,
+          "cpu_m_mean": 22.7,
+          "cpu_m_peak": 35,
+          "mem_mi_mean": 174.4,
+          "mem_mi_peak": 176
+        },
+        "processing-worker": {
+          "pods": 6,
+          "cpu_m_mean": 926.3,
+          "cpu_m_peak": 1207,
+          "mem_mi_mean": 520.4,
+          "mem_mi_peak": 539
+        },
+        "prometheus": {
+          "pods": 1,
+          "cpu_m_mean": 4.2,
+          "cpu_m_peak": 6,
+          "mem_mi_mean": 71.2,
+          "mem_mi_peak": 74
+        },
+        "promtail-n6qbg": {
+          "pods": 1,
+          "cpu_m_mean": 35.4,
+          "cpu_m_peak": 47,
+          "mem_mi_mean": 52.0,
+          "mem_mi_peak": 52
+        },
+        "pushgateway": {
+          "pods": 1,
+          "cpu_m_mean": 0.8,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 21.4,
+          "mem_mi_peak": 22
+        },
+        "rag-service": {
+          "pods": 1,
+          "cpu_m_mean": 3.4,
+          "cpu_m_peak": 4,
+          "mem_mi_mean": 74.0,
+          "mem_mi_peak": 74
+        },
+        "simulator-ui": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 13.0,
+          "mem_mi_peak": 13
+        },
+        "storage-consumer": {
+          "pods": 1,
+          "cpu_m_mean": 371.8,
+          "cpu_m_peak": 565,
+          "mem_mi_mean": 109.9,
+          "mem_mi_peak": 112
+        }
+      },
+      "postgres": {
+        "proc_stat_delta": {
+          "xact_commit": 35375,
+          "xact_rollback": 20,
+          "blks_read": 129770,
+          "blks_hit": 2558926,
+          "tup_inserted": 25038,
+          "tup_updated": 31349,
+          "tup_fetched": 744379,
+          "deadlocks": 0
+        },
+        "biz_stat_delta": {
+          "xact_commit": 16231,
+          "xact_rollback": 32,
+          "blks_read": 51293,
+          "blks_hit": 573959,
+          "tup_inserted": 11988,
+          "tup_updated": 26645,
+          "tup_fetched": 100879,
+          "deadlocks": 0
+        },
+        "lock_wait_samples": 0,
+        "proc_conns_peak": 56,
+        "proc_active_peak": 1,
+        "biz_conns_peak": 34,
+        "biz_active_peak": 1
+      },
+      "invariants": {
+        "missing_outcomes": 0,
+        "wrong_latest_sequence": 0,
+        "stuck_ledger_rows": 0,
+        "pending_outbox_after_drain": 0,
+        "duplicate_active_alerts": 0,
+        "proc_conflicts_delta": 0,
+        "biz_conflicts_delta": 0,
+        "bad_unavailable_downgrade": 0,
+        "unexpected_pod_restarts": {},
+        "oom_killed_delta": 0,
+        "total_violations": 0
+      },
+      "chaos": {
+        "events": [],
+        "recovery_seconds": null
+      },
+      "s1_replicas": 1,
+      "s1_total_step_seconds": 177.54
+    },
+    {
+      "preset": "A1",
+      "run_index": 1,
+      "stream_epoch": "956323a5-0253-419b-8714-c95f80b12b31",
+      "config": {
+        "preset": "A1",
+        "scheduler": "keyed_fifo",
+        "hybrid_enabled": false,
+        "active_keys": 16,
+        "per_key": 1,
+        "max_total_inflight": 16,
+        "commit_batch_size": 16,
+        "commit_max_wait_ms": 25,
+        "worker_replicas": 6,
+        "relay_replicas": 2,
+        "biz_replicas": 4,
+        "ingestion_replicas": 2,
+        "ml_shadow_replicas": 2,
+        "ml_shadow_image": "maintai-ml-bench:hgb-opt",
+        "ml_shadow_resources": {
+          "limits": {
+            "memory": "1Gi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          }
+        },
+        "ml_shadow_args": null,
+        "worker_image": "maintai-local/processing-worker:hybrid-bench"
+      },
+      "window": {
+        "warmup_seconds": 15,
+        "measure_seconds": 60,
+        "complete_cycles": 61,
+        "expected_window_readings": 3050,
+        "total_sent": 3800,
+        "status_counts": {
+          "202": 3800
+        },
+        "drained": true,
+        "drain_seconds": 1.047,
+        "last_counts": {
+          "pr_done": 3800,
+          "ob_pend": 0,
+          "ledger_pend": 0,
+          "biz_done": 3800,
+          "biz_alert_delta": 138,
+          "proc_alert_delta": 138
+        },
+        "sse_total_captured": 3800,
+        "sse_window_matched": 3050,
+        "sse_window_coverage_pct": 100.0,
+        "sse_probe_stats": {
+          "eventCounts": {
+            "telemetry.received": 7271,
+            "prediction.completed": 3850,
+            "processing.status_changed": 7271,
+            "alert.updated": 138
+          },
+          "uniquePredictionEvents": 3850,
+          "duplicateSuppressed": 0,
+          "reconnects": 0,
+          "streamError": null,
+          "closedAt": "2026-11-23T20:54:08.871Z"
+        }
+      },
+      "throughput": {
+        "sent_rps": 50.0,
+        "outcome_kinds": {
+          "PREDICTION_COMPLETED": 3800
+        },
+        "alert_dispositions": {},
+        "alerts_created_or_updated": 45,
+        "kafka_partitions_used": 12
+      },
+      "latency_ms": {
+        "sample_to_edge_spool": {
+          "count": 3050,
+          "mean": 5.501,
+          "p50": 4.652,
+          "p95": 9.974,
+          "p99": 22.775,
+          "max": 22.775,
+          "min": 3.262
+        },
+        "edge_to_ingestion_ack": {
+          "count": 3050,
+          "mean": 184.54,
+          "p50": 194.787,
+          "p95": 292.386,
+          "p99": 363.719,
+          "max": 437.11,
+          "min": 19.726
+        },
+        "sample_to_ingestion_ack": {
+          "count": 3050,
+          "mean": 190.041,
+          "p50": 200.093,
+          "p95": 299.493,
+          "p99": 368.029,
+          "max": 441.711,
+          "min": 24.327
+        },
+        "kafka_arrival_spread_per_cycle": {
+          "count": 61,
+          "mean": 248.525,
+          "p50": 238.0,
+          "p95": 336.0,
+          "p99": 381.2,
+          "max": 425,
+          "min": 177
+        },
+        "ack_spread_per_cycle": {
+          "count": 61,
+          "mean": 233.499,
+          "p50": 223.17,
+          "p95": 324.556,
+          "p99": 369.578,
+          "max": 417.384,
+          "min": 170.38
+        },
+        "kafka_to_hybrid_admit": {
+          "count": 0,
+          "mean": null,
+          "p50": null,
+          "p95": null,
+          "p99": null,
+          "max": null,
+          "min": null
+        },
+        "ml_inference_server": {
+          "count": 3050,
+          "mean": 30.59,
+          "p50": 22.33,
+          "p95": 82.207,
+          "p99": 103.847,
+          "max": 184.879,
+          "min": 3.235
+        },
+        "ml_completed_to_proc_db": {
+          "count": 3050,
+          "mean": 20.82,
+          "p50": 17.961,
+          "p95": 47.403,
+          "p99": 65.873,
+          "max": 134.627,
+          "min": 2.486
+        },
+        "ack_to_proc_db": {
+          "count": 3050,
+          "mean": 173.454,
+          "p50": 176.606,
+          "p95": 321.886,
+          "p99": 365.522,
+          "max": 572.311,
+          "min": 13.221
+        },
+        "proc_db_to_outbox": {
+          "count": 3050,
+          "mean": 63.302,
+          "p50": 54.85,
+          "p95": 129.264,
+          "p99": 176.417,
+          "max": 286.345,
+          "min": 18.929
+        },
+        "outbox_to_business_db": {
+          "count": 3050,
+          "mean": 6.129,
+          "p50": 3.32,
+          "p95": 20.358,
+          "p99": 41.091,
+          "max": 77.221,
+          "min": 0.0
+        },
+        "business_db_to_browser_sse": {
+          "count": 3050,
+          "mean": 93.048,
+          "p50": 92.189,
+          "p95": 140.442,
+          "p99": 164.457,
+          "max": 209.483,
+          "min": 9.202
+        },
+        "sample_to_business_db": {
+          "count": 3050,
+          "mean": 358.674,
+          "p50": 385.215,
+          "p95": 544.777,
+          "p99": 612.215,
+          "max": 692.748,
+          "min": 45.509
+        },
+        "sample_to_browser_sse_ui": {
+          "count": 3050,
+          "mean": 451.722,
+          "p50": 494.658,
+          "p95": 625.406,
+          "p99": 692.49,
+          "max": 778.927,
+          "min": 69.035
+        }
+      },
+      "cycle_metrics_ms": {
+        "first_prediction_biz_db": {
+          "count": 61,
+          "mean": 75.519,
+          "p50": 73.093,
+          "p95": 112.566,
+          "p99": 147.219,
+          "max": 168.728,
+          "min": 45.509
+        },
+        "last_prediction_biz_db": {
+          "count": 61,
+          "mean": 536.148,
+          "p50": 526.111,
+          "p95": 627.131,
+          "p99": 665.078,
+          "max": 692.748,
+          "min": 461.378
+        },
+        "spread_50_machines_biz_db": {
+          "count": 61,
+          "mean": 460.629,
+          "p50": 457.364,
+          "p95": 513.753,
+          "p99": 555.374,
+          "max": 607.155,
+          "min": 395.481
+        },
+        "first_prediction_browser_ui": {
+          "count": 61,
+          "mean": 110.574,
+          "p50": 102.41,
+          "p95": 188.927,
+          "p99": 212.925,
+          "max": 216.37,
+          "min": 69.035
+        },
+        "cycle_completion_browser_ui": {
+          "count": 61,
+          "mean": 609.706,
+          "p50": 597.767,
+          "p95": 712.923,
+          "p99": 743.334,
+          "max": 778.927,
+          "min": 532.171
+        },
+        "spread_50_machines_browser_ui": {
+          "count": 61,
+          "mean": 499.131,
+          "p50": 495.0,
+          "p95": 560.0,
+          "p99": 587.0,
+          "max": 590.0,
+          "min": 410.0
+        }
+      },
+      "prometheus_deltas": {
+        "histograms_ms": {
+          "maintai_processing_queue_wait_seconds": {
+            "count": 3046,
+            "mean_ms": 0.685,
+            "p50_ms": 25.0,
+            "p95_ms": 47.5,
+            "p99_ms": 49.5
+          },
+          "maintai_processing_ml_seconds": {
+            "count": 3047,
+            "mean_ms": 74.892,
+            "p50_ms": 68.687,
+            "p95_ms": 227.731,
+            "p99_ms": 245.904
+          },
+          "maintai_processing_admission_seconds": {
+            "count": 0,
+            "mean_ms": null,
+            "p50_ms": null,
+            "p95_ms": null,
+            "p99_ms": null
+          },
+          "maintai_processing_persist_seconds": {
+            "count": 0,
+            "mean_ms": null,
+            "p50_ms": null,
+            "p95_ms": null,
+            "p99_ms": null
+          },
+          "maintai_ml_inference_duration_seconds": {
+            "count": 3042,
+            "mean_ms": 33.51,
+            "p50_ms": 24.946,
+            "p95_ms": 94.68,
+            "p99_ms": 195.679
+          }
+        },
+        "ml_pod_distribution": {
+          "ml-service-shadow-795bbdf7bc-hdrlr": {
+            "SUCCESS": 1614.0,
+            "count": 1614,
+            "mean_ms": 37.863,
+            "p50_ms": 30.45,
+            "p95_ms": 98.329,
+            "p99_ms": 213.866
+          },
+          "ml-service-shadow-795bbdf7bc-pbst5": {
+            "SUCCESS": 1428.0,
+            "count": 1428,
+            "mean_ms": 28.59,
+            "p50_ms": 21.671,
+            "p95_ms": 88.174,
+            "p99_ms": 124.0
+          }
+        }
+      },
+      "processing_runtime_gauges": {
+        "active_keys_peak": 34,
+        "inflight_tasks_peak": 34,
+        "max_per_key_inflight_peak": 1,
+        "paused_partitions_peak": 0,
+        "queued_records_peak": 0.0
+      },
+      "kafka_max_lag": {
+        "local-processing-v1": 0,
+        "local-business-prediction-v1": 0,
+        "local-business-live-v1": 0,
+        "local-business-alert-v1": 0
+      },
+      "cgroup_v2": {
+        "window_seconds": 62.382,
+        "host_cpu_pct": 51.03,
+        "by_app": {
+          "ml-service-shadow": {
+            "pods": 2,
+            "cpu_cores": 0.5435,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ms": 0.0,
+            "throttled_ratio_pct": 0.0
+          },
+          "processing-worker": {
+            "pods": 6,
+            "cpu_cores": 1.2533,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ms": 0.0,
+            "throttled_ratio_pct": 0.0
+          }
+        },
+        "by_pod": {
+          "ml-service-shadow-795bbdf7bc-hdrlr": {
+            "app": "ml-service-shadow",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.2912,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 182.54
+          },
+          "ml-service-shadow-795bbdf7bc-pbst5": {
+            "app": "ml-service-shadow",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.2523,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 143.94
+          },
+          "processing-worker-859b85b47b-bs5gk": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.1781,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 102.04
+          },
+          "processing-worker-859b85b47b-gfhtw": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.1726,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 91.43
+          },
+          "processing-worker-859b85b47b-rckvv": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.1533,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 89.16
+          },
+          "processing-worker-859b85b47b-sdv88": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.1979,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 89.48
+          },
+          "processing-worker-859b85b47b-vpbc8": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.251,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 90.4
+          },
+          "processing-worker-859b85b47b-xrzkc": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.3004,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 90.53
+          }
+        }
+      },
+      "kubectl_top": {
+        "business-api": {
+          "pods": 3,
+          "cpu_m_mean": 173.7,
+          "cpu_m_peak": 496,
+          "mem_mi_mean": 167.0,
+          "mem_mi_peak": 229
+        },
+        "business-consumer": {
+          "pods": 4,
+          "cpu_m_mean": 503.2,
+          "cpu_m_peak": 768,
+          "mem_mi_mean": 307.8,
+          "mem_mi_peak": 309
+        },
+        "frontend": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 13.0,
+          "mem_mi_peak": 13
+        },
+        "grafana": {
+          "pods": 1,
+          "cpu_m_mean": 3.7,
+          "cpu_m_peak": 6,
+          "mem_mi_mean": 107.8,
+          "mem_mi_peak": 123
+        },
+        "ingestion-api": {
+          "pods": 2,
+          "cpu_m_mean": 242.0,
+          "cpu_m_peak": 405,
+          "mem_mi_mean": 162.1,
+          "mem_mi_peak": 163
+        },
+        "kafka": {
+          "pods": 1,
+          "cpu_m_mean": 159.9,
+          "cpu_m_peak": 230,
+          "mem_mi_mean": 1002.6,
+          "mem_mi_peak": 1005
+        },
+        "keycloak": {
+          "pods": 1,
+          "cpu_m_mean": 3.0,
+          "cpu_m_peak": 3,
+          "mem_mi_mean": 548.3,
+          "mem_mi_peak": 549
+        },
+        "loki": {
+          "pods": 1,
+          "cpu_m_mean": 6.7,
+          "cpu_m_peak": 8,
+          "mem_mi_mean": 189.1,
+          "mem_mi_peak": 205
+        },
+        "minio": {
+          "pods": 1,
+          "cpu_m_mean": 290.7,
+          "cpu_m_peak": 377,
+          "mem_mi_mean": 440.9,
+          "mem_mi_peak": 487
+        },
+        "ml-service": {
+          "pods": 2,
+          "cpu_m_mean": 5.8,
+          "cpu_m_peak": 6,
+          "mem_mi_mean": 238.0,
+          "mem_mi_peak": 238
+        },
+        "ml-service-mirror": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 13.0,
+          "mem_mi_peak": 13
+        },
+        "ml-service-shadow": {
+          "pods": 2,
+          "cpu_m_mean": 409.2,
+          "cpu_m_peak": 561,
+          "mem_mi_mean": 252.0,
+          "mem_mi_peak": 263
+        },
+        "mlflow": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 558.0,
+          "mem_mi_peak": 558
+        },
+        "postgres": {
+          "pods": 1,
+          "cpu_m_mean": 619.9,
+          "cpu_m_peak": 932,
+          "mem_mi_mean": 911.9,
+          "mem_mi_peak": 919
+        },
+        "processing-outbox-relay": {
+          "pods": 2,
+          "cpu_m_mean": 329.2,
+          "cpu_m_peak": 431,
+          "mem_mi_mean": 182.2,
+          "mem_mi_peak": 184
+        },
+        "processing-read-api": {
+          "pods": 1,
+          "cpu_m_mean": 190.9,
+          "cpu_m_peak": 721,
+          "mem_mi_mean": 178.3,
+          "mem_mi_peak": 179
+        },
+        "processing-worker": {
+          "pods": 6,
+          "cpu_m_mean": 896.6,
+          "cpu_m_peak": 1286,
+          "mem_mi_mean": 537.5,
+          "mem_mi_peak": 539
+        },
+        "prometheus": {
+          "pods": 1,
+          "cpu_m_mean": 3.0,
+          "cpu_m_peak": 3,
+          "mem_mi_mean": 93.1,
+          "mem_mi_peak": 94
+        },
+        "promtail-n6qbg": {
+          "pods": 1,
+          "cpu_m_mean": 39.0,
+          "cpu_m_peak": 50,
+          "mem_mi_mean": 53.9,
+          "mem_mi_peak": 55
+        },
+        "pushgateway": {
+          "pods": 1,
+          "cpu_m_mean": 0.8,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 21.3,
+          "mem_mi_peak": 22
+        },
+        "rag-service": {
+          "pods": 1,
+          "cpu_m_mean": 4.1,
+          "cpu_m_peak": 5,
+          "mem_mi_mean": 74.2,
+          "mem_mi_peak": 75
+        },
+        "simulator-ui": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 13.0,
+          "mem_mi_peak": 13
+        },
+        "storage-consumer": {
+          "pods": 1,
+          "cpu_m_mean": 400.2,
+          "cpu_m_peak": 551,
+          "mem_mi_mean": 106.2,
+          "mem_mi_peak": 108
+        }
+      },
+      "postgres": {
+        "proc_stat_delta": {
+          "xact_commit": 34481,
+          "xact_rollback": 65,
+          "blks_read": 108288,
+          "blks_hit": 2098637,
+          "tup_inserted": 24522,
+          "tup_updated": 31146,
+          "tup_fetched": 456199,
+          "deadlocks": 0
+        },
+        "biz_stat_delta": {
+          "xact_commit": 9784,
+          "xact_rollback": 30,
+          "blks_read": 23058,
+          "blks_hit": 591941,
+          "tup_inserted": 11816,
+          "tup_updated": 26691,
+          "tup_fetched": 98149,
+          "deadlocks": 0
+        },
+        "lock_wait_samples": 0,
+        "proc_conns_peak": 59,
+        "proc_active_peak": 1,
+        "biz_conns_peak": 38,
+        "biz_active_peak": 1
+      },
+      "invariants": {
+        "missing_outcomes": 0,
+        "wrong_latest_sequence": 0,
+        "stuck_ledger_rows": 0,
+        "pending_outbox_after_drain": 0,
+        "duplicate_active_alerts": 0,
+        "proc_conflicts_delta": 0,
+        "biz_conflicts_delta": 0,
+        "bad_unavailable_downgrade": 0,
+        "unexpected_pod_restarts": {},
+        "oom_killed_delta": 0,
+        "total_violations": 0
+      },
+      "chaos": {
+        "events": [],
+        "recovery_seconds": null
+      },
+      "s1_replicas": 2,
+      "s1_total_step_seconds": 147.08
+    },
+    {
+      "preset": "A1",
+      "run_index": 1,
+      "stream_epoch": "6f67d7e3-6678-4961-859f-27fa7be2122e",
+      "config": {
+        "preset": "A1",
+        "scheduler": "keyed_fifo",
+        "hybrid_enabled": false,
+        "active_keys": 16,
+        "per_key": 1,
+        "max_total_inflight": 16,
+        "commit_batch_size": 16,
+        "commit_max_wait_ms": 25,
+        "worker_replicas": 6,
+        "relay_replicas": 2,
+        "biz_replicas": 4,
+        "ingestion_replicas": 2,
+        "ml_shadow_replicas": 3,
+        "ml_shadow_image": "maintai-ml-bench:hgb-opt",
+        "ml_shadow_resources": {
+          "limits": {
+            "memory": "1Gi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          }
+        },
+        "ml_shadow_args": null,
+        "worker_image": "maintai-local/processing-worker:hybrid-bench"
+      },
+      "window": {
+        "warmup_seconds": 15,
+        "measure_seconds": 60,
+        "complete_cycles": 61,
+        "expected_window_readings": 3050,
+        "total_sent": 3800,
+        "status_counts": {
+          "202": 3800
+        },
+        "drained": true,
+        "drain_seconds": 0.925,
+        "last_counts": {
+          "pr_done": 3800,
+          "ob_pend": 0,
+          "ledger_pend": 0,
+          "biz_done": 3800,
+          "biz_alert_delta": 138,
+          "proc_alert_delta": 138
+        },
+        "sse_total_captured": 3800,
+        "sse_window_matched": 3050,
+        "sse_window_coverage_pct": 100.0,
+        "sse_probe_stats": {
+          "eventCounts": {
+            "telemetry.received": 7227,
+            "prediction.completed": 3850,
+            "processing.status_changed": 7227,
+            "alert.updated": 108,
+            "alert.created": 30
+          },
+          "uniquePredictionEvents": 3850,
+          "duplicateSuppressed": 0,
+          "reconnects": 0,
+          "streamError": null,
+          "closedAt": "2026-11-23T20:56:36.433Z"
+        }
+      },
+      "throughput": {
+        "sent_rps": 50.0,
+        "outcome_kinds": {
+          "PREDICTION_COMPLETED": 3800
+        },
+        "alert_dispositions": {},
+        "alerts_created_or_updated": 75,
+        "kafka_partitions_used": 12
+      },
+      "latency_ms": {
+        "sample_to_edge_spool": {
+          "count": 3050,
+          "mean": 4.62,
+          "p50": 4.256,
+          "p95": 6.33,
+          "p99": 8.025,
+          "max": 8.025,
+          "min": 3.306
+        },
+        "edge_to_ingestion_ack": {
+          "count": 3050,
+          "mean": 184.048,
+          "p50": 192.548,
+          "p95": 293.814,
+          "p99": 341.48,
+          "max": 373.084,
+          "min": 20.164
+        },
+        "sample_to_ingestion_ack": {
+          "count": 3050,
+          "mean": 188.668,
+          "p50": 197.283,
+          "p95": 298.28,
+          "p99": 345.655,
+          "max": 377.034,
+          "min": 23.912
+        },
+        "kafka_arrival_spread_per_cycle": {
+          "count": 61,
+          "mean": 246.443,
+          "p50": 244.0,
+          "p95": 322.0,
+          "p99": 345.0,
+          "max": 351,
+          "min": 167
+        },
+        "ack_spread_per_cycle": {
+          "count": 61,
+          "mean": 233.767,
+          "p50": 233.769,
+          "p95": 302.627,
+          "p99": 327.262,
+          "max": 332.153,
+          "min": 160.356
+        },
+        "kafka_to_hybrid_admit": {
+          "count": 0,
+          "mean": null,
+          "p50": null,
+          "p95": null,
+          "p99": null,
+          "max": null,
+          "min": null
+        },
+        "ml_inference_server": {
+          "count": 3050,
+          "mean": 17.871,
+          "p50": 13.498,
+          "p95": 46.633,
+          "p99": 66.621,
+          "max": 112.97,
+          "min": 2.95
+        },
+        "ml_completed_to_proc_db": {
+          "count": 3050,
+          "mean": 16.677,
+          "p50": 13.783,
+          "p95": 38.645,
+          "p99": 55.216,
+          "max": 94.961,
+          "min": 2.55
+        },
+        "ack_to_proc_db": {
+          "count": 3050,
+          "mean": 151.033,
+          "p50": 147.564,
+          "p95": 290.577,
+          "p99": 337.974,
+          "max": 389.248,
+          "min": 14.553
+        },
+        "proc_db_to_outbox": {
+          "count": 3050,
+          "mean": 76.342,
+          "p50": 69.4,
+          "p95": 149.39,
+          "p99": 187.688,
+          "max": 253.565,
+          "min": 20.774
+        },
+        "outbox_to_business_db": {
+          "count": 3050,
+          "mean": 7.842,
+          "p50": 4.235,
+          "p95": 26.159,
+          "p99": 54.809,
+          "max": 157.616,
+          "min": 0.0
+        },
+        "business_db_to_browser_sse": {
+          "count": 3050,
+          "mean": 92.256,
+          "p50": 90.971,
+          "p95": 139.872,
+          "p99": 155.691,
+          "max": 187.84,
+          "min": 10.341
+        },
+        "sample_to_business_db": {
+          "count": 3050,
+          "mean": 348.932,
+          "p50": 384.343,
+          "p95": 521.154,
+          "p99": 570.951,
+          "max": 651.997,
+          "min": 52.533
+        },
+        "sample_to_browser_sse_ui": {
+          "count": 3050,
+          "mean": 441.189,
+          "p50": 484.641,
+          "p95": 599.551,
+          "p99": 664.936,
+          "max": 736.866,
+          "min": 78.49
+        }
+      },
+      "cycle_metrics_ms": {
+        "first_prediction_biz_db": {
+          "count": 61,
+          "mean": 69.365,
+          "p50": 65.72,
+          "p95": 97.347,
+          "p99": 108.861,
+          "max": 111.494,
+          "min": 52.533
+        },
+        "last_prediction_biz_db": {
+          "count": 61,
+          "mean": 514.41,
+          "p50": 516.064,
+          "p95": 574.357,
+          "p99": 631.339,
+          "max": 651.997,
+          "min": 445.389
+        },
+        "spread_50_machines_biz_db": {
+          "count": 61,
+          "mean": 445.045,
+          "p50": 446.251,
+          "p95": 506.073,
+          "p99": 533.644,
+          "max": 568.899,
+          "min": 378.653
+        },
+        "first_prediction_browser_ui": {
+          "count": 61,
+          "mean": 98.379,
+          "p50": 93.606,
+          "p95": 131.768,
+          "p99": 170.454,
+          "max": 177.866,
+          "min": 78.49
+        },
+        "cycle_completion_browser_ui": {
+          "count": 61,
+          "mean": 586.297,
+          "p50": 587.623,
+          "p95": 644.195,
+          "p99": 724.207,
+          "max": 736.866,
+          "min": 511.358
+        },
+        "spread_50_machines_browser_ui": {
+          "count": 61,
+          "mean": 487.918,
+          "p50": 482.0,
+          "p95": 552.0,
+          "p99": 569.0,
+          "max": 584.0,
+          "min": 419.0
+        }
+      },
+      "prometheus_deltas": {
+        "histograms_ms": {
+          "maintai_processing_queue_wait_seconds": {
+            "count": 3043,
+            "mean_ms": 0.775,
+            "p50_ms": 25.0,
+            "p95_ms": 47.5,
+            "p99_ms": 49.5
+          },
+          "maintai_processing_ml_seconds": {
+            "count": 3047,
+            "mean_ms": 50.093,
+            "p50_ms": 44.323,
+            "p95_ms": 147.522,
+            "p99_ms": 229.504
+          },
+          "maintai_processing_admission_seconds": {
+            "count": 0,
+            "mean_ms": null,
+            "p50_ms": null,
+            "p95_ms": null,
+            "p99_ms": null
+          },
+          "maintai_processing_persist_seconds": {
+            "count": 0,
+            "mean_ms": null,
+            "p50_ms": null,
+            "p95_ms": null,
+            "p99_ms": null
+          },
+          "maintai_ml_inference_duration_seconds": {
+            "count": 3042,
+            "mean_ms": 19.239,
+            "p50_ms": 16.01,
+            "p95_ms": 49.879,
+            "p99_ms": 90.89
+          }
+        },
+        "ml_pod_distribution": {
+          "ml-service-shadow-795bbdf7bc-hdrlr": {
+            "SUCCESS": 1478.0,
+            "count": 1478,
+            "mean_ms": 21.825,
+            "p50_ms": 18.308,
+            "p95_ms": 67.028,
+            "p99_ms": 94.915
+          },
+          "ml-service-shadow-795bbdf7bc-pbst5": {
+            "SUCCESS": 961.0,
+            "count": 961,
+            "mean_ms": 16.026,
+            "p50_ms": 12.889,
+            "p95_ms": 44.906,
+            "p99_ms": 63.038
+          },
+          "ml-service-shadow-795bbdf7bc-wsldg": {
+            "SUCCESS": 603.0,
+            "count": 603,
+            "mean_ms": 18.021,
+            "p50_ms": 15.145,
+            "p95_ms": 49.021,
+            "p99_ms": 88.404
+          }
+        }
+      },
+      "processing_runtime_gauges": {
+        "active_keys_peak": 35,
+        "inflight_tasks_peak": 35,
+        "max_per_key_inflight_peak": 1,
+        "paused_partitions_peak": 0,
+        "queued_records_peak": 0.0
+      },
+      "kafka_max_lag": {
+        "local-processing-v1": 0,
+        "local-business-prediction-v1": 0,
+        "local-business-live-v1": 0,
+        "local-business-alert-v1": 0
+      },
+      "cgroup_v2": {
+        "window_seconds": 62.188,
+        "host_cpu_pct": 50.56,
+        "by_app": {
+          "ml-service-shadow": {
+            "pods": 3,
+            "cpu_cores": 0.5223,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ms": 0.0,
+            "throttled_ratio_pct": 0.0
+          },
+          "processing-worker": {
+            "pods": 6,
+            "cpu_cores": 1.274,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ms": 0.0,
+            "throttled_ratio_pct": 0.0
+          }
+        },
+        "by_pod": {
+          "ml-service-shadow-795bbdf7bc-hdrlr": {
+            "app": "ml-service-shadow",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.2565,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 151.75
+          },
+          "ml-service-shadow-795bbdf7bc-pbst5": {
+            "app": "ml-service-shadow",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.1619,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 143.68
+          },
+          "ml-service-shadow-795bbdf7bc-wsldg": {
+            "app": "ml-service-shadow",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.1039,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 128.54
+          },
+          "processing-worker-859b85b47b-bs5gk": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.1833,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 102.08
+          },
+          "processing-worker-859b85b47b-gfhtw": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.1747,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 91.4
+          },
+          "processing-worker-859b85b47b-rckvv": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.1563,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 89.33
+          },
+          "processing-worker-859b85b47b-sdv88": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.2008,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 89.72
+          },
+          "processing-worker-859b85b47b-vpbc8": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.2575,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 90.67
+          },
+          "processing-worker-859b85b47b-xrzkc": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.3014,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 90.84
+          }
+        }
+      },
+      "kubectl_top": {
+        "business-api": {
+          "pods": 3,
+          "cpu_m_mean": 136.9,
+          "cpu_m_peak": 193,
+          "mem_mi_mean": 232.8,
+          "mem_mi_peak": 235
+        },
+        "business-consumer": {
+          "pods": 4,
+          "cpu_m_mean": 538.8,
+          "cpu_m_peak": 769,
+          "mem_mi_mean": 308.3,
+          "mem_mi_peak": 310
+        },
+        "frontend": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 13.0,
+          "mem_mi_peak": 13
+        },
+        "grafana": {
+          "pods": 1,
+          "cpu_m_mean": 3.5,
+          "cpu_m_peak": 4,
+          "mem_mi_mean": 105.5,
+          "mem_mi_peak": 107
+        },
+        "ingestion-api": {
+          "pods": 2,
+          "cpu_m_mean": 291.8,
+          "cpu_m_peak": 392,
+          "mem_mi_mean": 162.0,
+          "mem_mi_peak": 163
+        },
+        "kafka": {
+          "pods": 1,
+          "cpu_m_mean": 160.3,
+          "cpu_m_peak": 228,
+          "mem_mi_mean": 999.5,
+          "mem_mi_peak": 1002
+        },
+        "keycloak": {
+          "pods": 1,
+          "cpu_m_mean": 8.5,
+          "cpu_m_peak": 31,
+          "mem_mi_mean": 550.9,
+          "mem_mi_peak": 552
+        },
+        "loki": {
+          "pods": 1,
+          "cpu_m_mean": 6.9,
+          "cpu_m_peak": 9,
+          "mem_mi_mean": 197.8,
+          "mem_mi_peak": 200
+        },
+        "minio": {
+          "pods": 1,
+          "cpu_m_mean": 293.5,
+          "cpu_m_peak": 368,
+          "mem_mi_mean": 440.1,
+          "mem_mi_peak": 479
+        },
+        "ml-service": {
+          "pods": 2,
+          "cpu_m_mean": 6.0,
+          "cpu_m_peak": 6,
+          "mem_mi_mean": 237.9,
+          "mem_mi_peak": 238
+        },
+        "ml-service-mirror": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 13.0,
+          "mem_mi_peak": 13
+        },
+        "ml-service-shadow": {
+          "pods": 3,
+          "cpu_m_mean": 365.1,
+          "cpu_m_peak": 536,
+          "mem_mi_mean": 372.4,
+          "mem_mi_peak": 388
+        },
+        "mlflow": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 558.0,
+          "mem_mi_peak": 558
+        },
+        "postgres": {
+          "pods": 1,
+          "cpu_m_mean": 658.2,
+          "cpu_m_peak": 811,
+          "mem_mi_mean": 936.7,
+          "mem_mi_peak": 944
+        },
+        "processing-outbox-relay": {
+          "pods": 2,
+          "cpu_m_mean": 350.3,
+          "cpu_m_peak": 431,
+          "mem_mi_mean": 182.3,
+          "mem_mi_peak": 184
+        },
+        "processing-read-api": {
+          "pods": 1,
+          "cpu_m_mean": 154.4,
+          "cpu_m_peak": 497,
+          "mem_mi_mean": 178.1,
+          "mem_mi_peak": 179
+        },
+        "processing-worker": {
+          "pods": 6,
+          "cpu_m_mean": 937.9,
+          "cpu_m_peak": 1307,
+          "mem_mi_mean": 541.3,
+          "mem_mi_peak": 543
+        },
+        "prometheus": {
+          "pods": 1,
+          "cpu_m_mean": 3.6,
+          "cpu_m_peak": 6,
+          "mem_mi_mean": 85.4,
+          "mem_mi_peak": 97
+        },
+        "promtail-n6qbg": {
+          "pods": 1,
+          "cpu_m_mean": 37.9,
+          "cpu_m_peak": 52,
+          "mem_mi_mean": 53.6,
+          "mem_mi_peak": 54
+        },
+        "pushgateway": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 21.7,
+          "mem_mi_peak": 22
+        },
+        "rag-service": {
+          "pods": 1,
+          "cpu_m_mean": 3.5,
+          "cpu_m_peak": 4,
+          "mem_mi_mean": 74.9,
+          "mem_mi_peak": 75
+        },
+        "simulator-ui": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 13.0,
+          "mem_mi_peak": 13
+        },
+        "storage-consumer": {
+          "pods": 1,
+          "cpu_m_mean": 336.8,
+          "cpu_m_peak": 562,
+          "mem_mi_mean": 107.3,
+          "mem_mi_peak": 108
+        }
+      },
+      "postgres": {
+        "proc_stat_delta": {
+          "xact_commit": 34037,
+          "xact_rollback": 65,
+          "blks_read": 76275,
+          "blks_hit": 1763273,
+          "tup_inserted": 24221,
+          "tup_updated": 31016,
+          "tup_fetched": 361559,
+          "deadlocks": 0
+        },
+        "biz_stat_delta": {
+          "xact_commit": 9800,
+          "xact_rollback": 27,
+          "blks_read": 32234,
+          "blks_hit": 617068,
+          "tup_inserted": 11892,
+          "tup_updated": 26515,
+          "tup_fetched": 99407,
+          "deadlocks": 0
+        },
+        "lock_wait_samples": 0,
+        "proc_conns_peak": 59,
+        "proc_active_peak": 1,
+        "biz_conns_peak": 42,
+        "biz_active_peak": 4
+      },
+      "invariants": {
+        "missing_outcomes": 0,
+        "wrong_latest_sequence": 0,
+        "stuck_ledger_rows": 0,
+        "pending_outbox_after_drain": 0,
+        "duplicate_active_alerts": 0,
+        "proc_conflicts_delta": 0,
+        "biz_conflicts_delta": 0,
+        "bad_unavailable_downgrade": 0,
+        "unexpected_pod_restarts": {},
+        "oom_killed_delta": 0,
+        "total_violations": 0
+      },
+      "chaos": {
+        "events": [],
+        "recovery_seconds": null
+      },
+      "s1_replicas": 3,
+      "s1_total_step_seconds": 149.67
+    },
+    {
+      "preset": "A1",
+      "run_index": 1,
+      "stream_epoch": "90f914e9-5c13-43ab-a16f-5f49bb3a03f8",
+      "config": {
+        "preset": "A1",
+        "scheduler": "keyed_fifo",
+        "hybrid_enabled": false,
+        "active_keys": 16,
+        "per_key": 1,
+        "max_total_inflight": 16,
+        "commit_batch_size": 16,
+        "commit_max_wait_ms": 25,
+        "worker_replicas": 6,
+        "relay_replicas": 2,
+        "biz_replicas": 4,
+        "ingestion_replicas": 2,
+        "ml_shadow_replicas": 4,
+        "ml_shadow_image": "maintai-ml-bench:hgb-opt",
+        "ml_shadow_resources": {
+          "limits": {
+            "memory": "1Gi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          }
+        },
+        "ml_shadow_args": null,
+        "worker_image": "maintai-local/processing-worker:hybrid-bench"
+      },
+      "window": {
+        "warmup_seconds": 15,
+        "measure_seconds": 60,
+        "complete_cycles": 61,
+        "expected_window_readings": 3050,
+        "total_sent": 3800,
+        "status_counts": {
+          "202": 3800,
+          "502": 1
+        },
+        "drained": true,
+        "drain_seconds": 1.054,
+        "last_counts": {
+          "pr_done": 3800,
+          "ob_pend": 0,
+          "ledger_pend": 0,
+          "biz_done": 3800,
+          "biz_alert_delta": 138,
+          "proc_alert_delta": 138
+        },
+        "sse_total_captured": 3800,
+        "sse_window_matched": 3050,
+        "sse_window_coverage_pct": 100.0,
+        "sse_probe_stats": {
+          "eventCounts": {
+            "telemetry.received": 7168,
+            "prediction.completed": 3850,
+            "processing.status_changed": 7168,
+            "alert.updated": 123,
+            "alert.created": 15
+          },
+          "uniquePredictionEvents": 3850,
+          "duplicateSuppressed": 0,
+          "reconnects": 0,
+          "streamError": null,
+          "closedAt": "2026-11-23T20:59:05.490Z"
+        }
+      },
+      "throughput": {
+        "sent_rps": 50.0,
+        "outcome_kinds": {
+          "PREDICTION_COMPLETED": 3800
+        },
+        "alert_dispositions": {},
+        "alerts_created_or_updated": 45,
+        "kafka_partitions_used": 12
+      },
+      "latency_ms": {
+        "sample_to_edge_spool": {
+          "count": 3050,
+          "mean": 4.8,
+          "p50": 4.598,
+          "p95": 6.472,
+          "p99": 9.414,
+          "max": 9.414,
+          "min": 3.299
+        },
+        "edge_to_ingestion_ack": {
+          "count": 3050,
+          "mean": 187.756,
+          "p50": 200.196,
+          "p95": 283.216,
+          "p99": 347.631,
+          "max": 374.515,
+          "min": 10.177
+        },
+        "sample_to_ingestion_ack": {
+          "count": 3050,
+          "mean": 192.555,
+          "p50": 204.942,
+          "p95": 287.915,
+          "p99": 351.491,
+          "max": 379.498,
+          "min": 15.427
+        },
+        "kafka_arrival_spread_per_cycle": {
+          "count": 61,
+          "mean": 251.951,
+          "p50": 245.0,
+          "p95": 323.0,
+          "p99": 355.2,
+          "max": 357,
+          "min": 202
+        },
+        "ack_spread_per_cycle": {
+          "count": 61,
+          "mean": 238.61,
+          "p50": 232.881,
+          "p95": 308.39,
+          "p99": 341.941,
+          "max": 342.784,
+          "min": 180.942
+        },
+        "kafka_to_hybrid_admit": {
+          "count": 0,
+          "mean": null,
+          "p50": null,
+          "p95": null,
+          "p99": null,
+          "max": null,
+          "min": null
+        },
+        "ml_inference_server": {
+          "count": 3050,
+          "mean": 13.658,
+          "p50": 10.082,
+          "p95": 34.449,
+          "p99": 50.204,
+          "max": 73.981,
+          "min": 3.303
+        },
+        "ml_completed_to_proc_db": {
+          "count": 3050,
+          "mean": 15.648,
+          "p50": 13.364,
+          "p95": 36.02,
+          "p99": 50.018,
+          "max": 87.724,
+          "min": 2.825
+        },
+        "ack_to_proc_db": {
+          "count": 3050,
+          "mean": 143.616,
+          "p50": 142.605,
+          "p95": 271.319,
+          "p99": 311.108,
+          "max": 397.823,
+          "min": 14.531
+        },
+        "proc_db_to_outbox": {
+          "count": 3050,
+          "mean": 79.812,
+          "p50": 76.956,
+          "p95": 144.605,
+          "p99": 186.017,
+          "max": 270.791,
+          "min": 18.508
+        },
+        "outbox_to_business_db": {
+          "count": 3050,
+          "mean": 6.913,
+          "p50": 4.04,
+          "p95": 22.333,
+          "p99": 41.474,
+          "max": 87.956,
+          "min": 0.0
+        },
+        "business_db_to_browser_sse": {
+          "count": 3050,
+          "mean": 90.647,
+          "p50": 88.844,
+          "p95": 141.798,
+          "p99": 158.292,
+          "max": 187.413,
+          "min": 8.651
+        },
+        "sample_to_business_db": {
+          "count": 3050,
+          "mean": 347.343,
+          "p50": 388.664,
+          "p95": 515.996,
+          "p99": 546.5,
+          "max": 581.579,
+          "min": 51.451
+        },
+        "sample_to_browser_sse_ui": {
+          "count": 3050,
+          "mean": 437.99,
+          "p50": 489.694,
+          "p95": 593.454,
+          "p99": 624.678,
+          "max": 657.977,
+          "min": 72.778
+        }
+      },
+      "cycle_metrics_ms": {
+        "first_prediction_biz_db": {
+          "count": 61,
+          "mean": 67.379,
+          "p50": 66.395,
+          "p95": 83.609,
+          "p99": 88.085,
+          "max": 92.463,
+          "min": 51.451
+        },
+        "last_prediction_biz_db": {
+          "count": 61,
+          "mean": 517.865,
+          "p50": 514.008,
+          "p95": 566.328,
+          "p99": 575.466,
+          "max": 581.579,
+          "min": 460.823
+        },
+        "spread_50_machines_biz_db": {
+          "count": 61,
+          "mean": 450.486,
+          "p50": 448.589,
+          "p95": 486.975,
+          "p99": 505.53,
+          "max": 511.766,
+          "min": 388.735
+        },
+        "first_prediction_browser_ui": {
+          "count": 61,
+          "mean": 97.316,
+          "p50": 95.667,
+          "p95": 114.619,
+          "p99": 157.088,
+          "max": 176.983,
+          "min": 72.778
+        },
+        "cycle_completion_browser_ui": {
+          "count": 61,
+          "mean": 592.578,
+          "p50": 590.273,
+          "p95": 639.226,
+          "p99": 649.362,
+          "max": 657.977,
+          "min": 540.366
+        },
+        "spread_50_machines_browser_ui": {
+          "count": 61,
+          "mean": 495.262,
+          "p50": 496.0,
+          "p95": 539.0,
+          "p99": 551.0,
+          "max": 560.0,
+          "min": 426.0
+        }
+      },
+      "prometheus_deltas": {
+        "histograms_ms": {
+          "maintai_processing_queue_wait_seconds": {
+            "count": 3045,
+            "mean_ms": 0.749,
+            "p50_ms": 25.0,
+            "p95_ms": 47.5,
+            "p99_ms": 49.5
+          },
+          "maintai_processing_ml_seconds": {
+            "count": 3047,
+            "mean_ms": 42.542,
+            "p50_ms": 38.676,
+            "p95_ms": 93.255,
+            "p99_ms": 189.862
+          },
+          "maintai_processing_admission_seconds": {
+            "count": 0,
+            "mean_ms": null,
+            "p50_ms": null,
+            "p95_ms": null,
+            "p99_ms": null
+          },
+          "maintai_processing_persist_seconds": {
+            "count": 0,
+            "mean_ms": null,
+            "p50_ms": null,
+            "p95_ms": null,
+            "p99_ms": null
+          },
+          "maintai_ml_inference_duration_seconds": {
+            "count": 3042,
+            "mean_ms": 14.714,
+            "p50_ms": 11.4,
+            "p95_ms": 43.365,
+            "p99_ms": 67.638
+          }
+        },
+        "ml_pod_distribution": {
+          "ml-service-shadow-795bbdf7bc-gnmtd": {
+            "SUCCESS": 719.0,
+            "count": 719,
+            "mean_ms": 14.996,
+            "p50_ms": 9.977,
+            "p95_ms": 44.298,
+            "p99_ms": 70.042
+          },
+          "ml-service-shadow-795bbdf7bc-hdrlr": {
+            "SUCCESS": 846.0,
+            "count": 846,
+            "mean_ms": 14.681,
+            "p50_ms": 11.701,
+            "p95_ms": 43.851,
+            "p99_ms": 71.8
+          },
+          "ml-service-shadow-795bbdf7bc-pbst5": {
+            "SUCCESS": 872.0,
+            "count": 872,
+            "mean_ms": 15.903,
+            "p50_ms": 13.05,
+            "p95_ms": 45.305,
+            "p99_ms": 77.053
+          },
+          "ml-service-shadow-795bbdf7bc-wsldg": {
+            "SUCCESS": 605.0,
+            "count": 605,
+            "mean_ms": 12.714,
+            "p50_ms": 10.089,
+            "p95_ms": 35.077,
+            "p99_ms": 47.423
+          }
+        }
+      },
+      "processing_runtime_gauges": {
+        "active_keys_peak": 35,
+        "inflight_tasks_peak": 35,
+        "max_per_key_inflight_peak": 1,
+        "paused_partitions_peak": 0,
+        "queued_records_peak": 0.0
+      },
+      "kafka_max_lag": {
+        "local-processing-v1": 0,
+        "local-business-prediction-v1": 0,
+        "local-business-live-v1": 0,
+        "local-business-alert-v1": 0
+      },
+      "cgroup_v2": {
+        "window_seconds": 62.44,
+        "host_cpu_pct": 50.64,
+        "by_app": {
+          "ml-service-shadow": {
+            "pods": 4,
+            "cpu_cores": 0.5101,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ms": 0.0,
+            "throttled_ratio_pct": 0.0
+          },
+          "processing-worker": {
+            "pods": 6,
+            "cpu_cores": 1.2833,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ms": 0.0,
+            "throttled_ratio_pct": 0.0
+          }
+        },
+        "by_pod": {
+          "ml-service-shadow-795bbdf7bc-gnmtd": {
+            "app": "ml-service-shadow",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.1191,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 141.7
+          },
+          "ml-service-shadow-795bbdf7bc-hdrlr": {
+            "app": "ml-service-shadow",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.1414,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 150.06
+          },
+          "ml-service-shadow-795bbdf7bc-pbst5": {
+            "app": "ml-service-shadow",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.1473,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 143.27
+          },
+          "ml-service-shadow-795bbdf7bc-wsldg": {
+            "app": "ml-service-shadow",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.1023,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 128.38
+          },
+          "processing-worker-859b85b47b-bs5gk": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.1828,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 102.59
+          },
+          "processing-worker-859b85b47b-gfhtw": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.176,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 91.62
+          },
+          "processing-worker-859b85b47b-rckvv": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.1574,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 90.04
+          },
+          "processing-worker-859b85b47b-sdv88": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.2023,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 90.09
+          },
+          "processing-worker-859b85b47b-vpbc8": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.2579,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 90.86
+          },
+          "processing-worker-859b85b47b-xrzkc": {
+            "app": "processing-worker",
+            "cpu_max": "max 100000",
+            "cpu_cores": 0.3069,
+            "nr_periods": 0,
+            "nr_throttled": 0,
+            "throttled_ratio_pct": 0.0,
+            "throttled_ms": 0.0,
+            "mem_mib_end": 90.97
+          }
+        }
+      },
+      "kubectl_top": {
+        "business-api": {
+          "pods": 3,
+          "cpu_m_mean": 130.6,
+          "cpu_m_peak": 200,
+          "mem_mi_mean": 235.3,
+          "mem_mi_peak": 237
+        },
+        "business-consumer": {
+          "pods": 4,
+          "cpu_m_mean": 540.2,
+          "cpu_m_peak": 777,
+          "mem_mi_mean": 308.8,
+          "mem_mi_peak": 310
+        },
+        "frontend": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 13.0,
+          "mem_mi_peak": 13
+        },
+        "grafana": {
+          "pods": 1,
+          "cpu_m_mean": 3.2,
+          "cpu_m_peak": 4,
+          "mem_mi_mean": 103.5,
+          "mem_mi_peak": 108
+        },
+        "ingestion-api": {
+          "pods": 2,
+          "cpu_m_mean": 263.5,
+          "cpu_m_peak": 402,
+          "mem_mi_mean": 162.0,
+          "mem_mi_peak": 162
+        },
+        "kafka": {
+          "pods": 1,
+          "cpu_m_mean": 160.6,
+          "cpu_m_peak": 225,
+          "mem_mi_mean": 998.8,
+          "mem_mi_peak": 1000
+        },
+        "keycloak": {
+          "pods": 1,
+          "cpu_m_mean": 3.3,
+          "cpu_m_peak": 4,
+          "mem_mi_mean": 552.4,
+          "mem_mi_peak": 553
+        },
+        "loki": {
+          "pods": 1,
+          "cpu_m_mean": 6.8,
+          "cpu_m_peak": 8,
+          "mem_mi_mean": 195.0,
+          "mem_mi_peak": 195
+        },
+        "minio": {
+          "pods": 1,
+          "cpu_m_mean": 285.9,
+          "cpu_m_peak": 368,
+          "mem_mi_mean": 437.0,
+          "mem_mi_peak": 476
+        },
+        "ml-service": {
+          "pods": 2,
+          "cpu_m_mean": 6.0,
+          "cpu_m_peak": 6,
+          "mem_mi_mean": 237.0,
+          "mem_mi_peak": 237
+        },
+        "ml-service-mirror": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 13.0,
+          "mem_mi_peak": 13
+        },
+        "ml-service-shadow": {
+          "pods": 4,
+          "cpu_m_mean": 400.1,
+          "cpu_m_peak": 540,
+          "mem_mi_mean": 510.5,
+          "mem_mi_peak": 535
+        },
+        "mlflow": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 558.0,
+          "mem_mi_peak": 558
+        },
+        "postgres": {
+          "pods": 1,
+          "cpu_m_mean": 700.9,
+          "cpu_m_peak": 966,
+          "mem_mi_mean": 947.9,
+          "mem_mi_peak": 957
+        },
+        "processing-outbox-relay": {
+          "pods": 2,
+          "cpu_m_mean": 328.0,
+          "cpu_m_peak": 426,
+          "mem_mi_mean": 183.5,
+          "mem_mi_peak": 184
+        },
+        "processing-read-api": {
+          "pods": 1,
+          "cpu_m_mean": 86.8,
+          "cpu_m_peak": 348,
+          "mem_mi_mean": 181.4,
+          "mem_mi_peak": 182
+        },
+        "processing-worker": {
+          "pods": 6,
+          "cpu_m_mean": 971.7,
+          "cpu_m_peak": 1313,
+          "mem_mi_mean": 541.1,
+          "mem_mi_peak": 543
+        },
+        "prometheus": {
+          "pods": 1,
+          "cpu_m_mean": 3.9,
+          "cpu_m_peak": 6,
+          "mem_mi_mean": 65.6,
+          "mem_mi_peak": 66
+        },
+        "promtail-n6qbg": {
+          "pods": 1,
+          "cpu_m_mean": 40.5,
+          "cpu_m_peak": 52,
+          "mem_mi_mean": 54.2,
+          "mem_mi_peak": 55
+        },
+        "pushgateway": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 21.9,
+          "mem_mi_peak": 22
+        },
+        "rag-service": {
+          "pods": 1,
+          "cpu_m_mean": 3.3,
+          "cpu_m_peak": 4,
+          "mem_mi_mean": 75.0,
+          "mem_mi_peak": 75
+        },
+        "simulator-ui": {
+          "pods": 1,
+          "cpu_m_mean": 1.0,
+          "cpu_m_peak": 1,
+          "mem_mi_mean": 13.0,
+          "mem_mi_peak": 13
+        },
+        "storage-consumer": {
+          "pods": 1,
+          "cpu_m_mean": 339.6,
+          "cpu_m_peak": 555,
+          "mem_mi_mean": 107.3,
+          "mem_mi_peak": 108
+        }
+      },
+      "postgres": {
+        "proc_stat_delta": {
+          "xact_commit": 34194,
+          "xact_rollback": 59,
+          "blks_read": 178255,
+          "blks_hit": 2189877,
+          "tup_inserted": 23958,
+          "tup_updated": 31140,
+          "tup_fetched": 530729,
+          "deadlocks": 0
+        },
+        "biz_stat_delta": {
+          "xact_commit": 9771,
+          "xact_rollback": 32,
+          "blks_read": 26306,
+          "blks_hit": 603747,
+          "tup_inserted": 11833,
+          "tup_updated": 26623,
+          "tup_fetched": 95792,
+          "deadlocks": 0
+        },
+        "lock_wait_samples": 0,
+        "proc_conns_peak": 60,
+        "proc_active_peak": 1,
+        "biz_conns_peak": 40,
+        "biz_active_peak": 1
+      },
+      "invariants": {
+        "missing_outcomes": 0,
+        "wrong_latest_sequence": 0,
+        "stuck_ledger_rows": 0,
+        "pending_outbox_after_drain": 0,
+        "duplicate_active_alerts": 0,
+        "proc_conflicts_delta": 0,
+        "biz_conflicts_delta": 0,
+        "bad_unavailable_downgrade": 0,
+        "unexpected_pod_restarts": {},
+        "oom_killed_delta": 0,
+        "total_violations": 0
+      },
+      "chaos": {
+        "events": [],
+        "recovery_seconds": null
+      },
+      "s1_replicas": 4,
+      "s1_total_step_seconds": 149.05
+    }
+  ]
+}

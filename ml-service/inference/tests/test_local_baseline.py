@@ -68,6 +68,7 @@ class TestLocalBaselineAPI(unittest.TestCase):
         self.client.close()
         api.STATE["pipeline"] = None
         api.STATE["metadata"] = None
+        api.STATE["fast_path"] = None
 
     def test_valid_request(self):
         response = self.client.post(
@@ -215,6 +216,51 @@ class TestLocalBaselineAPI(unittest.TestCase):
             response_a.json()["failure_probability"],
             response_b.json()["failure_probability"],
         )
+
+    def test_fast_path_matches_real_hgb_pipeline_within_1e12_and_falls_back_cleanly(self):
+        import joblib
+        import pandas as pd
+
+        repo_root = Path(__file__).resolve().parents[3]
+        hgb_dir = repo_root / "ml-service/artifacts/integration/hgb-interactions-m56w5ff4"
+        if not (hgb_dir / "pipeline.joblib").is_file():
+            self.skipTest("Integration HGB artifact not present")
+        import sys
+
+        sys.path.insert(0, str(repo_root / "ml-service/shared/preprocessing"))
+        pipeline = joblib.load(hgb_dir / "pipeline.joblib")
+        fast_path = api._build_verified_fast_path(pipeline)
+        self.assertIsNotNone(fast_path)
+
+        sample_probes = [
+            ("L", 297.2, 307.9, 1412.0, 51.4, 42.0),
+            ("M", 298.1, 308.6, 1551.0, 42.8, 108.0),
+            ("H", 301.4, 311.1, 1340.0, 64.5, 215.0),
+            ("H", 304.0, 312.5, 1210.0, 72.1, 240.0),
+        ]
+        for pt, air, proc, rpm, trq, wear in sample_probes:
+            f_obj = api.Features(
+                product_type=pt,
+                air_temperature_k=air,
+                process_temperature_k=proc,
+                rotational_speed_rpm=rpm,
+                torque_nm=trq,
+                tool_wear_min=wear,
+            )
+            df = pd.DataFrame([f_obj.model_dump()], columns=api.FEATURES)
+            ref_prob = float(pipeline.predict_proba(df)[0, 1])
+            fast_prob = fast_path.predict_proba_single(f_obj)
+            self.assertLessEqual(abs(ref_prob - fast_prob), 1e-12)
+
+        # Fallback: if STATE["pipeline"] changes (e.g. FakePipeline), stale fast_path is ignored
+        api.STATE["fast_path"] = fast_path
+        api.STATE["pipeline"] = FakePipeline(0.25)
+        resp = self.client.post("/api/v1/predict", json=valid_request())
+        self.assertEqual(resp.status_code, 200)
+        self.assertAlmostEqual(resp.json()["failure_probability"], 0.25, places=12)
+
+        # Unknown pipeline structure returns None cleanly without error
+        self.assertIsNone(api._build_verified_fast_path(FakePipeline(0.25)))
 
 
 if __name__ == "__main__":

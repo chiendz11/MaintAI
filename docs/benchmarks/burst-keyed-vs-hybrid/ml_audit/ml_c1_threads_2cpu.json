@@ -1,0 +1,359 @@
+{
+  "tag": "ML-C1-2CPU",
+  "image": "maintai-ml-bench:hgb-local",
+  "cpus_limit": 2.0,
+  "memory_limit": "1g",
+  "env": [
+    "OMP_NUM_THREADS=1",
+    "OPENBLAS_NUM_THREADS=1",
+    "MKL_NUM_THREADS=1"
+  ],
+  "workers": 1,
+  "duration_per_level_s": 60,
+  "startup_ready_ms": 3204.97,
+  "timestamp_utc": "2026-11-23T20:27:49.397821+00:00",
+  "concurrencies": [
+    {
+      "concurrency": 1,
+      "peak_inflight": 1,
+      "wall_elapsed_s": 59.996,
+      "total_requests": 6015,
+      "success_count": 6015,
+      "error_count": 0,
+      "error_rate_pct": 0.0,
+      "rps": 100.26,
+      "success_rps": 100.26,
+      "status_counts": {
+        "200": 6015
+      },
+      "http_latency_ms": {
+        "count": 6015,
+        "mean": 9.947,
+        "p50": 9.56,
+        "p95": 12.125,
+        "p99": 16.598,
+        "max": 65.154,
+        "min": 8.232
+      },
+      "server_inference_ms": {
+        "count": 6015,
+        "mean": 6.871,
+        "p50": 6.57,
+        "p95": 8.413,
+        "p99": 11.434,
+        "max": 62.216,
+        "min": 5.774
+      },
+      "queue_wait_ms": {
+        "count": 6015,
+        "mean": 3.076,
+        "p50": 2.971,
+        "p95": 3.868,
+        "p99": 4.976,
+        "max": 16.202,
+        "min": 2.322
+      },
+      "cgroup": {
+        "window_s": 59.9961,
+        "cpu_max": "200000 100000",
+        "cpu_cores": 0.8648,
+        "user_cores": 0.8386,
+        "system_cores": 0.0262,
+        "cpu_pct_of_limit": 43.24,
+        "nr_periods": 600,
+        "nr_throttled": 0,
+        "throttled_ratio_pct": 0.0,
+        "throttled_ms": 0.0,
+        "mem_current_mib": 138.21,
+        "mem_anon_mib": 122.1,
+        "host_cpu_pct": 17.58
+      },
+      "errors_sample": []
+    },
+    {
+      "concurrency": 2,
+      "peak_inflight": 2,
+      "wall_elapsed_s": 60.004,
+      "total_requests": 6257,
+      "success_count": 6257,
+      "error_count": 0,
+      "error_rate_pct": 0.0,
+      "rps": 104.28,
+      "success_rps": 104.28,
+      "status_counts": {
+        "200": 6257
+      },
+      "http_latency_ms": {
+        "count": 6257,
+        "mean": 19.156,
+        "p50": 18.89,
+        "p95": 23.387,
+        "p99": 29.051,
+        "max": 81.729,
+        "min": 9.627
+      },
+      "server_inference_ms": {
+        "count": 6257,
+        "mean": 11.687,
+        "p50": 11.823,
+        "p95": 16.492,
+        "p99": 20.003,
+        "max": 76.512,
+        "min": 6.153
+      },
+      "queue_wait_ms": {
+        "count": 6257,
+        "mean": 7.469,
+        "p50": 7.153,
+        "p95": 12.128,
+        "p99": 14.241,
+        "max": 58.938,
+        "min": 2.181
+      },
+      "cgroup": {
+        "window_s": 60.004,
+        "cpu_max": "200000 100000",
+        "cpu_cores": 1.0327,
+        "user_cores": 0.9382,
+        "system_cores": 0.0945,
+        "cpu_pct_of_limit": 51.64,
+        "nr_periods": 600,
+        "nr_throttled": 0,
+        "throttled_ratio_pct": 0.0,
+        "throttled_ms": 0.0,
+        "mem_current_mib": 130.25,
+        "mem_anon_mib": 120.84,
+        "host_cpu_pct": 15.8
+      },
+      "errors_sample": []
+    },
+    {
+      "concurrency": 4,
+      "peak_inflight": 4,
+      "wall_elapsed_s": 60.022,
+      "total_requests": 6502,
+      "success_count": 6502,
+      "error_count": 0,
+      "error_rate_pct": 0.0,
+      "rps": 108.33,
+      "success_rps": 108.33,
+      "status_counts": {
+        "200": 6502
+      },
+      "http_latency_ms": {
+        "count": 6502,
+        "mean": 36.901,
+        "p50": 36.45,
+        "p95": 49.603,
+        "p99": 62.221,
+        "max": 109.997,
+        "min": 11.935
+      },
+      "server_inference_ms": {
+        "count": 6502,
+        "mean": 19.003,
+        "p50": 18.468,
+        "p95": 32.502,
+        "p99": 39.464,
+        "max": 94.241,
+        "min": 6.078
+      },
+      "queue_wait_ms": {
+        "count": 6502,
+        "mean": 17.898,
+        "p50": 17.655,
+        "p95": 28.977,
+        "p99": 34.542,
+        "max": 90.481,
+        "min": 3.811
+      },
+      "cgroup": {
+        "window_s": 60.0227,
+        "cpu_max": "200000 100000",
+        "cpu_cores": 1.095,
+        "user_cores": 0.9931,
+        "system_cores": 0.102,
+        "cpu_pct_of_limit": 54.75,
+        "nr_periods": 600,
+        "nr_throttled": 0,
+        "throttled_ratio_pct": 0.0,
+        "throttled_ms": 0.0,
+        "mem_current_mib": 121.25,
+        "mem_anon_mib": 114.54,
+        "host_cpu_pct": 16.35
+      },
+      "errors_sample": []
+    },
+    {
+      "concurrency": 8,
+      "peak_inflight": 8,
+      "wall_elapsed_s": 60.061,
+      "total_requests": 6704,
+      "success_count": 6704,
+      "error_count": 0,
+      "error_rate_pct": 0.0,
+      "rps": 111.62,
+      "success_rps": 111.62,
+      "status_counts": {
+        "200": 6704
+      },
+      "http_latency_ms": {
+        "count": 6704,
+        "mean": 71.642,
+        "p50": 71.701,
+        "p95": 100.609,
+        "p99": 124.815,
+        "max": 174.097,
+        "min": 14.892
+      },
+      "server_inference_ms": {
+        "count": 6704,
+        "mean": 32.076,
+        "p50": 30.985,
+        "p95": 60.387,
+        "p99": 72.967,
+        "max": 127.486,
+        "min": 6.007
+      },
+      "queue_wait_ms": {
+        "count": 6704,
+        "mean": 39.566,
+        "p50": 39.006,
+        "p95": 64.991,
+        "p99": 81.902,
+        "max": 135.389,
+        "min": 6.103
+      },
+      "cgroup": {
+        "window_s": 60.0618,
+        "cpu_max": "200000 100000",
+        "cpu_cores": 1.1224,
+        "user_cores": 1.0169,
+        "system_cores": 0.1055,
+        "cpu_pct_of_limit": 56.12,
+        "nr_periods": 601,
+        "nr_throttled": 0,
+        "throttled_ratio_pct": 0.0,
+        "throttled_ms": 0.0,
+        "mem_current_mib": 118.61,
+        "mem_anon_mib": 112.0,
+        "host_cpu_pct": 15.93
+      },
+      "errors_sample": []
+    },
+    {
+      "concurrency": 12,
+      "peak_inflight": 12,
+      "wall_elapsed_s": 60.03,
+      "total_requests": 6589,
+      "success_count": 6589,
+      "error_count": 0,
+      "error_rate_pct": 0.0,
+      "rps": 109.76,
+      "success_rps": 109.76,
+      "status_counts": {
+        "200": 6589
+      },
+      "http_latency_ms": {
+        "count": 6589,
+        "mean": 109.284,
+        "p50": 111.498,
+        "p95": 152.708,
+        "p99": 178.771,
+        "max": 217.832,
+        "min": 17.076
+      },
+      "server_inference_ms": {
+        "count": 6589,
+        "mean": 44.333,
+        "p50": 42.192,
+        "p95": 87.447,
+        "p99": 108.232,
+        "max": 169.457,
+        "min": 6.308
+      },
+      "queue_wait_ms": {
+        "count": 6589,
+        "mean": 64.951,
+        "p50": 64.715,
+        "p95": 104.151,
+        "p99": 127.6,
+        "max": 164.374,
+        "min": 8.227
+      },
+      "cgroup": {
+        "window_s": 60.0303,
+        "cpu_max": "200000 100000",
+        "cpu_cores": 1.122,
+        "user_cores": 1.0204,
+        "system_cores": 0.1016,
+        "cpu_pct_of_limit": 56.1,
+        "nr_periods": 600,
+        "nr_throttled": 0,
+        "throttled_ratio_pct": 0.0,
+        "throttled_ms": 0.0,
+        "mem_current_mib": 120.13,
+        "mem_anon_mib": 112.82,
+        "host_cpu_pct": 16.33
+      },
+      "errors_sample": []
+    },
+    {
+      "concurrency": 24,
+      "peak_inflight": 24,
+      "wall_elapsed_s": 60.139,
+      "total_requests": 6426,
+      "success_count": 6426,
+      "error_count": 0,
+      "error_rate_pct": 0.0,
+      "rps": 106.85,
+      "success_rps": 106.85,
+      "status_counts": {
+        "200": 6426
+      },
+      "http_latency_ms": {
+        "count": 6426,
+        "mean": 224.388,
+        "p50": 231.39,
+        "p95": 304.711,
+        "p99": 348.64,
+        "max": 460.072,
+        "min": 27.642
+      },
+      "server_inference_ms": {
+        "count": 6426,
+        "mean": 69.049,
+        "p50": 60.239,
+        "p95": 159.441,
+        "p99": 192.281,
+        "max": 277.235,
+        "min": 6.267
+      },
+      "queue_wait_ms": {
+        "count": 6426,
+        "mean": 155.339,
+        "p50": 159.058,
+        "p95": 230.9,
+        "p99": 275.65,
+        "max": 375.056,
+        "min": 19.224
+      },
+      "cgroup": {
+        "window_s": 60.1395,
+        "cpu_max": "200000 100000",
+        "cpu_cores": 1.1211,
+        "user_cores": 1.0175,
+        "system_cores": 0.1036,
+        "cpu_pct_of_limit": 56.05,
+        "nr_periods": 601,
+        "nr_throttled": 0,
+        "throttled_ratio_pct": 0.0,
+        "throttled_ms": 0.0,
+        "mem_current_mib": 120.14,
+        "mem_anon_mib": 113.07,
+        "host_cpu_pct": 17.07
+      },
+      "errors_sample": []
+    }
+  ]
+}

@@ -514,3 +514,103 @@ def test_engine_supports_custom_plc_data_source_via_protocol(runtime_settings, t
         assert not engine.store.summary()["counts"]
     finally:
         engine.close()
+
+
+@pytest.mark.parametrize("mode", ["synchronized", "burst"])
+def test_synchronized_burst_sampling_emits_cycles_with_trace_and_fifo_spool(
+    runtime_settings, tmp_path, mode
+):
+    from collections import defaultdict
+    import threading
+
+    delivered = []
+    lock = threading.Lock()
+    fail_once = {"M-003": 1}
+
+    def accept(request):
+        payload = json.loads(request.content)
+        mid = payload["machine_id"]
+        if mid == "M-003" and payload["sequence_number"] == 1 and fail_once["M-003"] > 0:
+            fail_once["M-003"] -= 1
+            return httpx.Response(503)
+        with lock:
+            delivered.append(payload)
+        return ack(request)
+
+    trace_path = tmp_path / f"trace-{mode}.jsonl"
+    settings = runtime_settings.model_copy(
+        update={
+            "machine_count": 6,
+            "interval_ms": 120,
+            "send_workers": 6,
+            "retry_backoff_ms": 10,
+            "sampling_mode": mode,
+            "burst_trace_path": trace_path,
+            "state_path": tmp_path / f"state-{mode}.sqlite3",
+        }
+    )
+    assert runtime_settings.sampling_mode == "staggered"
+    engine = SensorEngine(settings, transport=httpx.MockTransport(accept))
+    try:
+        engine.start()
+        deadline = time.monotonic() + 3.0
+        while time.monotonic() < deadline and engine.completed < 18:
+            time.sleep(0.01)
+    finally:
+        engine.close()
+
+    by_machine = defaultdict(list)
+    for item in delivered:
+        by_machine[item["machine_id"]].append(item["sequence_number"])
+    assert len(by_machine) == 6
+    for mid, seqs in by_machine.items():
+        assert seqs == list(range(1, len(seqs) + 1))
+        assert len(seqs) >= 3
+
+    lines = [json.loads(line) for line in trace_path.read_text().splitlines() if line.strip()]
+    accepted_lines = [line for line in lines if line["outcome"] == "accepted"]
+    cycle1 = [line for line in accepted_lines if line["cycle_id"] == 1]
+    assert len(cycle1) == 6
+    assert len({line["sampled_at"] for line in cycle1}) == 1
+    assert len({line["edge_persisted_at"] for line in cycle1}) == 1
+    for line in accepted_lines:
+        assert line["sampling_mode"] == mode
+        for ts_field in (
+            "sampled_at",
+            "edge_persisted_at",
+            "sent_at",
+            "ingestion_ack_at",
+            "server_accepted_at",
+        ):
+            assert line[ts_field]
+    retried = [line for line in lines if line["machine_id"] == "M-003" and line["sequence_number"] == 1]
+    assert [line["outcome"] for line in retried] == ["failed", "accepted"]
+
+
+def test_sampling_mode_env_override_and_staggered_spread(runtime_settings, monkeypatch, tmp_path):
+    monkeypatch.setenv("SIM_AUTH_MODE", "local")
+    monkeypatch.setenv("SIM_INGESTION_AUTH", "none")
+    monkeypatch.setenv("BACKEND_BASE_URL", "http://127.0.0.1:9999")
+    monkeypatch.setenv("SIM_STATE_PATH", str(tmp_path / "env.sqlite3"))
+    monkeypatch.setenv("SIM_SAMPLING_MODE", "BURST")
+    monkeypatch.setenv("SIM_BURST_TRACE_PATH", str(tmp_path / "env-trace.jsonl"))
+    from simulator.settings import RuntimeSettings
+
+    env_settings = RuntimeSettings.from_env()
+    assert env_settings.sampling_mode == "burst"
+    assert env_settings.burst_trace_path == tmp_path / "env-trace.jsonl"
+
+    stagger_settings = runtime_settings.model_copy(
+        update={
+            "machine_count": 4,
+            "interval_ms": 200,
+            "sampling_mode": "staggered",
+            "state_path": tmp_path / "stagger.sqlite3",
+        }
+    )
+    engine = SensorEngine(stagger_settings, transport=httpx.MockTransport(ack))
+    try:
+        engine.tick()
+        assert engine.generated == 1  # Staggered emits only M-001 at t=0.
+    finally:
+        engine.close()

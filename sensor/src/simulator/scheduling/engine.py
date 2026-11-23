@@ -65,6 +65,14 @@ class SensorEngine:
         self.closed = False
         self.last_tick = time.monotonic()
         self.deadlines = {}
+        self.cycle_id = 0
+        self.cycle_deadline = None
+        self._trace_lock = threading.Lock()
+        self._event_traces: dict[str, dict] = {}
+        self._trace_fh = None
+        if settings.burst_trace_path is not None:
+            settings.burst_trace_path.parent.mkdir(parents=True, exist_ok=True)
+            self._trace_fh = settings.burst_trace_path.open("a", encoding="utf-8", buffering=1)
         self.machine_ids = [row["machine_id"] for row in self.store.list()]
 
     @property
@@ -103,15 +111,63 @@ class SensorEngine:
             self.generated += 1
         return event
 
+    def _record_trace(
+        self,
+        event_id: str,
+        payload: dict,
+        attempts: int,
+        *,
+        sent_at: str,
+        ingestion_ack_at: str,
+        result,
+        pop: bool,
+    ) -> None:
+        with self._trace_lock:
+            meta = self._event_traces.pop(event_id, None) if pop else self._event_traces.get(event_id)
+            if self._trace_fh is None:
+                return
+            meta = meta or {}
+            line = {
+                "sampling_mode": self.settings.sampling_mode,
+                "cycle_id": meta.get("cycle_id"),
+                "machine_id": payload["machine_id"],
+                "event_id": event_id,
+                "sequence_number": payload["sequence_number"],
+                "stream_epoch": payload.get("stream_epoch"),
+                "sampled_at": meta.get("sampled_at") or payload.get("received_at"),
+                "event_received_at": payload.get("received_at"),
+                "edge_persisted_at": meta.get("edge_persisted_at"),
+                "sent_at": sent_at,
+                "ingestion_ack_at": ingestion_ack_at,
+                "server_accepted_at": (result.response or {}).get("server_accepted_at"),
+                "outcome": result.outcome,
+                "status_code": result.status_code,
+                "attempts": attempts,
+                "send_latency_ms": round(result.latency_ms, 3),
+                "error": result.error,
+            }
+            self._trace_fh.write(json.dumps(line, separators=(",", ":")) + "\n")
+
     def deliver(self, row: dict):
         payload = json.loads(row["payload"])
         # Injection occurs once per durable event, so a simulated outage can recover.
         selected = payload["sequence_number"] % self.settings.fault_every == 0
         fault = self.settings.fault_mode if selected and row["attempts"] == 0 else FaultMode.NONE
+        sent_at = utc()
         result = self.client.send(payload, fault=fault)
+        ingestion_ack_at = utc()
         if result.outcome == "accepted":
             # Delete only after an identity-checked ACK; restart retries the same payload/ID.
             self.store.finish(row["event_id"], status="accepted")
+            self._record_trace(
+                row["event_id"],
+                payload,
+                row["attempts"] + 1,
+                sent_at=sent_at,
+                ingestion_ack_at=ingestion_ack_at,
+                result=result,
+                pop=True,
+            )
             if selected and self.settings.fault_mode == FaultMode.DUPLICATE_EVENT:
                 self.client.send(payload)
             return
@@ -135,6 +191,15 @@ class SensorEngine:
                 or result.error == "INGESTION_CREDENTIAL_UNAVAILABLE"
                 else "rejected"
             )
+        self._record_trace(
+            row["event_id"],
+            payload,
+            row["attempts"] + 1,
+            sent_at=sent_at,
+            ingestion_ack_at=ingestion_ack_at,
+            result=result,
+            pop=not result.retryable,
+        )
         self.store.finish(
             row["event_id"], status=status, error=result.error, next_at=time.time() + delay
         )
@@ -167,23 +232,44 @@ class SensorEngine:
         now = time.monotonic()
         interval = self.settings.interval_ms / 1000 / self.settings.speed
         due_machines = []
-        total = len(self.machine_ids)
-        for i, machine_id in enumerate(self.machine_ids):
-            deadline = self.deadlines.setdefault(machine_id, now + i * interval / total)
-            if generate and now >= deadline:
-                due_machines.append(machine_id)
-                next_deadline = deadline + interval
-                self.deadlines[machine_id] = (
-                    next_deadline if next_deadline > now else now + interval
-                )
+        cycle_id = None
+        if self.settings.sampling_mode in ("synchronized", "burst"):
+            if self.cycle_deadline is None:
+                self.cycle_deadline = now
+            if generate and now >= self.cycle_deadline:
+                self.cycle_id += 1
+                cycle_id = self.cycle_id
+                due_machines = list(self.machine_ids)
+                next_deadline = self.cycle_deadline + interval
+                self.cycle_deadline = next_deadline if next_deadline > now else now + interval
+        else:
+            total = len(self.machine_ids)
+            for i, machine_id in enumerate(self.machine_ids):
+                deadline = self.deadlines.setdefault(machine_id, now + i * interval / total)
+                if generate and now >= deadline:
+                    due_machines.append(machine_id)
+                    next_deadline = deadline + interval
+                    self.deadlines[machine_id] = (
+                        next_deadline if next_deadline > now else now + interval
+                    )
         if due_machines:
+            sampled_at = utc()
             events = self.store.generate_many(
                 due_machines,
                 self.build,
                 max_records=self.settings.spool_max_records,
                 max_bytes=self.settings.spool_max_bytes,
             )
+            edge_persisted_at = utc()
             if events:
+                if self._trace_fh is not None:
+                    with self._trace_lock:
+                        for ev in events:
+                            self._event_traces[ev["event_id"]] = {
+                                "cycle_id": cycle_id,
+                                "sampled_at": sampled_at,
+                                "edge_persisted_at": edge_persisted_at,
+                            }
                 self.metrics.generated.inc(len(events))
                 self.generated += len(events)
         self.dispatch_once()
@@ -239,6 +325,10 @@ class SensorEngine:
                 raise RuntimeError("Controller did not stop; state lock must remain held")
         if self.pool:
             self.pool.shutdown(wait=True)
+        if self._trace_fh is not None:
+            self._trace_fh.flush()
+            self._trace_fh.close()
+            self._trace_fh = None
         self.client.__exit__()
         self.store.close()
         self.closed = True

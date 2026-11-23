@@ -650,3 +650,174 @@ def test_rebalance_fences_stale_worker_in_stage_c(ordered_database):
             resume.set()
     with ordered_database.factory() as conn:
         assert conn.execute("SELECT count(*) AS n FROM processing_results").fetchone()["n"] == 1
+
+
+def test_r101_critical_slow_and_r102_normal_fast_end_to_end_ordering(ordered_database):
+    """Explicit §9.1 & §9.2 verification: R101 CRITICAL (slow) + R102 NORMAL (fast)."""
+    from psycopg import sql as psql
+    from sqlalchemy.engine import make_url
+    from maintai_messaging.postgres import connect as pg_connect
+    from backend.shared.alerts.handler import AlertHandler
+    from backend.shared.alerts.repository import AlertRepository
+    from backend.shared.persistence.migration import upgrade as upgrade_biz
+    from backend.shared.persistence.projections import ProjectionRepository
+    from backend.shared.persistence.registry import RegistryRepository
+    from backend.shared.projections.projector import Projector
+    from processing.shared.persistence.status import StatusRepository
+
+    providers = Providers(probability=0.92)  # >= 0.85 -> CRITICAL
+    app = hybrid_handler(ordered_database, providers)
+    base_predict = app.predict
+    barrier = threading.Barrier(2)
+    r102_persisted = threading.Event()
+
+    def predict(**kwargs):
+        barrier.wait(timeout=5)
+        if kwargs["event_id"] == "evt-M-001-101":
+            assert r102_persisted.wait(5)
+            time.sleep(0.02)
+            return Providers(probability=0.92).predict(**kwargs)  # CRITICAL
+        return Providers(probability=0.08).predict(**kwargs)  # R102 NORMAL
+
+    app.predict = predict
+    consumer = KeyedProcessingHandler(app)
+    assignment = consumer.acquire([TopicPartition("sensor.readings", 0)])[("sensor.readings", 0)]
+
+    ev101, rec101 = reading("M-001", 101, 101)
+    ev102, rec102 = reading("M-001", 102, 102)
+    t101 = consumer.admit(ev101, rec101, WorkContext(assignment, time.monotonic() + 15))
+    t102 = consumer.admit(ev102, rec102, WorkContext(assignment, time.monotonic() + 15))
+    ctx101 = WorkContext(assignment, time.monotonic() + 15, admission=t101)
+    ctx102 = WorkContext(assignment, time.monotonic() + 15, admission=t102)
+
+    def run_102():
+        res = consumer.handle(ev102, rec102, ctx102)
+        r102_persisted.set()
+        return res
+
+    with ThreadPoolExecutor(2) as pool:
+        f101 = pool.submit(consumer.handle, ev101, rec101, ctx101)
+        f102 = pool.submit(run_102)
+        f102.result(timeout=10)
+        # Out-of-order point: R102 (NORMAL) committed inference.results first, while
+        # processing_alert_ledger holds R102 (NO_SIGNAL) waiting on R101 (PENDING).
+        with ordered_database.factory() as conn:
+            inf_rows = conn.execute(
+                "SELECT source_sequence_number FROM maintai_kafka_outbox "
+                "WHERE topic='inference.results' ORDER BY created_at"
+            ).fetchall()
+            assert [int(r["source_sequence_number"]) for r in inf_rows] == [102]
+            assert (
+                conn.execute(
+                    "SELECT count(*) AS n FROM maintai_kafka_outbox WHERE topic='alert.signals'"
+                ).fetchone()["n"]
+                == 0
+            )
+            ledger = conn.execute(
+                "SELECT sequence_number, disposition FROM processing_alert_ledger ORDER BY admission_seq"
+            ).fetchall()
+            assert [(int(r["sequence_number"]), r["disposition"]) for r in ledger] == [
+                (101, "PENDING"),
+                (102, "NO_SIGNAL"),
+            ]
+        f101.result(timeout=10)
+
+    assert base_predict is not None
+    contracts = default_contracts()
+    with ordered_database.factory() as conn:
+        # Both R102 (enqueued first) and R101 (enqueued second) exist in history and outbox.
+        assert conn.execute("SELECT count(*) AS n FROM processing_results").fetchone()["n"] == 2
+        assert conn.execute("SELECT count(*) AS n FROM predictions").fetchone()["n"] == 2
+        assert conn.execute("SELECT count(*) AS n FROM processing_conflicts").fetchone()["n"] == 0
+        cursor = conn.execute(
+            "SELECT last_sequence FROM maintai_processing_machine_cursor WHERE machine_id='M-001'"
+        ).fetchone()
+        assert int(cursor["last_sequence"]) == 102
+        adm = conn.execute(
+            "SELECT last_admitted_sequence, alert_frontier_seq FROM processing_admission_cursor WHERE machine_id='M-001'"
+        ).fetchone()
+        assert int(adm["last_admitted_sequence"]) == 102
+        assert int(adm["alert_frontier_seq"]) == 2
+
+        inf_outbox = conn.execute(
+            "SELECT payload, message_id FROM maintai_kafka_outbox WHERE topic='inference.results' ORDER BY created_at"
+        ).fetchall()
+        sig_outbox = conn.execute(
+            "SELECT payload, message_id, source_sequence_number, dispatch_seq "
+            "FROM maintai_kafka_outbox WHERE topic='alert.signals' ORDER BY dispatch_seq"
+        ).fetchall()
+        assert [(int(r["source_sequence_number"]), int(r["dispatch_seq"])) for r in sig_outbox] == [
+            (101, 1)
+        ]
+        ledger_final = conn.execute(
+            "SELECT sequence_number, disposition FROM processing_alert_ledger ORDER BY admission_seq"
+        ).fetchall()
+        assert [(int(r["sequence_number"]), r["disposition"]) for r in ledger_final] == [
+            (101, "EMITTED"),
+            (102, "RESOLVED_NO_SIGNAL"),
+        ]
+
+    # Deliver out-of-order inference.results ([102 NORMAL, then 101 CRITICAL]) and ordered
+    # alert.signals ([101 CRITICAL]) into Business DB, checking UI view + alert lifecycle.
+    biz_name = "hyb_e2e_" + uuid.uuid4().hex[:12]
+    with pg_connect(ordered_database.dsn) as conn:
+        conn.autocommit = True
+        conn.execute(psql.SQL("CREATE DATABASE {}").format(psql.Identifier(biz_name)))
+    biz_dsn = make_url(ordered_database.dsn).set(database=biz_name).render_as_string(hide_password=False)
+    try:
+        upgrade_biz(biz_dsn)
+        RegistryRepository(lambda: pg_connect(biz_dsn)).provision(
+            [{"machine_id": "M-001", "display_name": "One"}]
+        )
+        projector = Projector()
+        for idx, row in enumerate(inf_outbox, start=1):
+            ev = contracts.decode("inference.results", bytes(row["payload"]))
+            with pg_connect(biz_dsn) as conn, conn.transaction():
+                projector(
+                    conn,
+                    ev,
+                    Record("inference.results", 0, idx, ev.key.encode(), ev.wire_bytes),
+                    None,
+                )
+
+        status_repo = StatusRepository(ordered_database.factory)
+
+        class LocalEvidenceClient:
+            def fetch(self, payload):
+                with ordered_database.factory() as pconn:
+                    res = pconn.execute(
+                        "SELECT result_id FROM processing_results WHERE event_id=%s",
+                        (payload["event_id"],),
+                    ).fetchone()
+                return status_repo.prediction(res["result_id"])
+
+        alert_repo = AlertRepository(lambda: pg_connect(biz_dsn))
+        alert_handler = AlertHandler(
+            lambda: pg_connect(biz_dsn), "business-alert-v1", LocalEvidenceClient(), repository=alert_repo
+        )
+        sig_ev = contracts.decode("alert.signals", bytes(sig_outbox[0]["payload"]))
+        alert_handler(
+            sig_ev, Record("alert.signals", 0, 1, sig_ev.key.encode(), sig_ev.wire_bytes)
+        )
+
+        proj_repo = ProjectionRepository(lambda: pg_connect(biz_dsn), alert_reader=alert_repo.active)
+        live_view = proj_repo.live("M-001")
+        detail_view = proj_repo.detail("M-001")
+        assert live_view["latest_valid_prediction"]["sequence_number"] == 102
+        assert live_view["latest_valid_prediction"]["prediction"] == "NORMAL"
+        assert detail_view["state"] == "NORMAL"
+        assert detail_view["latest_prediction"]["prediction"] == "NORMAL"
+        # R101 CRITICAL alert was created and NOT auto-resolved by newer R102 NORMAL!
+        assert len(detail_view["active_alerts"]) == 1
+        alert_detail = alert_repo.detail(detail_view["active_alerts"][0], {"M-001"})["alert"]
+        assert alert_detail["severity"] == "CRITICAL"
+        assert alert_detail["status"] == "OPEN"
+        with pg_connect(biz_dsn) as conn:
+            a_row = conn.execute("SELECT status, severity, latest_source_sequence FROM alerts").fetchone()
+            assert a_row["status"] == "OPEN"
+            assert a_row["severity"] == "CRITICAL"
+            assert int(a_row["latest_source_sequence"]) == 101
+    finally:
+        with pg_connect(ordered_database.dsn) as conn:
+            conn.autocommit = True
+            conn.execute(psql.SQL("DROP DATABASE {} WITH (FORCE)").format(psql.Identifier(biz_name)))
