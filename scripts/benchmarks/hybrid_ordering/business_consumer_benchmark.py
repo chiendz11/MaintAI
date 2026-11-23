@@ -80,6 +80,7 @@ class BizMetricsCollector:
         self.commit_ms: dict[str, list[float]] = defaultdict(list)
         self.pool_wait_ms: dict[str, list[float]] = defaultdict(list)
         self.kafka_commit_ms: dict[str, list[float]] = defaultdict(list)
+        self.kafka_commit_calls: dict[str, int] = defaultdict(int)
         self.handler_wall_ms: dict[str, list[float]] = defaultdict(list)
         self.poll_calls_while_busy: dict[str, int] = defaultdict(int)
         self.poll_empty_sleep_ms: dict[str, list[float]] = defaultdict(list)
@@ -158,14 +159,37 @@ def tracked_biz_pool(pool: BusinessPool, collector: BizMetricsCollector):
                     collector.commit_ms[role].append(proxy.commit_ms)
 
 
+class _CommitTimingClientProxy:
+    def __init__(self, inner, runner: "InstrumentedConsumerRunner"):
+        self._inner = inner
+        self._runner = runner
+
+    def commit(self, *args, **kwargs):
+        t0 = time.perf_counter()
+        try:
+            return self._inner.commit(*args, **kwargs)
+        finally:
+            dt = time.perf_counter() - t0
+            self._runner._cycle_commit_s += dt
+            with self._runner.collector.lock:
+                if self._runner.collector.active:
+                    self._runner.collector.kafka_commit_ms[self._runner.role].append(dt * 1000.0)
+                    self._runner.collector.kafka_commit_calls[self._runner.role] += 1
+
+    def __getattr__(self, name):
+        return getattr(self._inner, name)
+
+
 class InstrumentedConsumerRunner(ConsumerRunner):
-    """Exact copy of ConsumerRunner logic with non-invasive timing instrumentation."""
+    """Non-invasive timing wrapper around the real ConsumerRunner implementation."""
 
     def __init__(self, settings, role, handler, *, collector: BizMetricsCollector, replica_id: int, **kwargs):
         super().__init__(settings, role, handler, **kwargs)
         self.collector = collector
         self.replica_id = replica_id
         self._last_exec_finished_at = None
+        self._cycle_commit_s = 0.0
+        self.client = _CommitTimingClientProxy(self.client, self)
 
     def _poll(self, timeout):
         t0 = time.perf_counter()
@@ -184,85 +208,23 @@ class InstrumentedConsumerRunner(ConsumerRunner):
             return super()._execute(record)
         finally:
             done_ts = time.perf_counter()
+            self._cycle_commit_s = 0.0
             self._last_exec_finished_at = done_ts
             with self.collector.lock:
                 if self.collector.active:
                     self.collector.handler_wall_ms[self.role].append((done_ts - t0) * 1000.0)
 
-    def run(self, stop=None, *, max_records=None):
-        from concurrent.futures import ThreadPoolExecutor
-        from maintai_messaging.errors import ConfigurationError, ConsumerFailed
-
-        stop = stop or threading.Event()
-        if max_records is not None and max_records < 1:
-            raise ConfigurationError("max_records must be positive")
-        self.client.subscribe(
-            [self.topic],
-            on_assign=self._assigned,
-            on_revoke=self._revoked,
-            on_lost=self._revoked,
-        )
-        executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix=f"maintai-{self.role}-{self.replica_id}")
-        future = record = None
-        generation = None
-        try:
-            while True:
-                if future is not None:
-                    if not future.done():
-                        extra = self._poll(self.settings.poll_interval_seconds)
-                        if extra is not None:
-                            if len(self._pending) + 1 >= self._buffer_limit:
-                                raise ConsumerFailed("Serial consumer exceeded its bounded buffer")
-                            self._pending.append((self._generation, extra))
-                            self._flow_control()
-                        continue
-                    collected_ts = time.perf_counter()
-                    fin_ts = self._last_exec_finished_at
-                    if fin_ts is not None:
-                        with self.collector.lock:
-                            if self.collector.active:
-                                self.collector.wake_delay_ms[self.role].append(max(0.0, (collected_ts - fin_ts) * 1000.0))
-                                self.collector.batch_queue_lens[self.role].append(len(self._pending))
-                    try:
-                        future.result()
-                    except Exception as exc:
-                        raise ConsumerFailed("Handler failed; no offset advanced") from exc
-                    owned = {(p.topic, p.partition) for p in self.client.assignment()}
-                    if generation == self._generation and (record.topic, record.partition) in owned:
-                        c0 = time.perf_counter()
-                        positions = self.client.commit(
-                            offsets=[TopicPartition(record.topic, record.partition, record.offset + 1)],
-                            asynchronous=False,
-                        )
-                        c_ms = (time.perf_counter() - c0) * 1000.0
-                        with self.collector.lock:
-                            if self.collector.active:
-                                self.collector.kafka_commit_ms[self.role].append(c_ms)
-                        if any(getattr(partition, "error", None) for partition in positions or ()):
-                            raise ConsumerFailed("Broker did not acknowledge the offset commit")
-                        self.processed += 1
-                    self._busy = False
-                    future = None
-                    self._flow_control()
-                if stop.is_set() or (max_records is not None and self.processed >= max_records):
-                    break
-                if self._pending:
-                    pending_generation, record = self._pending.popleft()
-                    if pending_generation != self._generation:
-                        continue
-                else:
-                    record = self._poll(self.settings.poll_interval_seconds)
-                if record is None:
-                    continue
-                generation = self._generation
-                self._busy = True
-                self._last_exec_finished_at = None
-                self._flow_control()
-                future = executor.submit(self._execute, record)
-        finally:
-            self.client.close()
-            executor.shutdown(wait=True, cancel_futures=True)
-        return self.processed
+    def _flow_control(self):
+        super()._flow_control()
+        if not self._busy and self._last_exec_finished_at is not None:
+            collected_ts = time.perf_counter()
+            wake_s = max(0.0, collected_ts - self._last_exec_finished_at - self._cycle_commit_s)
+            self._last_exec_finished_at = None
+            self._cycle_commit_s = 0.0
+            with self.collector.lock:
+                if self.collector.active:
+                    self.collector.wake_delay_ms[self.role].append(wake_s * 1000.0)
+                    self.collector.batch_queue_lens[self.role].append(len(self._pending))
 
 
 def run_biz_trial(
@@ -275,6 +237,8 @@ def run_biz_trial(
     bootstrap_servers: str,
     warmup_seconds: int = 5,
     measure_seconds: int = 15,
+    commit_batch_size: int = 1,
+    commit_max_wait_ms: int = 25,
 ) -> dict:
     run_id = uuid4().hex[:12]
     proc_db = f"bench3_proc_{run_id}"
@@ -306,6 +270,8 @@ def run_biz_trial(
         bootstrap_servers=bootstrap_servers,
         group_prefix=f"bench3-{run_id}-",
         poll_interval_seconds=0.01,
+        commit_batch_size=commit_batch_size,
+        commit_max_wait_ms=commit_max_wait_ms,
         producer_git_sha="a" * 40,
     )
     ensure_topics_and_groups(settings, contracts)
@@ -788,6 +754,7 @@ def run_biz_trial(
                 "db_commit_ms": summarize(collector.commit_ms[role]),
                 "pool_wait_ms": summarize(collector.pool_wait_ms[role]),
                 "kafka_commit_ms": summarize(collector.kafka_commit_ms[role]),
+                "kafka_commit_calls": collector.kafka_commit_calls[role],
                 "wake_delay_ms": summarize(collector.wake_delay_ms[role]),
                 "poll_empty_sleep_ms": summarize(collector.poll_empty_sleep_ms[role]),
                 "poll_calls_while_busy": collector.poll_calls_while_busy[role],
@@ -798,6 +765,8 @@ def run_biz_trial(
             "mode": mode,
             "workload": workload,
             "biz_replicas": biz_replicas,
+            "commit_batch_size": commit_batch_size,
+            "commit_max_wait_ms": commit_max_wait_ms,
             "run_index": run_idx,
             "funnel_rps": {
                 "target_rps": round(sum(rates.values()), 2),
@@ -864,6 +833,8 @@ def main():
     parser.add_argument("--bootstrap-servers", default="127.0.0.1:39092")
     parser.add_argument("--runs", type=int, default=3)
     parser.add_argument("--matrix", default="", help="Optional filter e.g. baseline:A:1,hybrid:A:1,hybrid:A:2,hybrid:C:1,hybrid:C:2")
+    parser.add_argument("--commit-batch-size", type=int, default=1)
+    parser.add_argument("--commit-max-wait-ms", type=int, default=25)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
 
@@ -892,6 +863,8 @@ def main():
                 run_idx=r,
                 database_url=args.database_url,
                 bootstrap_servers=args.bootstrap_servers,
+                commit_batch_size=args.commit_batch_size,
+                commit_max_wait_ms=args.commit_max_wait_ms,
             )
             runs_out.append(res)
             out_path.write_text(json.dumps({"generated_at": datetime.now(timezone.utc).isoformat(), "runs": runs_out}, indent=2) + "\n")

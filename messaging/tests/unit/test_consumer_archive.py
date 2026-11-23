@@ -388,3 +388,82 @@ def test_serial_rebalance_resumes_previously_paused_partition(settings, contract
     assert len(client.resumes) >= 2
     assert client.paused is False
     assert [p.offset for p in client.commits] == [1, 2]
+
+
+def test_batched_offset_commit_coalesces_durable_receipts_and_flushes_on_stop(
+    settings, contracts, example
+):
+    from dataclasses import replace
+
+    batched_settings = replace(settings, commit_batch_size=3, commit_max_wait_ms=500)
+    client = ConsumerClient([message(example, offset=i) for i in range(5)])
+    persisted = []
+
+    def durable(_event, record):
+        persisted.append(record.offset)
+        return DurableReceipt.for_record(record)
+
+    runner = ConsumerRunner(batched_settings, "processing", durable, contracts=contracts, client=client)
+    assert runner.run(max_records=5) == 5
+    assert persisted == [0, 1, 2, 3, 4]
+    # Coalesces first 3 into offset 3, then remaining 2 into offset 5 on completion
+    assert [p.offset for p in client.commits] == [3, 5]
+
+
+def test_batched_commit_handler_failure_does_not_commit_unbatched_or_failed_record(
+    settings, contracts, example
+):
+    from dataclasses import replace
+
+    batched_settings = replace(settings, commit_batch_size=4, commit_max_wait_ms=500)
+    client = ConsumerClient([message(example, offset=i) for i in range(3)])
+
+    def fail_on_two(_event, record):
+        if record.offset == 2:
+            raise OSError("db crash")
+        return DurableReceipt.for_record(record)
+
+    runner = ConsumerRunner(
+        batched_settings, "processing", fail_on_two, contracts=contracts, client=client
+    )
+    with pytest.raises(ConsumerFailed):
+        runner.run(max_records=3)
+    assert not client.commits
+    assert client.closed
+
+
+def test_backpressured_buffer_overflow_raises_instead_of_dropping_record(
+    settings, contracts, example
+):
+    gate = threading.Event()
+
+    class UnpausableClient(ConsumerClient):
+        def pause(self, partitions):
+            super().pause(partitions)
+            self.paused = False
+
+        def close(self):
+            gate.set()
+            super().close()
+
+    client = UnpausableClient([message(example, offset=i) for i in range(3)])
+    handled = []
+
+    def blocking(_event, record):
+        handled.append(record.offset)
+        gate.wait(0.5)
+        return DurableReceipt.for_record(record)
+
+    runner = ConsumerRunner(
+        settings,
+        "processing",
+        blocking,
+        contracts=contracts,
+        client=client,
+        max_buffered_records=2,
+    )
+    with pytest.raises(ConsumerFailed, match="exceeded its bounded buffer"):
+        runner.run(max_records=3)
+    assert handled == [0]
+    assert not client.commits
+    assert client.closed

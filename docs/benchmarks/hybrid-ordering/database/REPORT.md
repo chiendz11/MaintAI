@@ -110,3 +110,35 @@ Captured on populated `processing_db` (~1,000 events after Hybrid Workload C):
    - Pass locked `processing_admission_cursor` state into `drain_frontier` (avoiding duplicate `FOR UPDATE` select) and skip redundant `INSERT ... ON CONFLICT` on `maintai_processing_machine_cursor` / `processing_source_cursor` when already initialized (`existing row -> direct SELECT ... FOR UPDATE`).
 2. **Optimization 2 (Eliminate Serial Poll-Thread Barrier) — Bounded `admit_batch()` on Poll Thread:**
    - Poll up to a bounded micro-batch (`e.g., max 16` ready records from librdkafka via `poll`/non-blocking drain) and execute durable `admit_batch()` inside **ONE fenced PG transaction** (with deterministic machine ordering and safe fallback to per-record admission on any conflict/error). Reduces `TxA` transactions and poll-thread stalls by **5–16×** at 50 RPS while keeping `synchronous_commit=on` and 100% durable admission before dispatch!
+
+---
+
+## 6. Phase 4 Before / After Results (`Opt 1` Kept vs `Opt 2` Rolled Back)
+
+### 6.1 Optimization 1 — Missing Index + SQL Pruning (Kept, Commit `11f9e9f`)
+
+Changes implemented:
+- Added `CREATE INDEX IF NOT EXISTS sensor_events_machine_seq ON sensor_events(machine_id, sequence_number)` in [0005_hybrid_ordering.py](file:///home/chienqt/Dev/newBTL/MaintAI/processing/migrations/versions/0005_hybrid_ordering.py).
+- Verified `EXPLAIN (ANALYZE, BUFFERS)` for `SELECT event_id FROM sensor_events WHERE machine_id=$1 AND sequence_number=$2 AND event_id <> $3 LIMIT 1`: switched from `Seq Scan` (`0.266ms`, `92` shared buffers at 1,000 rows) to `Index Scan using sensor_events_machine_seq` (`0.013ms`, `3` shared buffers — **20× faster**, constant `O(log N)`).
+- Eliminated redundant `require_ordering()`, duplicate `processing_admission_cursor FOR UPDATE`, and blind cursor `INSERT ... ON CONFLICT` in [resequencer.py](file:///home/chienqt/Dev/newBTL/MaintAI/processing/shared/persistence/resequencer.py) (`already_fenced=True` + cursor reuse), and skipped redundant `StageB_prepare` DB lookup in [handler.py](file:///home/chienqt/Dev/newBTL/MaintAI/processing/worker/src/consumer/handler.py) when `not ticket.replayed and not ticket.legacy_terminal`.
+
+Measured impact (`3` runs per workload on `controlled_benchmark.py`, `50 RPS`, `synchronous_commit=on`, before Opt 3):
+
+| Scenario | Admitted RPS | Outcomes RPS | Preds RPS | `processing_db_tx` p95 (ms) | `outbox` p95 (ms) | Hot e2e p95 (ms) | Bg e2e p95 (ms) | Worker CPU % | Violations |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `baseline-50rps` WL=A (`pk=1`) | 50.00 | 49.98 | 45.18 | 40.28 | 119.92 | 2,066.14 | 3,513.68 | 98.73% | 0 |
+| `candidate-50rps` WL=A (`pk=2`) | 46.02 | 45.87 | 34.76 | 59.77 | 122.79 | 4,349.29 | 15,000.95 | 123.93% | 0 |
+| **`phase4-opt1` WL=A (`pk=2`)** | **50.09** | **50.18** | 44.00 | **43.45** (-27.3%) | **102.95** | **2,383.99** | **7,771.73** | **105.11%** | **0** |
+| `candidate-50rps` WL=C (`pk=2`) | 45.38 | 43.58 | 35.73 | 65.35 | 204.19 | 8,310.98 | 12,089.50 | 121.57% | 0 |
+| **`phase4-opt1` WL=C (`pk=2`)** | **48.27** | **46.78** | 42.98 | **45.54** (-30.3%) | **150.37** | **5,791.33** | **5,195.34** | **106.60%** | **0** |
+
+**Conclusion:** Opt 1 completely eliminated Hybrid's Workload A admission regression (`46.02 -> 50.09 RPS`) while dropping DB tx p95 by ~`27–30%` and CPU by ~`15–19 percentage points`, without changing durability or lock semantics.
+
+### 6.2 Optimization 2 — `admit_batch()` on Poll Thread (**Tested & ROLLED BACK**)
+
+Raw evidence preserved in [phase4-opt2](file:///home/chienqt/Dev/newBTL/MaintAI/docs/benchmarks/hybrid-ordering/phase4-opt2/summary.csv). Although multi-record admission was functionally clean (`0` violations), holding multiple `processing_admission_cursor ... FOR UPDATE` row locks inside a single `TxA` transaction while waiting to dispatch the batch **regressed tail latencies and Workload C throughput**:
+
+- **WL=A (`opt2` vs `opt1`):** `db_tx_p95` degraded `43.45 -> 58.03 ms` (`+33.6%`), `outbox_p95` doubled `102.95 -> 207.44 ms` (`+101.5%`), `hot_p95` regressed `2,383.99 -> 2,912.80 ms`, `bg_p95` regressed `7,771.73 -> 10,144.00 ms`.
+- **WL=C (`opt2` vs `opt1`):** `outcomes_rps` dropped `46.78 -> 45.58 RPS`, `db_tx_p95` worsened `45.54 -> 49.74 ms`, `outbox_p95` jumped `150.37 -> 236.94 ms`, and `hot_p95` degraded `5,791.33 -> 7,262.78 ms`.
+
+Per empirical policy, `admit_batch` was **rolled back completely** before Opt 3, proving that short single-key `TxA` + immediate dispatch outperforms multi-key lock batching. Note that combined with Opt 3 (and `per_key=4` on Workload C), `phase4-opt1` + `Opt 3` achieves **`50.18–51.05 RPS` (WL=A)** and **`50.47 RPS` (WL=C)** end-to-end; see [business-consumer/REPORT.md](file:///home/chienqt/Dev/newBTL/MaintAI/docs/benchmarks/hybrid-ordering/business-consumer/REPORT.md#L86).

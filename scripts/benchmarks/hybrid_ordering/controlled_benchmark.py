@@ -387,6 +387,8 @@ def run_single(args, workload: str, run_idx: int) -> dict:
         bootstrap_servers=args.bootstrap_servers,
         group_prefix=f"bench-{run_id}-",
         poll_interval_seconds=0.01,
+        commit_batch_size=args.commit_batch_size,
+        commit_max_wait_ms=args.commit_max_wait_ms,
         producer_git_sha="a" * 40,
     )
     captured_offsets = ensure_topics_and_groups(settings, contracts)
@@ -1058,6 +1060,8 @@ def main():
     parser.add_argument("--measure-seconds", type=int, default=15)
     parser.add_argument("--runs", type=int, default=3)
     parser.add_argument("--workloads", default="A,B,C")
+    parser.add_argument("--commit-batch-size", type=int, default=1)
+    parser.add_argument("--commit-max-wait-ms", type=int, default=25)
     parser.add_argument("--output-dir", required=True)
     args = parser.parse_args()
 

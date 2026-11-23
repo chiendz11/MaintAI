@@ -118,6 +118,8 @@ class KafkaSettings:
     poll_interval_seconds: float = 0.1
     max_payload_bytes: int = 262144
     producer_git_sha: str = ""
+    commit_batch_size: int = 1
+    commit_max_wait_ms: int = 25
 
     def __post_init__(self):
         if not self.bootstrap_servers or not self.client_id:
@@ -148,6 +150,18 @@ class KafkaSettings:
             r"[0-9a-f]{40}|[0-9a-f]{64}", self.producer_git_sha
         ):
             raise ConfigurationError("Producer Git SHA must be an actual Git object ID")
+        if (
+            not isinstance(self.commit_batch_size, int)
+            or isinstance(self.commit_batch_size, bool)
+            or not 1 <= self.commit_batch_size <= 64
+        ):
+            raise ConfigurationError("Kafka commit batch size must be between 1 and 64")
+        if (
+            not isinstance(self.commit_max_wait_ms, int)
+            or isinstance(self.commit_max_wait_ms, bool)
+            or not 1 <= self.commit_max_wait_ms <= 1000
+        ):
+            raise ConfigurationError("Kafka commit max wait must be between 1 and 1000 ms")
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> KafkaSettings:
@@ -173,6 +187,8 @@ class KafkaSettings:
             poll_interval_seconds=float(env.get("KAFKA_POLL_INTERVAL_SECONDS", "0.1")),
             max_payload_bytes=int(env.get("KAFKA_MAX_PAYLOAD_BYTES", "262144")),
             producer_git_sha=env.get("PRODUCER_GIT_SHA", ""),
+            commit_batch_size=int(env.get("KAFKA_COMMIT_BATCH_SIZE", "1")),
+            commit_max_wait_ms=int(env.get("KAFKA_COMMIT_MAX_WAIT_MS", "25")),
         )
 
     def client_config(self) -> dict:

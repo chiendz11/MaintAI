@@ -1,0 +1,4007 @@
+{
+  "generated_at": "2026-11-23T06:26:35.334121+00:00",
+  "runs": [
+    {
+      "mode": "hybrid",
+      "workload": "A",
+      "biz_replicas": 1,
+      "commit_batch_size": 1,
+      "commit_max_wait_ms": 25,
+      "run_index": 1,
+      "funnel_rps": {
+        "target_rps": 50.0,
+        "sent_rps": 50.0,
+        "admitted_rps": 50.8,
+        "outcomes_rps": 51.2,
+        "outbox_pub_rps": 51.27,
+        "pred_consumed_rps": 53.27,
+        "biz_pred_commit_rps": 53.27
+      },
+      "latency_ms": {
+        "kafka_pub_to_biz_commit": {
+          "count": 750,
+          "mean": 238.15,
+          "p50": 157.778,
+          "p95": 629.796,
+          "p99": 658.947,
+          "max": 678.674
+        },
+        "hot_e2e": {
+          "count": 15,
+          "mean": 440.507,
+          "p50": 419.448,
+          "p95": 1018.773,
+          "p99": 1178.709,
+          "max": 1218.693
+        },
+        "bg_e2e": {
+          "count": 735,
+          "mean": 732.316,
+          "p50": 700.349,
+          "p95": 1385.03,
+          "p99": 1619.745,
+          "max": 1844.086
+        },
+        "pg_notify_delivery": {
+          "count": 1577,
+          "mean": 0.735,
+          "p50": 0.572,
+          "p95": 1.587,
+          "p99": 2.638,
+          "max": 7.891
+        }
+      },
+      "role_breakdown": {
+        "business-prediction": {
+          "handler_wall_ms": {
+            "count": 799,
+            "mean": 10.714,
+            "p50": 9.463,
+            "p95": 21.144,
+            "p99": 29.149,
+            "max": 32.476
+          },
+          "db_tx_ms": {
+            "count": 799,
+            "mean": 9.268,
+            "p50": 8.198,
+            "p95": 19.186,
+            "p99": 26.684,
+            "max": 30.443
+          },
+          "db_exec_ms": {
+            "count": 799,
+            "mean": 7.214,
+            "p50": 6.299,
+            "p95": 15.818,
+            "p99": 22.012,
+            "max": 26.801
+          },
+          "db_commit_ms": {
+            "count": 799,
+            "mean": 0.828,
+            "p50": 0.561,
+            "p95": 2.169,
+            "p99": 3.374,
+            "max": 6.625
+          },
+          "pool_wait_ms": {
+            "count": 799,
+            "mean": 0.011,
+            "p50": 0.011,
+            "p95": 0.017,
+            "p99": 0.028,
+            "max": 0.039
+          },
+          "kafka_commit_ms": {
+            "count": 799,
+            "mean": 5.821,
+            "p50": 5.693,
+            "p95": 6.741,
+            "p99": 7.929,
+            "max": 24.3
+          },
+          "kafka_commit_calls": 799,
+          "wake_delay_ms": {
+            "count": 799,
+            "mean": 0.234,
+            "p50": 0.147,
+            "p95": 0.711,
+            "p99": 1.393,
+            "max": 2.835
+          },
+          "poll_empty_sleep_ms": {
+            "count": 3951,
+            "mean": 0.028,
+            "p50": 0.007,
+            "p95": 0.102,
+            "p99": 0.638,
+            "max": 2.691
+          },
+          "poll_calls_while_busy": 4697,
+          "pending_queue_len": {
+            "count": 799,
+            "mean": 14.751,
+            "p50": 10.0,
+            "p95": 39.0,
+            "p99": 44.0,
+            "max": 46.0
+          }
+        },
+        "business-live": {
+          "handler_wall_ms": {
+            "count": 778,
+            "mean": 10.597,
+            "p50": 9.308,
+            "p95": 21.826,
+            "p99": 29.997,
+            "max": 38.074
+          },
+          "db_tx_ms": {
+            "count": 778,
+            "mean": 9.573,
+            "p50": 8.505,
+            "p95": 20.388,
+            "p99": 28.645,
+            "max": 35.316
+          },
+          "db_exec_ms": {
+            "count": 778,
+            "mean": 7.526,
+            "p50": 6.493,
+            "p95": 16.422,
+            "p99": 22.669,
+            "max": 32.901
+          },
+          "db_commit_ms": {
+            "count": 778,
+            "mean": 0.943,
+            "p50": 0.634,
+            "p95": 2.452,
+            "p99": 3.809,
+            "max": 7.947
+          },
+          "pool_wait_ms": {
+            "count": 778,
+            "mean": 0.011,
+            "p50": 0.011,
+            "p95": 0.017,
+            "p99": 0.024,
+            "max": 0.035
+          },
+          "kafka_commit_ms": {
+            "count": 779,
+            "mean": 5.81,
+            "p50": 5.659,
+            "p95": 6.839,
+            "p99": 8.245,
+            "max": 10.68
+          },
+          "kafka_commit_calls": 779,
+          "wake_delay_ms": {
+            "count": 779,
+            "mean": 0.265,
+            "p50": 0.158,
+            "p95": 0.835,
+            "p99": 1.603,
+            "max": 4.597
+          },
+          "poll_empty_sleep_ms": {
+            "count": 3757,
+            "mean": 0.035,
+            "p50": 0.007,
+            "p95": 0.146,
+            "p99": 0.721,
+            "max": 3.265
+          },
+          "poll_calls_while_busy": 4498,
+          "pending_queue_len": {
+            "count": 779,
+            "mean": 27.331,
+            "p50": 27.0,
+            "p95": 53.1,
+            "p99": 60.0,
+            "max": 63.0
+          }
+        },
+        "business-alert": {
+          "handler_wall_ms": {
+            "count": 81,
+            "mean": 17.681,
+            "p50": 16.977,
+            "p95": 32.05,
+            "p99": 35.232,
+            "max": 35.599
+          },
+          "db_tx_ms": {
+            "count": 81,
+            "mean": 16.786,
+            "p50": 16.104,
+            "p95": 31.064,
+            "p99": 33.726,
+            "max": 34.098
+          },
+          "db_exec_ms": {
+            "count": 81,
+            "mean": 9.658,
+            "p50": 9.544,
+            "p95": 19.056,
+            "p99": 22.419,
+            "max": 22.816
+          },
+          "db_commit_ms": {
+            "count": 81,
+            "mean": 1.008,
+            "p50": 0.867,
+            "p95": 2.415,
+            "p99": 2.751,
+            "max": 3.059
+          },
+          "pool_wait_ms": {
+            "count": 81,
+            "mean": 0.011,
+            "p50": 0.01,
+            "p95": 0.017,
+            "p99": 0.019,
+            "max": 0.02
+          },
+          "kafka_commit_ms": {
+            "count": 81,
+            "mean": 5.831,
+            "p50": 5.766,
+            "p95": 6.689,
+            "p99": 6.936,
+            "max": 7.04
+          },
+          "kafka_commit_calls": 81,
+          "wake_delay_ms": {
+            "count": 81,
+            "mean": 0.289,
+            "p50": 0.174,
+            "p95": 0.832,
+            "p99": 1.318,
+            "max": 1.417
+          },
+          "poll_empty_sleep_ms": {
+            "count": 587,
+            "mean": 0.031,
+            "p50": 0.007,
+            "p95": 0.088,
+            "p99": 0.522,
+            "max": 4.442
+          },
+          "poll_calls_while_busy": 587,
+          "pending_queue_len": {
+            "count": 81,
+            "mean": 0.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0,
+            "max": 0.0
+          }
+        }
+      },
+      "projector_substeps_ms": {
+        "lock_machine_ms": {
+          "count": 799,
+          "mean": 0.59,
+          "p50": 0.347,
+          "p95": 1.735,
+          "p99": 3.107,
+          "max": 5.17
+        },
+        "guard_source_ms": {
+          "count": 799,
+          "mean": 1.939,
+          "p50": 1.459,
+          "p95": 5.077,
+          "p99": 7.55,
+          "max": 11.97
+        },
+        "load_3tables_ms": {
+          "count": 799,
+          "mean": 1.746,
+          "p50": 1.327,
+          "p95": 4.484,
+          "p99": 6.706,
+          "max": 10.273
+        },
+        "reduce_ms": {
+          "count": 799,
+          "mean": 0.121,
+          "p50": 0.11,
+          "p95": 0.191,
+          "p99": 0.235,
+          "max": 0.289
+        },
+        "persist_upsert_ms": {
+          "count": 799,
+          "mean": 2.041,
+          "p50": 1.518,
+          "p95": 5.239,
+          "p99": 7.061,
+          "max": 11.515
+        },
+        "pg_notify_ms": {
+          "count": 799,
+          "mean": 0.542,
+          "p50": 0.307,
+          "p95": 1.83,
+          "p99": 2.957,
+          "max": 4.31
+        }
+      },
+      "out_of_order": {
+        "total_arrivals": 799,
+        "out_of_order_arrivals": 0,
+        "ooo_pct": 0.0,
+        "stale_pred_skipped_by_guard": 0,
+        "wrong_latest_sequence": 0
+      },
+      "notifications": {
+        "emitted": 2000,
+        "received": 2000
+      },
+      "lag_samples": [
+        {
+          "t_rel": 0.01,
+          "pred_total_lag": 30,
+          "pred_max_part_lag": 5,
+          "pred_per_partition": {
+            "0": 2,
+            "1": 3,
+            "2": 2,
+            "3": 2,
+            "4": 2,
+            "5": 3,
+            "6": 5,
+            "7": 5,
+            "8": 4,
+            "9": 0,
+            "10": 1,
+            "11": 1
+          },
+          "live_total_lag": 32
+        },
+        {
+          "t_rel": 1.01,
+          "pred_total_lag": 41,
+          "pred_max_part_lag": 7,
+          "pred_per_partition": {
+            "0": 2,
+            "1": 3,
+            "2": 2,
+            "3": 2,
+            "4": 3,
+            "5": 6,
+            "6": 5,
+            "7": 7,
+            "8": 5,
+            "9": 3,
+            "10": 2,
+            "11": 1
+          },
+          "live_total_lag": 33
+        },
+        {
+          "t_rel": 2.01,
+          "pred_total_lag": 34,
+          "pred_max_part_lag": 4,
+          "pred_per_partition": {
+            "0": 2,
+            "1": 2,
+            "2": 2,
+            "3": 1,
+            "4": 3,
+            "5": 4,
+            "6": 3,
+            "7": 4,
+            "8": 4,
+            "9": 2,
+            "10": 4,
+            "11": 3
+          },
+          "live_total_lag": 17
+        },
+        {
+          "t_rel": 3.02,
+          "pred_total_lag": 9,
+          "pred_max_part_lag": 2,
+          "pred_per_partition": {
+            "0": 2,
+            "1": 0,
+            "2": 1,
+            "3": 1,
+            "4": 1,
+            "5": 1,
+            "6": 0,
+            "7": 1,
+            "8": 0,
+            "9": 0,
+            "10": 2,
+            "11": 0
+          },
+          "live_total_lag": 21
+        },
+        {
+          "t_rel": 4.02,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 7
+        },
+        {
+          "t_rel": 5.02,
+          "pred_total_lag": 7,
+          "pred_max_part_lag": 2,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 1,
+            "6": 0,
+            "7": 1,
+            "8": 1,
+            "9": 1,
+            "10": 2,
+            "11": 1
+          },
+          "live_total_lag": 16
+        },
+        {
+          "t_rel": 6.02,
+          "pred_total_lag": 13,
+          "pred_max_part_lag": 3,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 1,
+            "2": 1,
+            "3": 0,
+            "4": 1,
+            "5": 1,
+            "6": 0,
+            "7": 2,
+            "8": 3,
+            "9": 0,
+            "10": 3,
+            "11": 1
+          },
+          "live_total_lag": 28
+        },
+        {
+          "t_rel": 7.03,
+          "pred_total_lag": 25,
+          "pred_max_part_lag": 4,
+          "pred_per_partition": {
+            "0": 1,
+            "1": 2,
+            "2": 1,
+            "3": 1,
+            "4": 2,
+            "5": 3,
+            "6": 1,
+            "7": 3,
+            "8": 3,
+            "9": 2,
+            "10": 4,
+            "11": 2
+          },
+          "live_total_lag": 33
+        },
+        {
+          "t_rel": 8.04,
+          "pred_total_lag": 11,
+          "pred_max_part_lag": 2,
+          "pred_per_partition": {
+            "0": 2,
+            "1": 0,
+            "2": 1,
+            "3": 1,
+            "4": 1,
+            "5": 2,
+            "6": 0,
+            "7": 1,
+            "8": 0,
+            "9": 1,
+            "10": 1,
+            "11": 1
+          },
+          "live_total_lag": 25
+        },
+        {
+          "t_rel": 9.04,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 15
+        },
+        {
+          "t_rel": 10.04,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 17
+        },
+        {
+          "t_rel": 11.04,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 18
+        },
+        {
+          "t_rel": 12.05,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 19
+        },
+        {
+          "t_rel": 13.05,
+          "pred_total_lag": 1,
+          "pred_max_part_lag": 1,
+          "pred_per_partition": {
+            "0": 1,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 21
+        },
+        {
+          "t_rel": 14.05,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 22
+        },
+        {
+          "t_rel": 15.06,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 0
+        }
+      ],
+      "max_pred_lag": 41,
+      "end_pred_lag": 0,
+      "max_live_lag": 33
+    },
+    {
+      "mode": "hybrid",
+      "workload": "A",
+      "biz_replicas": 1,
+      "commit_batch_size": 1,
+      "commit_max_wait_ms": 25,
+      "run_index": 2,
+      "funnel_rps": {
+        "target_rps": 50.0,
+        "sent_rps": 50.0,
+        "admitted_rps": 50.0,
+        "outcomes_rps": 50.0,
+        "outbox_pub_rps": 50.0,
+        "pred_consumed_rps": 49.67,
+        "biz_pred_commit_rps": 49.67
+      },
+      "latency_ms": {
+        "kafka_pub_to_biz_commit": {
+          "count": 750,
+          "mean": 265.082,
+          "p50": 232.92,
+          "p95": 533.801,
+          "p99": 610.182,
+          "max": 631.436
+        },
+        "hot_e2e": {
+          "count": 15,
+          "mean": 481.819,
+          "p50": 470.83,
+          "p95": 964.213,
+          "p99": 1013.19,
+          "max": 1025.434
+        },
+        "bg_e2e": {
+          "count": 735,
+          "mean": 814.415,
+          "p50": 769.625,
+          "p95": 1527.282,
+          "p99": 1785.97,
+          "max": 2110.355
+        },
+        "pg_notify_delivery": {
+          "count": 1466,
+          "mean": 0.779,
+          "p50": 0.607,
+          "p95": 1.75,
+          "p99": 2.563,
+          "max": 6.801
+        }
+      },
+      "role_breakdown": {
+        "business-prediction": {
+          "handler_wall_ms": {
+            "count": 745,
+            "mean": 12.328,
+            "p50": 11.025,
+            "p95": 25.012,
+            "p99": 32.758,
+            "max": 51.219
+          },
+          "db_tx_ms": {
+            "count": 745,
+            "mean": 10.86,
+            "p50": 9.503,
+            "p95": 23.435,
+            "p99": 30.351,
+            "max": 47.118
+          },
+          "db_exec_ms": {
+            "count": 745,
+            "mean": 8.569,
+            "p50": 7.431,
+            "p95": 18.947,
+            "p99": 25.418,
+            "max": 43.191
+          },
+          "db_commit_ms": {
+            "count": 745,
+            "mean": 0.971,
+            "p50": 0.667,
+            "p95": 2.715,
+            "p99": 4.051,
+            "max": 6.95
+          },
+          "pool_wait_ms": {
+            "count": 745,
+            "mean": 0.012,
+            "p50": 0.012,
+            "p95": 0.018,
+            "p99": 0.027,
+            "max": 0.049
+          },
+          "kafka_commit_ms": {
+            "count": 745,
+            "mean": 5.882,
+            "p50": 5.746,
+            "p95": 7.037,
+            "p99": 8.527,
+            "max": 14.107
+          },
+          "kafka_commit_calls": 745,
+          "wake_delay_ms": {
+            "count": 745,
+            "mean": 0.268,
+            "p50": 0.167,
+            "p95": 0.887,
+            "p99": 1.537,
+            "max": 2.764
+          },
+          "poll_empty_sleep_ms": {
+            "count": 4074,
+            "mean": 0.034,
+            "p50": 0.008,
+            "p95": 0.119,
+            "p99": 0.751,
+            "max": 3.654
+          },
+          "poll_calls_while_busy": 4808,
+          "pending_queue_len": {
+            "count": 745,
+            "mean": 14.125,
+            "p50": 11.0,
+            "p95": 35.0,
+            "p99": 38.0,
+            "max": 40.0
+          }
+        },
+        "business-live": {
+          "handler_wall_ms": {
+            "count": 721,
+            "mean": 11.975,
+            "p50": 10.661,
+            "p95": 24.748,
+            "p99": 34.233,
+            "max": 50.482
+          },
+          "db_tx_ms": {
+            "count": 721,
+            "mean": 10.867,
+            "p50": 9.456,
+            "p95": 23.505,
+            "p99": 31.836,
+            "max": 49.018
+          },
+          "db_exec_ms": {
+            "count": 721,
+            "mean": 8.518,
+            "p50": 7.37,
+            "p95": 18.756,
+            "p99": 25.8,
+            "max": 43.095
+          },
+          "db_commit_ms": {
+            "count": 721,
+            "mean": 1.033,
+            "p50": 0.728,
+            "p95": 2.674,
+            "p99": 4.399,
+            "max": 5.894
+          },
+          "pool_wait_ms": {
+            "count": 721,
+            "mean": 0.012,
+            "p50": 0.012,
+            "p95": 0.019,
+            "p99": 0.029,
+            "max": 0.104
+          },
+          "kafka_commit_ms": {
+            "count": 720,
+            "mean": 5.914,
+            "p50": 5.762,
+            "p95": 6.988,
+            "p99": 8.103,
+            "max": 12.171
+          },
+          "kafka_commit_calls": 720,
+          "wake_delay_ms": {
+            "count": 720,
+            "mean": 0.297,
+            "p50": 0.176,
+            "p95": 0.955,
+            "p99": 1.716,
+            "max": 3.189
+          },
+          "poll_empty_sleep_ms": {
+            "count": 3858,
+            "mean": 0.036,
+            "p50": 0.008,
+            "p95": 0.157,
+            "p99": 0.742,
+            "max": 5.741
+          },
+          "poll_calls_while_busy": 4599,
+          "pending_queue_len": {
+            "count": 720,
+            "mean": 29.985,
+            "p50": 30.0,
+            "p95": 57.0,
+            "p99": 62.0,
+            "max": 63.0
+          }
+        },
+        "business-alert": {
+          "handler_wall_ms": {
+            "count": 79,
+            "mean": 19.58,
+            "p50": 17.228,
+            "p95": 36.116,
+            "p99": 44.216,
+            "max": 46.025
+          },
+          "db_tx_ms": {
+            "count": 79,
+            "mean": 18.606,
+            "p50": 15.798,
+            "p95": 34.953,
+            "p99": 42.625,
+            "max": 43.034
+          },
+          "db_exec_ms": {
+            "count": 79,
+            "mean": 10.443,
+            "p50": 8.526,
+            "p95": 20.517,
+            "p99": 23.606,
+            "max": 28.207
+          },
+          "db_commit_ms": {
+            "count": 79,
+            "mean": 1.289,
+            "p50": 0.962,
+            "p95": 2.796,
+            "p99": 6.031,
+            "max": 6.908
+          },
+          "pool_wait_ms": {
+            "count": 79,
+            "mean": 0.012,
+            "p50": 0.011,
+            "p95": 0.017,
+            "p99": 0.029,
+            "max": 0.032
+          },
+          "kafka_commit_ms": {
+            "count": 79,
+            "mean": 5.985,
+            "p50": 5.832,
+            "p95": 7.05,
+            "p99": 8.578,
+            "max": 10.675
+          },
+          "kafka_commit_calls": 79,
+          "wake_delay_ms": {
+            "count": 79,
+            "mean": 0.418,
+            "p50": 0.234,
+            "p95": 1.265,
+            "p99": 2.651,
+            "max": 3.587
+          },
+          "poll_empty_sleep_ms": {
+            "count": 604,
+            "mean": 0.061,
+            "p50": 0.008,
+            "p95": 0.197,
+            "p99": 1.092,
+            "max": 4.211
+          },
+          "poll_calls_while_busy": 606,
+          "pending_queue_len": {
+            "count": 79,
+            "mean": 0.025,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 1.0,
+            "max": 1.0
+          }
+        }
+      },
+      "projector_substeps_ms": {
+        "lock_machine_ms": {
+          "count": 745,
+          "mean": 0.628,
+          "p50": 0.377,
+          "p95": 1.923,
+          "p99": 3.36,
+          "max": 7.874
+        },
+        "guard_source_ms": {
+          "count": 745,
+          "mean": 2.249,
+          "p50": 1.797,
+          "p95": 5.651,
+          "p99": 8.104,
+          "max": 12.677
+        },
+        "load_3tables_ms": {
+          "count": 745,
+          "mean": 2.195,
+          "p50": 1.653,
+          "p95": 5.875,
+          "p99": 8.301,
+          "max": 16.274
+        },
+        "reduce_ms": {
+          "count": 745,
+          "mean": 0.129,
+          "p50": 0.113,
+          "p95": 0.208,
+          "p99": 0.257,
+          "max": 0.462
+        },
+        "persist_upsert_ms": {
+          "count": 745,
+          "mean": 2.361,
+          "p50": 1.852,
+          "p95": 6.322,
+          "p99": 8.702,
+          "max": 12.398
+        },
+        "pg_notify_ms": {
+          "count": 745,
+          "mean": 0.677,
+          "p50": 0.38,
+          "p95": 2.167,
+          "p99": 3.851,
+          "max": 7.576
+        }
+      },
+      "out_of_order": {
+        "total_arrivals": 745,
+        "out_of_order_arrivals": 0,
+        "ooo_pct": 0.0,
+        "stale_pred_skipped_by_guard": 0,
+        "wrong_latest_sequence": 0
+      },
+      "notifications": {
+        "emitted": 2000,
+        "received": 2000
+      },
+      "lag_samples": [
+        {
+          "t_rel": 0.0,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 0
+        },
+        {
+          "t_rel": 1.0,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 0
+        },
+        {
+          "t_rel": 2.01,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 2
+        },
+        {
+          "t_rel": 3.01,
+          "pred_total_lag": 8,
+          "pred_max_part_lag": 2,
+          "pred_per_partition": {
+            "0": 1,
+            "1": 0,
+            "2": 1,
+            "3": 1,
+            "4": 2,
+            "5": 2,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 1,
+            "11": 0
+          },
+          "live_total_lag": 3
+        },
+        {
+          "t_rel": 4.01,
+          "pred_total_lag": 8,
+          "pred_max_part_lag": 2,
+          "pred_per_partition": {
+            "0": 2,
+            "1": 0,
+            "2": 1,
+            "3": 1,
+            "4": 1,
+            "5": 1,
+            "6": 0,
+            "7": 1,
+            "8": 0,
+            "9": 0,
+            "10": 1,
+            "11": 0
+          },
+          "live_total_lag": 4
+        },
+        {
+          "t_rel": 5.01,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 5
+        },
+        {
+          "t_rel": 6.01,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 7
+        },
+        {
+          "t_rel": 7.02,
+          "pred_total_lag": 8,
+          "pred_max_part_lag": 2,
+          "pred_per_partition": {
+            "0": 1,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 1,
+            "6": 0,
+            "7": 1,
+            "8": 1,
+            "9": 1,
+            "10": 1,
+            "11": 2
+          },
+          "live_total_lag": 17
+        },
+        {
+          "t_rel": 8.03,
+          "pred_total_lag": 13,
+          "pred_max_part_lag": 2,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 1,
+            "2": 1,
+            "3": 0,
+            "4": 2,
+            "5": 1,
+            "6": 1,
+            "7": 2,
+            "8": 2,
+            "9": 0,
+            "10": 2,
+            "11": 1
+          },
+          "live_total_lag": 32
+        },
+        {
+          "t_rel": 9.03,
+          "pred_total_lag": 23,
+          "pred_max_part_lag": 4,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 1,
+            "2": 2,
+            "3": 2,
+            "4": 1,
+            "5": 3,
+            "6": 3,
+            "7": 4,
+            "8": 4,
+            "9": 2,
+            "10": 1,
+            "11": 0
+          },
+          "live_total_lag": 45
+        },
+        {
+          "t_rel": 10.04,
+          "pred_total_lag": 30,
+          "pred_max_part_lag": 4,
+          "pred_per_partition": {
+            "0": 2,
+            "1": 3,
+            "2": 2,
+            "3": 2,
+            "4": 3,
+            "5": 3,
+            "6": 4,
+            "7": 4,
+            "8": 4,
+            "9": 1,
+            "10": 2,
+            "11": 0
+          },
+          "live_total_lag": 52
+        },
+        {
+          "t_rel": 11.04,
+          "pred_total_lag": 34,
+          "pred_max_part_lag": 4,
+          "pred_per_partition": {
+            "0": 2,
+            "1": 2,
+            "2": 2,
+            "3": 1,
+            "4": 4,
+            "5": 4,
+            "6": 3,
+            "7": 4,
+            "8": 4,
+            "9": 2,
+            "10": 4,
+            "11": 2
+          },
+          "live_total_lag": 42
+        },
+        {
+          "t_rel": 12.04,
+          "pred_total_lag": 13,
+          "pred_max_part_lag": 2,
+          "pred_per_partition": {
+            "0": 2,
+            "1": 0,
+            "2": 1,
+            "3": 1,
+            "4": 2,
+            "5": 2,
+            "6": 0,
+            "7": 1,
+            "8": 0,
+            "9": 1,
+            "10": 2,
+            "11": 1
+          },
+          "live_total_lag": 25
+        },
+        {
+          "t_rel": 13.04,
+          "pred_total_lag": 15,
+          "pred_max_part_lag": 4,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 2,
+            "3": 1,
+            "4": 2,
+            "5": 4,
+            "6": 0,
+            "7": 2,
+            "8": 0,
+            "9": 0,
+            "10": 2,
+            "11": 2
+          },
+          "live_total_lag": 53
+        },
+        {
+          "t_rel": 14.05,
+          "pred_total_lag": 15,
+          "pred_max_part_lag": 2,
+          "pred_per_partition": {
+            "0": 2,
+            "1": 0,
+            "2": 1,
+            "3": 1,
+            "4": 1,
+            "5": 2,
+            "6": 1,
+            "7": 1,
+            "8": 1,
+            "9": 2,
+            "10": 2,
+            "11": 1
+          },
+          "live_total_lag": 49
+        },
+        {
+          "t_rel": 15.05,
+          "pred_total_lag": 1,
+          "pred_max_part_lag": 1,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 1,
+            "11": 0
+          },
+          "live_total_lag": 25
+        }
+      ],
+      "max_pred_lag": 34,
+      "end_pred_lag": 1,
+      "max_live_lag": 53
+    },
+    {
+      "mode": "hybrid",
+      "workload": "A",
+      "biz_replicas": 1,
+      "commit_batch_size": 1,
+      "commit_max_wait_ms": 25,
+      "run_index": 3,
+      "funnel_rps": {
+        "target_rps": 50.0,
+        "sent_rps": 50.0,
+        "admitted_rps": 50.73,
+        "outcomes_rps": 51.0,
+        "outbox_pub_rps": 52.2,
+        "pred_consumed_rps": 53.33,
+        "biz_pred_commit_rps": 53.33
+      },
+      "latency_ms": {
+        "kafka_pub_to_biz_commit": {
+          "count": 750,
+          "mean": 279.322,
+          "p50": 329.878,
+          "p95": 560.653,
+          "p99": 583.372,
+          "max": 595.426
+        },
+        "hot_e2e": {
+          "count": 15,
+          "mean": 523.175,
+          "p50": 479.727,
+          "p95": 1058.409,
+          "p99": 1135.524,
+          "max": 1154.802
+        },
+        "bg_e2e": {
+          "count": 735,
+          "mean": 873.762,
+          "p50": 847.847,
+          "p95": 1507.366,
+          "p99": 1657.92,
+          "max": 1870.894
+        },
+        "pg_notify_delivery": {
+          "count": 1567,
+          "mean": 2.513,
+          "p50": 2.212,
+          "p95": 4.429,
+          "p99": 5.656,
+          "max": 13.705
+        }
+      },
+      "role_breakdown": {
+        "business-prediction": {
+          "handler_wall_ms": {
+            "count": 800,
+            "mean": 11.599,
+            "p50": 10.268,
+            "p95": 22.476,
+            "p99": 30.848,
+            "max": 42.059
+          },
+          "db_tx_ms": {
+            "count": 800,
+            "mean": 10.227,
+            "p50": 8.951,
+            "p95": 20.188,
+            "p99": 29.204,
+            "max": 40.877
+          },
+          "db_exec_ms": {
+            "count": 800,
+            "mean": 6.414,
+            "p50": 5.36,
+            "p95": 14.466,
+            "p99": 23.002,
+            "max": 32.922
+          },
+          "db_commit_ms": {
+            "count": 800,
+            "mean": 2.657,
+            "p50": 2.318,
+            "p95": 5.166,
+            "p99": 6.389,
+            "max": 8.299
+          },
+          "pool_wait_ms": {
+            "count": 800,
+            "mean": 0.012,
+            "p50": 0.011,
+            "p95": 0.017,
+            "p99": 0.024,
+            "max": 0.051
+          },
+          "kafka_commit_ms": {
+            "count": 801,
+            "mean": 5.762,
+            "p50": 5.645,
+            "p95": 6.694,
+            "p99": 7.954,
+            "max": 12.559
+          },
+          "kafka_commit_calls": 801,
+          "wake_delay_ms": {
+            "count": 801,
+            "mean": 0.254,
+            "p50": 0.162,
+            "p95": 0.735,
+            "p99": 1.819,
+            "max": 5.22
+          },
+          "poll_empty_sleep_ms": {
+            "count": 4289,
+            "mean": 0.026,
+            "p50": 0.007,
+            "p95": 0.058,
+            "p99": 0.488,
+            "max": 2.334
+          },
+          "poll_calls_while_busy": 5003,
+          "pending_queue_len": {
+            "count": 801,
+            "mean": 15.745,
+            "p50": 16.0,
+            "p95": 33.0,
+            "p99": 35.0,
+            "max": 36.0
+          }
+        },
+        "business-live": {
+          "handler_wall_ms": {
+            "count": 767,
+            "mean": 10.88,
+            "p50": 9.67,
+            "p95": 20.871,
+            "p99": 29.454,
+            "max": 41.684
+          },
+          "db_tx_ms": {
+            "count": 767,
+            "mean": 9.93,
+            "p50": 8.747,
+            "p95": 19.826,
+            "p99": 27.946,
+            "max": 38.48
+          },
+          "db_exec_ms": {
+            "count": 767,
+            "mean": 6.214,
+            "p50": 5.031,
+            "p95": 14.849,
+            "p99": 22.646,
+            "max": 30.918
+          },
+          "db_commit_ms": {
+            "count": 767,
+            "mean": 2.691,
+            "p50": 2.46,
+            "p95": 4.761,
+            "p99": 6.213,
+            "max": 13.553
+          },
+          "pool_wait_ms": {
+            "count": 767,
+            "mean": 0.012,
+            "p50": 0.012,
+            "p95": 0.018,
+            "p99": 0.026,
+            "max": 0.04
+          },
+          "kafka_commit_ms": {
+            "count": 766,
+            "mean": 5.782,
+            "p50": 5.664,
+            "p95": 6.716,
+            "p99": 7.556,
+            "max": 13.917
+          },
+          "kafka_commit_calls": 766,
+          "wake_delay_ms": {
+            "count": 766,
+            "mean": 0.262,
+            "p50": 0.16,
+            "p95": 0.82,
+            "p99": 1.497,
+            "max": 3.356
+          },
+          "poll_empty_sleep_ms": {
+            "count": 3867,
+            "mean": 0.033,
+            "p50": 0.007,
+            "p95": 0.141,
+            "p99": 0.719,
+            "max": 3.412
+          },
+          "poll_calls_while_busy": 4612,
+          "pending_queue_len": {
+            "count": 766,
+            "mean": 34.517,
+            "p50": 36.0,
+            "p95": 59.0,
+            "p99": 62.35,
+            "max": 63.0
+          }
+        },
+        "business-alert": {
+          "handler_wall_ms": {
+            "count": 82,
+            "mean": 17.848,
+            "p50": 14.338,
+            "p95": 35.972,
+            "p99": 49.343,
+            "max": 57.618
+          },
+          "db_tx_ms": {
+            "count": 82,
+            "mean": 16.955,
+            "p50": 13.532,
+            "p95": 32.7,
+            "p99": 44.642,
+            "max": 56.819
+          },
+          "db_exec_ms": {
+            "count": 82,
+            "mean": 8.029,
+            "p50": 6.174,
+            "p95": 19.198,
+            "p99": 27.28,
+            "max": 39.796
+          },
+          "db_commit_ms": {
+            "count": 82,
+            "mean": 3.237,
+            "p50": 2.996,
+            "p95": 5.371,
+            "p99": 9.088,
+            "max": 10.2
+          },
+          "pool_wait_ms": {
+            "count": 82,
+            "mean": 0.011,
+            "p50": 0.01,
+            "p95": 0.016,
+            "p99": 0.022,
+            "max": 0.025
+          },
+          "kafka_commit_ms": {
+            "count": 82,
+            "mean": 5.801,
+            "p50": 5.642,
+            "p95": 6.646,
+            "p99": 7.872,
+            "max": 10.412
+          },
+          "kafka_commit_calls": 82,
+          "wake_delay_ms": {
+            "count": 82,
+            "mean": 0.262,
+            "p50": 0.174,
+            "p95": 0.614,
+            "p99": 1.54,
+            "max": 1.821
+          },
+          "poll_empty_sleep_ms": {
+            "count": 607,
+            "mean": 0.031,
+            "p50": 0.007,
+            "p95": 0.09,
+            "p99": 0.583,
+            "max": 1.434
+          },
+          "poll_calls_while_busy": 609,
+          "pending_queue_len": {
+            "count": 82,
+            "mean": 0.024,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 1.0,
+            "max": 1.0
+          }
+        }
+      },
+      "projector_substeps_ms": {
+        "lock_machine_ms": {
+          "count": 800,
+          "mean": 0.556,
+          "p50": 0.34,
+          "p95": 1.809,
+          "p99": 2.836,
+          "max": 5.783
+        },
+        "guard_source_ms": {
+          "count": 800,
+          "mean": 1.78,
+          "p50": 1.284,
+          "p95": 4.597,
+          "p99": 8.007,
+          "max": 11.49
+        },
+        "load_3tables_ms": {
+          "count": 800,
+          "mean": 1.651,
+          "p50": 1.074,
+          "p95": 4.92,
+          "p99": 7.619,
+          "max": 12.305
+        },
+        "reduce_ms": {
+          "count": 800,
+          "mean": 0.109,
+          "p50": 0.1,
+          "p95": 0.177,
+          "p99": 0.207,
+          "max": 0.269
+        },
+        "persist_upsert_ms": {
+          "count": 800,
+          "mean": 1.532,
+          "p50": 1.134,
+          "p95": 3.931,
+          "p99": 6.121,
+          "max": 8.501
+        },
+        "pg_notify_ms": {
+          "count": 800,
+          "mean": 0.509,
+          "p50": 0.251,
+          "p95": 1.832,
+          "p99": 2.967,
+          "max": 4.276
+        }
+      },
+      "out_of_order": {
+        "total_arrivals": 800,
+        "out_of_order_arrivals": 0,
+        "ooo_pct": 0.0,
+        "stale_pred_skipped_by_guard": 0,
+        "wrong_latest_sequence": 0
+      },
+      "notifications": {
+        "emitted": 2000,
+        "received": 2000
+      },
+      "lag_samples": [
+        {
+          "t_rel": 0.0,
+          "pred_total_lag": 18,
+          "pred_max_part_lag": 4,
+          "pred_per_partition": {
+            "0": 3,
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 1,
+            "5": 2,
+            "6": 4,
+            "7": 2,
+            "8": 1,
+            "9": 1,
+            "10": 0,
+            "11": 1
+          },
+          "live_total_lag": 25
+        },
+        {
+          "t_rel": 1.0,
+          "pred_total_lag": 20,
+          "pred_max_part_lag": 3,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 2,
+            "2": 1,
+            "3": 3,
+            "4": 1,
+            "5": 2,
+            "6": 3,
+            "7": 3,
+            "8": 2,
+            "9": 2,
+            "10": 0,
+            "11": 1
+          },
+          "live_total_lag": 20
+        },
+        {
+          "t_rel": 2.01,
+          "pred_total_lag": 34,
+          "pred_max_part_lag": 4,
+          "pred_per_partition": {
+            "0": 2,
+            "1": 2,
+            "2": 2,
+            "3": 3,
+            "4": 3,
+            "5": 4,
+            "6": 2,
+            "7": 4,
+            "8": 4,
+            "9": 2,
+            "10": 4,
+            "11": 2
+          },
+          "live_total_lag": 25
+        },
+        {
+          "t_rel": 3.01,
+          "pred_total_lag": 18,
+          "pred_max_part_lag": 4,
+          "pred_per_partition": {
+            "0": 2,
+            "1": 0,
+            "2": 2,
+            "3": 1,
+            "4": 1,
+            "5": 4,
+            "6": 0,
+            "7": 2,
+            "8": 1,
+            "9": 1,
+            "10": 2,
+            "11": 2
+          },
+          "live_total_lag": 7
+        },
+        {
+          "t_rel": 4.01,
+          "pred_total_lag": 15,
+          "pred_max_part_lag": 3,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 1,
+            "2": 1,
+            "3": 0,
+            "4": 2,
+            "5": 2,
+            "6": 0,
+            "7": 2,
+            "8": 3,
+            "9": 0,
+            "10": 3,
+            "11": 1
+          },
+          "live_total_lag": 37
+        },
+        {
+          "t_rel": 5.02,
+          "pred_total_lag": 18,
+          "pred_max_part_lag": 3,
+          "pred_per_partition": {
+            "0": 1,
+            "1": 2,
+            "2": 1,
+            "3": 1,
+            "4": 2,
+            "5": 0,
+            "6": 2,
+            "7": 3,
+            "8": 3,
+            "9": 1,
+            "10": 2,
+            "11": 0
+          },
+          "live_total_lag": 46
+        },
+        {
+          "t_rel": 6.02,
+          "pred_total_lag": 26,
+          "pred_max_part_lag": 5,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 2,
+            "2": 1,
+            "3": 2,
+            "4": 2,
+            "5": 3,
+            "6": 2,
+            "7": 5,
+            "8": 4,
+            "9": 1,
+            "10": 3,
+            "11": 1
+          },
+          "live_total_lag": 49
+        },
+        {
+          "t_rel": 7.03,
+          "pred_total_lag": 30,
+          "pred_max_part_lag": 4,
+          "pred_per_partition": {
+            "0": 3,
+            "1": 2,
+            "2": 2,
+            "3": 2,
+            "4": 3,
+            "5": 4,
+            "6": 1,
+            "7": 3,
+            "8": 3,
+            "9": 1,
+            "10": 4,
+            "11": 2
+          },
+          "live_total_lag": 40
+        },
+        {
+          "t_rel": 8.03,
+          "pred_total_lag": 14,
+          "pred_max_part_lag": 2,
+          "pred_per_partition": {
+            "0": 2,
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 1,
+            "5": 2,
+            "6": 1,
+            "7": 1,
+            "8": 0,
+            "9": 1,
+            "10": 1,
+            "11": 2
+          },
+          "live_total_lag": 24
+        },
+        {
+          "t_rel": 9.03,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 33
+        },
+        {
+          "t_rel": 10.03,
+          "pred_total_lag": 1,
+          "pred_max_part_lag": 1,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 1,
+            "11": 0
+          },
+          "live_total_lag": 39
+        },
+        {
+          "t_rel": 11.04,
+          "pred_total_lag": 4,
+          "pred_max_part_lag": 2,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 2,
+            "6": 1,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 1
+          },
+          "live_total_lag": 44
+        },
+        {
+          "t_rel": 12.04,
+          "pred_total_lag": 10,
+          "pred_max_part_lag": 2,
+          "pred_per_partition": {
+            "0": 1,
+            "1": 0,
+            "2": 1,
+            "3": 0,
+            "4": 1,
+            "5": 1,
+            "6": 0,
+            "7": 1,
+            "8": 1,
+            "9": 1,
+            "10": 2,
+            "11": 1
+          },
+          "live_total_lag": 37
+        },
+        {
+          "t_rel": 13.04,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 40
+        },
+        {
+          "t_rel": 14.05,
+          "pred_total_lag": 1,
+          "pred_max_part_lag": 1,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 1,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 27
+        },
+        {
+          "t_rel": 15.05,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 3
+        }
+      ],
+      "max_pred_lag": 34,
+      "end_pred_lag": 0,
+      "max_live_lag": 49
+    },
+    {
+      "mode": "hybrid",
+      "workload": "C",
+      "biz_replicas": 1,
+      "commit_batch_size": 1,
+      "commit_max_wait_ms": 25,
+      "run_index": 1,
+      "funnel_rps": {
+        "target_rps": 50.0,
+        "sent_rps": 50.0,
+        "admitted_rps": 46.47,
+        "outcomes_rps": 46.47,
+        "outbox_pub_rps": 46.4,
+        "pred_consumed_rps": 45.6,
+        "biz_pred_commit_rps": 45.6
+      },
+      "latency_ms": {
+        "kafka_pub_to_biz_commit": {
+          "count": 750,
+          "mean": 220.978,
+          "p50": 198.367,
+          "p95": 493.643,
+          "p99": 566.658,
+          "max": 587.609
+        },
+        "hot_e2e": {
+          "count": 240,
+          "mean": 4028.319,
+          "p50": 4152.738,
+          "p95": 4945.646,
+          "p99": 5100.409,
+          "max": 5241.545
+        },
+        "bg_e2e": {
+          "count": 510,
+          "mean": 840.939,
+          "p50": 808.373,
+          "p95": 1518.144,
+          "p99": 2317.997,
+          "max": 3372.913
+        },
+        "pg_notify_delivery": {
+          "count": 1379,
+          "mean": 0.831,
+          "p50": 0.657,
+          "p95": 1.831,
+          "p99": 3.33,
+          "max": 5.243
+        }
+      },
+      "role_breakdown": {
+        "business-prediction": {
+          "handler_wall_ms": {
+            "count": 684,
+            "mean": 13.94,
+            "p50": 12.468,
+            "p95": 29.479,
+            "p99": 38.107,
+            "max": 50.172
+          },
+          "db_tx_ms": {
+            "count": 684,
+            "mean": 12.323,
+            "p50": 10.771,
+            "p95": 27.142,
+            "p99": 35.994,
+            "max": 46.431
+          },
+          "db_exec_ms": {
+            "count": 684,
+            "mean": 9.689,
+            "p50": 8.226,
+            "p95": 22.458,
+            "p99": 31.303,
+            "max": 39.872
+          },
+          "db_commit_ms": {
+            "count": 684,
+            "mean": 1.122,
+            "p50": 0.795,
+            "p95": 3.172,
+            "p99": 5.005,
+            "max": 7.379
+          },
+          "pool_wait_ms": {
+            "count": 684,
+            "mean": 0.012,
+            "p50": 0.013,
+            "p95": 0.017,
+            "p99": 0.023,
+            "max": 0.055
+          },
+          "kafka_commit_ms": {
+            "count": 684,
+            "mean": 5.945,
+            "p50": 5.786,
+            "p95": 7.263,
+            "p99": 8.593,
+            "max": 15.392
+          },
+          "kafka_commit_calls": 684,
+          "wake_delay_ms": {
+            "count": 684,
+            "mean": 0.302,
+            "p50": 0.172,
+            "p95": 1.039,
+            "p99": 1.656,
+            "max": 3.308
+          },
+          "poll_empty_sleep_ms": {
+            "count": 4089,
+            "mean": 0.031,
+            "p50": 0.008,
+            "p95": 0.091,
+            "p99": 0.613,
+            "max": 3.948
+          },
+          "poll_calls_while_busy": 4748,
+          "pending_queue_len": {
+            "count": 684,
+            "mean": 12.196,
+            "p50": 11.0,
+            "p95": 27.0,
+            "p99": 33.17,
+            "max": 35.0
+          }
+        },
+        "business-live": {
+          "handler_wall_ms": {
+            "count": 741,
+            "mean": 12.802,
+            "p50": 11.177,
+            "p95": 27.45,
+            "p99": 35.701,
+            "max": 40.983
+          },
+          "db_tx_ms": {
+            "count": 741,
+            "mean": 11.669,
+            "p50": 10.01,
+            "p95": 25.676,
+            "p99": 34.559,
+            "max": 39.921
+          },
+          "db_exec_ms": {
+            "count": 741,
+            "mean": 9.176,
+            "p50": 7.802,
+            "p95": 21.939,
+            "p99": 28.491,
+            "max": 33.63
+          },
+          "db_commit_ms": {
+            "count": 741,
+            "mean": 1.106,
+            "p50": 0.781,
+            "p95": 2.988,
+            "p99": 4.16,
+            "max": 5.27
+          },
+          "pool_wait_ms": {
+            "count": 741,
+            "mean": 0.013,
+            "p50": 0.013,
+            "p95": 0.019,
+            "p99": 0.023,
+            "max": 0.043
+          },
+          "kafka_commit_ms": {
+            "count": 741,
+            "mean": 5.893,
+            "p50": 5.728,
+            "p95": 6.986,
+            "p99": 8.54,
+            "max": 9.688
+          },
+          "kafka_commit_calls": 741,
+          "wake_delay_ms": {
+            "count": 741,
+            "mean": 0.318,
+            "p50": 0.173,
+            "p95": 1.106,
+            "p99": 1.953,
+            "max": 4.239
+          },
+          "poll_empty_sleep_ms": {
+            "count": 4117,
+            "mean": 0.042,
+            "p50": 0.008,
+            "p95": 0.159,
+            "p99": 0.976,
+            "max": 4.96
+          },
+          "poll_calls_while_busy": 4861,
+          "pending_queue_len": {
+            "count": 741,
+            "mean": 34.903,
+            "p50": 36.0,
+            "p95": 59.0,
+            "p99": 62.0,
+            "max": 63.0
+          }
+        },
+        "business-alert": {
+          "handler_wall_ms": {
+            "count": 71,
+            "mean": 23.267,
+            "p50": 20.838,
+            "p95": 39.851,
+            "p99": 47.776,
+            "max": 48.982
+          },
+          "db_tx_ms": {
+            "count": 71,
+            "mean": 22.061,
+            "p50": 19.979,
+            "p95": 38.564,
+            "p99": 45.247,
+            "max": 46.385
+          },
+          "db_exec_ms": {
+            "count": 71,
+            "mean": 12.644,
+            "p50": 10.449,
+            "p95": 23.991,
+            "p99": 29.557,
+            "max": 32.386
+          },
+          "db_commit_ms": {
+            "count": 71,
+            "mean": 1.335,
+            "p50": 1.083,
+            "p95": 3.001,
+            "p99": 3.79,
+            "max": 3.832
+          },
+          "pool_wait_ms": {
+            "count": 71,
+            "mean": 0.013,
+            "p50": 0.013,
+            "p95": 0.018,
+            "p99": 0.022,
+            "max": 0.03
+          },
+          "kafka_commit_ms": {
+            "count": 71,
+            "mean": 5.884,
+            "p50": 5.829,
+            "p95": 6.878,
+            "p99": 7.385,
+            "max": 7.669
+          },
+          "kafka_commit_calls": 71,
+          "wake_delay_ms": {
+            "count": 71,
+            "mean": 0.338,
+            "p50": 0.216,
+            "p95": 0.918,
+            "p99": 1.271,
+            "max": 1.32
+          },
+          "poll_empty_sleep_ms": {
+            "count": 637,
+            "mean": 0.054,
+            "p50": 0.008,
+            "p95": 0.163,
+            "p99": 1.065,
+            "max": 3.434
+          },
+          "poll_calls_while_busy": 640,
+          "pending_queue_len": {
+            "count": 71,
+            "mean": 0.042,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 1.0,
+            "max": 1.0
+          }
+        }
+      },
+      "projector_substeps_ms": {
+        "lock_machine_ms": {
+          "count": 684,
+          "mean": 1.157,
+          "p50": 0.549,
+          "p95": 3.811,
+          "p99": 9.91,
+          "max": 20.528
+        },
+        "guard_source_ms": {
+          "count": 684,
+          "mean": 2.691,
+          "p50": 1.961,
+          "p95": 7.01,
+          "p99": 9.875,
+          "max": 13.028
+        },
+        "load_3tables_ms": {
+          "count": 684,
+          "mean": 2.417,
+          "p50": 1.858,
+          "p95": 6.056,
+          "p99": 8.122,
+          "max": 9.915
+        },
+        "reduce_ms": {
+          "count": 684,
+          "mean": 0.111,
+          "p50": 0.101,
+          "p95": 0.192,
+          "p99": 0.238,
+          "max": 0.259
+        },
+        "persist_upsert_ms": {
+          "count": 684,
+          "mean": 2.039,
+          "p50": 1.474,
+          "p95": 6.077,
+          "p99": 8.089,
+          "max": 13.901
+        },
+        "pg_notify_ms": {
+          "count": 684,
+          "mean": 0.809,
+          "p50": 0.456,
+          "p95": 2.69,
+          "p99": 4.626,
+          "max": 7.888
+        }
+      },
+      "out_of_order": {
+        "total_arrivals": 684,
+        "out_of_order_arrivals": 46,
+        "ooo_pct": 6.73,
+        "stale_pred_skipped_by_guard": 46,
+        "wrong_latest_sequence": 0
+      },
+      "notifications": {
+        "emitted": 1926,
+        "received": 1926
+      },
+      "lag_samples": [
+        {
+          "t_rel": 0.0,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 1
+        },
+        {
+          "t_rel": 1.01,
+          "pred_total_lag": 3,
+          "pred_max_part_lag": 1,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 1,
+            "2": 1,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 1,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 16
+        },
+        {
+          "t_rel": 2.01,
+          "pred_total_lag": 12,
+          "pred_max_part_lag": 4,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 2,
+            "2": 1,
+            "3": 1,
+            "4": 1,
+            "5": 0,
+            "6": 1,
+            "7": 4,
+            "8": 1,
+            "9": 1,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 29
+        },
+        {
+          "t_rel": 3.02,
+          "pred_total_lag": 20,
+          "pred_max_part_lag": 7,
+          "pred_per_partition": {
+            "0": 1,
+            "1": 1,
+            "2": 2,
+            "3": 2,
+            "4": 1,
+            "5": 2,
+            "6": 2,
+            "7": 7,
+            "8": 1,
+            "9": 1,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 44
+        },
+        {
+          "t_rel": 4.02,
+          "pred_total_lag": 28,
+          "pred_max_part_lag": 11,
+          "pred_per_partition": {
+            "0": 1,
+            "1": 2,
+            "2": 2,
+            "3": 2,
+            "4": 0,
+            "5": 2,
+            "6": 4,
+            "7": 11,
+            "8": 2,
+            "9": 1,
+            "10": 0,
+            "11": 1
+          },
+          "live_total_lag": 46
+        },
+        {
+          "t_rel": 5.02,
+          "pred_total_lag": 23,
+          "pred_max_part_lag": 9,
+          "pred_per_partition": {
+            "0": 1,
+            "1": 2,
+            "2": 1,
+            "3": 1,
+            "4": 2,
+            "5": 1,
+            "6": 1,
+            "7": 9,
+            "8": 2,
+            "9": 1,
+            "10": 2,
+            "11": 0
+          },
+          "live_total_lag": 45
+        },
+        {
+          "t_rel": 6.03,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 29
+        },
+        {
+          "t_rel": 7.03,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 48
+        },
+        {
+          "t_rel": 8.03,
+          "pred_total_lag": 5,
+          "pred_max_part_lag": 2,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 1,
+            "2": 1,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 2,
+            "8": 1,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 59
+        },
+        {
+          "t_rel": 9.03,
+          "pred_total_lag": 13,
+          "pred_max_part_lag": 6,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 1,
+            "2": 0,
+            "3": 1,
+            "4": 1,
+            "5": 1,
+            "6": 0,
+            "7": 6,
+            "8": 1,
+            "9": 0,
+            "10": 2,
+            "11": 0
+          },
+          "live_total_lag": 60
+        },
+        {
+          "t_rel": 10.03,
+          "pred_total_lag": 13,
+          "pred_max_part_lag": 8,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 1,
+            "5": 1,
+            "6": 1,
+            "7": 8,
+            "8": 1,
+            "9": 0,
+            "10": 1,
+            "11": 0
+          },
+          "live_total_lag": 64
+        },
+        {
+          "t_rel": 11.04,
+          "pred_total_lag": 14,
+          "pred_max_part_lag": 4,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 2,
+            "2": 2,
+            "3": 1,
+            "4": 1,
+            "5": 0,
+            "6": 1,
+            "7": 4,
+            "8": 1,
+            "9": 1,
+            "10": 1,
+            "11": 0
+          },
+          "live_total_lag": 74
+        },
+        {
+          "t_rel": 12.04,
+          "pred_total_lag": 10,
+          "pred_max_part_lag": 6,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 1,
+            "2": 0,
+            "3": 1,
+            "4": 1,
+            "5": 1,
+            "6": 0,
+            "7": 6,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 65
+        },
+        {
+          "t_rel": 13.04,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 34
+        },
+        {
+          "t_rel": 14.05,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 20
+        },
+        {
+          "t_rel": 15.06,
+          "pred_total_lag": 12,
+          "pred_max_part_lag": 9,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 1,
+            "5": 1,
+            "6": 0,
+            "7": 9,
+            "8": 0,
+            "9": 0,
+            "10": 1,
+            "11": 0
+          },
+          "live_total_lag": 6
+        }
+      ],
+      "max_pred_lag": 28,
+      "end_pred_lag": 12,
+      "max_live_lag": 74
+    },
+    {
+      "mode": "hybrid",
+      "workload": "C",
+      "biz_replicas": 1,
+      "commit_batch_size": 1,
+      "commit_max_wait_ms": 25,
+      "run_index": 2,
+      "funnel_rps": {
+        "target_rps": 50.0,
+        "sent_rps": 50.0,
+        "admitted_rps": 49.6,
+        "outcomes_rps": 47.8,
+        "outbox_pub_rps": 47.8,
+        "pred_consumed_rps": 47.6,
+        "biz_pred_commit_rps": 47.6
+      },
+      "latency_ms": {
+        "kafka_pub_to_biz_commit": {
+          "count": 750,
+          "mean": 209.227,
+          "p50": 192.268,
+          "p95": 480.247,
+          "p99": 532.667,
+          "max": 578.351
+        },
+        "hot_e2e": {
+          "count": 240,
+          "mean": 3470.84,
+          "p50": 3569.442,
+          "p95": 3930.062,
+          "p99": 4064.428,
+          "max": 4128.248
+        },
+        "bg_e2e": {
+          "count": 510,
+          "mean": 780.951,
+          "p50": 769.267,
+          "p95": 1321.346,
+          "p99": 1452.808,
+          "max": 1614.601
+        },
+        "pg_notify_delivery": {
+          "count": 1392,
+          "mean": 0.789,
+          "p50": 0.612,
+          "p95": 1.715,
+          "p99": 3.05,
+          "max": 4.917
+        }
+      },
+      "role_breakdown": {
+        "business-prediction": {
+          "handler_wall_ms": {
+            "count": 714,
+            "mean": 13.318,
+            "p50": 11.394,
+            "p95": 28.648,
+            "p99": 36.373,
+            "max": 39.007
+          },
+          "db_tx_ms": {
+            "count": 714,
+            "mean": 11.715,
+            "p50": 9.966,
+            "p95": 25.761,
+            "p99": 34.014,
+            "max": 37.126
+          },
+          "db_exec_ms": {
+            "count": 714,
+            "mean": 9.212,
+            "p50": 7.776,
+            "p95": 21.388,
+            "p99": 27.45,
+            "max": 31.492
+          },
+          "db_commit_ms": {
+            "count": 714,
+            "mean": 1.085,
+            "p50": 0.752,
+            "p95": 3.356,
+            "p99": 5.036,
+            "max": 6.096
+          },
+          "pool_wait_ms": {
+            "count": 714,
+            "mean": 0.012,
+            "p50": 0.013,
+            "p95": 0.017,
+            "p99": 0.022,
+            "max": 0.098
+          },
+          "kafka_commit_ms": {
+            "count": 713,
+            "mean": 5.841,
+            "p50": 5.734,
+            "p95": 6.906,
+            "p99": 8.121,
+            "max": 10.254
+          },
+          "kafka_commit_calls": 713,
+          "wake_delay_ms": {
+            "count": 713,
+            "mean": 0.28,
+            "p50": 0.17,
+            "p95": 0.866,
+            "p99": 1.637,
+            "max": 2.993
+          },
+          "poll_empty_sleep_ms": {
+            "count": 4101,
+            "mean": 0.031,
+            "p50": 0.008,
+            "p95": 0.095,
+            "p99": 0.756,
+            "max": 2.582
+          },
+          "poll_calls_while_busy": 4775,
+          "pending_queue_len": {
+            "count": 713,
+            "mean": 11.289,
+            "p50": 9.0,
+            "p95": 24.0,
+            "p99": 28.0,
+            "max": 31.0
+          }
+        },
+        "business-live": {
+          "handler_wall_ms": {
+            "count": 718,
+            "mean": 12.531,
+            "p50": 10.496,
+            "p95": 27.823,
+            "p99": 33.66,
+            "max": 58.529
+          },
+          "db_tx_ms": {
+            "count": 718,
+            "mean": 11.371,
+            "p50": 9.577,
+            "p95": 25.951,
+            "p99": 31.319,
+            "max": 57.007
+          },
+          "db_exec_ms": {
+            "count": 718,
+            "mean": 8.913,
+            "p50": 7.036,
+            "p95": 20.632,
+            "p99": 25.902,
+            "max": 53.599
+          },
+          "db_commit_ms": {
+            "count": 718,
+            "mean": 1.101,
+            "p50": 0.754,
+            "p95": 3.061,
+            "p99": 4.413,
+            "max": 8.602
+          },
+          "pool_wait_ms": {
+            "count": 718,
+            "mean": 0.013,
+            "p50": 0.013,
+            "p95": 0.018,
+            "p99": 0.023,
+            "max": 0.041
+          },
+          "kafka_commit_ms": {
+            "count": 717,
+            "mean": 5.851,
+            "p50": 5.692,
+            "p95": 7.07,
+            "p99": 8.594,
+            "max": 12.095
+          },
+          "kafka_commit_calls": 717,
+          "wake_delay_ms": {
+            "count": 717,
+            "mean": 0.312,
+            "p50": 0.183,
+            "p95": 1.101,
+            "p99": 1.962,
+            "max": 4.198
+          },
+          "poll_empty_sleep_ms": {
+            "count": 3926,
+            "mean": 0.034,
+            "p50": 0.008,
+            "p95": 0.128,
+            "p99": 0.658,
+            "max": 3.573
+          },
+          "poll_calls_while_busy": 4655,
+          "pending_queue_len": {
+            "count": 717,
+            "mean": 36.967,
+            "p50": 39.0,
+            "p95": 59.0,
+            "p99": 62.0,
+            "max": 63.0
+          }
+        },
+        "business-alert": {
+          "handler_wall_ms": {
+            "count": 74,
+            "mean": 22.364,
+            "p50": 22.054,
+            "p95": 39.961,
+            "p99": 45.904,
+            "max": 46.908
+          },
+          "db_tx_ms": {
+            "count": 74,
+            "mean": 21.281,
+            "p50": 21.13,
+            "p95": 39.05,
+            "p99": 42.983,
+            "max": 43.13
+          },
+          "db_exec_ms": {
+            "count": 74,
+            "mean": 11.815,
+            "p50": 10.617,
+            "p95": 23.888,
+            "p99": 25.735,
+            "max": 29.187
+          },
+          "db_commit_ms": {
+            "count": 74,
+            "mean": 1.648,
+            "p50": 1.089,
+            "p95": 4.768,
+            "p99": 6.319,
+            "max": 8.342
+          },
+          "pool_wait_ms": {
+            "count": 74,
+            "mean": 0.012,
+            "p50": 0.012,
+            "p95": 0.016,
+            "p99": 0.018,
+            "max": 0.021
+          },
+          "kafka_commit_ms": {
+            "count": 74,
+            "mean": 6.016,
+            "p50": 5.711,
+            "p95": 7.299,
+            "p99": 8.307,
+            "max": 8.31
+          },
+          "kafka_commit_calls": 74,
+          "wake_delay_ms": {
+            "count": 74,
+            "mean": 0.299,
+            "p50": 0.201,
+            "p95": 0.812,
+            "p99": 1.292,
+            "max": 1.411
+          },
+          "poll_empty_sleep_ms": {
+            "count": 638,
+            "mean": 0.036,
+            "p50": 0.008,
+            "p95": 0.144,
+            "p99": 0.604,
+            "max": 2.156
+          },
+          "poll_calls_while_busy": 641,
+          "pending_queue_len": {
+            "count": 74,
+            "mean": 0.041,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 1.0,
+            "max": 1.0
+          }
+        }
+      },
+      "projector_substeps_ms": {
+        "lock_machine_ms": {
+          "count": 714,
+          "mean": 1.017,
+          "p50": 0.492,
+          "p95": 3.163,
+          "p99": 8.943,
+          "max": 14.13
+        },
+        "guard_source_ms": {
+          "count": 714,
+          "mean": 2.636,
+          "p50": 2.005,
+          "p95": 6.872,
+          "p99": 9.382,
+          "max": 12.939
+        },
+        "load_3tables_ms": {
+          "count": 714,
+          "mean": 2.405,
+          "p50": 1.817,
+          "p95": 6.425,
+          "p99": 8.901,
+          "max": 13.412
+        },
+        "reduce_ms": {
+          "count": 714,
+          "mean": 0.104,
+          "p50": 0.095,
+          "p95": 0.183,
+          "p99": 0.215,
+          "max": 0.294
+        },
+        "persist_upsert_ms": {
+          "count": 714,
+          "mean": 1.72,
+          "p50": 1.142,
+          "p95": 5.305,
+          "p99": 8.446,
+          "max": 13.23
+        },
+        "pg_notify_ms": {
+          "count": 714,
+          "mean": 0.789,
+          "p50": 0.411,
+          "p95": 2.78,
+          "p99": 4.436,
+          "max": 7.209
+        }
+      },
+      "out_of_order": {
+        "total_arrivals": 714,
+        "out_of_order_arrivals": 40,
+        "ooo_pct": 5.6,
+        "stale_pred_skipped_by_guard": 40,
+        "wrong_latest_sequence": 0
+      },
+      "notifications": {
+        "emitted": 1933,
+        "received": 1933
+      },
+      "lag_samples": [
+        {
+          "t_rel": 0.0,
+          "pred_total_lag": 6,
+          "pred_max_part_lag": 3,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 1,
+            "2": 1,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 3,
+            "8": 0,
+            "9": 0,
+            "10": 1,
+            "11": 0
+          },
+          "live_total_lag": 13
+        },
+        {
+          "t_rel": 1.01,
+          "pred_total_lag": 8,
+          "pred_max_part_lag": 2,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 2,
+            "2": 1,
+            "3": 1,
+            "4": 1,
+            "5": 0,
+            "6": 1,
+            "7": 1,
+            "8": 1,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 25
+        },
+        {
+          "t_rel": 2.01,
+          "pred_total_lag": 11,
+          "pred_max_part_lag": 4,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 2,
+            "4": 0,
+            "5": 1,
+            "6": 2,
+            "7": 4,
+            "8": 1,
+            "9": 1,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 36
+        },
+        {
+          "t_rel": 3.02,
+          "pred_total_lag": 18,
+          "pred_max_part_lag": 7,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 1,
+            "2": 1,
+            "3": 0,
+            "4": 2,
+            "5": 2,
+            "6": 1,
+            "7": 7,
+            "8": 2,
+            "9": 0,
+            "10": 2,
+            "11": 0
+          },
+          "live_total_lag": 31
+        },
+        {
+          "t_rel": 4.02,
+          "pred_total_lag": 12,
+          "pred_max_part_lag": 4,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 2,
+            "2": 0,
+            "3": 1,
+            "4": 1,
+            "5": 1,
+            "6": 0,
+            "7": 4,
+            "8": 1,
+            "9": 0,
+            "10": 2,
+            "11": 0
+          },
+          "live_total_lag": 42
+        },
+        {
+          "t_rel": 5.02,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 26
+        },
+        {
+          "t_rel": 6.02,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 24
+        },
+        {
+          "t_rel": 7.03,
+          "pred_total_lag": 8,
+          "pred_max_part_lag": 4,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 1,
+            "5": 0,
+            "6": 0,
+            "7": 4,
+            "8": 1,
+            "9": 0,
+            "10": 2,
+            "11": 0
+          },
+          "live_total_lag": 35
+        },
+        {
+          "t_rel": 8.03,
+          "pred_total_lag": 7,
+          "pred_max_part_lag": 1,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 1,
+            "5": 0,
+            "6": 1,
+            "7": 1,
+            "8": 0,
+            "9": 1,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 51
+        },
+        {
+          "t_rel": 9.04,
+          "pred_total_lag": 22,
+          "pred_max_part_lag": 9,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 2,
+            "2": 1,
+            "3": 1,
+            "4": 2,
+            "5": 2,
+            "6": 1,
+            "7": 9,
+            "8": 2,
+            "9": 0,
+            "10": 2,
+            "11": 0
+          },
+          "live_total_lag": 53
+        },
+        {
+          "t_rel": 10.04,
+          "pred_total_lag": 24,
+          "pred_max_part_lag": 8,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 2,
+            "2": 2,
+            "3": 2,
+            "4": 1,
+            "5": 1,
+            "6": 2,
+            "7": 8,
+            "8": 3,
+            "9": 1,
+            "10": 2,
+            "11": 0
+          },
+          "live_total_lag": 69
+        },
+        {
+          "t_rel": 11.05,
+          "pred_total_lag": 22,
+          "pred_max_part_lag": 10,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 2,
+            "2": 2,
+            "3": 0,
+            "4": 2,
+            "5": 1,
+            "6": 1,
+            "7": 10,
+            "8": 2,
+            "9": 0,
+            "10": 2,
+            "11": 0
+          },
+          "live_total_lag": 60
+        },
+        {
+          "t_rel": 12.05,
+          "pred_total_lag": 1,
+          "pred_max_part_lag": 1,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 1,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 56
+        },
+        {
+          "t_rel": 13.05,
+          "pred_total_lag": 1,
+          "pred_max_part_lag": 1,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 1,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 43
+        },
+        {
+          "t_rel": 14.06,
+          "pred_total_lag": 5,
+          "pred_max_part_lag": 2,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 2,
+            "8": 1,
+            "9": 0,
+            "10": 2,
+            "11": 0
+          },
+          "live_total_lag": 55
+        },
+        {
+          "t_rel": 15.06,
+          "pred_total_lag": 11,
+          "pred_max_part_lag": 5,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 2,
+            "2": 0,
+            "3": 0,
+            "4": 1,
+            "5": 1,
+            "6": 1,
+            "7": 5,
+            "8": 1,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 42
+        }
+      ],
+      "max_pred_lag": 24,
+      "end_pred_lag": 11,
+      "max_live_lag": 69
+    },
+    {
+      "mode": "hybrid",
+      "workload": "C",
+      "biz_replicas": 1,
+      "commit_batch_size": 1,
+      "commit_max_wait_ms": 25,
+      "run_index": 3,
+      "funnel_rps": {
+        "target_rps": 50.0,
+        "sent_rps": 50.0,
+        "admitted_rps": 46.67,
+        "outcomes_rps": 45.93,
+        "outbox_pub_rps": 45.73,
+        "pred_consumed_rps": 45.07,
+        "biz_pred_commit_rps": 45.07
+      },
+      "latency_ms": {
+        "kafka_pub_to_biz_commit": {
+          "count": 750,
+          "mean": 135.171,
+          "p50": 90.077,
+          "p95": 386.671,
+          "p99": 425.089,
+          "max": 443.701
+        },
+        "hot_e2e": {
+          "count": 240,
+          "mean": 3799.944,
+          "p50": 3977.778,
+          "p95": 5006.996,
+          "p99": 5084.809,
+          "max": 5186.402
+        },
+        "bg_e2e": {
+          "count": 510,
+          "mean": 711.65,
+          "p50": 681.135,
+          "p95": 1350.566,
+          "p99": 2498.174,
+          "max": 3122.841
+        },
+        "pg_notify_delivery": {
+          "count": 1374,
+          "mean": 0.834,
+          "p50": 0.642,
+          "p95": 1.868,
+          "p99": 3.031,
+          "max": 5.381
+        }
+      },
+      "role_breakdown": {
+        "business-prediction": {
+          "handler_wall_ms": {
+            "count": 676,
+            "mean": 13.692,
+            "p50": 12.505,
+            "p95": 27.939,
+            "p99": 30.913,
+            "max": 36.68
+          },
+          "db_tx_ms": {
+            "count": 676,
+            "mean": 12.076,
+            "p50": 10.858,
+            "p95": 25.846,
+            "p99": 28.704,
+            "max": 32.086
+          },
+          "db_exec_ms": {
+            "count": 676,
+            "mean": 9.428,
+            "p50": 8.32,
+            "p95": 20.635,
+            "p99": 24.205,
+            "max": 28.059
+          },
+          "db_commit_ms": {
+            "count": 676,
+            "mean": 1.125,
+            "p50": 0.775,
+            "p95": 2.95,
+            "p99": 4.813,
+            "max": 6.694
+          },
+          "pool_wait_ms": {
+            "count": 676,
+            "mean": 0.012,
+            "p50": 0.013,
+            "p95": 0.017,
+            "p99": 0.022,
+            "max": 0.064
+          },
+          "kafka_commit_ms": {
+            "count": 676,
+            "mean": 5.829,
+            "p50": 5.718,
+            "p95": 6.863,
+            "p99": 7.791,
+            "max": 9.849
+          },
+          "kafka_commit_calls": 676,
+          "wake_delay_ms": {
+            "count": 676,
+            "mean": 0.341,
+            "p50": 0.178,
+            "p95": 1.262,
+            "p99": 2.323,
+            "max": 3.256
+          },
+          "poll_empty_sleep_ms": {
+            "count": 4007,
+            "mean": 0.03,
+            "p50": 0.008,
+            "p95": 0.058,
+            "p99": 0.592,
+            "max": 4.546
+          },
+          "poll_calls_while_busy": 4634,
+          "pending_queue_len": {
+            "count": 676,
+            "mean": 7.299,
+            "p50": 5.0,
+            "p95": 23.0,
+            "p99": 24.25,
+            "max": 25.0
+          }
+        },
+        "business-live": {
+          "handler_wall_ms": {
+            "count": 740,
+            "mean": 12.689,
+            "p50": 11.405,
+            "p95": 26.103,
+            "p99": 33.053,
+            "max": 36.498
+          },
+          "db_tx_ms": {
+            "count": 740,
+            "mean": 11.534,
+            "p50": 10.377,
+            "p95": 24.427,
+            "p99": 31.169,
+            "max": 35.264
+          },
+          "db_exec_ms": {
+            "count": 740,
+            "mean": 9.06,
+            "p50": 7.88,
+            "p95": 19.843,
+            "p99": 24.766,
+            "max": 30.842
+          },
+          "db_commit_ms": {
+            "count": 740,
+            "mean": 1.083,
+            "p50": 0.745,
+            "p95": 2.978,
+            "p99": 4.708,
+            "max": 6.034
+          },
+          "pool_wait_ms": {
+            "count": 740,
+            "mean": 0.012,
+            "p50": 0.013,
+            "p95": 0.017,
+            "p99": 0.021,
+            "max": 0.033
+          },
+          "kafka_commit_ms": {
+            "count": 739,
+            "mean": 5.875,
+            "p50": 5.718,
+            "p95": 7.159,
+            "p99": 8.14,
+            "max": 9.526
+          },
+          "kafka_commit_calls": 739,
+          "wake_delay_ms": {
+            "count": 739,
+            "mean": 0.301,
+            "p50": 0.168,
+            "p95": 1.151,
+            "p99": 1.618,
+            "max": 3.061
+          },
+          "poll_empty_sleep_ms": {
+            "count": 4108,
+            "mean": 0.029,
+            "p50": 0.008,
+            "p95": 0.133,
+            "p99": 0.615,
+            "max": 3.093
+          },
+          "poll_calls_while_busy": 4847,
+          "pending_queue_len": {
+            "count": 739,
+            "mean": 30.729,
+            "p50": 31.0,
+            "p95": 55.0,
+            "p99": 60.62,
+            "max": 63.0
+          }
+        },
+        "business-alert": {
+          "handler_wall_ms": {
+            "count": 70,
+            "mean": 21.258,
+            "p50": 20.949,
+            "p95": 35.131,
+            "p99": 41.585,
+            "max": 46.832
+          },
+          "db_tx_ms": {
+            "count": 70,
+            "mean": 20.282,
+            "p50": 20.156,
+            "p95": 34.416,
+            "p99": 39.409,
+            "max": 43.333
+          },
+          "db_exec_ms": {
+            "count": 70,
+            "mean": 11.438,
+            "p50": 10.345,
+            "p95": 21.389,
+            "p99": 26.118,
+            "max": 29.671
+          },
+          "db_commit_ms": {
+            "count": 70,
+            "mean": 1.454,
+            "p50": 1.34,
+            "p95": 3.642,
+            "p99": 4.409,
+            "max": 5.02
+          },
+          "pool_wait_ms": {
+            "count": 70,
+            "mean": 0.012,
+            "p50": 0.013,
+            "p95": 0.016,
+            "p99": 0.019,
+            "max": 0.024
+          },
+          "kafka_commit_ms": {
+            "count": 70,
+            "mean": 5.999,
+            "p50": 5.794,
+            "p95": 7.113,
+            "p99": 8.259,
+            "max": 8.751
+          },
+          "kafka_commit_calls": 70,
+          "wake_delay_ms": {
+            "count": 70,
+            "mean": 0.296,
+            "p50": 0.233,
+            "p95": 0.881,
+            "p99": 1.107,
+            "max": 1.209
+          },
+          "poll_empty_sleep_ms": {
+            "count": 576,
+            "mean": 0.043,
+            "p50": 0.008,
+            "p95": 0.157,
+            "p99": 0.97,
+            "max": 3.537
+          },
+          "poll_calls_while_busy": 576,
+          "pending_queue_len": {
+            "count": 70,
+            "mean": 0.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0,
+            "max": 0.0
+          }
+        }
+      },
+      "projector_substeps_ms": {
+        "lock_machine_ms": {
+          "count": 676,
+          "mean": 0.995,
+          "p50": 0.536,
+          "p95": 3.328,
+          "p99": 5.776,
+          "max": 13.454
+        },
+        "guard_source_ms": {
+          "count": 676,
+          "mean": 2.614,
+          "p50": 2.127,
+          "p95": 6.435,
+          "p99": 9.351,
+          "max": 15.77
+        },
+        "load_3tables_ms": {
+          "count": 676,
+          "mean": 2.397,
+          "p50": 1.83,
+          "p95": 6.23,
+          "p99": 8.326,
+          "max": 14.352
+        },
+        "reduce_ms": {
+          "count": 676,
+          "mean": 0.116,
+          "p50": 0.114,
+          "p95": 0.191,
+          "p99": 0.225,
+          "max": 0.252
+        },
+        "persist_upsert_ms": {
+          "count": 676,
+          "mean": 2.009,
+          "p50": 1.455,
+          "p95": 5.491,
+          "p99": 7.399,
+          "max": 12.25
+        },
+        "pg_notify_ms": {
+          "count": 676,
+          "mean": 0.767,
+          "p50": 0.411,
+          "p95": 2.521,
+          "p99": 4.479,
+          "max": 5.669
+        }
+      },
+      "out_of_order": {
+        "total_arrivals": 676,
+        "out_of_order_arrivals": 41,
+        "ooo_pct": 6.07,
+        "stale_pred_skipped_by_guard": 42,
+        "wrong_latest_sequence": 0
+      },
+      "notifications": {
+        "emitted": 1931,
+        "received": 1931
+      },
+      "lag_samples": [
+        {
+          "t_rel": 0.0,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 0
+        },
+        {
+          "t_rel": 1.0,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 1
+        },
+        {
+          "t_rel": 2.01,
+          "pred_total_lag": 8,
+          "pred_max_part_lag": 5,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 1,
+            "5": 0,
+            "6": 0,
+            "7": 5,
+            "8": 1,
+            "9": 0,
+            "10": 1,
+            "11": 0
+          },
+          "live_total_lag": 11
+        },
+        {
+          "t_rel": 3.01,
+          "pred_total_lag": 9,
+          "pred_max_part_lag": 3,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 1,
+            "2": 1,
+            "3": 0,
+            "4": 1,
+            "5": 0,
+            "6": 1,
+            "7": 3,
+            "8": 1,
+            "9": 0,
+            "10": 1,
+            "11": 0
+          },
+          "live_total_lag": 24
+        },
+        {
+          "t_rel": 4.02,
+          "pred_total_lag": 15,
+          "pred_max_part_lag": 4,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 2,
+            "2": 1,
+            "3": 1,
+            "4": 1,
+            "5": 1,
+            "6": 2,
+            "7": 4,
+            "8": 2,
+            "9": 1,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 36
+        },
+        {
+          "t_rel": 5.02,
+          "pred_total_lag": 26,
+          "pred_max_part_lag": 10,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 2,
+            "2": 1,
+            "3": 2,
+            "4": 2,
+            "5": 1,
+            "6": 3,
+            "7": 10,
+            "8": 2,
+            "9": 1,
+            "10": 2,
+            "11": 0
+          },
+          "live_total_lag": 41
+        },
+        {
+          "t_rel": 6.02,
+          "pred_total_lag": 5,
+          "pred_max_part_lag": 5,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 5,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 24
+        },
+        {
+          "t_rel": 7.02,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 22
+        },
+        {
+          "t_rel": 8.03,
+          "pred_total_lag": 4,
+          "pred_max_part_lag": 3,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 1,
+            "6": 0,
+            "7": 3,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 29
+        },
+        {
+          "t_rel": 9.03,
+          "pred_total_lag": 7,
+          "pred_max_part_lag": 5,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 2,
+            "5": 0,
+            "6": 0,
+            "7": 5,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 36
+        },
+        {
+          "t_rel": 10.03,
+          "pred_total_lag": 9,
+          "pred_max_part_lag": 5,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 1,
+            "5": 0,
+            "6": 0,
+            "7": 5,
+            "8": 1,
+            "9": 0,
+            "10": 2,
+            "11": 0
+          },
+          "live_total_lag": 45
+        },
+        {
+          "t_rel": 11.03,
+          "pred_total_lag": 12,
+          "pred_max_part_lag": 7,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 1,
+            "2": 0,
+            "3": 0,
+            "4": 1,
+            "5": 0,
+            "6": 0,
+            "7": 7,
+            "8": 1,
+            "9": 0,
+            "10": 2,
+            "11": 0
+          },
+          "live_total_lag": 48
+        },
+        {
+          "t_rel": 12.03,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 37
+        },
+        {
+          "t_rel": 13.04,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 15
+        },
+        {
+          "t_rel": 14.04,
+          "pred_total_lag": 0,
+          "pred_max_part_lag": 0,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 15
+        },
+        {
+          "t_rel": 15.04,
+          "pred_total_lag": 10,
+          "pred_max_part_lag": 9,
+          "pred_per_partition": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 1,
+            "6": 0,
+            "7": 9,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0
+          },
+          "live_total_lag": 8
+        }
+      ],
+      "max_pred_lag": 26,
+      "end_pred_lag": 10,
+      "max_live_lag": 48
+    }
+  ]
+}

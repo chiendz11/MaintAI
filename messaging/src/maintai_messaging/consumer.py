@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import threading
+import time
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -92,6 +93,10 @@ class ConsumerRunner:
         self._backpressured = False
         self._buffer_limit = max_buffered_records
         self._pending = deque()
+        self._pending_commits = {}
+        self._pending_commit_gen = None
+        self._pending_commit_count = 0
+        self._first_uncommitted_at = None
         self.processed = 0
         self.rebalances = 0
 
@@ -108,6 +113,29 @@ class ConsumerRunner:
     def _revoked(self, _consumer, _partitions):
         self._generation += 1
         self._pending.clear()
+        self._pending_commits.clear()
+        self._pending_commit_gen = None
+        self._pending_commit_count = 0
+        self._first_uncommitted_at = None
+
+    def _flush_commits(self):
+        if not self._pending_commits:
+            return
+        if self._pending_commit_gen != self._generation:
+            self._pending_commits.clear()
+            self._pending_commit_count = 0
+            self._first_uncommitted_at = None
+            return
+        owned = {(p.topic, p.partition) for p in self.client.assignment()}
+        offsets = [tp for key, tp in sorted(self._pending_commits.items()) if key in owned]
+        self._pending_commits.clear()
+        self._pending_commit_count = 0
+        self._first_uncommitted_at = None
+        if not offsets:
+            return
+        positions = self.client.commit(offsets=offsets, asynchronous=False)
+        if any(getattr(partition, "error", None) for partition in positions or ()):
+            raise ConsumerFailed("Broker did not acknowledge the offset commit")
 
     def _execute(self, record):
         if self.role.startswith("storage-"):
@@ -161,16 +189,21 @@ class ConsumerRunner:
         executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="maintai-handler")
         future = record = None
         generation = None
+        done_event = threading.Event()
         try:
             while True:
                 if future is not None:
                     if not future.done():
-                        extra = self._poll(self.settings.poll_interval_seconds)
+                        extra = self._poll(0)
                         if extra is not None:
                             if len(self._pending) + 1 >= self._buffer_limit:
                                 raise ConsumerFailed("Serial consumer exceeded its bounded buffer")
                             self._pending.append((self._generation, extra))
                             self._flow_control()
+                            if not done_event.is_set():
+                                continue
+                        if not done_event.is_set():
+                            done_event.wait(min(self.settings.poll_interval_seconds, 0.002))
                         continue
                     try:
                         future.result()
@@ -178,19 +211,29 @@ class ConsumerRunner:
                         raise ConsumerFailed("Handler failed; no offset advanced") from exc
                     owned = {(p.topic, p.partition) for p in self.client.assignment()}
                     if generation == self._generation and (record.topic, record.partition) in owned:
-                        positions = self.client.commit(
-                            offsets=[
-                                TopicPartition(record.topic, record.partition, record.offset + 1)
-                            ],
-                            asynchronous=False,
+                        if self._pending_commit_gen != generation:
+                            self._pending_commits.clear()
+                            self._pending_commit_count = 0
+                            self._first_uncommitted_at = None
+                            self._pending_commit_gen = generation
+                        self._pending_commits[(record.topic, record.partition)] = TopicPartition(
+                            record.topic, record.partition, record.offset + 1
                         )
-                        if any(getattr(partition, "error", None) for partition in positions or ()):
-                            raise ConsumerFailed("Broker did not acknowledge the offset commit")
+                        self._pending_commit_count += 1
+                        if self._first_uncommitted_at is None:
+                            self._first_uncommitted_at = time.monotonic()
+                        if (
+                            self._pending_commit_count >= self.settings.commit_batch_size
+                            or (time.monotonic() - self._first_uncommitted_at) * 1000.0
+                            >= self.settings.commit_max_wait_ms
+                        ):
+                            self._flush_commits()
                         self.processed += 1
                     self._busy = False
                     future = None
                     self._flow_control()
                 if stop.is_set() or (max_records is not None and self.processed >= max_records):
+                    self._flush_commits()
                     break
                 if self._pending:
                     pending_generation, record = self._pending.popleft()
@@ -198,12 +241,17 @@ class ConsumerRunner:
                         continue
                 else:
                     record = self._poll(self.settings.poll_interval_seconds)
+                    if record is None:
+                        self._flush_commits()
+                        continue
                 if record is None:
                     continue
                 generation = self._generation
                 self._busy = True
                 self._flow_control()
+                done_event.clear()
                 future = executor.submit(self._execute, record)
+                future.add_done_callback(lambda _f: done_event.set())
         finally:
             # Auto commit and auto offset storage are both disabled. A handler
             # still completing during shutdown can only cause safe redelivery.
