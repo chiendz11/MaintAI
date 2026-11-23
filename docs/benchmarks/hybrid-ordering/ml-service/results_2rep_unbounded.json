@@ -1,0 +1,1037 @@
+{
+  "generated_at": "2026-11-23T05:32:36.889747+00:00",
+  "urls": [
+    "http://127.0.0.1:18001",
+    "http://127.0.0.1:18002"
+  ],
+  "containers": [
+    "maintai-ml-hgb-bench-1",
+    "maintai-ml-hgb-bench-2"
+  ],
+  "probe_identities": [
+    {
+      "prediction_id": "pred_b8f72acea791478baa91057eca003e9e",
+      "event_id": "probe_init_0",
+      "prediction": "NORMAL",
+      "failure_probability": 3.0164017534678426e-05,
+      "model_version": "hgb-interactions-candidate-v1",
+      "preprocessor_version": "sensor-interactions-onehot-v1",
+      "model_threshold": 0.08943418823732646,
+      "inference_ms": 6.709178909659386,
+      "predicted_at": "2026-11-23T05:32:26.024870+00:00"
+    },
+    {
+      "prediction_id": "pred_95c12377ad0b48959c07931799961088",
+      "event_id": "probe_init_1",
+      "prediction": "NORMAL",
+      "failure_probability": 3.0164017534678426e-05,
+      "model_version": "hgb-interactions-candidate-v1",
+      "preprocessor_version": "sensor-interactions-onehot-v1",
+      "model_threshold": 0.08943418823732646,
+      "inference_ms": 7.467993069440126,
+      "predicted_at": "2026-11-23T05:32:26.039403+00:00"
+    }
+  ],
+  "results": [
+    {
+      "concurrency": 2,
+      "throughput_rps_mean": 188.068,
+      "throughput_rps_runs": [
+        174.268,
+        201.358,
+        188.577
+      ],
+      "http_p50_mean": 9.596,
+      "http_p95_mean": 12.903,
+      "http_p99_mean": 31.562,
+      "server_inf_p50_mean": 6.276,
+      "server_inf_p95_mean": 8.265,
+      "queue_overhead_p95_mean": 5.124,
+      "total_errors": 0,
+      "total_timeouts": 0,
+      "runs": [
+        {
+          "wall_elapsed_s": 0.5738,
+          "total_requests": 100,
+          "success_count": 100,
+          "error_count": 0,
+          "timeout_count": 0,
+          "throughput_rps": 174.268,
+          "success_rps": 174.268,
+          "status_counts": {
+            "200": 100
+          },
+          "predictions": {
+            "NORMAL": 98,
+            "FAILURE": 2
+          },
+          "http_ms": {
+            "count": 100,
+            "mean": 11.419,
+            "p50": 9.573,
+            "p95": 11.315,
+            "p99": 59.134,
+            "max": 66.482
+          },
+          "server_inference_ms": {
+            "count": 100,
+            "mean": 7.304,
+            "p50": 6.124,
+            "p95": 7.357,
+            "p99": 55.557,
+            "max": 63.927
+          },
+          "queue_overhead_ms": {
+            "count": 100,
+            "mean": 4.115,
+            "p50": 3.216,
+            "p95": 4.844,
+            "p99": 38.927,
+            "max": 41.782
+          },
+          "sample_errors": [],
+          "cgroup": {
+            "maintai-ml-hgb-bench-1": {
+              "cpu_cores_avg": 0.8436,
+              "cpu_pct_of_one_core": 84.36,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 132.09
+            },
+            "maintai-ml-hgb-bench-2": {
+              "cpu_cores_avg": 0.8129,
+              "cpu_pct_of_one_core": 81.29,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 131.47
+            }
+          },
+          "prom_avg_inference_ms": 7.415,
+          "gpu_before_after": {
+            "before": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 0, 25, 975, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 238"
+              ]
+            },
+            "after": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 0, 25, 969, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 232"
+              ]
+            }
+          }
+        },
+        {
+          "wall_elapsed_s": 0.4966,
+          "total_requests": 100,
+          "success_count": 100,
+          "error_count": 0,
+          "timeout_count": 0,
+          "throughput_rps": 201.358,
+          "success_rps": 201.358,
+          "status_counts": {
+            "200": 100
+          },
+          "predictions": {
+            "NORMAL": 98,
+            "FAILURE": 2
+          },
+          "http_ms": {
+            "count": 100,
+            "mean": 9.815,
+            "p50": 9.567,
+            "p95": 11.58,
+            "p99": 12.634,
+            "max": 12.913
+          },
+          "server_inference_ms": {
+            "count": 100,
+            "mean": 6.356,
+            "p50": 6.226,
+            "p95": 7.407,
+            "p99": 8.557,
+            "max": 9.326
+          },
+          "queue_overhead_ms": {
+            "count": 100,
+            "mean": 3.46,
+            "p50": 3.354,
+            "p95": 4.666,
+            "p99": 4.918,
+            "max": 4.954
+          },
+          "sample_errors": [],
+          "cgroup": {
+            "maintai-ml-hgb-bench-1": {
+              "cpu_cores_avg": 0.8487,
+              "cpu_pct_of_one_core": 84.87,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 132.71
+            },
+            "maintai-ml-hgb-bench-2": {
+              "cpu_cores_avg": 0.8838,
+              "cpu_pct_of_one_core": 88.38,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 132.17
+            }
+          },
+          "prom_avg_inference_ms": 6.464,
+          "gpu_before_after": {
+            "before": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 0, 25, 969, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 232"
+              ]
+            },
+            "after": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 13, 33, 969, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 232"
+              ]
+            }
+          }
+        },
+        {
+          "wall_elapsed_s": 0.5303,
+          "total_requests": 100,
+          "success_count": 100,
+          "error_count": 0,
+          "timeout_count": 0,
+          "throughput_rps": 188.577,
+          "success_rps": 188.577,
+          "status_counts": {
+            "200": 100
+          },
+          "predictions": {
+            "NORMAL": 98,
+            "FAILURE": 2
+          },
+          "http_ms": {
+            "count": 100,
+            "mean": 10.488,
+            "p50": 9.648,
+            "p95": 15.813,
+            "p99": 22.919,
+            "max": 23.468
+          },
+          "server_inference_ms": {
+            "count": 100,
+            "mean": 6.972,
+            "p50": 6.479,
+            "p95": 10.03,
+            "p99": 15.705,
+            "max": 17.634
+          },
+          "queue_overhead_ms": {
+            "count": 100,
+            "mean": 3.516,
+            "p50": 3.192,
+            "p95": 5.862,
+            "p99": 7.236,
+            "max": 8.076
+          },
+          "sample_errors": [],
+          "cgroup": {
+            "maintai-ml-hgb-bench-1": {
+              "cpu_cores_avg": 0.8597,
+              "cpu_pct_of_one_core": 85.97,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 133.12
+            },
+            "maintai-ml-hgb-bench-2": {
+              "cpu_cores_avg": 0.8903,
+              "cpu_pct_of_one_core": 89.03,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 132.61
+            }
+          },
+          "prom_avg_inference_ms": 7.101,
+          "gpu_before_after": {
+            "before": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 13, 33, 969, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 232"
+              ]
+            },
+            "after": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 0, 25, 969, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 231"
+              ]
+            }
+          }
+        }
+      ],
+      "cpu_pct_sum_mean": 171.3,
+      "rss_mib_max": 133.12,
+      "total_throttled_periods": 0
+    },
+    {
+      "concurrency": 4,
+      "throughput_rps_mean": 202.466,
+      "throughput_rps_runs": [
+        209.685,
+        219.695,
+        178.018
+      ],
+      "http_p50_mean": 19.68,
+      "http_p95_mean": 25.062,
+      "http_p99_mean": 28.228,
+      "server_inf_p50_mean": 10.277,
+      "server_inf_p95_mean": 16.919,
+      "queue_overhead_p95_mean": 13.505,
+      "total_errors": 0,
+      "total_timeouts": 0,
+      "runs": [
+        {
+          "wall_elapsed_s": 0.4769,
+          "total_requests": 100,
+          "success_count": 100,
+          "error_count": 0,
+          "timeout_count": 0,
+          "throughput_rps": 209.685,
+          "success_rps": 209.685,
+          "status_counts": {
+            "200": 100
+          },
+          "predictions": {
+            "NORMAL": 98,
+            "FAILURE": 2
+          },
+          "http_ms": {
+            "count": 100,
+            "mean": 18.781,
+            "p50": 18.918,
+            "p95": 23.926,
+            "p99": 25.319,
+            "max": 36.399
+          },
+          "server_inference_ms": {
+            "count": 100,
+            "mean": 10.719,
+            "p50": 9.538,
+            "p95": 16.592,
+            "p99": 19.157,
+            "max": 32.005
+          },
+          "queue_overhead_ms": {
+            "count": 100,
+            "mean": 8.062,
+            "p50": 7.738,
+            "p95": 13.162,
+            "p99": 14.176,
+            "max": 15.792
+          },
+          "sample_errors": [],
+          "cgroup": {
+            "maintai-ml-hgb-bench-1": {
+              "cpu_cores_avg": 1.073,
+              "cpu_pct_of_one_core": 107.3,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 132.46
+            },
+            "maintai-ml-hgb-bench-2": {
+              "cpu_cores_avg": 1.0631,
+              "cpu_pct_of_one_core": 106.31,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 132.49
+            }
+          },
+          "prom_avg_inference_ms": 11.353,
+          "gpu_before_after": {
+            "before": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 0, 25, 975, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 238"
+              ]
+            },
+            "after": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 37, 30, 975, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 238"
+              ]
+            }
+          }
+        },
+        {
+          "wall_elapsed_s": 0.4552,
+          "total_requests": 100,
+          "success_count": 100,
+          "error_count": 0,
+          "timeout_count": 0,
+          "throughput_rps": 219.695,
+          "success_rps": 219.695,
+          "status_counts": {
+            "200": 100
+          },
+          "predictions": {
+            "NORMAL": 98,
+            "FAILURE": 2
+          },
+          "http_ms": {
+            "count": 100,
+            "mean": 17.913,
+            "p50": 17.948,
+            "p95": 23.372,
+            "p99": 26.885,
+            "max": 28.463
+          },
+          "server_inference_ms": {
+            "count": 100,
+            "mean": 10.07,
+            "p50": 9.46,
+            "p95": 14.729,
+            "p99": 17.909,
+            "max": 19.827
+          },
+          "queue_overhead_ms": {
+            "count": 100,
+            "mean": 7.843,
+            "p50": 7.778,
+            "p95": 12.588,
+            "p99": 14.037,
+            "max": 14.99
+          },
+          "sample_errors": [],
+          "cgroup": {
+            "maintai-ml-hgb-bench-1": {
+              "cpu_cores_avg": 1.0375,
+              "cpu_pct_of_one_core": 103.75,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 132.21
+            },
+            "maintai-ml-hgb-bench-2": {
+              "cpu_cores_avg": 1.079,
+              "cpu_pct_of_one_core": 107.9,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 132.52
+            }
+          },
+          "prom_avg_inference_ms": 10.796,
+          "gpu_before_after": {
+            "before": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 0, 1, 975, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 238"
+              ]
+            },
+            "after": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 0, 1, 975, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 238"
+              ]
+            }
+          }
+        },
+        {
+          "wall_elapsed_s": 0.5617,
+          "total_requests": 100,
+          "success_count": 100,
+          "error_count": 0,
+          "timeout_count": 0,
+          "throughput_rps": 178.018,
+          "success_rps": 178.018,
+          "status_counts": {
+            "200": 100
+          },
+          "predictions": {
+            "NORMAL": 98,
+            "FAILURE": 2
+          },
+          "http_ms": {
+            "count": 100,
+            "mean": 22.405,
+            "p50": 22.173,
+            "p95": 27.889,
+            "p99": 32.48,
+            "max": 37.81
+          },
+          "server_inference_ms": {
+            "count": 100,
+            "mean": 12.548,
+            "p50": 11.833,
+            "p95": 19.435,
+            "p99": 21.547,
+            "max": 23.053
+          },
+          "queue_overhead_ms": {
+            "count": 100,
+            "mean": 9.857,
+            "p50": 9.848,
+            "p95": 14.765,
+            "p99": 16.735,
+            "max": 20.071
+          },
+          "sample_errors": [],
+          "cgroup": {
+            "maintai-ml-hgb-bench-1": {
+              "cpu_cores_avg": 1.0435,
+              "cpu_pct_of_one_core": 104.35,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 132.06
+            },
+            "maintai-ml-hgb-bench-2": {
+              "cpu_cores_avg": 1.0348,
+              "cpu_pct_of_one_core": 103.48,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 133.27
+            }
+          },
+          "prom_avg_inference_ms": 13.293,
+          "gpu_before_after": {
+            "before": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 1, 2, 974, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 238"
+              ]
+            },
+            "after": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 0, 2, 975, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 238"
+              ]
+            }
+          }
+        }
+      ],
+      "cpu_pct_sum_mean": 211.03,
+      "rss_mib_max": 133.27,
+      "total_throttled_periods": 0
+    },
+    {
+      "concurrency": 8,
+      "throughput_rps_mean": 197.564,
+      "throughput_rps_runs": [
+        215.015,
+        191.868,
+        185.808
+      ],
+      "http_p50_mean": 39.509,
+      "http_p95_mean": 60.322,
+      "http_p99_mean": 73.359,
+      "server_inf_p50_mean": 16.1,
+      "server_inf_p95_mean": 35.416,
+      "queue_overhead_p95_mean": 35.822,
+      "total_errors": 0,
+      "total_timeouts": 0,
+      "runs": [
+        {
+          "wall_elapsed_s": 0.4651,
+          "total_requests": 100,
+          "success_count": 100,
+          "error_count": 0,
+          "timeout_count": 0,
+          "throughput_rps": 215.015,
+          "success_rps": 215.015,
+          "status_counts": {
+            "200": 100
+          },
+          "predictions": {
+            "NORMAL": 98,
+            "FAILURE": 2
+          },
+          "http_ms": {
+            "count": 100,
+            "mean": 36.057,
+            "p50": 36.133,
+            "p95": 52.544,
+            "p99": 65.017,
+            "max": 77.503
+          },
+          "server_inference_ms": {
+            "count": 100,
+            "mean": 16.612,
+            "p50": 14.746,
+            "p95": 30.958,
+            "p99": 47.068,
+            "max": 50.632
+          },
+          "queue_overhead_ms": {
+            "count": 100,
+            "mean": 19.445,
+            "p50": 18.939,
+            "p95": 31.427,
+            "p99": 33.798,
+            "max": 35.418
+          },
+          "sample_errors": [],
+          "cgroup": {
+            "maintai-ml-hgb-bench-1": {
+              "cpu_cores_avg": 1.1171,
+              "cpu_pct_of_one_core": 111.71,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 132.19
+            },
+            "maintai-ml-hgb-bench-2": {
+              "cpu_cores_avg": 1.1736,
+              "cpu_pct_of_one_core": 117.36,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 132.66
+            }
+          },
+          "prom_avg_inference_ms": 18.985,
+          "gpu_before_after": {
+            "before": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 0, 12, 975, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 238"
+              ]
+            },
+            "after": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 0, 12, 975, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 238"
+              ]
+            }
+          }
+        },
+        {
+          "wall_elapsed_s": 0.5212,
+          "total_requests": 100,
+          "success_count": 100,
+          "error_count": 0,
+          "timeout_count": 0,
+          "throughput_rps": 191.868,
+          "success_rps": 191.868,
+          "status_counts": {
+            "200": 100
+          },
+          "predictions": {
+            "NORMAL": 98,
+            "FAILURE": 2
+          },
+          "http_ms": {
+            "count": 100,
+            "mean": 40.761,
+            "p50": 41.554,
+            "p95": 63.843,
+            "p99": 71.907,
+            "max": 77.373
+          },
+          "server_inference_ms": {
+            "count": 100,
+            "mean": 18.235,
+            "p50": 15.503,
+            "p95": 34.926,
+            "p99": 44.373,
+            "max": 45.991
+          },
+          "queue_overhead_ms": {
+            "count": 100,
+            "mean": 22.526,
+            "p50": 22.727,
+            "p95": 39.798,
+            "p99": 42.588,
+            "max": 43.328
+          },
+          "sample_errors": [],
+          "cgroup": {
+            "maintai-ml-hgb-bench-1": {
+              "cpu_cores_avg": 1.128,
+              "cpu_pct_of_one_core": 112.8,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 133.05
+            },
+            "maintai-ml-hgb-bench-2": {
+              "cpu_cores_avg": 1.1407,
+              "cpu_pct_of_one_core": 114.07,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 132.67
+            }
+          },
+          "prom_avg_inference_ms": 20.492,
+          "gpu_before_after": {
+            "before": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 0, 12, 975, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 238"
+              ]
+            },
+            "after": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 0, 12, 975, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 238"
+              ]
+            }
+          }
+        },
+        {
+          "wall_elapsed_s": 0.5382,
+          "total_requests": 100,
+          "success_count": 100,
+          "error_count": 0,
+          "timeout_count": 0,
+          "throughput_rps": 185.808,
+          "success_rps": 185.808,
+          "status_counts": {
+            "200": 100
+          },
+          "predictions": {
+            "NORMAL": 98,
+            "FAILURE": 2
+          },
+          "http_ms": {
+            "count": 100,
+            "mean": 41.442,
+            "p50": 40.841,
+            "p95": 64.579,
+            "p99": 83.153,
+            "max": 86.276
+          },
+          "server_inference_ms": {
+            "count": 100,
+            "mean": 19.662,
+            "p50": 18.05,
+            "p95": 40.363,
+            "p99": 48.947,
+            "max": 54.508
+          },
+          "queue_overhead_ms": {
+            "count": 100,
+            "mean": 21.781,
+            "p50": 21.328,
+            "p95": 36.24,
+            "p99": 45.124,
+            "max": 51.183
+          },
+          "sample_errors": [],
+          "cgroup": {
+            "maintai-ml-hgb-bench-1": {
+              "cpu_cores_avg": 1.11,
+              "cpu_pct_of_one_core": 111.0,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 133.25
+            },
+            "maintai-ml-hgb-bench-2": {
+              "cpu_cores_avg": 1.0995,
+              "cpu_pct_of_one_core": 109.95,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 133.58
+            }
+          },
+          "prom_avg_inference_ms": 22.014,
+          "gpu_before_after": {
+            "before": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 0, 12, 975, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 238"
+              ]
+            },
+            "after": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 6, 16, 975, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 238"
+              ]
+            }
+          }
+        }
+      ],
+      "cpu_pct_sum_mean": 225.63,
+      "rss_mib_max": 133.58,
+      "total_throttled_periods": 0
+    },
+    {
+      "concurrency": 12,
+      "throughput_rps_mean": 205.459,
+      "throughput_rps_runs": [
+        193.709,
+        192.194,
+        230.474
+      ],
+      "http_p50_mean": 56.653,
+      "http_p95_mean": 83.649,
+      "http_p99_mean": 93.185,
+      "server_inf_p50_mean": 22.29,
+      "server_inf_p95_mean": 45.874,
+      "queue_overhead_p95_mean": 57.945,
+      "total_errors": 0,
+      "total_timeouts": 0,
+      "runs": [
+        {
+          "wall_elapsed_s": 0.5162,
+          "total_requests": 100,
+          "success_count": 100,
+          "error_count": 0,
+          "timeout_count": 0,
+          "throughput_rps": 193.709,
+          "success_rps": 193.709,
+          "status_counts": {
+            "200": 100
+          },
+          "predictions": {
+            "NORMAL": 98,
+            "FAILURE": 2
+          },
+          "http_ms": {
+            "count": 100,
+            "mean": 59.914,
+            "p50": 55.967,
+            "p95": 89.458,
+            "p99": 99.283,
+            "max": 105.309
+          },
+          "server_inference_ms": {
+            "count": 100,
+            "mean": 21.832,
+            "p50": 19.799,
+            "p95": 45.157,
+            "p99": 57.937,
+            "max": 62.949
+          },
+          "queue_overhead_ms": {
+            "count": 100,
+            "mean": 38.082,
+            "p50": 37.215,
+            "p95": 66.436,
+            "p99": 72.252,
+            "max": 83.642
+          },
+          "sample_errors": [],
+          "cgroup": {
+            "maintai-ml-hgb-bench-1": {
+              "cpu_cores_avg": 1.1097,
+              "cpu_pct_of_one_core": 110.97,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 133.21
+            },
+            "maintai-ml-hgb-bench-2": {
+              "cpu_cores_avg": 1.1273,
+              "cpu_pct_of_one_core": 112.73,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 133.27
+            }
+          },
+          "prom_avg_inference_ms": 27.31,
+          "gpu_before_after": {
+            "before": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 0, 24, 963, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 226"
+              ]
+            },
+            "after": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 20, 28, 963, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 226"
+              ]
+            }
+          }
+        },
+        {
+          "wall_elapsed_s": 0.5203,
+          "total_requests": 100,
+          "success_count": 100,
+          "error_count": 0,
+          "timeout_count": 0,
+          "throughput_rps": 192.194,
+          "success_rps": 192.194,
+          "status_counts": {
+            "200": 100
+          },
+          "predictions": {
+            "NORMAL": 98,
+            "FAILURE": 2
+          },
+          "http_ms": {
+            "count": 100,
+            "mean": 60.906,
+            "p50": 62.656,
+            "p95": 88.977,
+            "p99": 98.126,
+            "max": 102.293
+          },
+          "server_inference_ms": {
+            "count": 100,
+            "mean": 27.796,
+            "p50": 28.158,
+            "p95": 52.384,
+            "p99": 61.126,
+            "max": 75.407
+          },
+          "queue_overhead_ms": {
+            "count": 100,
+            "mean": 33.11,
+            "p50": 32.226,
+            "p95": 57.907,
+            "p99": 64.217,
+            "max": 72.386
+          },
+          "sample_errors": [],
+          "cgroup": {
+            "maintai-ml-hgb-bench-1": {
+              "cpu_cores_avg": 1.1297,
+              "cpu_pct_of_one_core": 112.97,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 134.17
+            },
+            "maintai-ml-hgb-bench-2": {
+              "cpu_cores_avg": 1.1397,
+              "cpu_pct_of_one_core": 113.97,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 133.82
+            }
+          },
+          "prom_avg_inference_ms": 31.204,
+          "gpu_before_after": {
+            "before": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 5, 26, 963, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 226"
+              ]
+            },
+            "after": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 5, 26, 963, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 226"
+              ]
+            }
+          }
+        },
+        {
+          "wall_elapsed_s": 0.4339,
+          "total_requests": 100,
+          "success_count": 100,
+          "error_count": 0,
+          "timeout_count": 0,
+          "throughput_rps": 230.474,
+          "success_rps": 230.474,
+          "status_counts": {
+            "200": 100
+          },
+          "predictions": {
+            "NORMAL": 98,
+            "FAILURE": 2
+          },
+          "http_ms": {
+            "count": 100,
+            "mean": 50.192,
+            "p50": 51.336,
+            "p95": 72.513,
+            "p99": 82.147,
+            "max": 86.638
+          },
+          "server_inference_ms": {
+            "count": 100,
+            "mean": 20.512,
+            "p50": 18.912,
+            "p95": 40.082,
+            "p99": 48.839,
+            "max": 48.924
+          },
+          "queue_overhead_ms": {
+            "count": 100,
+            "mean": 29.68,
+            "p50": 30.182,
+            "p95": 49.493,
+            "p99": 54.985,
+            "max": 57.59
+          },
+          "sample_errors": [],
+          "cgroup": {
+            "maintai-ml-hgb-bench-1": {
+              "cpu_cores_avg": 1.1566,
+              "cpu_pct_of_one_core": 115.66,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 133.64
+            },
+            "maintai-ml-hgb-bench-2": {
+              "cpu_cores_avg": 1.16,
+              "cpu_pct_of_one_core": 116.0,
+              "delta_nr_throttled": 0,
+              "delta_throttled_ms": 0.0,
+              "rss_mib": 133.59
+            }
+          },
+          "prom_avg_inference_ms": 22.911,
+          "gpu_before_after": {
+            "before": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 18, 29, 963, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 226"
+              ]
+            },
+            "after": {
+              "gpu_summary": [
+                "NVIDIA GeForce RTX 2050, 12, 31, 963, 4096"
+              ],
+              "compute_processes": [
+                "1942660, /opt/brave-bin/brave --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=1942608 --enable-crash-reporter=ec419327-4bfd-4c76-b2ac-06fc43bea605? --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4?i?13561066112789446412?3947166143730666524?262144 --field-trial-handle=3?i?8239166556589630934?15520106761336447651?262144 --disable-features=EyeDropper --variations-seed-version=main@7f1c5f4118171fc8b8e452b55ecde6ac711661bb --pseudonymization-salt-handle=7?i?10517278813045457630?4254928721240115642?4 --trace-process-track-uuid=3190708988185955192, 226"
+              ]
+            }
+          }
+        }
+      ],
+      "cpu_pct_sum_mean": 227.43,
+      "rss_mib_max": 134.17,
+      "total_throttled_periods": 0
+    }
+  ]
+}
