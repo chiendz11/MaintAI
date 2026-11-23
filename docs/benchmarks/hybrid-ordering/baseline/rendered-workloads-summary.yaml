@@ -1,0 +1,515 @@
+deployments:
+  business-api:
+    replicas: 1
+    image: ghcr.io/chiendz11/maintai-business-api:sha-f7f389d64a91ffba93dede9e9e1174b81613675f
+    resources:
+      limits:
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    envFrom:
+    - configMapRef:
+        name: business-api-config-tfftd8b85c
+    - secretRef:
+        name: local-business-api-env
+  business-consumer:
+    replicas: 1
+    image: ghcr.io/chiendz11/maintai-business-consumer:sha-f7f389d64a91ffba93dede9e9e1174b81613675f
+    resources:
+      limits:
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    envFrom:
+    - configMapRef:
+        name: business-consumer-config-5mc4kgt697
+    - secretRef:
+        name: local-business-consumer-env
+  frontend:
+    replicas: 1
+    image: ghcr.io/chiendz11/maintai-frontend:sha-57169209bd959156e1c923c79b672b4d98a871ce
+    resources:
+      limits:
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    envFrom: []
+  ingestion-api:
+    replicas: 1
+    image: ghcr.io/chiendz11/maintai-ingestion-api:sha-c2bce0081dfef67345d81f1edf58996a603681ac
+    resources:
+      limits:
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    envFrom:
+    - configMapRef:
+        name: ingestion-api-config-2ghk98cchm
+  ml-service:
+    replicas: 1
+    image: ghcr.io/chiendz11/maintai-ml-service:sha-94248e49bd84b112162244f62b25fd466cbf82f4
+    resources:
+      limits:
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    envFrom:
+    - configMapRef:
+        name: ml-service-config-ghh57mh7dm
+    - secretRef:
+        name: local-ml-service-env
+  ml-service-mirror:
+    replicas: 1
+    image: nginxinc/nginx-unprivileged:stable-alpine@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 128Mi
+      requests:
+        cpu: 25m
+        memory: 32Mi
+    envFrom: null
+  ml-service-shadow:
+    replicas: 1
+    image: ghcr.io/chiendz11/maintai-ml-service:sha-94248e49bd84b112162244f62b25fd466cbf82f4
+    resources:
+      limits:
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    envFrom:
+    - configMapRef:
+        name: ml-service-shadow-config-565k5h68hd
+    - secretRef:
+        name: local-ml-service-env
+  mlflow:
+    replicas: 1
+    image: ghcr.io/mlflow/mlflow:v2.19.0
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 256Mi
+    envFrom: null
+  processing-outbox-relay:
+    replicas: 2
+    image: ghcr.io/chiendz11/maintai-processing-outbox-relay:sha-3b47520ef87cbed0f8f567696ef43db86206306b
+    resources:
+      limits:
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    envFrom:
+    - configMapRef:
+        name: processing-outbox-relay-config-6mdh44g9fh
+    - secretRef:
+        name: local-processing-outbox-relay-env
+  processing-read-api:
+    replicas: 1
+    image: ghcr.io/chiendz11/maintai-processing-read-api:sha-c2bce0081dfef67345d81f1edf58996a603681ac
+    resources:
+      limits:
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    envFrom:
+    - configMapRef:
+        name: processing-read-api-config-44ht722gdg
+    - secretRef:
+        name: local-processing-read-api-env
+    - secretRef:
+        name: local-processing-history-env
+  processing-worker:
+    replicas: 1
+    image: ghcr.io/chiendz11/maintai-processing-worker:sha-648f1ef36bc8181b59bd4ebec44bef5d76cf96f8
+    resources:
+      limits:
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    envFrom:
+    - configMapRef:
+        name: processing-worker-config-bmhc6ht2ft
+    - secretRef:
+        name: local-processing-worker-env
+  rag-service:
+    replicas: 1
+    image: maintai-local/rag-service:image-1e5c3fe741a5e45d73a0dd500f6717f2f7a5b7574f809fc74b8e3b9a260d3759
+    resources:
+      limits:
+        cpu: '2'
+        memory: 2Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+    envFrom:
+    - configMapRef:
+        name: rag-service-config-bdfk9bg584
+    - secretRef:
+        name: local-rag-service-env
+  sensor:
+    replicas: 1
+    image: ghcr.io/chiendz11/maintai-sensor:sha-9f22aa37f1affe82568cc60894db225de62a2c2c
+    resources:
+      limits:
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    envFrom:
+    - configMapRef:
+        name: sensor-config-4f64b5f552
+  simulator-ui:
+    replicas: 1
+    image: ghcr.io/chiendz11/maintai-simulator-ui:sha-94248e49bd84b112162244f62b25fd466cbf82f4
+    resources:
+      limits:
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    envFrom: []
+  storage-consumer:
+    replicas: 1
+    image: ghcr.io/chiendz11/maintai-storage-consumer:sha-f3466035b61c09ab81751afbe004be959747178f
+    resources:
+      limits:
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    envFrom:
+    - configMapRef:
+        name: storage-consumer-config-87hh67cbk2
+    - secretRef:
+        name: local-storage-env
+hpa:
+- name: business-api-hpa
+  target: business-api
+  min: 1
+  max: 4
+  metrics:
+  - resource:
+      name: cpu
+      target:
+        averageUtilization: 70
+        type: Utilization
+    type: Resource
+- name: frontend-hpa
+  target: frontend
+  min: 1
+  max: 4
+  metrics:
+  - resource:
+      name: cpu
+      target:
+        averageUtilization: 70
+        type: Utilization
+    type: Resource
+- name: ingestion-api-hpa
+  target: ingestion-api
+  min: 2
+  max: 2
+  metrics:
+  - resource:
+      name: cpu
+      target:
+        averageUtilization: 70
+        type: Utilization
+    type: Resource
+- name: ml-service-hpa
+  target: ml-service
+  min: 2
+  max: 2
+  metrics:
+  - resource:
+      name: cpu
+      target:
+        averageUtilization: 70
+        type: Utilization
+    type: Resource
+- name: ml-service-shadow-hpa
+  target: ml-service-shadow
+  min: 1
+  max: 1
+  metrics:
+  - resource:
+      name: cpu
+      target:
+        averageUtilization: 80
+        type: Utilization
+    type: Resource
+- name: rag-service-hpa
+  target: rag-service
+  min: 1
+  max: 3
+  metrics:
+  - resource:
+      name: cpu
+      target:
+        averageUtilization: 75
+        type: Utilization
+    type: Resource
+keda:
+- name: business-consumer-scaledobject
+  target: business-consumer
+  min: 4
+  max: 4
+  triggers:
+  - metadata:
+      allowIdleConsumers: 'false'
+      bootstrapServers: kafka.maintai-local.svc.cluster.local:9092
+      consumerGroup: local-business-live-v1
+      lagThreshold: '20'
+      offsetResetPolicy: latest
+      topic: sensor.readings
+    type: kafka
+  - metadata:
+      allowIdleConsumers: 'false'
+      bootstrapServers: kafka.maintai-local.svc.cluster.local:9092
+      consumerGroup: local-business-prediction-v1
+      lagThreshold: '20'
+      offsetResetPolicy: latest
+      topic: inference.results
+    type: kafka
+  - metadata:
+      value: '70'
+    metricType: Utilization
+    type: cpu
+- name: processing-worker-scaledobject
+  target: processing-worker
+  min: 6
+  max: 6
+  triggers:
+  - metadata:
+      allowIdleConsumers: 'false'
+      bootstrapServers: kafka.maintai-local.svc.cluster.local:9092
+      consumerGroup: local-processing-v1
+      lagThreshold: '20'
+      offsetResetPolicy: latest
+      topic: sensor.readings
+    type: kafka
+  - metadata:
+      value: '70'
+    metricType: Utilization
+    type: cpu
+key_configs:
+  business-api-config-tfftd8b85c:
+    BUSINESS_ALERT_NOTIFY_CHANNEL: maintai_business_alert_v1
+    BUSINESS_HISTORY_CURSOR_KEY_FILE: /history/cursor-keys.json
+    BUSINESS_HISTORY_DELEGATION_ISSUER: http://business-api:8003/maintai-history
+    BUSINESS_HISTORY_ENABLED: 'true'
+    BUSINESS_HISTORY_SERVICE_SUBJECT: 1aa95d50-1576-407f-97ff-46048198b1d6
+    BUSINESS_HISTORY_SIGNING_KEY_FILE: /history/signing-key.pem
+    BUSINESS_HISTORY_SIGNING_KEY_ID: history-66da4408f7354908
+    BUSINESS_HOST: 0.0.0.0
+    BUSINESS_MACHINES_CLAIM: machine_ids
+    BUSINESS_NOTIFY_CHANNEL: maintai_business_live_v1
+    BUSINESS_OIDC_AUDIENCE: maintai-business-local
+    BUSINESS_OIDC_ISSUER: https://auth.maintai.localhost/realms/maintai
+    BUSINESS_OIDC_JWKS_URL: http://keycloak:8080/realms/maintai/protocol/openid-connect/certs
+    BUSINESS_PORT: '8003'
+    BUSINESS_PROCESSING_OAUTH_CLIENT_ID: maintai-processing
+    BUSINESS_PROCESSING_OAUTH_SECRET_FILE: /credentials/processing/client_secret
+    BUSINESS_PROCESSING_OAUTH_TOKEN_URL: http://keycloak:8080/realms/maintai/protocol/openid-connect/token
+    BUSINESS_PROCESSING_READ_URL: http://processing-read-api:8004
+    BUSINESS_PROFILE: local-test
+    BUSINESS_ROLES_CLAIM: roles
+    PRODUCER_GIT_SHA: 2df0a914287a86f3500731ba05a2ba866bbee160
+  business-consumer-config-5mc4kgt697:
+    BUSINESS_ALERT_NOTIFY_CHANNEL: maintai_business_alert_v1
+    BUSINESS_CONSUMER_HOST: 0.0.0.0
+    BUSINESS_CONSUMER_PORT: '8083'
+    BUSINESS_CONSUMER_PROFILE: local-test
+    BUSINESS_NOTIFY_CHANNEL: maintai_business_live_v1
+    BUSINESS_PROCESSING_OAUTH_CLIENT_ID: maintai-processing
+    BUSINESS_PROCESSING_OAUTH_SECRET_FILE: /credentials/processing/client_secret
+    BUSINESS_PROCESSING_OAUTH_TOKEN_URL: http://keycloak:8080/realms/maintai/protocol/openid-connect/token
+    BUSINESS_PROCESSING_READ_URL: http://processing-read-api:8004
+    KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    KAFKA_GROUP_PREFIX: local-
+    KAFKA_LOCAL_MODE: 'true'
+    KAFKA_POLL_INTERVAL_SECONDS: '0.01'
+    KAFKA_SECURITY_PROTOCOL: PLAINTEXT
+    PRODUCER_GIT_SHA: 2df0a914287a86f3500731ba05a2ba866bbee160
+  ingestion-api-config-2ghk98cchm:
+    AUTH_MODE: oidc
+    BUSINESS_PUBLIC_ORIGIN: https://app.maintai.localhost
+    INGESTION_ENV: local
+    INGESTION_HOST: 0.0.0.0
+    INGESTION_MAX_INFLIGHT: '64'
+    INGESTION_PORT: '8000'
+    KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    KAFKA_GROUP_PREFIX: local-
+    KAFKA_LOCAL_MODE: 'true'
+    KAFKA_SECURITY_PROTOCOL: PLAINTEXT
+    OIDC_AUDIENCE: ingestion
+    OIDC_ISSUER: https://auth.maintai.localhost/realms/maintai
+    OIDC_JWKS_URL: http://keycloak:8080/realms/maintai/protocol/openid-connect/certs
+    OIDC_MACHINES_CLAIM: machine_ids
+    OIDC_ROLES_CLAIM: roles
+    PRODUCER_GIT_SHA: 5b4664bb24e9f107c00a83e1faffb72fc5c1f4e3
+  ml-service-artifacts-f6kkfckmbb:
+    artifacts.json: '[{"bucket": "maintai-models", "key": "models/logreg-baseline-v0/pipeline.joblib",
+      "version_id": "943ae35a-5b6c-4266-8778-1d3cd24ebfab", "path": "/local/models/logreg-baseline-v0/pipeline.joblib",
+      "sha256": "163967932a2c4774c55539cad4bb64099baa7d252e8f472261b6f672ade91f44"},
+      {"bucket": "maintai-models", "key": "models/logreg-baseline-v0/metadata.json",
+      "version_id": "c2d85b19-f805-42b6-ae23-d603f8f8f0e3", "path": "/local/models/logreg-baseline-v0/metadata.json",
+      "sha256": "821b32a0f9db0ffe79dbc196c160732a3802eb349e48f52d905bd3713be1b9c8"},
+      {"bucket": "maintai-models", "key": "models/logreg-baseline-v0/evaluation.json",
+      "version_id": "d580bd3f-c3d3-466a-8149-6504d32cfc37", "path": "/local/models/logreg-baseline-v0/evaluation.json",
+      "sha256": "5c797c56ad4faeb84d3b2d44cb910c36242c20aa8bbdd501cb1f3b4b835038db"},
+      {"bucket": "maintai-models", "key": "models/logreg-baseline-v0/drift_reference.json",
+      "version_id": "ad15daee-5a49-4cb9-9299-e81cd8314525", "path": "/local/models/logreg-baseline-v0/drift_reference.json",
+      "sha256": "ba9cac5d5ebae48cd5b68fe8710758d53e3b976af4131bd2ea2e2d843d3fea71"}]'
+  ml-service-config-ghh57mh7dm:
+    AWS_DEFAULT_REGION: us-east-1
+    AWS_REGION: us-east-1
+    MAINTAI_LOCAL_ONLY: '1'
+    MLFLOW_TRACKING_URI: http://mlflow:5000
+    MODEL_DIR: /local/models/logreg-baseline-v0
+    OMP_NUM_THREADS: '1'
+    OPENBLAS_NUM_THREADS: '1'
+    PRODUCER_GIT_SHA: 5b4664bb24e9f107c00a83e1faffb72fc5c1f4e3
+    S3_ENDPOINT_URL: http://minio:9000
+    SERVICE_ROLE: champion
+  ml-service-mirror-config:
+    default.conf: "split_clients \"$msec$connection_requests\" $shadow_sample {\n\
+      \  5% 1;\n  *   0;\n}\n\nupstream champion_backend {\n  server ml-service.maintai-local.svc.cluster.local:8001;\n\
+      \  keepalive 64;\n  keepalive_requests 50;\n}\n\nupstream shadow_backend {\n\
+      \  server ml-service-shadow.maintai-local.svc.cluster.local:8001;\n  keepalive\
+      \ 32;\n  keepalive_requests 25;\n}\n\nserver {\n  listen 8001;\n\n  location\
+      \ = /health/live {\n    access_log off;\n    return 200 \"ok\\n\";\n  }\n\n\
+      \  location = /health/ready {\n    access_log off;\n    return 200 \"ok\\n\"\
+      ;\n  }\n\n  location / {\n    mirror /_shadow;\n    mirror_request_body on;\n\
+      \    proxy_pass http://champion_backend;\n    proxy_http_version 1.1;\n    proxy_set_header\
+      \ Connection \"\";\n    proxy_set_header Host $host;\n    proxy_connect_timeout\
+      \ 2s;\n    proxy_read_timeout 5s;\n  }\n\n  location = /_shadow {\n    internal;\n\
+      \    if ($shadow_sample = 0) {\n      return 204;\n    }\n    proxy_pass http://shadow_backend$request_uri;\n\
+      \    proxy_http_version 1.1;\n    proxy_set_header Connection \"\";\n    proxy_set_header\
+      \ Host $host;\n    proxy_pass_request_body on;\n    proxy_ignore_client_abort\
+      \ on;\n    proxy_connect_timeout 25ms;\n    proxy_read_timeout 50ms;\n  }\n\
+      }\n"
+  ml-service-shadow-artifacts-58tttf4hd5:
+    artifacts.json: '[{"bucket": "maintai-models", "key": "models/hgb-interactions-candidate-v1/pipeline.joblib",
+      "version_id": "a602aef0-f15f-46bf-bb20-89940ced5f87", "path": "/local/models/hgb-interactions-candidate-v1/pipeline.joblib",
+      "sha256": "eb96429b8fa5896f8b4f43d23b2df7499a9e25a6f67ffcbaf272d8e6656f4599"},
+      {"bucket": "maintai-models", "key": "models/hgb-interactions-candidate-v1/metadata.json",
+      "version_id": "9fdbbd54-7a37-4ef9-ab2b-6d3308cc4034", "path": "/local/models/hgb-interactions-candidate-v1/metadata.json",
+      "sha256": "034c84233af9e2c3b1a0960deb66324259736f362ecb83aa4fa230998c976805"},
+      {"bucket": "maintai-models", "key": "models/hgb-interactions-candidate-v1/evaluation.json",
+      "version_id": "c693d86c-a81b-4041-9ffa-67fb286266dd", "path": "/local/models/hgb-interactions-candidate-v1/evaluation.json",
+      "sha256": "d09679f27a448d5aed5ed72af6256265afa68865e2e63192fdb5b44dbeb2c6ce"},
+      {"bucket": "maintai-models", "key": "models/hgb-interactions-candidate-v1/drift_reference.json",
+      "version_id": "40d2b877-43db-4443-a12d-b49beb2b8179", "path": "/local/models/hgb-interactions-candidate-v1/drift_reference.json",
+      "sha256": "76ce402c7c42c3267524bccc133d4383166f07d9f804b0aa650723574db46543"}]'
+  ml-service-shadow-config-565k5h68hd:
+    AWS_DEFAULT_REGION: us-east-1
+    AWS_REGION: us-east-1
+    MAINTAI_LOCAL_ONLY: '1'
+    MLFLOW_TRACKING_URI: http://mlflow:5000
+    MODEL_DIR: /local/models/hgb-interactions-candidate-v1
+    OMP_NUM_THREADS: '1'
+    OPENBLAS_NUM_THREADS: '1'
+    PRODUCER_GIT_SHA: 5b4664bb24e9f107c00a83e1faffb72fc5c1f4e3
+    S3_ENDPOINT_URL: http://minio:9000
+    SERVICE_ROLE: shadow
+  processing-outbox-relay-config-6mdh44g9fh:
+    KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    KAFKA_GROUP_PREFIX: local-
+    KAFKA_LOCAL_MODE: 'true'
+    KAFKA_SECURITY_PROTOCOL: PLAINTEXT
+    OUTBOX_BATCH_SIZE: '64'
+    OUTBOX_CLAIM_LEASE_SECONDS: '120'
+    OUTBOX_EXECUTION_MODE: ordered
+    OUTBOX_POLL_INTERVAL_MS: '10'
+    PROCESSING_HEALTH_HOST: 0.0.0.0
+    PROCESSING_HEALTH_PORT: '8082'
+    PROCESSING_PROFILE: local-fixture
+    PRODUCER_GIT_SHA: 5b4664bb24e9f107c00a83e1faffb72fc5c1f4e3
+  processing-read-api-config-44ht722gdg:
+    PROCESSING_CLEANER_DRY_RUN: 'true'
+    PROCESSING_HISTORY_CURSOR_KEY_FILE: /history/cursor-keys.json
+    PROCESSING_HISTORY_DELEGATION_ISSUER: http://business-api:8003/maintai-history
+    PROCESSING_HISTORY_DELEGATION_JWKS_URL: http://business-api:8003/.well-known/jwks.json
+    PROCESSING_HISTORY_ENABLED: 'true'
+    PROCESSING_HISTORY_EXPORT_BUCKET: maintai-processed
+    PROCESSING_HISTORY_META_SCHEMA: history_meta
+    PROCESSING_HISTORY_RAW_BUCKET: maintai-raw-c8c61d245736
+    PROCESSING_HISTORY_S3_ENDPOINT: http://minio:9000
+    PROCESSING_READ_HOST: 0.0.0.0
+    PROCESSING_READ_MACHINES_CLAIM: machine_ids
+    PROCESSING_READ_OIDC_AUDIENCE: maintai-processing-local
+    PROCESSING_READ_OIDC_ISSUER: https://auth.maintai.localhost/realms/maintai
+    PROCESSING_READ_OIDC_JWKS_URL: http://keycloak:8080/realms/maintai/protocol/openid-connect/certs
+    PROCESSING_READ_PORT: '8004'
+    PROCESSING_READ_PROFILE: local-test
+    PROCESSING_READ_ROLES_CLAIM: roles
+    PROCESSING_RETENTION_ENABLED: 'false'
+    PRODUCER_GIT_SHA: 5b4664bb24e9f107c00a83e1faffb72fc5c1f4e3
+  processing-risk-policy-748dt7f69b:
+    risk-policy.json: "{\n  \"policy_version\": \"demo-risk-v1\",\n  \"thresholds\"\
+      : {\n    \"watch\": 0.40,\n    \"high\": 0.65,\n    \"critical\": 0.85\n  },\n\
+      \  \"create_alert_for\": [\"HIGH\", \"CRITICAL\"]\n}\n"
+  processing-worker-artifacts-576tkck6kc:
+    artifacts.json: '[{"path": "/local/fixtures/model-identity.json", "sha256": "a884a79e45086ae4df1e596c3ea05500e7413b86dd553931c9fe8f47d921322b"}]'
+  processing-worker-config-bmhc6ht2ft:
+    BUSINESS_BASE_URL: http://business-api:8003
+    BUSINESS_OAUTH_CLIENT_ID: maintai-registry
+    BUSINESS_OAUTH_SECRET_FILE: /credentials/registry/client_secret
+    BUSINESS_OAUTH_TOKEN_URL: http://keycloak:8080/realms/maintai/protocol/openid-connect/token
+    KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    KAFKA_GROUP_PREFIX: local-
+    KAFKA_LOCAL_MODE: 'true'
+    KAFKA_POLL_INTERVAL_SECONDS: '0.01'
+    KAFKA_SECURITY_PROTOCOL: PLAINTEXT
+    ML_BASE_URL: http://ml-service-mirror:8001
+    PROCESSING_EXECUTION_MODE: keyed
+    PROCESSING_HEALTH_HOST: 0.0.0.0
+    PROCESSING_HEALTH_PORT: '8081'
+    PROCESSING_MAX_ACTIVE_KEYS: '8'
+    PROCESSING_MAX_UNCOMMITTED_PER_PARTITION: '256'
+    PROCESSING_MODEL_IDENTITY_FIXTURE: /local/fixtures/model-identity.json
+    PROCESSING_PROFILE: local-fixture
+    PROCESSING_REGISTRY_CACHE_SECONDS: '30'
+    PROCESSING_RISK_POLICY_FILE: /local/config/risk-policy.json
+    PROCESSING_SCHEMA_DIRECTORY: /app/http-contracts
+    PRODUCER_GIT_SHA: 5b4664bb24e9f107c00a83e1faffb72fc5c1f4e3
+  sensor-artifacts-7kb9k89t52:
+    artifacts.json: '[{"path": "/local/datasets/ai4i2020.csv", "sha256": "dc6630cd9b1f0f853922fad78a1b6436570d3f1ec863f1dd5c4340ac56bc8a8e"}]'
+  sensor-config-4f64b5f552:
+    BACKEND_BASE_URL: http://ingestion-api:8000
+    PRODUCER_GIT_SHA: 5b4664bb24e9f107c00a83e1faffb72fc5c1f4e3
+    SIM_AUTH_MODE: jwt
+    SIM_CONTROL_SCOPE: simulator:control
+    SIM_DATASET_PATH: /local/datasets/ai4i2020.csv
+    SIM_HOST: 0.0.0.0
+    SIM_INGESTION_AUTH: oauth
+    SIM_INITIAL_STATE: PAUSED
+    SIM_INTERVAL_MS: '1000'
+    SIM_JWKS_URL: http://keycloak:8080/realms/maintai/protocol/openid-connect/certs
+    SIM_JWT_AUDIENCE: simulator-control
+    SIM_JWT_ISSUER: https://auth.maintai.localhost/realms/maintai
+    SIM_LOOP_DATASET: 'true'
+    SIM_MACHINE_COUNT: '50'
+    SIM_MACHINES_CLAIM: machine_ids
+    SIM_OAUTH_CLIENT_ID: maintai-sensor
+    SIM_OAUTH_SCOPE: sensor:write
+    SIM_OAUTH_SECRET_FILE: /credentials/sensor/client_secret
+    SIM_OAUTH_TOKEN_URL: http://keycloak:8080/realms/maintai/protocol/openid-connect/token
+    SIM_PORT: '8005'
+    SIM_ROLES_CLAIM: roles
+    SIM_SEND_WORKERS: '32'
+    SIM_STATE_PATH: /state/state.sqlite3
+    SSL_CERT_FILE: /tls/ca.crt
