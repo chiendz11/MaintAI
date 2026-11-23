@@ -338,6 +338,8 @@ class ProcessingHandler:
         prepared,
         *,
         admission,
+        admission_cursor=None,
+        already_fenced=False,
         unavailable_alert_disposition=None,
     ):
         sequence = event.payload["sequence_number"]
@@ -394,6 +396,8 @@ class ProcessingHandler:
                 topic=record.topic,
                 source_partition=record.partition,
                 contracts=self.contracts,
+                already_fenced=already_fenced,
+                cursor=admission_cursor,
             )
         outbox.enqueue(connection, "inference.results", prepared.outcome)
         return disposition, drain_summary
@@ -452,6 +456,7 @@ class KeyedProcessingHandler(KeyedTransactionalHandler):
                     consumer_group=self.consumer_group,
                     event=event,
                     record=record,
+                    already_fenced=True,
                 )
             return ticket
         except Exception as exc:
@@ -508,8 +513,13 @@ class KeyedProcessingHandler(KeyedTransactionalHandler):
                 raise IdentityConflict("Legacy terminal ticket lacks owner evidence")
             return receipt
 
-        prepared = self.prepare(event, record, context)
-        context.check()
+        if not ticket.replayed and not ticket.legacy_terminal:
+            context.check()
+            prepared = self.application._prepare_business(event, record)
+            context.check()
+        else:
+            prepared = self.prepare(event, record, context)
+            context.check()
         if canonical_json(event.payload) != source_identity:
             raise IdentityConflict("Prepare mutated the immutable source reading")
 
@@ -517,7 +527,7 @@ class KeyedProcessingHandler(KeyedTransactionalHandler):
         disposition = None
         with self.connection_factory() as connection, connection.transaction():
             self._fence(connection, context)
-            self.application.resequencer._ensure_admission_cursor(
+            admission_cursor = self.application.resequencer._ensure_admission_cursor(
                 connection,
                 consumer_group=self.consumer_group,
                 machine_id=event.key,
@@ -534,6 +544,8 @@ class KeyedProcessingHandler(KeyedTransactionalHandler):
                         topic=record.topic,
                         source_partition=record.partition,
                         contracts=self.contracts,
+                        already_fenced=True,
+                        cursor=admission_cursor,
                     )
                 context.check()
             else:
@@ -559,6 +571,8 @@ class KeyedProcessingHandler(KeyedTransactionalHandler):
                     outbox,
                     prepared,
                     admission=ticket,
+                    admission_cursor=admission_cursor,
+                    already_fenced=True,
                     unavailable_alert_disposition=self.unavailable_alert_disposition,
                 )
                 if canonical_json(event.payload) != source_identity:

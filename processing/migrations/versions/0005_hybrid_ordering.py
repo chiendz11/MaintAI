@@ -66,6 +66,8 @@ def upgrade():
         CREATE INDEX processing_alert_ledger_blocked
             ON processing_alert_ledger(consumer_group, machine_id, decided_at)
             WHERE disposition = 'BLOCKED';
+        CREATE INDEX IF NOT EXISTS sensor_events_machine_seq
+            ON sensor_events(machine_id, sequence_number);
     """)
 
 

@@ -1,0 +1,132 @@
+{
+  "workload": "A",
+  "run_index": 2,
+  "mode": "hybrid",
+  "config": {
+    "max_active_keys": 8,
+    "max_inflight_per_key": 2,
+    "max_total_inflight": 8,
+    "proc_pool_size": 12,
+    "biz_pool_size": 12,
+    "ml_max_concurrency": 12,
+    "ml_latency_ms": 25.0,
+    "ml_slow_prob": 0.1,
+    "ml_slow_ms": 300.0,
+    "warmup_seconds": 5,
+    "measure_seconds": 15,
+    "machines": 50,
+    "workload_c_background_machines": 34
+  },
+  "throughput": {
+    "target_rps": 50.0,
+    "total_sent_with_warmup": 1000,
+    "total_terminal_outcomes": 1000,
+    "total_predictions_completed": 1000,
+    "window_sent": 750,
+    "window_admitted_rps": 50.0,
+    "window_outcomes_rps": 49.8,
+    "window_predictions_rps": 44.13,
+    "errors": 0
+  },
+  "latency_ms": {
+    "inference": {
+      "count": 750,
+      "mean": 51.925,
+      "p50": 26.058,
+      "p95": 300.94,
+      "p99": 304.536,
+      "max": 305.678
+    },
+    "processing_db_tx": {
+      "count": 750,
+      "mean": 22.385,
+      "p50": 20.9,
+      "p95": 43.646,
+      "p99": 50.945,
+      "max": 68.543
+    },
+    "inference_to_db_commit": {
+      "count": 750,
+      "mean": 31.039,
+      "p50": 29.355,
+      "p95": 56.182,
+      "p99": 70.138,
+      "max": 82.135
+    },
+    "db_commit_to_kafka_publish": {
+      "count": 750,
+      "mean": 35.684,
+      "p50": 26.307,
+      "p95": 102.172,
+      "p99": 146.668,
+      "max": 164.023
+    },
+    "kafka_publish_to_business_db": {
+      "count": 750,
+      "mean": 2253.31,
+      "p50": 1517.362,
+      "p95": 7912.775,
+      "p99": 11788.443,
+      "max": 14324.315
+    },
+    "alert_signal_to_alert_creation": {
+      "count": 75,
+      "mean": 18.991,
+      "p50": 16.947,
+      "p95": 37.549,
+      "p99": 47.907,
+      "max": 50.5
+    },
+    "alert_frontier_wait": {
+      "count": 1000,
+      "mean": 4.482,
+      "p50": 3.492,
+      "p95": 11.884,
+      "p99": 18.718,
+      "max": 24.472
+    },
+    "hot_machine_pred_e2e": {
+      "count": 15,
+      "mean": 2028.679,
+      "p50": 2027.228,
+      "p95": 2328.119,
+      "p99": 2360.11,
+      "max": 2368.108
+    },
+    "background_machine_pred_e2e": {
+      "count": 735,
+      "mean": 2730.998,
+      "p50": 1928.353,
+      "p95": 8795.01,
+      "p99": 12578.565,
+      "max": 14532.558
+    }
+  },
+  "resources_and_queues": {
+    "ml_peak_concurrency": 8,
+    "max_active_inflight": 8,
+    "max_per_key_inflight": 1,
+    "max_pending_records": 23,
+    "max_outbox_pending": 11,
+    "max_outbox_pending_results": 8,
+    "max_outbox_pending_alerts": 3,
+    "max_oldest_outbox_s": 0.138,
+    "max_alert_reorder_depth": 14,
+    "max_pg_conns": 14,
+    "max_pg_lock_waits": 0,
+    "mean_cpu_pct": 104.57,
+    "peak_rss_mb": 135.47,
+    "cpu_throttled_periods": 0,
+    "frontier_stall_s": 0.0
+  },
+  "correctness": {
+    "missing_readings": 0,
+    "duplicate_terminal_outcomes": 0,
+    "duplicate_alerts": 0,
+    "stale_prediction_updates": 0,
+    "wrong_latest_sequence": 0,
+    "alert_sequence_violations": 0,
+    "offset_commit_violations": 0,
+    "unresolved_alert_ledger": 0
+  }
+}

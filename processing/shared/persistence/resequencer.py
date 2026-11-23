@@ -87,8 +87,11 @@ class AlertResequencer:
             )
         return row
 
-    def admit(self, connection, *, consumer_group, event, record) -> AdmissionTicket:
-        require_ordering(connection)
+    def admit(
+        self, connection, *, consumer_group, event, record, already_fenced: bool = False
+    ) -> AdmissionTicket:
+        if not already_fenced:
+            require_ordering(connection)
         machine_id = event.key
         sequence = event.payload["sequence_number"]
         cursor = self._ensure_admission_cursor(
@@ -280,13 +283,17 @@ class AlertResequencer:
         topic: str,
         source_partition: int,
         contracts,
+        already_fenced: bool = False,
+        cursor: dict | None = None,
     ) -> dict:
-        require_ordering(connection)
-        cursor = connection.execute(
-            "SELECT * FROM processing_admission_cursor "
-            "WHERE consumer_group=%s AND machine_id=%s FOR UPDATE",
-            (consumer_group, machine_id),
-        ).fetchone()
+        if not already_fenced:
+            require_ordering(connection)
+        if cursor is None:
+            cursor = connection.execute(
+                "SELECT * FROM processing_admission_cursor "
+                "WHERE consumer_group=%s AND machine_id=%s FOR UPDATE",
+                (consumer_group, machine_id),
+            ).fetchone()
         if cursor is None:
             return {"emitted": 0, "resolved_no_signal": 0, "stalled_reason": None, "frontier": 0}
 
@@ -327,26 +334,37 @@ class AlertResequencer:
         resolved_no_signal = 0
         highest_frontier = already_done_frontier
         if ready_rows:
-            connection.execute(
-                "INSERT INTO maintai_processing_machine_cursor "
-                "(consumer_group,machine_id,topic,source_partition) VALUES (%s,%s,%s,%s) "
-                "ON CONFLICT DO NOTHING",
-                (consumer_group, machine_id, topic, source_partition),
-            )
             machine_cur = connection.execute(
                 "SELECT * FROM maintai_processing_machine_cursor "
                 "WHERE consumer_group=%s AND machine_id=%s FOR UPDATE",
                 (consumer_group, machine_id),
             ).fetchone()
-            connection.execute(
-                "INSERT INTO processing_source_cursor "
-                "(machine_id,topic,source_partition) VALUES (%s,%s,%s) ON CONFLICT DO NOTHING",
-                (machine_id, topic, source_partition),
-            )
+            if machine_cur is None:
+                connection.execute(
+                    "INSERT INTO maintai_processing_machine_cursor "
+                    "(consumer_group,machine_id,topic,source_partition) VALUES (%s,%s,%s,%s) "
+                    "ON CONFLICT DO NOTHING",
+                    (consumer_group, machine_id, topic, source_partition),
+                )
+                machine_cur = connection.execute(
+                    "SELECT * FROM maintai_processing_machine_cursor "
+                    "WHERE consumer_group=%s AND machine_id=%s FOR UPDATE",
+                    (consumer_group, machine_id),
+                ).fetchone()
             source_cur = connection.execute(
                 "SELECT * FROM processing_source_cursor WHERE machine_id=%s FOR UPDATE",
                 (machine_id,),
             ).fetchone()
+            if source_cur is None:
+                connection.execute(
+                    "INSERT INTO processing_source_cursor "
+                    "(machine_id,topic,source_partition) VALUES (%s,%s,%s) ON CONFLICT DO NOTHING",
+                    (machine_id, topic, source_partition),
+                )
+                source_cur = connection.execute(
+                    "SELECT * FROM processing_source_cursor WHERE machine_id=%s FOR UPDATE",
+                    (machine_id,),
+                ).fetchone()
             highest_seq = max(
                 int(machine_cur["last_sequence"]),
                 int(source_cur["last_sequence"]),
