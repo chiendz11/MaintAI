@@ -198,8 +198,20 @@ def test_http_to_terminal_outcomes_and_alert_signal_with_real_broker(
             self.send_json(200, detail)
 
         def do_POST(self):
-            assert self.path == "/api/v1/predict"
             body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            if self.path != "/api/v1/predict":
+                self.send_json(
+                    404,
+                    {
+                        "error": {
+                            "code": "NOT_FOUND",
+                            "message": "not found",
+                            "retryable": False,
+                            "details": {},
+                        }
+                    },
+                )
+                return
             ml_calls.append(body["event_id"])
             if body["features"]["torque_nm"] == 999:
                 if stop_during_inference and body["event_id"] in expected:
