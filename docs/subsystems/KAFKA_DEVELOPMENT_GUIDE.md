@@ -454,3 +454,11 @@ riêng. M6 không bật outcome archive, processed cold history hoặc source cl
 Read API tự sở hữu snapshot/export metadata và bounded runner; Worker chỉ realtime,
 không thêm processing-maintenance hoặc Kafka command topic cho export. Full demo
 raw dùng MinIO local, không cần AWS; fixture không chứng minh provider đã tích hợp.
+
+## 13. Cập nhật `2026-11-25` — Pipelined Producer, Single-Pod MQTT Bridge & Synchronous Commit Batching
+
+Các tối ưu vận tải đã được hợp nhất vào `maintai-messaging` (`messaging/src/maintai_messaging/`) và `maintai-ingestion` (`ingestion-api/`):
+
+- **Pipelined `KafkaPublisher.publish_batch()`:** Đẩy liên tiếp nhiều `client.produce()` rồi `poll()` gom toàn bộ delivery callbacks trong 1 broker RTT, **không giữ `self._lock` trong lúc chờ broker ACK**; cấu hình mặc định trên cluster local dùng `KAFKA_LINGER_MS=2` (biên hợp lệ `0..20`) và `KAFKA_COMPRESSION_TYPE=lz4`.
+- **Single-Pod MQTT→Kafka Bridge (`maintai_ingestion.mqtt_bridge`):** Chạy đúng `1` replica (`strategy: Recreate`) trong Deployment `ingestion-mqtt-bridge`, **cấm `$share/`** subscription để giữ thứ tự FIFO từng máy từ Eclipse Mosquitto (`maintai/v1/site/+/machines/+/telemetry`, chấp nhận `("/telemetry", "/readings")` và lọc `/status`). Bridge gom batch (`INGESTION_MQTT_BATCH_SIZE=32`, `INGESTION_MQTT_BATCH_WAIT_MS=5`, `INGESTION_MQTT_MAX_INFLIGHT=256`), đẩy qua `IngestionGateway.handle_batch()` và **chỉ gửi `PUBACK` MQTT sau khi Kafka broker ACK** (lỗi `503/504` giữ nguyên un-ACKed). Đường HTTP `POST /api/v1/sensor-readings` vẫn giữ nguyên song song.
+- **Synchronous Commit Batching ở `ConsumerRunner`:** Giữ bounded prefetch serial `64/32` cho Business/Storage, cho phép gộp commit đồng bộ thông qua `KAFKA_COMMIT_BATCH_SIZE` (`16` cho `business-consumer`) và `KAFKA_COMMIT_MAX_WAIT_MS` (`50`). Chi tiết kiến trúc & số đo thực tế xem [HIGH_THROUGHPUT_KSERVE_MQTT_ARCHITECTURE_REPORT.md](../reports/HIGH_THROUGHPUT_KSERVE_MQTT_ARCHITECTURE_REPORT.md).
