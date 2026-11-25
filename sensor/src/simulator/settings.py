@@ -90,6 +90,13 @@ class RuntimeSettings(SimulatorConfig):
     mqtt_port: int = Field(default=1883, ge=1, le=65535)
     mqtt_topic_prefix: str = "maintai/v1/site/local/machines"
     mqtt_qos: Literal[1] = 1
+    mqtt_tls_enabled: bool = False
+    mqtt_ca_certs: Path | None = None
+    mqtt_certfile: Path | None = None
+    mqtt_keyfile: Path | None = None
+    mqtt_username: str = ""
+    mqtt_password: str = Field(default="", repr=False)
+    mqtt_password_file: Path | None = None
     spool_max_records: int = Field(default=100_000, ge=1)
     spool_max_bytes: int = Field(default=134_217_728, ge=1024)
     spool_max_records_per_machine: int | None = Field(default=None, ge=1)
@@ -139,6 +146,26 @@ class RuntimeSettings(SimulatorConfig):
                 ch in self.mqtt_topic_prefix for ch in ("+", "#")
             ):
                 raise ValueError("MQTT topic prefix must be explicit without wildcards")
+            if (self.mqtt_certfile is None) != (self.mqtt_keyfile is None):
+                raise ValueError("Both MQTT client cert and key files are required")
+            if (
+                self.mqtt_certfile is not None or self.mqtt_ca_certs is not None
+            ) and not self.mqtt_tls_enabled:
+                raise ValueError("MQTT certificates require SIM_MQTT_TLS_ENABLED=true")
+            if (
+                self.mqtt_password or self.mqtt_password_file is not None
+            ) and not self.mqtt_username.strip():
+                raise ValueError("MQTT password requires SIM_MQTT_USERNAME")
+            if not local and not loopback(self.mqtt_host):
+                has_user_auth = bool(
+                    self.mqtt_username.strip()
+                    and (self.mqtt_password or self.mqtt_password_file is not None)
+                )
+                has_mtls = self.mqtt_certfile is not None and self.mqtt_keyfile is not None
+                if not self.mqtt_tls_enabled or not (has_user_auth or has_mtls):
+                    raise ValueError(
+                        "Shared external MQTT requires SIM_MQTT_TLS_ENABLED=true and auth or mTLS"
+                    )
         if self.spool_max_records_per_machine is None:
             self.spool_max_records_per_machine = math.ceil(
                 self.spool_max_records / max(1, self.machine_count) * 1.5

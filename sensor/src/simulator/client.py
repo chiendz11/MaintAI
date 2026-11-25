@@ -2,6 +2,7 @@
 
 import json
 import logging
+import ssl
 import threading
 import time
 from collections.abc import Callable
@@ -67,6 +68,12 @@ class MqttTransport:
         topic_prefix: str = "maintai/v1/site/local/machines",
         qos: Literal[1] = 1,
         timeout_seconds: float = 5.0,
+        tls_enabled: bool = False,
+        ca_certs: str | None = None,
+        certfile: str | None = None,
+        keyfile: str | None = None,
+        username: str = "",
+        password: str = "",
         observe: Callable[[str], None] = lambda outcome: None,
         client=None,
     ):
@@ -94,6 +101,16 @@ class MqttTransport:
             self.client = cli
         else:
             self.client = client
+        if tls_enabled:
+            self.client.tls_set(
+                ca_certs=ca_certs or None,
+                certfile=certfile or None,
+                keyfile=keyfile or None,
+                cert_reqs=ssl.CERT_REQUIRED,
+                tls_version=ssl.PROTOCOL_TLS_CLIENT,
+            )
+        if username:
+            self.client.username_pw_set(username, password or None)
 
     def _on_connect(self, client, _userdata, _flags, reason_code, _properties=None):
         if reason_code == 0 or getattr(reason_code, "value", reason_code) == 0:

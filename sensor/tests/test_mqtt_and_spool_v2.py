@@ -247,3 +247,74 @@ def test_runtime_settings_mqtt_validation(runtime_settings):
     assert validated.spool_max_records_per_machine is not None
     with pytest.raises(ValueError, match="wildcards"):
         type(s).model_validate({**s.model_dump(), "mqtt_topic_prefix": "maintai/+/machines"})
+
+
+def test_mqtt_tls_and_auth_settings_and_transport(tmp_path, runtime_settings):
+    class _TlsRecordingMqttClient(_FakeMqttClient):
+        def __init__(self):
+            super().__init__(published=True)
+            self.tls_args = None
+            self.auth_args = None
+
+        def tls_set(self, **kwargs):
+            self.tls_args = kwargs
+
+        def username_pw_set(self, username, password=None):
+            self.auth_args = (username, password)
+
+    from simulator.settings import RuntimeSettings
+
+    pw_file = tmp_path / "mqtt.pass"
+    pw_file.write_text("mqtt-pass\n", encoding="utf-8")
+
+    # Local cluster JWT mode with internal mosquitto and plaintext remains valid
+    local_jwt = RuntimeSettings.model_validate(
+        {
+            **runtime_settings.model_dump(),
+            "auth_mode": "jwt",
+            "jwt_issuer": "https://keycloak.local/realms/maintai",
+            "jwks_url": "https://keycloak.local/realms/maintai/certs",
+            "backend_base_url": "https://ingestion-api.local",
+            "transport_mode": "mqtt",
+            "mqtt_host": "mosquitto",
+            "mqtt_port": 1883,
+            "mqtt_tls_enabled": False,
+            "state_path": tmp_path / "local.sqlite3",
+            "cors_origins": ["https://sim.maintai.localhost"],
+        }
+    )
+    assert local_jwt.mqtt_tls_enabled is False
+
+    # Shared external broker without TLS+auth fails closed
+    with pytest.raises(ValueError, match="Shared external MQTT"):
+        RuntimeSettings.model_validate(
+            {
+                **runtime_settings.model_dump(),
+                "auth_mode": "jwt",
+                "jwt_issuer": "https://keycloak.example.com/realms/maintai",
+                "jwks_url": "https://keycloak.example.com/realms/maintai/certs",
+                "backend_base_url": "https://ingestion.example.com",
+                "transport_mode": "mqtt",
+                "mqtt_host": "broker.example.com",
+                "mqtt_port": 8883,
+                "mqtt_tls_enabled": False,
+                "state_path": tmp_path / "bad.sqlite3",
+                "cors_origins": ["https://sim.example.com"],
+            }
+        )
+
+    fake = _TlsRecordingMqttClient()
+    transport = MqttTransport(
+        "broker.example.com",
+        port=8883,
+        tls_enabled=True,
+        ca_certs="/certs/ca.crt",
+        username="sensor-edge",
+        password=pw_file.read_text(encoding="utf-8").strip(),
+        client=fake,
+        observe=lambda _: None,
+    )
+    assert fake.tls_args is not None
+    assert fake.tls_args["ca_certs"] == "/certs/ca.crt"
+    assert fake.auth_args == ("sensor-edge", "mqtt-pass")
+    assert transport.host == "broker.example.com"

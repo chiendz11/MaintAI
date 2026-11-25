@@ -60,7 +60,7 @@
       "imported_on": "2026-10-19",
       "source_document_revision": "1.4.0",
       "upstream_sha256": "dcce56143a210b1aa733483c93c73e84cd498fc4521fe03d3e25425ebf5e8c5c",
-      "sha256": "01818197ba8e31a2597f08c148e802379e697abfe8a1f5c15bbbe9072953ea28"
+      "sha256": "8ff9045d59b349b1ada50e02bd43b2edeab682abede762e981455c5da809681f"
     },
     {
       "path": "docs/architecture/RUNTIME_DATAFLOW.md",
@@ -107,7 +107,7 @@
       "source_filename": null,
       "upstream_sha256": null,
       "added_on": "2026-10-19",
-      "sha256": "de68c4bcf2268d62568c397916da03117aad3479dc1c7acab413569449f8b93c"
+      "sha256": "81599accc63fe942b3a744f4e7594d0bd6ba34c669562017d7d2eb509384fdf3"
     },
     {
       "path": "docs/architecture/UI_ARCHITECTURE.md",
@@ -331,7 +331,7 @@
       "path": "docs/operations/LOCAL_DEMO_GUIDE.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "e551efb7b7b5ee728ed8af0ade2d5e9b7b51c154a164663686007356e2f5b481"
+      "sha256": "d07cebc9baeedd423cbadd6c8bfab6c4c4aab4b59f2b951c208e30d63f8d60b2"
     },
     {
       "path": "docs/reports/LOCAL_BASELINE_50_MACHINES_REPORT.md",
@@ -345,7 +345,7 @@
       "source_filename": null,
       "upstream_sha256": null,
       "added_on": "2026-11-25",
-      "sha256": "00199998614699f89eb0366e466c286df4fe1e38c7ab11fd26a741f288896804"
+      "sha256": "833b0c218cde18f3f999df1a7dca9ea799f4489a522e37b4bc58d2d2493c8ed5"
     }
   ],
   "upstream_inherited_contract_revision": "1.3.1",

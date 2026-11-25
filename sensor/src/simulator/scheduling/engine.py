@@ -51,12 +51,21 @@ class SensorEngine:
             self.store.close()
             raise
         if settings.transport_mode == "mqtt" and transport is None:
+            mqtt_password = settings.mqtt_password
+            if not mqtt_password and settings.mqtt_password_file is not None:
+                mqtt_password = settings.mqtt_password_file.read_text(encoding="utf-8").strip()
             self.client: DeliveryTransport = MqttTransport(
                 settings.mqtt_host,
                 port=settings.mqtt_port,
                 topic_prefix=settings.mqtt_topic_prefix,
                 qos=settings.mqtt_qos,
                 timeout_seconds=settings.timeout_seconds,
+                tls_enabled=settings.mqtt_tls_enabled,
+                ca_certs=str(settings.mqtt_ca_certs) if settings.mqtt_ca_certs else None,
+                certfile=str(settings.mqtt_certfile) if settings.mqtt_certfile else None,
+                keyfile=str(settings.mqtt_keyfile) if settings.mqtt_keyfile else None,
+                username=settings.mqtt_username,
+                password=mqtt_password,
                 observe=lambda outcome: self.metrics.attempts.labels(outcome).inc(),
             )
         else:

@@ -3,6 +3,7 @@
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from pathlib import Path
 from urllib.parse import urlparse
 
 from maintai_messaging.config import KafkaSettings
@@ -54,6 +55,21 @@ def number(env, key, default, low, high):
     return value
 
 
+def _bool_env(env: Mapping[str, str], key: str, default: bool = False) -> bool:
+    raw = env.get(key, "true" if default else "false").strip().lower()
+    if raw not in {"true", "false"}:
+        raise ValueError(f"Invalid boolean configuration for {key}")
+    return raw == "true"
+
+
+def _secret_env(env: Mapping[str, str], value_key: str, file_key: str) -> str:
+    value = env.get(value_key, "")
+    file_path = env.get(file_key, "").strip()
+    if file_path and not value:
+        return Path(file_path).read_text(encoding="utf-8").strip()
+    return value
+
+
 @dataclass(frozen=True)
 class AppSettings:
     kafka: KafkaSettings = field(repr=False)
@@ -86,6 +102,12 @@ class AppSettings:
     mqtt_max_inflight: int = 256
     mqtt_source_subject: str = ""
     mqtt_allowed_machines: frozenset[str] = frozenset()
+    mqtt_tls_enabled: bool = False
+    mqtt_ca_certs: str = ""
+    mqtt_certfile: str = ""
+    mqtt_keyfile: str = ""
+    mqtt_username: str = ""
+    mqtt_password: str = field(default="", repr=False)
 
     @classmethod
     def from_env(cls, env: Mapping[str, str]):
@@ -157,9 +179,7 @@ class AppSettings:
             audience = env.get("OIDC_AUDIENCE", "ingestion")
             if audience != "ingestion":
                 raise ValueError("Ingestion audience required")
-            mqtt_enabled = env.get("INGESTION_MQTT_ENABLED", "false").lower() == "true"
-            if env.get("INGESTION_MQTT_ENABLED", "false").lower() not in {"true", "false"}:
-                raise ValueError("Invalid MQTT toggle")
+            mqtt_enabled = _bool_env(env, "INGESTION_MQTT_ENABLED", False)
             mqtt_host = env.get("INGESTION_MQTT_HOST", "mosquitto").strip()
             mqtt_port = int(env.get("INGESTION_MQTT_PORT", "1883"))
             mqtt_topic_filter = env.get(
@@ -178,6 +198,14 @@ class AppSettings:
                 if raw_mqtt_machines.strip()
                 else machines
             )
+            mqtt_tls_enabled = _bool_env(env, "INGESTION_MQTT_TLS_ENABLED", False)
+            mqtt_ca_certs = env.get("INGESTION_MQTT_CA_CERTS", "").strip()
+            mqtt_certfile = env.get("INGESTION_MQTT_CERTFILE", "").strip()
+            mqtt_keyfile = env.get("INGESTION_MQTT_KEYFILE", "").strip()
+            mqtt_username = env.get("INGESTION_MQTT_USERNAME", "").strip()
+            mqtt_password = _secret_env(
+                env, "INGESTION_MQTT_PASSWORD", "INGESTION_MQTT_PASSWORD_FILE"
+            )
             if mqtt_enabled:
                 if (
                     not mqtt_host
@@ -191,11 +219,18 @@ class AppSettings:
                     or not mqtt_source_subject
                     or not mqtt_allowed_machines
                     or "*" in mqtt_allowed_machines
+                    or (bool(mqtt_certfile) != bool(mqtt_keyfile))
+                    or ((mqtt_certfile or mqtt_ca_certs) and not mqtt_tls_enabled)
+                    or (mqtt_password and not mqtt_username)
                 ):
                     raise ValueError("Invalid MQTT bridge configuration")
                 if environment == "shared" and not loopback(mqtt_host):
-                    # Shared deployments must still enforce explicit TLS/network boundaries.
-                    pass
+                    has_user_auth = bool(mqtt_username and mqtt_password)
+                    has_mtls = bool(mqtt_certfile and mqtt_keyfile)
+                    if not mqtt_tls_enabled or not (has_user_auth or has_mtls):
+                        raise ValueError(
+                            "Shared external MQTT bridge requires TLS and auth or mTLS"
+                        )
             return cls(
                 kafka=kafka,
                 business_origin=origin.rstrip("/"),
@@ -227,6 +262,12 @@ class AppSettings:
                 mqtt_max_inflight=mqtt_max_inflight,
                 mqtt_source_subject=mqtt_source_subject,
                 mqtt_allowed_machines=mqtt_allowed_machines,
+                mqtt_tls_enabled=mqtt_tls_enabled,
+                mqtt_ca_certs=mqtt_ca_certs,
+                mqtt_certfile=mqtt_certfile,
+                mqtt_keyfile=mqtt_keyfile,
+                mqtt_username=mqtt_username,
+                mqtt_password=mqtt_password,
             )
-        except (ValueError, TypeError, OverflowError, ConfigurationError):
+        except (ValueError, TypeError, OverflowError, ConfigurationError, OSError):
             raise ValueError("Invalid ingestion configuration") from None
