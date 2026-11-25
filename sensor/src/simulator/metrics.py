@@ -30,6 +30,28 @@ class SensorMetrics:
             "Durable pending readings",
             registry=self.registry,
         )
+        self.dropped = Counter(
+            "maintai_simulator_spool_dropped_total",
+            "Sensor readings dropped due to spool quota",
+            ["reason"],
+            registry=self.registry,
+        )
+        self.spool_records = Gauge(
+            "maintai_simulator_spool_records",
+            "Spool and quarantine record counts by status",
+            ["status"],
+            registry=self.registry,
+        )
+        self.spool_bytes = Gauge(
+            "maintai_simulator_spool_bytes",
+            "Active pending spool bytes",
+            registry=self.registry,
+        )
+        self.spool_quota_ratio = Gauge(
+            "maintai_simulator_spool_quota_ratio",
+            "Highest spool quota utilization ratio (records or bytes)",
+            registry=self.registry,
+        )
         self.http = Counter(
             "maintai_http_requests_total",
             "Completed control requests",
@@ -44,9 +66,19 @@ class SensorMetrics:
             registry=self.registry,
         )
 
-    def refresh(self, store):
+    def refresh(self, store, *, max_records: int | None = None, max_bytes: int | None = None):
         machines = store.list()
         summary = store.summary()
         for state in ("RUNNING", "PAUSED"):
             self.machines.labels(state).set(sum(m["stream_state"] == state for m in machines))
-        self.pending.set(summary["counts"].get("pending", 0))
+        pending_count = summary["counts"].get("pending", 0)
+        self.pending.set(pending_count)
+        for status in ("pending", "auth", "expired", "rejected"):
+            self.spool_records.labels(status).set(summary["counts"].get(status, 0))
+        self.spool_bytes.set(summary["bytes"])
+        ratios = []
+        if max_records and max_records > 0:
+            ratios.append(pending_count / max_records)
+        if max_bytes and max_bytes > 0:
+            ratios.append(summary["bytes"] / max_bytes)
+        self.spool_quota_ratio.set(min(1.0, max(ratios)) if ratios else 0.0)

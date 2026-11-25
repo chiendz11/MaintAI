@@ -182,9 +182,19 @@ class KeyedTransactionalHandler:
     The SDK never substitutes an invented ML result or business callback.
     """
 
-    def __init__(self, connection_factory, consumer_group, prepare, persist, *, contracts=None):
+    def __init__(
+        self,
+        connection_factory,
+        consumer_group,
+        prepare,
+        persist,
+        *,
+        prepare_batch=None,
+        contracts=None,
+    ):
         self.connection_factory, self.consumer_group = connection_factory, consumer_group
         self.prepare, self.persist = prepare, persist
+        self.prepare_batch = prepare_batch
         self.contracts = contracts or default_contracts()
         self.owner = uuid.uuid4().hex
         with self.connection_factory() as connection:
@@ -318,6 +328,114 @@ class KeyedTransactionalHandler:
             )
         return DurableReceipt.for_record(record)
 
+    def handle_batch(self, items, context):
+        if not items:
+            return []
+        if len(items) == 1:
+            event, record = items[0]
+            return [self.handle(event, record, context)]
+        token = context.assignment
+        source_identities = []
+        machine_key = items[0][0].key
+        for event, record in items:
+            if event.topic != "sensor.readings":
+                raise ConfigurationError("Keyed Processing only handles sensor.readings")
+            if event.key != machine_key:
+                raise IdentityConflict("Per-key micro-batch mixed machine keys")
+            if (
+                event.wire_bytes != record.value
+                or event.topic != record.topic
+                or (token.group, token.topic, token.partition)
+                != (self.consumer_group, record.topic, record.partition)
+            ):
+                raise IdentityConflict("Work/fence coordinates do not identify this reading")
+            source_identities.append(canonical_json(event.payload))
+
+        pending_indices = []
+        pending_items = []
+        with self.connection_factory() as connection, connection.transaction():
+            self._fence(connection, context)
+            for idx, (event, _record) in enumerate(items):
+                if not self._duplicate(connection, event):
+                    pending_indices.append(idx)
+                    pending_items.append((event, _record))
+        if not pending_items:
+            return [DurableReceipt.for_record(record) for _event, record in items]
+
+        if self.prepare_batch is not None:
+            prepared_pending = list(self.prepare_batch(pending_items, context))
+        else:
+            prepared_pending = [self.prepare(e, r, context) for e, r in pending_items]
+        if len(prepared_pending) != len(pending_items):
+            raise ConsumerFailed("Batch preparation returned mismatched outcome count")
+        prepared_by_idx = dict(zip(pending_indices, prepared_pending, strict=True))
+        context.check()
+        for (event, _record), source_identity in zip(items, source_identities, strict=True):
+            if canonical_json(event.payload) != source_identity:
+                raise IdentityConflict("Prepare mutated the immutable source reading")
+
+        with self.connection_factory() as connection, connection.transaction():
+            self._fence(connection, context)
+            connection.execute(
+                "INSERT INTO maintai_processing_machine_cursor "
+                "(consumer_group,machine_id,topic,source_partition) VALUES (%s,%s,%s,%s) "
+                "ON CONFLICT DO NOTHING",
+                (self.consumer_group, machine_key, items[0][1].topic, items[0][1].partition),
+            )
+            cursor = connection.execute(
+                "SELECT * FROM maintai_processing_machine_cursor "
+                "WHERE consumer_group=%s AND machine_id=%s FOR UPDATE",
+                (self.consumer_group, machine_key),
+            ).fetchone()
+            last_sequence = cursor["last_sequence"]
+            last_event_id = cursor["last_event_id"]
+            cursor_updated = False
+            for idx, ((event, record), source_identity) in enumerate(
+                zip(items, source_identities, strict=True)
+            ):
+                if self._duplicate(connection, event):
+                    continue
+                prepared = prepared_by_idx.get(idx)
+                if prepared is None:
+                    prepared = self.prepare(event, record, context)
+                sequence = event.payload["sequence_number"]
+                if sequence <= last_sequence or (
+                    cursor["topic"],
+                    cursor["source_partition"],
+                ) != (record.topic, record.partition):
+                    raise IdentityConflict("Machine source order/partition requires reconciliation")
+                connection.execute(
+                    "INSERT INTO maintai_kafka_inbox "
+                    "(consumer_group,topic,message_id,identity_sha256,source_partition,"
+                    "source_offset,schema_version) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                    (
+                        self.consumer_group,
+                        event.topic,
+                        event.message_id,
+                        event.identity_sha256,
+                        record.partition,
+                        record.offset,
+                        event.schema_version,
+                    ),
+                )
+                outbox = OrderedOutbox(event, self.contracts)
+                self.persist(connection, event, record, outbox, prepared)
+                if canonical_json(event.payload) != source_identity:
+                    raise IdentityConflict("Persist mutated the immutable source reading")
+                outbox.validate()
+                last_sequence = sequence
+                last_event_id = event.message_id
+                cursor_updated = True
+            context.check()
+            if cursor_updated:
+                connection.execute(
+                    "UPDATE maintai_processing_machine_cursor "
+                    "SET last_sequence=%s,last_event_id=%s "
+                    "WHERE consumer_group=%s AND machine_id=%s",
+                    (last_sequence, last_event_id, self.consumer_group, machine_key),
+                )
+        return [DurableReceipt.for_record(record) for _event, record in items]
+
 
 class OrderedOutboxRelay(OutboxRelay):
     """Claim one head immediately before each bounded publish, never a later row."""
@@ -329,9 +447,16 @@ class OrderedOutboxRelay(OutboxRelay):
             require_ordering(connection)
 
     def _claim(self):
+        rows = self._claim_batch(limit=1)
+        return rows[0] if rows else None
+
+    def _claim_batch(self, limit: int | None = None):
+        target = min(self.batch_size, 16) if limit is None else min(limit, self.batch_size, 16)
+        if target < 1:
+            return []
         with self.connection_factory() as connection, connection.transaction():
             require_ordering(connection)
-            key = connection.execute(
+            keys = connection.execute(
                 "SELECT k.topic,k.message_key FROM maintai_outbox_keys k "
                 "CROSS JOIN LATERAL ("
                 "SELECT o.created_at,o.status,o.next_attempt_at,o.lease_until "
@@ -346,50 +471,62 @@ class OrderedOutboxRelay(OutboxRelay):
                 "AND ((o.status='PENDING' AND o.next_attempt_at<=clock_timestamp()) "
                 "OR (o.status='LEASED' AND o.lease_until<clock_timestamp())) "
                 "ORDER BY o.created_at,k.topic,k.message_key "
-                "LIMIT 1 FOR UPDATE OF k SKIP LOCKED"
-            ).fetchone()
-            if key is None:
-                return None
-            lease = connection.execute(
-                "UPDATE maintai_outbox_keys SET owner=%s,generation=generation+1,"
-                "lease_until=clock_timestamp()+(%s * interval '1 second') "
-                "WHERE topic=%s AND message_key=%s RETURNING *",
-                (self.owner, self.lease_seconds, key["topic"], key["message_key"]),
-            ).fetchone()
-            return connection.execute(
-                "UPDATE maintai_kafka_outbox SET status='LEASED',lease_owner=%s,"
-                "lease_until=%s,fencing_token=%s,attempts=attempts+1 "
-                "WHERE topic=%s AND message_key=%s AND dispatch_seq=%s RETURNING *",
-                (
-                    self.owner,
-                    lease["lease_until"],
-                    lease["generation"],
-                    key["topic"],
-                    key["message_key"],
-                    lease["last_published"] + 1,
-                ),
-            ).fetchone()
+                "LIMIT %s FOR UPDATE OF k SKIP LOCKED",
+                (target,),
+            ).fetchall()
+            if not keys:
+                return []
+            claimed = []
+            for key in keys:
+                lease = connection.execute(
+                    "UPDATE maintai_outbox_keys SET owner=%s,generation=generation+1,"
+                    "lease_until=clock_timestamp()+(%s * interval '1 second') "
+                    "WHERE topic=%s AND message_key=%s RETURNING *",
+                    (self.owner, self.lease_seconds, key["topic"], key["message_key"]),
+                ).fetchone()
+                row = connection.execute(
+                    "UPDATE maintai_kafka_outbox SET status='LEASED',lease_owner=%s,"
+                    "lease_until=%s,fencing_token=%s,attempts=attempts+1 "
+                    "WHERE topic=%s AND message_key=%s AND dispatch_seq=%s RETURNING *",
+                    (
+                        self.owner,
+                        lease["lease_until"],
+                        lease["generation"],
+                        key["topic"],
+                        key["message_key"],
+                        lease["last_published"] + 1,
+                    ),
+                ).fetchone()
+                if row is not None:
+                    claimed.append(row)
+            return claimed
 
     def _finish(self, row, success, delay):
+        self._finish_batch([(row, success, delay)])
+
+    def _finish_batch(self, items):
+        if not items:
+            return
         with self.connection_factory() as connection, connection.transaction():
             require_ordering(connection)
-            key = connection.execute(
-                "SELECT * FROM maintai_outbox_keys WHERE topic=%s AND message_key=%s "
-                "AND owner=%s AND generation=%s AND lease_until>=clock_timestamp() FOR UPDATE",
-                (row["topic"], row["message_key"], self.owner, row["fencing_token"]),
-            ).fetchone()
-            if key is None or key["last_published"] + 1 != row["dispatch_seq"]:
-                raise LeaseLost("Ordered key lease was lost; successor remains blocked")
-            super()._finish_in_connection(connection, row, success, delay)
-            connection.execute(
-                "UPDATE maintai_outbox_keys SET owner=NULL,lease_until=NULL,last_published=%s "
-                "WHERE topic=%s AND message_key=%s",
-                (
-                    row["dispatch_seq"] if success else key["last_published"],
-                    row["topic"],
-                    row["message_key"],
-                ),
-            )
+            for row, success, delay in items:
+                key = connection.execute(
+                    "SELECT * FROM maintai_outbox_keys WHERE topic=%s AND message_key=%s "
+                    "AND owner=%s AND generation=%s AND lease_until>=clock_timestamp() FOR UPDATE",
+                    (row["topic"], row["message_key"], self.owner, row["fencing_token"]),
+                ).fetchone()
+                if key is None or key["last_published"] + 1 != row["dispatch_seq"]:
+                    raise LeaseLost("Ordered key lease was lost; successor remains blocked")
+                super()._finish_in_connection(connection, row, success, delay)
+                connection.execute(
+                    "UPDATE maintai_outbox_keys SET owner=NULL,lease_until=NULL,last_published=%s "
+                    "WHERE topic=%s AND message_key=%s",
+                    (
+                        row["dispatch_seq"] if success else key["last_published"],
+                        row["topic"],
+                        row["message_key"],
+                    ),
+                )
 
     def run_once(self):
         try:
@@ -406,22 +543,43 @@ class OrderedOutboxRelay(OutboxRelay):
 
     def _run_once(self):
         published = 0
-        for _ in range(self.batch_size):
-            row = self._claim()
-            if row is None:
+        remaining = self.batch_size
+        while remaining > 0:
+            rows = self._claim_batch(limit=remaining)
+            if not rows:
                 break
-            self.current_topic = row["topic"]
-            raw = bytes(row["payload"])
-            if hashlib.sha256(raw).hexdigest() != row["payload_sha256"]:
-                raise IdentityConflict("Outbox payload checksum mismatch")
-            event = self.publisher.contracts.decode(row["topic"], raw, writer=True)
-            if event.key != row["message_key"] or event.message_id != row["message_id"]:
-                raise IdentityConflict("Outbox row and immutable message identity differ")
-            try:
-                self.publisher.publish_event(event)
-            except PublishUnavailable:
-                self._finish(row, False, min(300, 2 ** min(row["attempts"], 8)) + random.random())
+            events = []
+            for row in rows:
+                self.current_topic = row["topic"]
+                raw = bytes(row["payload"])
+                if hashlib.sha256(raw).hexdigest() != row["payload_sha256"]:
+                    raise IdentityConflict("Outbox payload checksum mismatch")
+                event = self.publisher.contracts.decode(row["topic"], raw, writer=True)
+                if event.key != row["message_key"] or event.message_id != row["message_id"]:
+                    raise IdentityConflict("Outbox row and immutable message identity differ")
+                events.append(event)
+            if hasattr(self.publisher, "publish_batch"):
+                try:
+                    outcomes = self.publisher.publish_batch(events)
+                except PublishUnavailable as exc:
+                    outcomes = [exc] * len(rows)
             else:
-                self._finish(row, True, 0)
-                published += 1
+                outcomes = []
+                for event in events:
+                    try:
+                        outcomes.append(self.publisher.publish_event(event))
+                    except PublishUnavailable as exc:
+                        outcomes.append(exc)
+            finishes = []
+            for row, outcome in zip(rows, outcomes, strict=True):
+                if isinstance(outcome, PublishUnavailable):
+                    delay = min(300, 2 ** min(row["attempts"], 8)) + random.random()
+                    finishes.append((row, False, delay))
+                elif isinstance(outcome, Exception):
+                    raise outcome
+                else:
+                    finishes.append((row, True, 0))
+                    published += 1
+            self._finish_batch(finishes)
+            remaining -= len(rows)
         return published

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import threading
+import time
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -92,6 +93,9 @@ class ConsumerRunner:
         self._backpressured = False
         self._buffer_limit = max_buffered_records
         self._pending = deque()
+        self._uncommitted: dict[tuple[str, int], int] = {}
+        self._uncommitted_count = 0
+        self._uncommitted_since: float | None = None
         self.processed = 0
         self.rebalances = 0
 
@@ -105,7 +109,60 @@ class ConsumerRunner:
             # librdkafka retains per-partition APP_PAUSE across revoke/assign.
             consumer.resume(partitions)
 
-    def _revoked(self, _consumer, _partitions):
+    def _flush_commits(self, *, keys=None):
+        if not self._uncommitted:
+            return
+        if keys is None:
+            owned = {(p.topic, p.partition) for p in self.client.assignment()}
+            for stale in [k for k in self._uncommitted if k not in owned]:
+                del self._uncommitted[stale]
+            target_keys = sorted(self._uncommitted)
+        else:
+            target_keys = sorted(k for k in self._uncommitted if k in keys)
+        if not target_keys:
+            if not self._uncommitted:
+                self._uncommitted_count = 0
+                self._uncommitted_since = None
+            return
+        offsets = [
+            TopicPartition(topic, part, self._uncommitted[topic, part])
+            for topic, part in target_keys
+        ]
+        positions = self.client.commit(offsets=offsets, asynchronous=False)
+        if any(getattr(partition, "error", None) for partition in positions or ()):
+            raise ConsumerFailed("Broker did not acknowledge the offset commit")
+        for key in target_keys:
+            del self._uncommitted[key]
+        if not self._uncommitted:
+            self._uncommitted_count = 0
+            self._uncommitted_since = None
+        else:
+            self._uncommitted_count = max(0, self._uncommitted_count - len(target_keys))
+
+    def _should_flush_commits(self) -> bool:
+        if not self._uncommitted:
+            return False
+        if self._uncommitted_count >= self.settings.commit_batch_size:
+            return True
+        if self._uncommitted_since is None:
+            return False
+        return (
+            time.monotonic() - self._uncommitted_since
+        ) * 1000 >= self.settings.commit_max_wait_ms
+
+    def _revoked(self, _consumer, partitions):
+        keys = {(p.topic, p.partition) for p in partitions}
+        self._flush_commits(keys=keys)
+        self._generation += 1
+        self._pending.clear()
+
+    def _lost(self, _consumer, partitions):
+        keys = {(p.topic, p.partition) for p in partitions}
+        for key in keys:
+            self._uncommitted.pop(key, None)
+        if not self._uncommitted:
+            self._uncommitted_count = 0
+            self._uncommitted_since = None
         self._generation += 1
         self._pending.clear()
 
@@ -156,7 +213,7 @@ class ConsumerRunner:
             [self.topic],
             on_assign=self._assigned,
             on_revoke=self._revoked,
-            on_lost=self._revoked,
+            on_lost=self._lost,
         )
         executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="maintai-handler")
         future = record = None
@@ -171,6 +228,8 @@ class ConsumerRunner:
                                 raise ConsumerFailed("Serial consumer exceeded its bounded buffer")
                             self._pending.append((self._generation, extra))
                             self._flow_control()
+                        if self._should_flush_commits():
+                            self._flush_commits()
                         continue
                     try:
                         future.result()
@@ -178,19 +237,23 @@ class ConsumerRunner:
                         raise ConsumerFailed("Handler failed; no offset advanced") from exc
                     owned = {(p.topic, p.partition) for p in self.client.assignment()}
                     if generation == self._generation and (record.topic, record.partition) in owned:
-                        positions = self.client.commit(
-                            offsets=[
-                                TopicPartition(record.topic, record.partition, record.offset + 1)
-                            ],
-                            asynchronous=False,
+                        key = (record.topic, record.partition)
+                        self._uncommitted[key] = max(
+                            self._uncommitted.get(key, 0), record.offset + 1
                         )
-                        if any(getattr(partition, "error", None) for partition in positions or ()):
-                            raise ConsumerFailed("Broker did not acknowledge the offset commit")
+                        self._uncommitted_count += 1
+                        if self._uncommitted_since is None:
+                            self._uncommitted_since = time.monotonic()
                         self.processed += 1
+                        if self._should_flush_commits():
+                            self._flush_commits()
                     self._busy = False
                     future = None
                     self._flow_control()
+                if self._should_flush_commits():
+                    self._flush_commits()
                 if stop.is_set() or (max_records is not None and self.processed >= max_records):
+                    self._flush_commits()
                     break
                 if self._pending:
                     pending_generation, record = self._pending.popleft()
@@ -198,6 +261,8 @@ class ConsumerRunner:
                         continue
                 else:
                     record = self._poll(self.settings.poll_interval_seconds)
+                    if self._should_flush_commits():
+                        self._flush_commits()
                 if record is None:
                     continue
                 generation = self._generation

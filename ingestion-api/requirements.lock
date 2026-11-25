@@ -73,6 +73,8 @@ maintai-messaging==0.3.1
     # via -r ingestion-api/requirements.in
 opentelemetry-api==1.45.1
     # via fastapi
+paho-mqtt==2.2.0
+    # via -r ingestion-api/requirements.in
 prometheus-client==0.26.0
     # via -r ingestion-api/requirements.in
 pycparser==3.12

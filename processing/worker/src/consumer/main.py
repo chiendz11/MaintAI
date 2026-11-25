@@ -85,6 +85,13 @@ async def run_worker(settings, stop, *, max_records=None):
                 observer.ml_results.labels(result.failure_code or "SUCCESS").inc()
                 return result
 
+            def predict_batch(items):
+                with observer.ml_latency.time():
+                    results = wait_for_http(ml.predict_batch(items), 5)
+                for result in results:
+                    observer.ml_results.labels(result.failure_code or "SUCCESS").inc()
+                return results
+
             contracts = default_contracts()
             group = (
                 settings.kafka.group_prefix
@@ -104,6 +111,7 @@ async def run_worker(settings, stop, *, max_records=None):
                 registry_cache_seconds=cache_seconds,
                 contracts=contracts,
                 validation_observer=observer.record_validation,
+                predict_batch=predict_batch,
             )
 
             def durable(event, record):

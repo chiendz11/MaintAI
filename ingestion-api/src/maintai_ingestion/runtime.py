@@ -9,6 +9,7 @@ from maintai_messaging.producer import KafkaPublisher
 
 from .auth import LocalFixtureVerifier, OidcIdentityVerifier, jwks_fetcher
 from .health import DependencyState, KafkaReadinessProbe
+from .mqtt_bridge import MqttKafkaBridge
 from .observability import Observability, ObservedPublisher
 from .request_guards import AdmissionGate
 
@@ -42,6 +43,7 @@ class Runtime:
     gate: AdmissionGate
     health: DependencyState
     obs: Observability
+    mqtt_bridge: MqttKafkaBridge | None = None
     _close_lock: asyncio.Lock = field(default_factory=asyncio.Lock, init=False)
     _closed: bool = field(default=False, init=False)
 
@@ -56,6 +58,8 @@ class Runtime:
             safe_check(self.probe.check), safe_check(self.verifier.check)
         )
         self.health.kafka, self.health.auth_keys = kafka, auth
+        if self.mqtt_bridge is not None:
+            self.health.mqtt = self.mqtt_bridge.connected
         import time
 
         self.health.checked_at = time.monotonic()
@@ -72,6 +76,8 @@ class Runtime:
             if self._closed:
                 return
             self.gate.begin_shutdown()
+            if self.mqtt_bridge is not None:
+                await run_blocking(self.mqtt_bridge.stop)
             await self.gate.empty.wait()
             try:
                 await run_blocking(self.publisher.close)
@@ -114,6 +120,7 @@ def build_runtime(settings, *, publisher_factory=None, verifier=None, probe=None
     except Exception:
         publisher.close()
         raise
+    mqtt_bridge = MqttKafkaBridge(settings, gateway) if settings.mqtt_enabled else None
     return Runtime(
         settings,
         publisher,
@@ -121,6 +128,7 @@ def build_runtime(settings, *, publisher_factory=None, verifier=None, probe=None
         verifier,
         probe,
         AdmissionGate(settings.max_inflight),
-        DependencyState(),
+        DependencyState(mqtt_enabled=settings.mqtt_enabled),
         obs,
+        mqtt_bridge=mqtt_bridge,
     )

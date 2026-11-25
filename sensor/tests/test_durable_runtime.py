@@ -201,9 +201,11 @@ def test_quota_ttl_auth_block_and_manual_repair(runtime_settings):
         assert len(engine.store.due(time.time(), 1000, 10)) == 1
         engine.store.due(time.time() + 2000, 1000, 10)
         assert engine.store.summary()["counts"] == {"expired": 2}
-        assert engine.generate_once("M-002") is None  # Never silently delete an expired payload.
+        # Expired rows move to spool_quarantine; pending quota is freed for M-002.
+        third = engine.generate_once("M-002")
+        assert third is not None
         engine.store.repair(second["event_id"], "discard", "operator exported evidence")
-        assert engine.generate_once("M-002") is not None
+        assert engine.store.summary()["counts"] == {"pending": 1, "expired": 1}
     finally:
         engine.close()
 

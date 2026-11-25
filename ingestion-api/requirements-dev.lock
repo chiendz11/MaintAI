@@ -116,6 +116,10 @@ packaging==26.3
     #   build
     #   pytest
     #   wheel
+paho-mqtt==2.2.0
+    # via
+    #   -c ingestion-api/requirements.lock
+    #   -r ingestion-api/requirements.in
 pluggy==1.7.0
     # via pytest
 prometheus-client==0.26.0

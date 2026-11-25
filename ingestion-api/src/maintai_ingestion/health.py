@@ -22,8 +22,10 @@ class KafkaReadinessProbe:
 
 
 class DependencyState:
-    def __init__(self):
+    def __init__(self, *, mqtt_enabled: bool = False):
         self.kafka = self.auth_keys = False
+        self.mqtt_enabled = mqtt_enabled
+        self.mqtt = not mqtt_enabled
         self.checked_at = float("-inf")
 
     def response(self, *, draining=False):
@@ -33,5 +35,7 @@ class DependencyState:
             "kafka": self.kafka and fresh,
             "auth_keys": self.auth_keys and fresh,
         }
+        if self.mqtt_enabled:
+            checks["mqtt"] = self.mqtt and fresh
         ready = all(checks.values()) and not draining
         return (200 if ready else 503), {"status": "UP" if ready else "DEGRADED", "checks": checks}

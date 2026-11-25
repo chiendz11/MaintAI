@@ -204,6 +204,10 @@ class ObservedPublisher:
     def __init__(self, publisher, observability):
         self.publisher, self.obs, self.settings = publisher, observability, publisher.settings
 
+    @property
+    def contracts(self):
+        return self.publisher.contracts
+
     def publish(self, topic, payload):
         try:
             delivery = self.publisher.publish(topic, payload)
@@ -212,6 +216,20 @@ class ObservedPublisher:
             raise
         self.obs.record_publish(topic, reason=payload.get("reason"))
         return delivery
+
+    def publish_batch(self, events):
+        try:
+            results = self.publisher.publish_batch(events)
+        except Exception as error:
+            for event in events:
+                self.obs.record_publish(event.topic, error)
+            raise
+        for event, result in zip(events, results, strict=True):
+            if isinstance(result, Exception):
+                self.obs.record_publish(event.topic, result)
+            else:
+                self.obs.record_publish(event.topic, reason=event.payload.get("reason"))
+        return results
 
     def close(self):
         self.publisher.close()

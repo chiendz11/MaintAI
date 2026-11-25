@@ -9,6 +9,7 @@ from __future__ import annotations
 import fcntl
 import hashlib
 import json
+import logging
 import os
 import sqlite3
 import threading
@@ -16,6 +17,8 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 from uuid import uuid4
+
+from simulator.logging import log
 
 
 def utc(value: float | None = None) -> str:
@@ -38,10 +41,13 @@ class ControlError(Exception):
 
 
 class StateStore:
+    SCHEMA_VERSION = "2"
+
     def __init__(self, path: Path):
         path.parent.mkdir(parents=True, exist_ok=True)
         self.lock = threading.RLock()
         self.closed = False
+        self._rr_offset = 0
         self.file_lock = path.with_suffix(path.suffix + ".lock").open("a+")
         try:
             fcntl.flock(self.file_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -76,6 +82,19 @@ class StateStore:
                 CREATE INDEX IF NOT EXISTS spool_due ON spool(status, next_at, id);
                 CREATE INDEX IF NOT EXISTS spool_machine_status_id ON spool(machine_id, status, id);
                 CREATE INDEX IF NOT EXISTS spool_pending_created ON spool(status, created_at);
+                CREATE TABLE IF NOT EXISTS spool_quarantine (
+                    id INTEGER PRIMARY KEY, event_id TEXT NOT NULL UNIQUE,
+                    machine_id TEXT NOT NULL, payload TEXT NOT NULL, size INTEGER NOT NULL,
+                    created_at REAL NOT NULL, attempts INTEGER NOT NULL DEFAULT 0,
+                    status TEXT NOT NULL, error TEXT, quarantined_at REAL NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS spool_quarantine_status_id
+                    ON spool_quarantine(status, id);
+                CREATE TABLE IF NOT EXISTS spool_stats (
+                    machine_id TEXT PRIMARY KEY,
+                    pending_count INTEGER NOT NULL DEFAULT 0,
+                    pending_bytes INTEGER NOT NULL DEFAULT 0
+                );
                 CREATE TABLE IF NOT EXISTS commands (
                     actor TEXT NOT NULL, key TEXT NOT NULL, fingerprint TEXT NOT NULL,
                     response TEXT NOT NULL, created_at REAL NOT NULL,
@@ -88,14 +107,92 @@ class StateStore:
             """)
             with self.transaction() as db:
                 old = db.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()
-                if old and old[0] != "1":
+                if old is None:
+                    db.execute(
+                        "INSERT OR IGNORE INTO meta VALUES ('schema_version', ?)",
+                        (self.SCHEMA_VERSION,),
+                    )
+                    db.execute("INSERT OR IGNORE INTO spool_stats VALUES ('__global__', 0, 0)")
+                elif old[0] == "1":
+                    self._migrate_v1_to_v2(db)
+                elif old[0] == self.SCHEMA_VERSION:
+                    db.execute("INSERT OR IGNORE INTO spool_stats VALUES ('__global__', 0, 0)")
+                else:
                     raise ValueError(
                         "Unsupported Sensor state schema; explicit migration is required"
                     )
-                db.execute("INSERT OR IGNORE INTO meta VALUES ('schema_version','1')")
         except Exception:
             self.close()
             raise
+
+    @staticmethod
+    def _migrate_v1_to_v2(db: sqlite3.Connection) -> None:
+        """Idempotent startup migration from v1 spool table to v2 quarantine + O(1) stats."""
+        now = time.time()
+        rows = db.execute(
+            "SELECT * FROM spool WHERE status IN ('expired', 'rejected') ORDER BY id"
+        ).fetchall()
+        for row in rows:
+            db.execute(
+                "INSERT OR IGNORE INTO spool_quarantine "
+                "(event_id,machine_id,payload,size,created_at,attempts,status,error,quarantined_at)"
+                " VALUES (?,?,?,?,?,?,?,?,?)",
+                (
+                    row["event_id"],
+                    row["machine_id"],
+                    row["payload"],
+                    row["size"],
+                    row["created_at"],
+                    row["attempts"],
+                    row["status"],
+                    row["error"],
+                    now,
+                ),
+            )
+        if rows:
+            db.execute("DELETE FROM spool WHERE status IN ('expired', 'rejected')")
+        db.execute("DELETE FROM spool_stats")
+        total = db.execute(
+            "SELECT COUNT(*), COALESCE(SUM(size), 0) FROM spool WHERE status='pending'"
+        ).fetchone()
+        db.execute("INSERT INTO spool_stats VALUES ('__global__', ?, ?)", (total[0], total[1]))
+        for per_m in db.execute(
+            "SELECT machine_id, COUNT(*), COALESCE(SUM(size), 0) "
+            "FROM spool WHERE status='pending' GROUP BY machine_id"
+        ):
+            db.execute("INSERT INTO spool_stats VALUES (?, ?, ?)", (per_m[0], per_m[1], per_m[2]))
+        db.execute("INSERT OR REPLACE INTO meta VALUES ('schema_version', '2')")
+
+    @staticmethod
+    def _adjust_stats(
+        db: sqlite3.Connection, machine_id: str, delta_count: int, delta_bytes: int
+    ) -> None:
+        if delta_count == 0 and delta_bytes == 0:
+            return
+        for key in ("__global__", machine_id):
+            db.execute(
+                "INSERT INTO spool_stats(machine_id, pending_count, pending_bytes) VALUES (?,?,?) "
+                "ON CONFLICT(machine_id) DO UPDATE SET "
+                "pending_count=MAX(0, pending_count + excluded.pending_count), "
+                "pending_bytes=MAX(0, pending_bytes + excluded.pending_bytes)",
+                (key, max(0, delta_count), max(0, delta_bytes)),
+            ) if delta_count > 0 or delta_bytes > 0 else db.execute(
+                "UPDATE spool_stats SET "
+                "pending_count=MAX(0, pending_count + ?), "
+                "pending_bytes=MAX(0, pending_bytes + ?) WHERE machine_id=?",
+                (delta_count, delta_bytes, key),
+            )
+
+    @staticmethod
+    def _trim_quarantine(db: sqlite3.Connection, max_records: int) -> None:
+        row = db.execute("SELECT COUNT(*) FROM spool_quarantine").fetchone()
+        excess = row[0] - max_records
+        if excess > 0:
+            db.execute(
+                "DELETE FROM spool_quarantine WHERE id IN "
+                "(SELECT id FROM spool_quarantine ORDER BY id LIMIT ?)",
+                (excess,),
+            )
 
     @contextmanager
     def transaction(self):
@@ -233,6 +330,8 @@ class StateStore:
         *,
         max_records: int,
         max_bytes: int,
+        max_records_per_machine: int | None = None,
+        on_drop=None,
         now: float | None = None,
     ) -> list[dict]:
         if not machines:
@@ -240,6 +339,19 @@ class StateStore:
         now = time.time() if now is None else now
         unique = tuple(dict.fromkeys(machines))
         placeholders = ",".join("?" for _ in unique)
+
+        def record_drop(reason: str, machine_id: str, pending_count: int, pending_bytes: int):
+            if on_drop is not None:
+                on_drop(reason)
+            log(
+                "sensor_spool_dropped",
+                level=logging.WARNING,
+                reason=reason,
+                machine_id=machine_id,
+                pending_records=pending_count,
+                pending_bytes=pending_bytes,
+            )
+
         with self.lock:
             running = self.db.execute(
                 f"SELECT COUNT(*) FROM machines WHERE machine_id IN ({placeholders}) "
@@ -248,12 +360,29 @@ class StateStore:
             ).fetchone()[0]
             if not running:
                 return []
+            ordered = list(machines)
+            if len(ordered) > 1:
+                offset = self._rr_offset % len(ordered)
+                ordered = ordered[offset:] + ordered[:offset]
+                self._rr_offset = (offset + 1) % len(ordered)
             with self.transaction() as db:
-                count, size = db.execute(
-                    "SELECT COUNT(*),COALESCE(SUM(size),0) FROM spool"
+                global_row = db.execute(
+                    "SELECT pending_count, pending_bytes FROM spool_stats "
+                    "WHERE machine_id='__global__'"
                 ).fetchone()
+                count = global_row["pending_count"] if global_row else 0
+                size = global_row["pending_bytes"] if global_row else 0
                 if count >= max_records:
+                    record_drop("global_records", ordered[0], count, size)
                     return []
+                per_machine_counts = {
+                    r["machine_id"]: r["pending_count"]
+                    for r in db.execute(
+                        f"SELECT machine_id, pending_count FROM spool_stats "
+                        f"WHERE machine_id IN ({placeholders})",
+                        unique,
+                    )
+                }
                 machine_total = db.execute("SELECT COUNT(*) FROM machines").fetchone()[0]
                 rows = {
                     r["machine_id"]: dict(r)
@@ -262,11 +391,18 @@ class StateStore:
                     )
                 }
                 events: list[dict] = []
-                for machine in machines:
+                for machine in ordered:
                     if count >= max_records:
+                        record_drop("global_records", machine, count, size)
                         break
                     row = rows.get(machine)
                     if not row or row["stream_state"] != "RUNNING":
+                        continue
+                    if (
+                        max_records_per_machine is not None
+                        and per_machine_counts.get(machine, 0) >= max_records_per_machine
+                    ):
+                        record_drop("machine_records", machine, count, size)
                         continue
                     payload = build(dict(row))
                     if payload is None:
@@ -278,6 +414,7 @@ class StateStore:
                     encoded = canonical(payload)
                     byte_size = len(encoded.encode())
                     if size + byte_size > max_bytes:
+                        record_drop("global_bytes", machine, count, size)
                         continue
                     db.execute(
                         "INSERT INTO spool(event_id,machine_id,payload,size,created_at,next_at) "
@@ -290,19 +427,35 @@ class StateStore:
                         "WHERE machine_id=?",
                         (sequence, machine_total, machine),
                     )
+                    self._adjust_stats(db, machine, 1, byte_size)
                     row["sequence_number"] = sequence
                     row["row_cursor"] += machine_total
                     row["scenario_step"] += 1
+                    per_machine_counts[machine] = per_machine_counts.get(machine, 0) + 1
                     count += 1
                     size += byte_size
                     events.append(payload)
                 return events
 
     def generate(
-        self, machine: str, build, *, max_records: int, max_bytes: int, now: float | None = None
+        self,
+        machine: str,
+        build,
+        *,
+        max_records: int,
+        max_bytes: int,
+        max_records_per_machine: int | None = None,
+        on_drop=None,
+        now: float | None = None,
     ) -> dict | None:
         events = self.generate_many(
-            [machine], build, max_records=max_records, max_bytes=max_bytes, now=now
+            [machine],
+            build,
+            max_records=max_records,
+            max_bytes=max_bytes,
+            max_records_per_machine=max_records_per_machine,
+            on_drop=on_drop,
+            now=now,
         )
         return events[0] if events else None
 
@@ -313,13 +466,36 @@ class StateStore:
         limit: int,
         *,
         exclude_machines: tuple[str, ...] | list[str] = (),
+        quarantine_max_records: int = 10_000,
     ) -> list[dict]:
         with self.transaction() as db:
-            db.execute(
-                "UPDATE spool SET status='expired',error='TTL_EXPIRED' WHERE "
-                "status='pending' AND created_at<?",
+            expired_rows = db.execute(
+                "SELECT * FROM spool WHERE status='pending' AND created_at<? ORDER BY id",
                 (now - ttl,),
-            )
+            ).fetchall()
+            if expired_rows:
+                for row in expired_rows:
+                    db.execute(
+                        "INSERT OR REPLACE INTO spool_quarantine "
+                        "(event_id,machine_id,payload,size,created_at,attempts,"
+                        "status,error,quarantined_at) VALUES (?,?,?,?,?,?,?,?,?)",
+                        (
+                            row["event_id"],
+                            row["machine_id"],
+                            row["payload"],
+                            row["size"],
+                            row["created_at"],
+                            row["attempts"],
+                            "expired",
+                            "TTL_EXPIRED",
+                            now,
+                        ),
+                    )
+                    self._adjust_stats(db, row["machine_id"], -1, -row["size"])
+                db.execute(
+                    "DELETE FROM spool WHERE status='pending' AND created_at<?", (now - ttl,)
+                )
+                self._trim_quarantine(db, quarantine_max_records)
             excluded = tuple(dict.fromkeys(exclude_machines))
             clause = ""
             params: list[object] = [now]
@@ -344,49 +520,141 @@ class StateStore:
             )
             return [dict(row) for row in rows]
 
-    def finish(self, event_id: str, *, status: str, error: str | None = None, next_at: float = 0):
+    def finish(
+        self,
+        event_id: str,
+        *,
+        status: str,
+        error: str | None = None,
+        next_at: float = 0,
+        quarantine_max_records: int = 10_000,
+    ):
         with self.transaction() as db:
+            row = db.execute("SELECT * FROM spool WHERE event_id=?", (event_id,)).fetchone()
+            if not row:
+                return
+            was_pending = row["status"] == "pending"
             if status == "accepted":
                 db.execute("DELETE FROM spool WHERE event_id=?", (event_id,))
+                if was_pending:
+                    self._adjust_stats(db, row["machine_id"], -1, -row["size"])
+            elif status == "rejected":
+                db.execute(
+                    "INSERT OR REPLACE INTO spool_quarantine "
+                    "(event_id,machine_id,payload,size,created_at,attempts,"
+                    "status,error,quarantined_at) VALUES (?,?,?,?,?,?,?,?,?)",
+                    (
+                        row["event_id"],
+                        row["machine_id"],
+                        row["payload"],
+                        row["size"],
+                        row["created_at"],
+                        row["attempts"] + 1,
+                        "rejected",
+                        error,
+                        time.time(),
+                    ),
+                )
+                db.execute("DELETE FROM spool WHERE event_id=?", (event_id,))
+                if was_pending:
+                    self._adjust_stats(db, row["machine_id"], -1, -row["size"])
+                self._trim_quarantine(db, quarantine_max_records)
             else:
                 db.execute(
                     "UPDATE spool SET status=?,error=?,next_at=?,attempts=attempts+1 WHERE "
                     "event_id=?",
                     (status, error, next_at, event_id),
                 )
+                if was_pending and status != "pending":
+                    self._adjust_stats(db, row["machine_id"], -1, -row["size"])
 
     def summary(self) -> dict:
         with self.transaction() as db:
-            counts = dict(db.execute("SELECT status,COUNT(*) FROM spool GROUP BY status"))
-            row = db.execute(
-                "SELECT COALESCE(SUM(size),0),MIN(CASE WHEN status='pending' THEN "
-                "created_at END) FROM spool"
+            stats = db.execute(
+                "SELECT pending_count, pending_bytes FROM spool_stats WHERE machine_id='__global__'"
             ).fetchone()
-            return {"counts": counts, "bytes": row[0], "oldest": row[1]}
+            pending_count = stats["pending_count"] if stats else 0
+            pending_bytes = stats["pending_bytes"] if stats else 0
+            counts: dict[str, int] = {}
+            if pending_count > 0:
+                counts["pending"] = pending_count
+            for row in db.execute(
+                "SELECT status, COUNT(*) FROM spool WHERE status!='pending' GROUP BY status"
+            ):
+                counts[row[0]] = row[1]
+            for row in db.execute("SELECT status, COUNT(*) FROM spool_quarantine GROUP BY status"):
+                counts[row[0]] = counts.get(row[0], 0) + row[1]
+            oldest = db.execute(
+                "SELECT MIN(created_at) FROM spool WHERE status='pending'"
+            ).fetchone()[0]
+            return {"counts": counts, "bytes": pending_bytes, "oldest": oldest}
 
     def inspect(self) -> list[dict]:
         with self.transaction() as db:
-            return [
+            rows = [
                 dict(r)
                 for r in db.execute(
                     "SELECT event_id,machine_id,status,attempts,error,created_at FROM "
                     "spool ORDER BY id LIMIT 100"
                 )
             ]
+            if len(rows) < 100:
+                rows.extend(
+                    dict(r)
+                    for r in db.execute(
+                        "SELECT event_id,machine_id,status,attempts,error,created_at FROM "
+                        "spool_quarantine ORDER BY id LIMIT ?",
+                        (100 - len(rows),),
+                    )
+                )
+            return rows
 
     def repair(self, event_id: str, action: str, reason: str):
         with self.transaction() as db:
-            row = db.execute("SELECT status FROM spool WHERE event_id=?", (event_id,)).fetchone()
+            row = db.execute("SELECT * FROM spool WHERE event_id=?", (event_id,)).fetchone()
+            from_quarantine = False
+            if not row:
+                row = db.execute(
+                    "SELECT * FROM spool_quarantine WHERE event_id=?", (event_id,)
+                ).fetchone()
+                from_quarantine = True
             if not row:
                 raise ValueError("Spool event not found")
+            prev_status = row["status"]
             if action == "retry":
-                db.execute(
-                    "UPDATE spool SET status='pending',error=NULL,next_at=?,created_at=? "
-                    "WHERE event_id=?",
-                    (time.time(), time.time(), event_id),
-                )
+                now = time.time()
+                if from_quarantine:
+                    db.execute(
+                        "INSERT INTO spool(event_id,machine_id,payload,size,created_at,"
+                        "next_at,attempts,status,error) VALUES (?,?,?,?,?,?,?,?,NULL)",
+                        (
+                            row["event_id"],
+                            row["machine_id"],
+                            row["payload"],
+                            row["size"],
+                            now,
+                            now,
+                            row["attempts"],
+                            "pending",
+                        ),
+                    )
+                    db.execute("DELETE FROM spool_quarantine WHERE event_id=?", (event_id,))
+                    self._adjust_stats(db, row["machine_id"], 1, row["size"])
+                else:
+                    db.execute(
+                        "UPDATE spool SET status='pending',error=NULL,next_at=?,created_at=? "
+                        "WHERE event_id=?",
+                        (now, now, event_id),
+                    )
+                    if prev_status != "pending":
+                        self._adjust_stats(db, row["machine_id"], 1, row["size"])
             else:
-                db.execute("DELETE FROM spool WHERE event_id=?", (event_id,))
+                if from_quarantine:
+                    db.execute("DELETE FROM spool_quarantine WHERE event_id=?", (event_id,))
+                else:
+                    db.execute("DELETE FROM spool WHERE event_id=?", (event_id,))
+                    if prev_status == "pending":
+                        self._adjust_stats(db, row["machine_id"], -1, -row["size"])
             db.execute(
                 "INSERT INTO audit(created_at,actor,action,target,detail) VALUES (?,?,?,?,?)",
                 (
@@ -394,7 +662,7 @@ class StateStore:
                     "local-maintainer",
                     "spool-" + action,
                     event_id,
-                    canonical({"reason": reason, "previous_status": row[0]}),
+                    canonical({"reason": reason, "previous_status": prev_status}),
                 ),
             )
 

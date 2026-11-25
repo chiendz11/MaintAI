@@ -27,6 +27,8 @@ def create_app(settings, *, publisher_factory=None, verifier=None, probe=None):
         stop = asyncio.Event()
         monitor = None
         try:
+            if runtime.mqtt_bridge is not None:
+                runtime.mqtt_bridge.start()
             await runtime.refresh_health()
             monitor = asyncio.create_task(runtime.monitor(stop))
             yield

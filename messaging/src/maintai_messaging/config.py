@@ -20,6 +20,7 @@ class KeyedSettings:
     max_pending_records: int = 512
     max_pending_bytes: int = 16777216
     max_pending_per_key: int = 64
+    max_batch_per_key: int = 16
     max_uncommitted_per_partition: int = 128
     resume_low_watermark: float = 0.5
     handler_timeout_seconds: float = 15
@@ -31,6 +32,7 @@ class KeyedSettings:
             "max_pending_records",
             "max_pending_bytes",
             "max_pending_per_key",
+            "max_batch_per_key",
             "max_uncommitted_per_partition",
         ):
             if not isinstance(getattr(self, name), int) or getattr(self, name) < 1:
@@ -51,6 +53,7 @@ class KeyedSettings:
             "max_pending_records": "PROCESSING_MAX_PENDING_RECORDS",
             "max_pending_bytes": "PROCESSING_MAX_PENDING_BYTES",
             "max_pending_per_key": "PROCESSING_MAX_PENDING_PER_KEY",
+            "max_batch_per_key": "PROCESSING_MAX_BATCH_PER_KEY",
             "max_uncommitted_per_partition": "PROCESSING_MAX_UNCOMMITTED_PER_PARTITION",
         }
         defaults = cls()
@@ -85,6 +88,10 @@ class KafkaSettings:
     poll_interval_seconds: float = 0.1
     max_payload_bytes: int = 262144
     producer_git_sha: str = ""
+    linger_ms: int = 2
+    compression_type: str = "lz4"
+    commit_batch_size: int = 16
+    commit_max_wait_ms: int = 50
 
     def __post_init__(self):
         if not self.bootstrap_servers or not self.client_id:
@@ -107,6 +114,14 @@ class KafkaSettings:
             raise ConfigurationError("Poll interval must be between 0.01 and 1 second")
         if not 1024 <= self.max_payload_bytes <= 524288:
             raise ConfigurationError("Payload limit must be between 1 KiB and 512 KiB")
+        if not 0 <= self.linger_ms <= 5000:
+            raise ConfigurationError("Kafka linger.ms must be between 0 and 5000 ms")
+        if self.compression_type not in {"none", "gzip", "snappy", "lz4", "zstd"}:
+            raise ConfigurationError("Unsupported Kafka compression type")
+        if not 1 <= self.commit_batch_size <= 512:
+            raise ConfigurationError("Kafka commit batch size must be between 1 and 512")
+        if not 0 <= self.commit_max_wait_ms <= 5000:
+            raise ConfigurationError("Kafka commit max wait must be between 0 and 5000 ms")
         if self.group_prefix and not self.local_mode:
             raise ConfigurationError(
                 "Custom group prefixes are local-only; production uses topic ACLs"
@@ -140,6 +155,10 @@ class KafkaSettings:
             poll_interval_seconds=float(env.get("KAFKA_POLL_INTERVAL_SECONDS", "0.1")),
             max_payload_bytes=int(env.get("KAFKA_MAX_PAYLOAD_BYTES", "262144")),
             producer_git_sha=env.get("PRODUCER_GIT_SHA", ""),
+            linger_ms=int(env.get("KAFKA_LINGER_MS", "2")),
+            compression_type=env.get("KAFKA_COMPRESSION_TYPE", "lz4"),
+            commit_batch_size=int(env.get("KAFKA_COMMIT_BATCH_SIZE", "16")),
+            commit_max_wait_ms=int(env.get("KAFKA_COMMIT_MAX_WAIT_MS", "50")),
         )
 
     def client_config(self) -> dict:
@@ -169,7 +188,8 @@ class KafkaSettings:
             "max.in.flight.requests.per.connection": 5,
             "message.timeout.ms": self.delivery_timeout_ms,
             "request.timeout.ms": min(self.delivery_timeout_ms, 5000),
-            "linger.ms": 0,
+            "linger.ms": self.linger_ms,
+            "compression.type": self.compression_type,
         }
 
     def consumer_config(self, group_id: str) -> dict:

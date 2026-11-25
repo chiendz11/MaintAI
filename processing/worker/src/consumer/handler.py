@@ -43,9 +43,11 @@ class ProcessingHandler:
         registry_cache_seconds=0,
         contracts=None,
         validation_observer=None,
+        predict_batch=None,
     ):
         self.connection_factory, self.consumer_group = connection_factory, consumer_group
         self.validator, self.registry_lookup, self.predict = validator, registry_lookup, predict
+        self.predict_batch = predict_batch
         self.identity_resolver, self.policy = identity_resolver, policy
         self.producer_git_sha = producer_git_sha
         self.validation_observer = validation_observer
@@ -224,6 +226,95 @@ class ProcessingHandler:
         context.check()
         return prepared
 
+    def _outcome_from_prediction_attempt(self, factory, event, result):
+        risk, inference_ms = None, None
+        if result.response is None:
+            if not result.failure_code or result.attempts not in (1, 2):
+                raise ValueError("ML attempt is missing its typed failure")
+            outcome = factory.unavailable(result.failure_code, result.attempts)
+        elif result.response.event_id != event.message_id:
+            outcome = factory.unavailable("ML_INVALID_RESPONSE", result.attempts)
+        else:
+            identity = self.identity_resolver(result.response)
+            outcome, risk = completed_outcome(
+                factory, result.response, verified_identity=identity, policy=self.policy
+            )
+            inference_ms = result.response.inference_ms
+        return PreparedOutcome(
+            outcome, risk, inference_ms, should_alert=bool(risk and risk.should_create_alert)
+        )
+
+    def prepare_batch(self, items, context):
+        context.check()
+        if not items:
+            return []
+        if len(items) == 1:
+            event, record = items[0]
+            return [self.prepare(event, record, context)]
+        prepared: list[PreparedOutcome | None] = [None] * len(items)
+        with self.connection_factory() as connection:
+            for idx, (event, record) in enumerate(items):
+                prepared[idx] = self._terminal(connection, event, record)
+
+        registry_cache = {}
+        ml_indices: list[int] = []
+        ml_requests: list[dict] = []
+        ml_factories = []
+        for idx, (event, record) in enumerate(items):
+            if prepared[idx] is not None:
+                continue
+            factory = self._factory(event, record)
+            dq = self.validator.validate(event.payload["features"])
+            if dq.status == "INVALID":
+                self._observe_validation("INVALID", tuple(issue.code for issue in dq.errors))
+                outcome = factory.invalid(
+                    [{"field": issue.field[:256], "code": issue.code} for issue in dq.errors[:128]]
+                )
+                prepared[idx] = PreparedOutcome(outcome)
+                continue
+            machine_id = event.key
+            if machine_id not in registry_cache:
+                registry_cache[machine_id] = self.registry_lookup(
+                    machine_id, correlation_id=event.payload["correlation_id"]
+                )
+            machine = registry_cache[machine_id]
+            if machine.status == "UNAVAILABLE":
+                self._observe_validation("UNKNOWN", ("REGISTRY_UNAVAILABLE",))
+                raise RegistryUnavailable("Business registry could not validate the machine")
+            if machine.status == "NOT_FOUND":
+                self._observe_validation("INVALID", ("MACHINE_NOT_FOUND",))
+                outcome = factory.invalid([{"field": "machine_id", "code": "MACHINE_NOT_FOUND"}])
+                prepared[idx] = PreparedOutcome(outcome)
+                continue
+            if machine.status != "FOUND":
+                self._observe_validation("UNKNOWN", ("REGISTRY_UNAVAILABLE",))
+                raise RegistryUnavailable("Registry returned an unknown lookup state")
+            self._observe_validation("VALID")
+            ml_indices.append(idx)
+            ml_factories.append((factory, event))
+            ml_requests.append(
+                {
+                    "event_id": event.message_id,
+                    "machine_id": machine_id,
+                    "features": dq.normalized_features,
+                    "correlation_id": event.payload["correlation_id"],
+                }
+            )
+
+        if ml_requests:
+            if self.predict_batch is not None and len(ml_requests) > 1:
+                results = list(self.predict_batch(ml_requests))
+            else:
+                results = [self.predict(**req) for req in ml_requests]
+            if len(results) != len(ml_requests):
+                raise ValueError("Batch inference result length mismatch")
+            for idx, (factory, event), result in zip(
+                ml_indices, ml_factories, results, strict=True
+            ):
+                prepared[idx] = self._outcome_from_prediction_attempt(factory, event, result)
+        context.check()
+        return prepared
+
     def persist_prepared(self, connection, event, record, outbox, prepared):
         inserted = connection.execute(
             """INSERT INTO processing_source_cursor
@@ -294,6 +385,7 @@ class KeyedProcessingHandler(KeyedTransactionalHandler):
             application.consumer_group,
             application.prepare,
             application.persist_prepared,
+            prepare_batch=application.prepare_batch,
             contracts=application.contracts,
         )
 
@@ -353,3 +445,66 @@ class KeyedProcessingHandler(KeyedTransactionalHandler):
         if self.on_receipt:
             observe_safely(lambda: self.on_receipt(event, record))
         return receipt
+
+    def handle_batch(self, items, context):
+        if not items:
+            return []
+        if len(items) == 1:
+            return [self.handle(items[0][0], items[0][1], context)]
+        try:
+            token = context.assignment
+            for event, record in items:
+                if (
+                    event.topic != "sensor.readings"
+                    or event.wire_bytes != record.value
+                    or event.topic != record.topic
+                    or record.key != event.key.encode()
+                    or (token.group, token.topic, token.partition)
+                    != (self.consumer_group, record.topic, record.partition)
+                ):
+                    raise IdentityConflict("Work/fence coordinates do not identify this reading")
+            receipts = []
+            with self.connection_factory() as connection, connection.transaction():
+                self._fence(connection, context)
+                all_replayed = True
+                for event, record in items:
+                    terminal = self.application._terminal(connection, event, record)
+                    if terminal is None:
+                        if self._duplicate(connection, event):
+                            raise IdentityConflict("SDK receipt has no owner terminal result")
+                        all_replayed = False
+                        break
+                    if not self._duplicate(connection, event):
+                        connection.execute(
+                            """INSERT INTO maintai_kafka_inbox
+                            (consumer_group,topic,message_id,identity_sha256,source_partition,source_offset,schema_version)
+                            VALUES (%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING""",
+                            (
+                                self.consumer_group,
+                                event.topic,
+                                event.message_id,
+                                event.identity_sha256,
+                                record.partition,
+                                record.offset,
+                                event.schema_version,
+                            ),
+                        )
+                        self._duplicate(connection, event)
+                    receipts.append(DurableReceipt.for_record(record))
+                context.check()
+            if not all_replayed:
+                receipts = super().handle_batch(items, context)
+        except Exception as exc:
+            if isinstance(exc, IdentityConflict):
+                with self.application.connection_factory() as connection, connection.transaction():
+                    for event, record in items:
+                        self.application.repository.record_conflict(
+                            connection, event, record, consumer_group=self.consumer_group
+                        )
+            if self.on_error:
+                observe_safely(self.on_error)
+            raise
+        if self.on_receipt:
+            for event, record in items:
+                observe_safely(lambda event=event, record=record: self.on_receipt(event, record))
+        return receipts
