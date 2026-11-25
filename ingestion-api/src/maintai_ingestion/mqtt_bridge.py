@@ -80,7 +80,7 @@ class MqttKafkaBridge:
         if self._stop.is_set():
             return
         # Exclude LWT/birth status messages if subscribed broadly.
-        if not message.topic.endswith("/readings"):
+        if not message.topic.endswith(("/telemetry", "/readings")):
             if message.qos > 0:
                 self.client.ack(message.mid, message.qos)
             return

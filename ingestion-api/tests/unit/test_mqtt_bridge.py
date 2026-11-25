@@ -72,7 +72,7 @@ def mqtt_settings():
             "INGESTION_MQTT_ENABLED": "true",
             "INGESTION_MQTT_HOST": "mosquitto",
             "INGESTION_MQTT_PORT": "1883",
-            "INGESTION_MQTT_TOPIC_FILTER": "maintai/v1/site/local/machines/+/readings",
+            "INGESTION_MQTT_TOPIC_FILTER": "maintai/v1/site/local/machines/+/telemetry",
             "INGESTION_MQTT_BATCH_SIZE": "16",
             "INGESTION_MQTT_BATCH_WAIT_MS": "5",
         }
@@ -123,6 +123,19 @@ def test_mqtt_bridge_acks_only_after_kafka_durability():
     bridge._on_connect(fake_mqtt, None, None, 0)
     assert bridge.connected
     assert fake_mqtt.subscribed == [(settings.mqtt_topic_filter, 1)]
+
+    def msg(mid, topic, payload):
+        return type("Msg", (), {"mid": mid, "qos": 1, "topic": topic, "payload": payload})()
+
+    bridge._on_message(
+        fake_mqtt, None, msg(8, "maintai/v1/site/local/machines/controller/status", b"ONLINE")
+    )
+    bridge._on_message(
+        fake_mqtt, None, msg(9, "maintai/v1/site/local/machines/M-001/telemetry", raw_valid)
+    )
+    assert bridge.flush_once() == 1
+    assert fake_mqtt.acks == [(8, 1), (9, 1)]
+    fake_mqtt.acks.clear()
 
     acked = bridge.process_messages(
         [

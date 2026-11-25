@@ -79,7 +79,7 @@ class AppSettings:
     mqtt_enabled: bool = False
     mqtt_host: str = "mosquitto"
     mqtt_port: int = 1883
-    mqtt_topic_filter: str = "maintai/v1/site/+/machines/+/readings"
+    mqtt_topic_filter: str = "maintai/v1/site/+/machines/+/telemetry"
     mqtt_client_id: str = "maintai-ingestion-mqtt-bridge"
     mqtt_batch_size: int = 32
     mqtt_batch_wait_ms: int = 5
@@ -163,7 +163,7 @@ class AppSettings:
             mqtt_host = env.get("INGESTION_MQTT_HOST", "mosquitto").strip()
             mqtt_port = int(env.get("INGESTION_MQTT_PORT", "1883"))
             mqtt_topic_filter = env.get(
-                "INGESTION_MQTT_TOPIC_FILTER", "maintai/v1/site/+/machines/+/readings"
+                "INGESTION_MQTT_TOPIC_FILTER", "maintai/v1/site/+/machines/+/telemetry"
             ).strip()
             mqtt_client_id = env.get(
                 "INGESTION_MQTT_CLIENT_ID", "maintai-ingestion-mqtt-bridge"
