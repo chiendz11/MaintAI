@@ -316,3 +316,12 @@ full app callbacks/images/deployment/load vẫn cần tích hợp. Xem
 [implementation report](../reports/PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md), Plan §K
 và readiness §19. Initial legacy inbox cần reviewed cursor bootstrap riêng;
 activation bản này fail closed, không tự backfill.
+
+## 11. Cập nhật triển khai `2026-11-25` — Ordered Per-Key Micro-Batching (`per_key = 1`)
+
+Đã tích hợp đầy đủ vào `processing/`, `messaging/` và GitOps overlay `environments/local/apps/` (xem [HIGH_THROUGHPUT_KSERVE_MQTT_ARCHITECTURE_REPORT.md](../reports/HIGH_THROUGHPUT_KSERVE_MQTT_ARCHITECTURE_REPORT.md)):
+
+- **Giữ nguyên `per_key = 1` FIFO:** Worker tuyệt đối không chạy song song nhiều event của cùng `machine_id`; nhánh thử nghiệm Hybrid out-of-order (`AlertResequencer`) không được áp dụng và đã lưu trữ ở tag `archive/hybrid-ordering-benchmark` (`67a748a`).
+- **Per-Key Micro-Batching (`PROCESSING_MAX_BATCH_PER_KEY=16`):** Khi một `machine_id` có backlog nhiều reading trong partition (ví dụ lúc recovery), scheduler gom tối đa `16` reading liên tiếp của đúng máy đó thành một micro-batch, chạy DQ tuần tự, gọi `InferenceClient.predict_batch()` (`POST /api/v1/predict/batch` với fallback `404` tự động về `POST /api/v1/predict`) cho các item `VALID`, áp risk policy, commit một transaction DB + outbox và giải phóng safe completed prefix cho `OffsetCoordinator`.
+- **Pipelined `OrderedOutboxRelay`:** Giữ nguyên mode `ordered` (head-only theo `(topic, machine_id)`), kết hợp `KafkaPublisher.publish_batch()` với `KAFKA_LINGER_MS=2` và `KAFKA_COMPRESSION_TYPE=lz4`.
+- **Business Consumer:** Tiếp tục chạy serial `ConsumerRunner` (`64/32`) và chỉ tối ưu commit batch đồng bộ (`KAFKA_COMMIT_BATCH_SIZE=16`, `KAFKA_COMMIT_MAX_WAIT_MS=50`), không bật keyed mode cho Business/Storage.

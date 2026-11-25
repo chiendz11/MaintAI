@@ -1,3 +1,5 @@
+> **Implementation update 25/11/2026 (`MaintAI@7f79d8d`, `MaintAI-gitops@16c70f6`):** Trên môi trường local `k3d`, đường dẫn chính đã bổ sung **Mosquitto 2.1.4 + `ingestion-mqtt-bridge` (1 replica, `Recreate`, không `$share`)** song song HTTP `ingestion-api`, **KServe `v0.18.1` + Knative Serving `v1.21.3` + Kourier `v1.21.1` (KPA `min=2/max=6`, `UVICORN_WORKERS=1`, `/api/v1/predict/batch`)** cho `ml-service-champion`, **Per-Key Micro-Batching (`PROCESSING_MAX_BATCH_PER_KEY=16`, `per_key=1`)** và **Commit Batching (`KAFKA_COMMIT_BATCH_SIZE=16`)**. Chi tiết số đo xem [HIGH_THROUGHPUT_KSERVE_MQTT_ARCHITECTURE_REPORT.md](../reports/HIGH_THROUGHPUT_KSERVE_MQTT_ARCHITECTURE_REPORT.md).
+
 > **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
 > durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
 > có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
@@ -29,15 +31,16 @@ ghi metadata bằng pool quyền hẹp. Không processed archive hoặc cleanup 
 |---|---|---|---|---|
 | Business React Frontend | Deployment + Service `frontend`, image/config riêng | Lưu lượng người dùng | Business REST/SSE, không có DB credentials | Người1, release độc lập Simulator |
 | Simulator UI riêng | Deployment + Service `simulator-ui`, React/client/demo + Dockerfile riêng; chưa build/deploy | Người vận hành demo | Sensor Control API0.3.0, provider HTTP đã test local | Người4, release độc lập Business và Sensor backend |
-| Simulator + Control | Deployment + internal Service | Kịch bản demo | SQLite/WAL state/spool; persistent local volume, Recreate | Ban đầu 1 replica, không phải PLC |
-| Ingestion API | Deployment + Service | HTTP RPS, ACK p95 | Kafka producer | Auth, envelope validation, accepted/rejected |
-| Processing Worker | Deployment | Kafka lag/age, keyed queue, ML/DB throughput | Ghi `processing_db`, gọi ML | Target PROC-ORDER-01: per-machine FIFO + bounded concurrency + offset coordinator |
+| Simulator + Control | Deployment + internal Service | Kịch bản demo | SQLite/WAL state/spool v2 (`100k`/`128 MiB`), `SIM_TRANSPORT_MODE=mqtt\|http`, `Recreate` | Ban đầu 1 replica, không phải PLC |
+| Mosquitto Broker | Deployment (`Recreate`) + Service + PVC (`sync-wave: '-30'`) | MQTT QoS 1 broker (local) | Persistent `/mosquitto/data/` (1Gi), `allow-sensor-ingestion-to-mosquitto` | Tách lớp edge transport, không thay Kafka |
+| Ingestion API + MQTT Bridge | 2 Deployments (`ingestion-api` + `ingestion-mqtt-bridge`, 1 replica `Recreate`) | HTTP RPS / MQTT ingress, ACK p95 | Kafka `publish_batch` + `lz4` + `KAFKA_LINGER_MS=2` | Auth, envelope validation, non-`$share` QoS 1 bridge ACK sau Kafka |
+| Processing Worker | Deployment | Kafka lag/age, keyed queue, ML/DB throughput | Ghi `processing_db`, gọi `/api/v1/predict/batch` | `PROC-ORDER-01`: `per_key=1` FIFO + micro-batching (`<=16`) + safe-prefix offset coordinator |
 | Processing Read API | **Deployment + Service riêng** | History RPS/p95, export backlog | SELECT dữ liệu gốc + metadata RW quyền hẹp; raw S3 read/exports write | Snapshot/export runner cùng runtime; **không** cần history_db |
-| Processing Outbox Relay | Deployment | Pending/blocked-key age | Quyền outbox có giới hạn + Kafka producer | Target ordered dispatch theo topic/máy; SDK ordered mode đã có; full runtime chưa Ready |
+| Processing Outbox Relay | Deployment | Pending/blocked-key age | Quyền outbox có giới hạn + Kafka producer (`publish_batch`, `lz4`) | Ordered dispatch theo `(topic,machine_id)` |
 | Storage Consumer | Deployment | Archive/catalog lag, S3 throughput | Kafka consume, S3 write | Raw accepted/rejected + catalog/coverage M6; outcome archive không bật |
-| Business Consumer | Deployment | Projection lag | Kafka + ghi `business_db` | Ba handlers, không infer ML |
+| Business Consumer | Deployment | Projection lag | Kafka (`KAFKA_COMMIT_BATCH_SIZE=16`) + ghi `business_db` | Ba handlers với serial bounded prefetch `64/32`, không infer ML |
 | Business API | Deployment + Service | REST RPS/SSE clients | `business_db` với quyền theo nhiệm vụ | Alert, Feedback, SSE, facades |
-| ML inference | Deployment + internal Service | Inference QPS/p95 | Model artifacts được pin | Không quyết định Alert |
+| ML inference | KServe `InferenceService` (Knative KPA `min=2/max=6`, `UVICORN_WORKERS=1`) + `ml-service-mirror` (5% shadow) | Concurrency/RPS (`scaleTarget=4`), p95 | Model artifacts được pin, zero-pandas fast path | `/api/v1/predict/batch` & `/api/v1/predict`; không quyết định Alert |
 | RAG API | Deployment + internal Service | Retrieval/LLM QPS | `knowledge_db`, S3 manuals | Lỗi RAG không làm chặn Alert |
 | MLflow Server | Deployment + Service | Train/tracking/registry | `mlflow_db` và S3 artifacts | Image source `ml-service/mlflow/`; deployment/config GitOps |
 | Drift Worker | CronJob | Theo lịch và data window | `drift_db`, S3 hoặc Read API | Không nằm trên inference critical path |
@@ -80,15 +83,19 @@ flowchart LR
     SIM[Sensor Simulator · Deployment / Control API]
   end
   subgraph CLUSTER[Kubernetes: namespace MaintAI]
+    MOSQ[Mosquitto · Deployment + PVC]
+    BR[ingestion-mqtt-bridge · 1 Deployment Recreate]
     ING[ingestion-api · Deployment]
     K[(Kafka · topics)]
-    PW[processing-worker · keyed scheduler + offset coordinator]
+    PW[processing-worker · keyed FIFO + micro-batch]
     PR[processing-read-api · Deployment]
     OR[processing-outbox-relay · ordered per topic/machine]
     ST[storage-consumer · Deployment]
-    BC[business-consumer · Deployment]
+    BC[business-consumer · commit batch]
     BA[business-api · Deployment + SSE]
-    ML[ml-service · Deployment]
+    MIR[ml-service-mirror · Nginx 5% shadow]
+    ML[ml-service-champion · KServe + Knative KPA]
+    MS[ml-service-shadow · Deployment]
     RG[rag-service · Deployment]
     DW[drift-worker · CronJob]
     TJ[training · Job]
@@ -103,12 +110,17 @@ flowchart LR
     S[(S3 / MinIO)]
   end
   SUI -->|Control HTTP có auth| SIM
-  SIM -->|HTTP| ING
+  SIM -->|MQTT QoS 1 + Spool v2| MOSQ
+  MOSQ -->|non-$share QoS 1| BR
+  SIM -.->|HTTP fallback| ING
+  BR -->|publish_batch + lz4| K
   ING -->|sensor.readings / sensor.rejected| K
   K -->|Nhóm Processing| PW
   K -->|Nhóm Archive| ST
   K -->|Nhóm Business| BC
-  PW -->|HTTP predict| ML
+  PW -->|POST /predict/batch| MIR
+  MIR -->|Kourier internal| ML
+  MIR -.->|5% mirror| MS
   PW -->|Transaction + Outbox| P
   P --> OR -->|inference.results / alert.signals| K
   ST -->|Lưu trữ bất biến| S
@@ -128,6 +140,7 @@ flowchart LR
   MF --> M
   MF --> S
   ML -->|Tải artifact đã pin khi startup| S
+  MS -->|Shadow bundle| S
 ```
 
 Đây là **sơ đồ phụ thuộc logic của các Deployments**. Kafka/PostgreSQL/S3 có thể đặt trong cluster demo hoặc dùng dịch vụ managed/external; không suy ra tính sẵn sàng cao (HA). `processing-read-api` là Deployment riêng; tài liệu nguồn mô tả Compose entrypoint, nhưng app repo hiện vẫn skeleton và chưa xác minh startup command. `processing-worker` không phục vụ HTTP history.

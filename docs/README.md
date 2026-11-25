@@ -1,6 +1,6 @@
 # MaintAI Docs — Hệ Thống Tài Liệu Kiến Trúc & Vận Hành (Target v1.4)
 
-Cập nhật: **2026-11-04**. Toàn bộ tài liệu kỹ thuật của hệ thống **MaintAI (Predictive Maintenance Platform)** được chuẩn hóa và tổ chức thành **5 Phân Hệ Logic** nhằm phục vụ đa dạng đối tượng từ nhà phát triển, kỹ sư AI, kiến trúc sư đến kỹ sư DevOps/SRE.
+Cập nhật: **2026-11-25**. Toàn bộ tài liệu kỹ thuật của hệ thống **MaintAI (Predictive Maintenance Platform)** được chuẩn hóa và tổ chức thành **5 Phân Hệ Logic** nhằm phục vụ đa dạng đối tượng từ nhà phát triển, kỹ sư AI, kiến trúc sư đến kỹ sư DevOps/SRE.
 
 ---
 
@@ -12,7 +12,7 @@ flowchart TD
 
     subgraph Tier1 ["Phân Hệ 1: Vận Hành & Khởi Động Nhanh (Operations & Quickstart Hub)"]
         D1["DEVOPS_FRAMEWORK_AND_OPERATIONS_GUIDE.md\n(Khung DevOps 4-Tier, CI/CD Rollout Demo & Sổ tay Vận hành)"]
-        D2["LOCAL_DEMO_GUIDE.md\n(Sổ tay k3d Demo 1-Click Terraform, Vòng đời Cụm & LOCAL-K3D-01)"]
+        D2["LOCAL_DEMO_GUIDE.md\n(Sổ tay k3d Demo, Mosquitto/KServe Local & LOCAL-K3D-01)"]
         D3["LOCAL_DEMO_PREPARATION.md\n(LOCAL-DEMO-01: Model Identity, Groq Secret & RAG Knowledge Seed)"]
     end
 
@@ -25,14 +25,14 @@ flowchart TD
 
     subgraph Tier3 ["Phân Hệ 3: Kiến Trúc Cốt Lõi & Hợp Đồng Hệ Thống (Core Architecture & System Contracts v1.4)"]
         C1["MaintAI_System_Contracts_v1_4_DEPLOYMENT_PROVENANCE.md\n(Nguồn chuẩn tối cao cho Schemas, Enums, DB Roles)"]
-        C2["DEPLOYMENT_ARCHITECTURE.md\n(Kiến trúc triển khai K8s, phân vùng DB & Kafka Topics)"]
+        C2["DEPLOYMENT_ARCHITECTURE.md\n(Kiến trúc K8s, Mosquitto/Bridge, KServe KPA & Kafka Topics)"]
         C3["RUNTIME_DATAFLOW.md & VERSIONING_AND_PROVENANCE.md\n(Luồng dữ liệu thời gian thực & Quản lý xuất xứ)"]
         C4["api-contract-decisions.md\n(Quyết định API HTTP baseline v1.3.2)"]
     end
 
     subgraph Tier4 ["Phân Hệ 4: Hướng Dẫn Kỹ Thuật Từng Module (Subsystem Deep-Dives)"]
-        M1["PROCESSING_CONCURRENCY_AND_ORDERING.md\n(PROC-ORDER-01: Xử lý song song theo máy & Ordered Outbox)"]
-        M2["KAFKA_DEVELOPMENT_GUIDE.md\n(Sổ tay phát triển Kafka SDK & Durability)"]
+        M1["PROCESSING_CONCURRENCY_AND_ORDERING.md\n(PROC-ORDER-01: Keyed FIFO, Per-Key Micro-Batching & Ordered Outbox)"]
+        M2["KAFKA_DEVELOPMENT_GUIDE.md\n(Kafka SDK, Pipelining lz4, MQTT Bridge & Commit Batching)"]
         M3["OBSERVABILITY_IMPLEMENTATION.md & MLFLOW_INTEGRATION_GUIDE.md\n(OBS-01 Metrics & MLFLOW-01 Model Tracking)"]
         M4["RAG_GROQ_PROVIDER.md & RISK_POLICY_OWNERSHIP.md\n(Tích hợp Groq API & Quản lý Chính sách Rủi ro)"]
         M5["OUTCOME_V1_4_MIGRATION.md & IMPLEMENTATION_PLAN.md\n(Chuẩn hóa Outcome v1.4 & Kế hoạch triển khai PR)"]
@@ -42,7 +42,8 @@ flowchart TD
         R1["M5_IMPLEMENTATION_REPORT.md (Alert Lifecycle & Audit)"]
         R2["M6_IMPLEMENTATION_REPORT.md & M6_HISTORY_ARCHITECTURE_DECISION.md\n(History Snapshots & Raw Archive Handoff)"]
         R3["STORAGE_CATALOG_IMPLEMENTATION_REPORT.md & PROCESSING_ORDERING_IMPLEMENTATION_REPORT.md"]
-        R4["legacy-artifact-audit.md, recovery-jobs-operations.md & implementation-readiness.md"]
+        R4["HIGH_THROUGHPUT_KSERVE_MQTT_ARCHITECTURE_REPORT.md\n(KServe KPA, MQTT QoS 1, Spool v2, Micro-Batching & Kiểm chứng k3d)"]
+        R5["legacy-artifact-audit.md, recovery-jobs-operations.md & implementation-readiness.md"]
     end
 
     Hub --> Tier1
@@ -76,7 +77,7 @@ Các tài liệu hướng dẫn thực hành triển khai và chạy hệ thốn
 
 | Tài liệu | Vai trò cốt lõi | Đối tượng |
 | :--- | :--- | :--- |
-| **[LOCAL_DEMO_GUIDE.md](operations/LOCAL_DEMO_GUIDE.md)** | **Sổ tay thực chiến khởi động, vòng đời cụm `k3d` và đặc tả `LOCAL-K3D-01`** bằng Terraform (`make tf-apply`), Argo CD PreSync Hooks và E2E Walkthrough. | Tất cả thành viên |
+| **[LOCAL_DEMO_GUIDE.md](operations/LOCAL_DEMO_GUIDE.md)** | **Sổ tay thực chiến khởi động, vòng đời cụm `k3d` và đặc tả `LOCAL-K3D-01`** bằng Terraform (`make tf-apply`), Mosquitto MQTT + KServe/Knative KPA local, Argo CD PreSync Hooks và E2E Walkthrough. | Tất cả thành viên |
 | **[DEVOPS_FRAMEWORK_AND_OPERATIONS_GUIDE.md](operations/DEVOPS_FRAMEWORK_AND_OPERATIONS_GUIDE.md)** | **Khung chuẩn hóa DevOps 4-tier toàn diện** (`MaintAI`, `MaintAI-gitops`, `Maint-infrastructure`, `MaintAI-system-tests`), LocalStack + ESO, Ingress ALB, HPA, Observability và kịch bản Rolling Update/Rollback CI/CD. | DevOps, SRE, Platform |
 | **[LOCAL_DEMO_PREPARATION.md](operations/LOCAL_DEMO_PREPARATION.md)** | **Quy trình `LOCAL-DEMO-01`** chuẩn bị Model Identity (không MLflow), Groq Secret, seed tri thức pgvector/MiniLM và bounded prefetch SDK 0.3.1. | AI Engineer, Platform |
 
@@ -115,8 +116,8 @@ Tài liệu hướng dẫn triển khai chi tiết cho từng thành phần chuy
 
 | Tài liệu | Vai trò cốt lõi | Đối tượng |
 | :--- | :--- | :--- |
-| **[PROC-ORDER-01 — Concurrency & Ordering](subsystems/PROCESSING_CONCURRENCY_AND_ORDERING.md)** | Thiết kế xử lý song song theo máy (Per-Machine Concurrency), bảo toàn thứ tự FIFO nghiêm ngặt, cơ chế Head-retry blocking và Ordered Outbox Relay. | Người 1 (Backend/Processing) |
-| **[Kafka Development Guide](subsystems/KAFKA_DEVELOPMENT_GUIDE.md)** | Hướng dẫn phát triển với thư viện `maintai_messaging` SDK, contracts Kafka, inbox/outbox, idempotency và xử lý lỗi. | Người 1, Người 4 |
+| **[PROC-ORDER-01 — Concurrency & Ordering](subsystems/PROCESSING_CONCURRENCY_AND_ORDERING.md)** | Thiết kế xử lý song song theo máy (`per_key=1` FIFO nghiêm ngặt), Per-Key Micro-Batching (`PROCESSING_MAX_BATCH_PER_KEY=16`), safe-prefix commit và Ordered Outbox Relay. | Người 1 (Backend/Processing) |
+| **[Kafka Development Guide](subsystems/KAFKA_DEVELOPMENT_GUIDE.md)** | Hướng dẫn `maintai_messaging` SDK, producer `publish_batch` (`KAFKA_LINGER_MS`, `lz4`), Single-Pod MQTT→Kafka Bridge và synchronous commit batching. | Người 1, Người 4 |
 | **[OBS-01 — Metrics Implementation](subsystems/OBSERVABILITY_IMPLEMENTATION.md)** | Danh mục chuẩn hóa tên metrics, labels, types, units, buckets và hướng dẫn cào số liệu cho Prometheus/Grafana. | Người 4, SRE |
 | **[MLFLOW-01 — Training Integration](subsystems/MLFLOW_INTEGRATION_GUIDE.md)** | Tích hợp vòng đời huấn luyện mô hình ML, logging metrics, model registry và quy chuẩn đóng gói artifacts. | Người 2 (ML Engineer) |
 | **[RAG-GROQ-01 — Tích hợp Groq API](subsystems/RAG_GROQ_PROVIDER.md)** | Tích hợp Groq LLM API cho `rag-service`, semantic search với pgvector và trích dẫn tài liệu bảo trì. | Người 3 (RAG Engineer) |
@@ -143,6 +144,7 @@ Hồ sơ bằng chứng kiểm thử và lịch sử tiến hóa kiến trúc:
 | **[Storage Catalog Report](reports/STORAGE_CATALOG_IMPLEMENTATION_REPORT.md)** | Báo cáo kiểm chứng triển khai Storage Consumer và MinIO catalog. |
 | **[Sensor Implementation Report](reports/SENSOR_IMPLEMENTATION_REPORT.md)** | Báo cáo kiểm chứng Sensor v0.3.0, SQLite spooling và 5 Control APIs. |
 | **[Local Baseline 50 Machines Report](reports/LOCAL_BASELINE_50_MACHINES_REPORT.md)** | Cấu hình cụm `k3d` và số đo thực nghiệm cho baseline vận hành local `50` máy (`50 readings/s`, Interval + SSE Latency + ConnectionPool). |
+| **[High-Throughput KServe & MQTT Architecture](reports/HIGH_THROUGHPUT_KSERVE_MQTT_ARCHITECTURE_REPORT.md)** | Kiến trúc mới đã hợp nhất trên `main`: Mosquitto QoS 1, `ingestion-mqtt-bridge`, SQLite Spool v2, KServe `v0.18.1` + Knative KPA (`UVICORN_WORKERS=1`), Per-Key Micro-Batching (`<=16`), Commit Batching (`16`) và bằng chứng chạy live `50 msg/s` trên `k3d`. |
 | **[Tài liệu kiểm toán & Kế thừa](reports/legacy-artifact-audit.md)** | Hồ sơ kiểm toán các tài liệu cũ đã retire; tham chiếu [history-storage-contract.md](architecture/history-storage-contract.md), [recovery-jobs-operations.md](architecture/recovery-jobs-operations.md), [implementation-readiness.md](architecture/implementation-readiness.md) và [repository-layout.md](architecture/repository-layout.md). |
 
 ---

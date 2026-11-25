@@ -1,3 +1,5 @@
+> **Implementation update 25/11/2026 (`MaintAI@7f79d8d`, `MaintAI-gitops@16c70f6`):** Đã triển khai luồng **MQTT QoS 1 + SQLite Spool v2** (`sensor` → `mosquitto:1883` → `ingestion-mqtt-bridge` → Kafka `publish_batch` + `lz4`), **Per-Key Micro-Batching (`PROCESSING_MAX_BATCH_PER_KEY=16`)** gọi **`/api/v1/predict/batch`** (fallback `404` về `/api/v1/predict`) qua `ml-service-mirror` tới **KServe `ml-service-champion`**, và **Commit Batching (`KAFKA_COMMIT_BATCH_SIZE=16`)** ở `business-consumer`. Xem báo cáo [HIGH_THROUGHPUT_KSERVE_MQTT_ARCHITECTURE_REPORT.md](../reports/HIGH_THROUGHPUT_KSERVE_MQTT_ARCHITECTURE_REPORT.md).
+
 > **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
 > durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
 > có source/tests. Full app callbacks/probes/images/deployment còn cần tích hợp.
@@ -269,3 +271,11 @@ Baseline100 máy×1 reading/s. Hệ thống scale-ready qua các stage riêng, n
 Giữ cùng source ID cho mẫu latency, không cộng p95 các stage hay dùng202 làm kết
 quả inference. Đo/tối ưu bottleneck theo [Capacity §11](../design-basis/02_ASSUMPTIONS_AND_CAPACITY.md#11-scale-ready-tính-và-tối-ưu-latency-khi-x100),
 không đổi ordering/durability hoặc bỏ history/alerts để giảm thời gian giả.
+
+## 11. Đường dữ liệu nâng cấp: MQTT QoS 1, Spool v2, KServe Batch ML và Commit Batching (25/11/2026)
+
+Khi chạy chế độ local/production MQTT (`SIM_TRANSPORT_MODE=mqtt`), đường dẫn edge được tách qua broker QoS 1 trong khi vẫn giữ nguyên contract Kafka và HTTP `/api/v1/sensor-readings` song song:
+
+1. **Edge (`sensor` → `Mosquitto` → `ingestion-mqtt-bridge`):** `sensor` lưu reading vào SQLite Spool v2 (`schema_version=2`, quota `100k` / `128 MiB`, `spool_stats` $O(1)$, `spool_quarantine` tách `expired`/`rejected`) rồi gửi QoS 1 tới `maintai/v1/site/local/machines/{machine_id}/telemetry`; chỉ xóa khỏi `pending` sau `PUBACK`. Pod `ingestion-mqtt-bridge` duy nhất (`replicas: 1`, không dùng `$share/`) gom tối đa `32` tin / `5 ms`, validate envelope bằng `IngestionGateway`, gọi `KafkaPublisher.publish_batch()` (`KAFKA_LINGER_MS=2`, `lz4`) và chỉ `PUBACK` về Mosquitto sau khi Kafka ACK bền vững (trả `503/504` giữ un-ACKed để Mosquitto gửi lại).
+2. **Processing & KServe ML (`processing-worker` → `ml-service-mirror` → `Kourier` → `ml-service-champion`):** `processing-worker` giữ **Keyed FIFO (`per_key=1`)** nhưng đọc gom tối đa `PROCESSING_MAX_BATCH_PER_KEY=16` bản ghi liên tiếp của cùng máy trong mỗi lần gọi `InferenceClient.predict_batch()` (`POST /api/v1/predict/batch`, tự fallback `404` về `POST /api/v1/predict`). Traffic qua `ml-service-mirror` được định tuyến nội bộ qua Kourier tới KServe `ml-service-champion` (`UVICORN_WORKERS=1`, zero-pandas NumPy fast path, KPA `min=2/max=6`, `scaleTarget=4`) và mirror bất đồng bộ `5%` tới `ml-service-shadow`.
+3. **Downstream (`processing-outbox-relay` → `business-consumer`):** Relay gửi theo lô pipeline (`publish_batch`, `lz4`); `business-consumer` giữ `ConsumerRunner` tuần tự (`64/32`) và gộp commit đồng bộ theo ngưỡng `KAFKA_COMMIT_BATCH_SIZE=16` / `KAFKA_COMMIT_MAX_WAIT_MS=50` sau khi các giao dịch DB đã commit xong.
