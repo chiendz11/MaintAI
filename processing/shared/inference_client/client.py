@@ -137,18 +137,39 @@ class InferenceClient:
         if type(max_response_bytes) is not int or max_response_bytes <= 0:
             raise ValueError("ML response byte budget must be positive")
         self.http, self.validator = http, feature_validator
-        self.url = str(url).rstrip("/") + "/api/v1/predict"
+        base = str(url).rstrip("/")
+        self.url = base + "/api/v1/predict"
+        self.batch_url = base + "/api/v1/predict/batch"
         self.timeout_seconds, self.max_response_bytes = timeout_seconds, max_response_bytes
         self._headers = {"Authorization": f"Bearer {bearer_token}"} if bearer_token else {}
 
-    async def predict(
-        self,
-        *,
-        event_id: str,
-        machine_id: str,
-        features: dict,
-        correlation_id: str,
-    ) -> PredictionAttempt:
+    @staticmethod
+    def _error_code_for_status(status: int) -> str:
+        if status in {401, 403}:
+            return "ML_AUTH_FAILED"
+        if status in {400, 422}:
+            return "ML_REQUEST_REJECTED"
+        return "ML_HTTP_ERROR"
+
+    async def _read_bounded_body(self, response, max_bytes: int) -> bytes | None:
+        encoding = response.headers.get("Content-Encoding", "identity").strip().lower()
+        if encoding not in {"", "identity"}:
+            return None
+        raw = bytearray()
+        if response.is_stream_consumed:
+            if len(response.content) > max_bytes:
+                return None
+            raw.extend(response.content)
+            return bytes(raw)
+        async for chunk in response.aiter_raw(chunk_size=16384):
+            if len(raw) + len(chunk) > max_bytes:
+                return None
+            raw.extend(chunk)
+        return bytes(raw)
+
+    def _validate_single_input(
+        self, event_id: str, machine_id: str, features: dict, correlation_id: str
+    ) -> dict:
         if any(
             not isinstance(value, str) or not value
             for value in (event_id, machine_id, correlation_id)
@@ -159,7 +180,17 @@ class InferenceClient:
         dq = self.validator.validate(features)
         if dq.status != "VALID":
             raise ValueError("Only validated features may be sent to ML")
-        body = {"event_id": event_id, "machine_id": machine_id, "features": dq.normalized_features}
+        return {"event_id": event_id, "machine_id": machine_id, "features": dq.normalized_features}
+
+    async def predict(
+        self,
+        *,
+        event_id: str,
+        machine_id: str,
+        features: dict,
+        correlation_id: str,
+    ) -> PredictionAttempt:
+        body = self._validate_single_input(event_id, machine_id, features, correlation_id)
         headers = {
             **self._headers,
             "X-Correlation-ID": correlation_id,
@@ -183,34 +214,14 @@ class InferenceClient:
                                 if attempt == 1:
                                     continue
                                 return PredictionAttempt(None, "ML_UNAVAILABLE", attempt)
-                            code = (
-                                "ML_AUTH_FAILED"
-                                if status in {401, 403}
-                                else "ML_REQUEST_REJECTED"
-                                if status in {400, 422}
-                                else "ML_HTTP_ERROR"
+                            return PredictionAttempt(
+                                None, self._error_code_for_status(status), attempt
                             )
-                            return PredictionAttempt(None, code, attempt)
-                        # HTTPX's decoded iterator can allocate the entire expanded
-                        # transport chunk before yielding. Refuse compression and
-                        # consume raw identity bytes instead of decompressing them.
-                        encoding = (
-                            response.headers.get("Content-Encoding", "identity").strip().lower()
-                        )
-                        if encoding not in {"", "identity"}:
+                        raw = await self._read_bounded_body(response, self.max_response_bytes)
+                        if raw is None:
                             return PredictionAttempt(None, "ML_INVALID_RESPONSE", attempt)
-                        raw = bytearray()
-                        if response.is_stream_consumed:
-                            if len(response.content) > self.max_response_bytes:
-                                return PredictionAttempt(None, "ML_INVALID_RESPONSE", attempt)
-                            raw.extend(response.content)
-                        else:
-                            async for chunk in response.aiter_raw(chunk_size=16384):
-                                if len(raw) + len(chunk) > self.max_response_bytes:
-                                    return PredictionAttempt(None, "ML_INVALID_RESPONSE", attempt)
-                                raw.extend(chunk)
                         try:
-                            payload = strict_json(bytes(raw))
+                            payload = strict_json(raw)
                             prediction = PredictionResponse.model_validate_json(
                                 canonical_json(payload)
                             )
@@ -228,3 +239,106 @@ class InferenceClient:
             if attempt == 2:
                 return PredictionAttempt(None, code, attempt)
         raise AssertionError("Unreachable ML attempt state")
+
+    async def predict_batch(self, items: list[dict]) -> list[PredictionAttempt]:
+        if not items:
+            return []
+        if len(items) == 1:
+            item = items[0]
+            return [
+                await self.predict(
+                    event_id=item["event_id"],
+                    machine_id=item["machine_id"],
+                    features=item["features"],
+                    correlation_id=item["correlation_id"],
+                )
+            ]
+        results: list[PredictionAttempt] = []
+        for offset in range(0, len(items), 64):
+            chunk = items[offset : offset + 64]
+            results.extend(await self._predict_batch_chunk(chunk))
+        return results
+
+    async def _predict_batch_chunk(self, chunk: list[dict]) -> list[PredictionAttempt]:
+        bodies = [
+            self._validate_single_input(
+                item["event_id"], item["machine_id"], item["features"], item["correlation_id"]
+            )
+            for item in chunk
+        ]
+        headers = {
+            **self._headers,
+            "X-Correlation-ID": chunk[0]["correlation_id"],
+            "Accept": "application/json",
+            "Accept-Encoding": "identity",
+        }
+        max_bytes = self.max_response_bytes * len(chunk)
+        for attempt in (1, 2):
+            try:
+                async with asyncio.timeout(self.timeout_seconds):
+                    async with self.http.stream(
+                        "POST",
+                        self.batch_url,
+                        json={"items": bodies},
+                        headers=headers,
+                        timeout=self.timeout_seconds,
+                        follow_redirects=False,
+                    ) as response:
+                        status = response.status_code
+                        if status in {404, 405}:
+                            return [
+                                await self.predict(
+                                    event_id=item["event_id"],
+                                    machine_id=item["machine_id"],
+                                    features=item["features"],
+                                    correlation_id=item["correlation_id"],
+                                )
+                                for item in chunk
+                            ]
+                        if status != 200:
+                            if status in {500, 502, 503, 504}:
+                                if attempt == 1:
+                                    continue
+                                return [PredictionAttempt(None, "ML_UNAVAILABLE", attempt)] * len(
+                                    chunk
+                                )
+                            code = self._error_code_for_status(status)
+                            return [PredictionAttempt(None, code, attempt)] * len(chunk)
+                        raw = await self._read_bounded_body(response, max_bytes)
+                        if raw is None:
+                            return [PredictionAttempt(None, "ML_INVALID_RESPONSE", attempt)] * len(
+                                chunk
+                            )
+                        try:
+                            payload = strict_json(raw)
+                            raw_results = (
+                                payload.get("results") if isinstance(payload, dict) else None
+                            )
+                            if not isinstance(raw_results, list) or len(raw_results) != len(chunk):
+                                return [
+                                    PredictionAttempt(None, "ML_INVALID_RESPONSE", attempt)
+                                ] * len(chunk)
+                            attempts: list[PredictionAttempt] = []
+                            for req_item, res_item in zip(chunk, raw_results, strict=True):
+                                prediction = PredictionResponse.model_validate_json(
+                                    canonical_json(res_item)
+                                )
+                                if prediction.event_id != req_item["event_id"]:
+                                    return [
+                                        PredictionAttempt(None, "ML_INVALID_RESPONSE", attempt)
+                                    ] * len(chunk)
+                                attempts.append(PredictionAttempt(prediction, None, attempt))
+                            return attempts
+                        except (ContractViolation, ValidationError):
+                            return [PredictionAttempt(None, "ML_INVALID_RESPONSE", attempt)] * len(
+                                chunk
+                            )
+            except (TimeoutError, httpx.TimeoutException):
+                code = "ML_TIMEOUT"
+            except httpx.DecodingError:
+                return [PredictionAttempt(None, "ML_INVALID_RESPONSE", attempt)] * len(chunk)
+            except httpx.TransportError:
+                code = "ML_CONNECTION_FAILED"
+            if attempt == 2:
+                return [PredictionAttempt(None, code, attempt)] * len(chunk)
+        raise AssertionError("Unreachable ML batch attempt state")

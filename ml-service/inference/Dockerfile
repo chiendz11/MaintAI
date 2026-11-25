@@ -20,10 +20,14 @@ COPY ml-service/inference/api/local_baseline.py /app/local_baseline.py
 COPY ml-service/shared/preprocessing/feature_interactions.py /app/feature_interactions.py
 
 # Model được mount khi chạy, không đóng cứng vào image.
-ENV MODEL_DIR=/models/current
+ENV MODEL_DIR=/models/current \
+    OMP_NUM_THREADS=1 \
+    OPENBLAS_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1 \
+    UVICORN_WORKERS=1
 
 USER mluser
 
 EXPOSE 8001
 
-CMD ["python", "-m", "uvicorn", "local_baseline:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "1", "--no-proxy-headers"]
+CMD ["sh", "-c", "exec python -m uvicorn local_baseline:app --host 0.0.0.0 --port 8001 --workers \"${UVICORN_WORKERS:-1}\" --no-proxy-headers"]

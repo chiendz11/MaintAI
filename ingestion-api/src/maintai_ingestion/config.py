@@ -29,6 +29,7 @@ INTERNAL_HOSTS = {
     "minio",
     "rag-service",
     "ingestion-api",
+    "mosquitto",
 }
 
 
@@ -75,6 +76,16 @@ class AppSettings:
     body_timeout: float = 10
     probe_timeout: float = 1
     probe_interval: float = 5
+    mqtt_enabled: bool = False
+    mqtt_host: str = "mosquitto"
+    mqtt_port: int = 1883
+    mqtt_topic_filter: str = "maintai/v1/site/+/machines/+/readings"
+    mqtt_client_id: str = "maintai-ingestion-mqtt-bridge"
+    mqtt_batch_size: int = 32
+    mqtt_batch_wait_ms: int = 5
+    mqtt_max_inflight: int = 256
+    mqtt_source_subject: str = ""
+    mqtt_allowed_machines: frozenset[str] = frozenset()
 
     @classmethod
     def from_env(cls, env: Mapping[str, str]):
@@ -146,6 +157,45 @@ class AppSettings:
             audience = env.get("OIDC_AUDIENCE", "ingestion")
             if audience != "ingestion":
                 raise ValueError("Ingestion audience required")
+            mqtt_enabled = env.get("INGESTION_MQTT_ENABLED", "false").lower() == "true"
+            if env.get("INGESTION_MQTT_ENABLED", "false").lower() not in {"true", "false"}:
+                raise ValueError("Invalid MQTT toggle")
+            mqtt_host = env.get("INGESTION_MQTT_HOST", "mosquitto").strip()
+            mqtt_port = int(env.get("INGESTION_MQTT_PORT", "1883"))
+            mqtt_topic_filter = env.get(
+                "INGESTION_MQTT_TOPIC_FILTER", "maintai/v1/site/+/machines/+/readings"
+            ).strip()
+            mqtt_client_id = env.get(
+                "INGESTION_MQTT_CLIENT_ID", "maintai-ingestion-mqtt-bridge"
+            ).strip()
+            mqtt_batch_size = int(env.get("INGESTION_MQTT_BATCH_SIZE", "32"))
+            mqtt_batch_wait_ms = int(env.get("INGESTION_MQTT_BATCH_WAIT_MS", "5"))
+            mqtt_max_inflight = int(env.get("INGESTION_MQTT_MAX_INFLIGHT", "256"))
+            mqtt_source_subject = env.get("INGESTION_MQTT_SOURCE_SUBJECT", subject).strip()
+            raw_mqtt_machines = env.get("INGESTION_MQTT_ALLOWED_MACHINE_IDS", "")
+            mqtt_allowed_machines = (
+                frozenset(x.strip() for x in raw_mqtt_machines.split(",") if x.strip())
+                if raw_mqtt_machines.strip()
+                else machines
+            )
+            if mqtt_enabled:
+                if (
+                    not mqtt_host
+                    or not 1 <= mqtt_port <= 65535
+                    or not mqtt_topic_filter
+                    or mqtt_topic_filter.startswith("$share/")
+                    or not mqtt_client_id
+                    or not 1 <= mqtt_batch_size <= 256
+                    or not 0 <= mqtt_batch_wait_ms <= 5000
+                    or not 1 <= mqtt_max_inflight <= 4096
+                    or not mqtt_source_subject
+                    or not mqtt_allowed_machines
+                    or "*" in mqtt_allowed_machines
+                ):
+                    raise ValueError("Invalid MQTT bridge configuration")
+                if environment == "shared" and not loopback(mqtt_host):
+                    # Shared deployments must still enforce explicit TLS/network boundaries.
+                    pass
             return cls(
                 kafka=kafka,
                 business_origin=origin.rstrip("/"),
@@ -167,6 +217,16 @@ class AppSettings:
                 body_timeout=number(env, "INGESTION_BODY_TIMEOUT_SECONDS", 10, 0.01, 120),
                 probe_timeout=number(env, "INGESTION_PROBE_TIMEOUT_SECONDS", 1, 0.01, 5),
                 probe_interval=number(env, "INGESTION_PROBE_INTERVAL_SECONDS", 5, 0.1, 5),
+                mqtt_enabled=mqtt_enabled,
+                mqtt_host=mqtt_host,
+                mqtt_port=mqtt_port,
+                mqtt_topic_filter=mqtt_topic_filter,
+                mqtt_client_id=mqtt_client_id,
+                mqtt_batch_size=mqtt_batch_size,
+                mqtt_batch_wait_ms=mqtt_batch_wait_ms,
+                mqtt_max_inflight=mqtt_max_inflight,
+                mqtt_source_subject=mqtt_source_subject,
+                mqtt_allowed_machines=mqtt_allowed_machines,
             )
         except (ValueError, TypeError, OverflowError, ConfigurationError):
             raise ValueError("Invalid ingestion configuration") from None

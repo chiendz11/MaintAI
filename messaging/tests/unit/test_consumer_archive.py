@@ -2,6 +2,7 @@ import base64
 import gzip
 import json
 import threading
+from dataclasses import replace
 
 import pytest
 from maintai_messaging.archive import S3RecordArchive
@@ -28,7 +29,13 @@ def test_offset_progress_after_durable_receipts_is_contiguous(settings, contract
         persisted.append(record.offset)
         return DurableReceipt.for_record(record)
 
-    runner = ConsumerRunner(settings, "processing", durable, contracts=contracts, client=client)
+    runner = ConsumerRunner(
+        replace(settings, commit_batch_size=1),
+        "processing",
+        durable,
+        contracts=contracts,
+        client=client,
+    )
     assert runner.run(max_records=2) == 2
     assert persisted == [3, 5]
     assert [p.offset for p in client.commits] == [4, 6]
@@ -59,7 +66,13 @@ def test_commit_failure_does_not_advance_or_process_later_record(settings, contr
         persisted.append(record.offset)
         return DurableReceipt.for_record(record)
 
-    runner = ConsumerRunner(settings, "processing", durable, contracts=contracts, client=client)
+    runner = ConsumerRunner(
+        replace(settings, commit_batch_size=1),
+        "processing",
+        durable,
+        contracts=contracts,
+        client=client,
+    )
     with pytest.raises(OSError):
         runner.run(max_records=2)
     assert persisted == [0] and not client.commits and client.closed
@@ -119,7 +132,12 @@ def test_serial_prefetch_is_bounded_and_never_runs_handlers_in_parallel(
         return DurableReceipt.for_record(record)
 
     runner = ConsumerRunner(
-        settings, "processing", durable, contracts=contracts, client=client, max_buffered_records=4
+        replace(settings, commit_batch_size=1),
+        "processing",
+        durable,
+        contracts=contracts,
+        client=client,
+        max_buffered_records=4,
     )
     assert runner.run(max_records=total) == total
     assert samples and max(samples) == 4
@@ -141,7 +159,12 @@ def test_shutdown_does_not_commit_prefetched_but_unprocessed_records(settings, c
         return DurableReceipt.for_record(record)
 
     runner = ConsumerRunner(
-        settings, "processing", durable, contracts=contracts, client=client, max_buffered_records=4
+        replace(settings, commit_batch_size=1),
+        "processing",
+        durable,
+        contracts=contracts,
+        client=client,
+        max_buffered_records=4,
     )
     assert runner.run(stop) == 1
     assert [p.offset for p in client.commits] == [1]
@@ -388,3 +411,69 @@ def test_serial_rebalance_resumes_previously_paused_partition(settings, contract
     assert len(client.resumes) >= 2
     assert client.paused is False
     assert [p.offset for p in client.commits] == [1, 2]
+
+
+def test_serial_commit_batching_flushes_on_batch_size_and_shutdown(settings, contracts, example):
+    batched = replace(settings, commit_batch_size=4, commit_max_wait_ms=5000)
+    client = ConsumerClient([message(example, offset=i) for i in range(6)])
+    runner = ConsumerRunner(
+        batched,
+        "processing",
+        lambda _event, record: DurableReceipt.for_record(record),
+        contracts=contracts,
+        client=client,
+    )
+    assert runner.run(max_records=6) == 6
+    assert [p.offset for p in client.commits] == [4, 6]
+
+
+def test_serial_commit_batching_flushes_on_max_wait_and_revokes_cleanly(
+    settings, contracts, example
+):
+    import time as time_mod
+
+    batched = replace(settings, commit_batch_size=16, commit_max_wait_ms=25)
+    client = ConsumerClient([message(example, offset=0)])
+    runner = ConsumerRunner(
+        batched,
+        "processing",
+        lambda _event, record: DurableReceipt.for_record(record),
+        contracts=contracts,
+        client=client,
+    )
+    stop = threading.Event()
+
+    def stop_after_commit(c):
+        if len(c.commits) >= 1:
+            stop.set()
+        else:
+            time_mod.sleep(0.01)
+
+    client.during_wait = stop_after_commit
+    assert runner.run(stop) == 1
+    assert [p.offset for p in client.commits] == [1]
+
+
+def test_serial_commit_batching_revoke_commits_and_lost_drops(settings, contracts, example):
+    from confluent_kafka import TopicPartition
+
+    batched = replace(settings, commit_batch_size=16, commit_max_wait_ms=5000)
+    client = ConsumerClient([message(example, offset=0), message(example, offset=1)])
+    runner = ConsumerRunner(
+        batched,
+        "processing",
+        lambda _event, record: DurableReceipt.for_record(record),
+        contracts=contracts,
+        client=client,
+    )
+    part = [TopicPartition("sensor.readings", 0)]
+    client.assign(part)
+    runner._uncommitted[("sensor.readings", 0)] = 10
+    runner._uncommitted_count = 1
+    runner._revoked(client, part)
+    assert [p.offset for p in client.commits] == [10]
+    runner._uncommitted[("sensor.readings", 0)] = 15
+    runner._uncommitted_count = 1
+    runner._lost(client, part)
+    assert [p.offset for p in client.commits] == [10]
+    assert runner._uncommitted == {}

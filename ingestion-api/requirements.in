@@ -7,4 +7,5 @@ uvicorn>=0.30,<1
 httpx>=0.28,<1
 PyJWT[crypto]>=2.10,<3
 prometheus-client>=0.21,<1
+paho-mqtt>=2.1,<3
 maintai-messaging==0.3.1

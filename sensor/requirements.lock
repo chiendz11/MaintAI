@@ -38,6 +38,8 @@ idna==3.20
     #   httpx
 opentelemetry-api==1.45.1
     # via fastapi
+paho-mqtt==2.2.0
+    # via maintai-sensor (sensor/pyproject.toml)
 prometheus-client==0.26.0
     # via maintai-sensor (sensor/pyproject.toml)
 pycparser==3.11

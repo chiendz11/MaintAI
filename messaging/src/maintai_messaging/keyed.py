@@ -210,10 +210,11 @@ class KeyedConsumerRunner(ConsumerRunner):
                     raise ConsumerFailed("Handler deadline exceeded; fence and replay")
                 continue
             del self.active[key]
+            entries = entry if isinstance(entry, list) else [entry]
             try:
-                receipt = future.result()
+                result = future.result()
             except Exception as exc:
-                if not entry.assignment.cancelled.is_set():
+                if not any(e.assignment.cancelled.is_set() for e in entries):
                     if self.metrics and isinstance(exc, LeaseLost):
                         observe_safely(lambda: self.metrics.stale.labels(stage="DB_FENCE").inc())
                     raise ConsumerFailed(
@@ -222,13 +223,26 @@ class KeyedConsumerRunner(ConsumerRunner):
                 if self.metrics:
                     observe_safely(lambda: self.metrics.stale.labels(stage="HANDLER").inc())
             else:
-                if entry.assignment.cancelled.is_set():
+                if any(e.assignment.cancelled.is_set() for e in entries):
                     if self.metrics:
                         observe_safely(lambda: self.metrics.stale.labels(stage="HANDLER").inc())
-                elif receipt != DurableReceipt.for_record(entry.record):
-                    raise ConsumerFailed("Keyed handler did not provide durable receipt")
                 else:
-                    entry.done = True
+                    receipts = (
+                        [result]
+                        if len(entries) == 1 and isinstance(result, DurableReceipt)
+                        else result
+                    )
+                    if (
+                        not isinstance(receipts, (list, tuple))
+                        or len(receipts) != len(entries)
+                        or any(
+                            r != DurableReceipt.for_record(e.record)
+                            for r, e in zip(receipts, entries, strict=True)
+                        )
+                    ):
+                        raise ConsumerFailed("Keyed handler did not provide durable receipt")
+                    for e in entries:
+                        e.done = True
             if self.queues.get(key):
                 self.ready.append(key)
 
@@ -248,29 +262,51 @@ class KeyedConsumerRunner(ConsumerRunner):
             self.processed += len(entries)
 
     def _dispatch(self, executor):
+        supports_batch = callable(getattr(self.handler, "handle_batch", None))
+        batch_limit = self.limits.max_batch_per_key if supports_batch else 1
         while self.ready and len(self.active) < self.limits.max_active_keys:
             key = self.ready.popleft()
             if key in self.active or not self.queues.get(key):
                 continue
-            entry = self.queues[key].popleft()
-            if not self.queues[key]:
+            queue = self.queues[key]
+            entries = []
+            while queue and len(entries) < batch_limit:
+                candidate = queue[0]
+                if candidate.assignment.cancelled.is_set():
+                    queue.popleft()
+                    continue
+                if entries and candidate.assignment is not entries[0].assignment:
+                    break
+                entries.append(queue.popleft())
+            if not queue:
                 del self.queues[key]
-            if entry.assignment.cancelled.is_set():
+            if not entries:
                 continue
             context = WorkContext(
-                entry.assignment, time.monotonic() + self.limits.handler_timeout_seconds
+                entries[0].assignment, time.monotonic() + self.limits.handler_timeout_seconds
             )
+            if len(entries) > 1:
+                future = executor.submit(
+                    self.handler.handle_batch,
+                    [(e.event, e.record) for e in entries],
+                    context,
+                )
+            else:
+                future = executor.submit(
+                    self.handler.handle, entries[0].event, entries[0].record, context
+                )
             self.active[key] = (
-                executor.submit(self.handler.handle, entry.event, entry.record, context),
-                entry,
+                future,
+                entries,
                 context,
             )
             if self.metrics:
-                observe_safely(
-                    lambda entry=entry: self.metrics.queue_wait.observe(
-                        time.monotonic() - entry.admitted_at
+                for entry in entries:
+                    observe_safely(
+                        lambda entry=entry: self.metrics.queue_wait.observe(
+                            time.monotonic() - entry.admitted_at
+                        )
                     )
-                )
 
     def _backpressure(self, *, draining=False, max_records=None):
         entries = self.ledger.entries()
@@ -339,6 +375,28 @@ class KeyedConsumerRunner(ConsumerRunner):
                 record = self._poll(self.settings.poll_interval_seconds)
                 if record is not None and draining_at is None:
                     self._admit(record)
+                    if (
+                        callable(getattr(self.handler, "handle_batch", None))
+                        and self.limits.max_batch_per_key > 1
+                    ):
+                        drained = 0
+                        max_drain = min(32, max(0, self.limits.max_pending_records - 1))
+                        while drained < max_drain:
+                            self._backpressure(draining=False, max_records=max_records)
+                            if (
+                                self.paused
+                                or len(self.ledger.entries()) >= self.limits.max_pending_records
+                                or (
+                                    max_records is not None
+                                    and self.processed + len(self.ledger.entries()) >= max_records
+                                )
+                            ):
+                                break
+                            extra = self._poll(0)
+                            if extra is None:
+                                break
+                            self._admit(extra)
+                            drained += 1
         finally:
             tokens = list(self.tokens.values())
             for token in tokens:

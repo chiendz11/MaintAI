@@ -7,7 +7,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
-from simulator.client import BackendClient
+from simulator.client import BackendClient, DeliveryTransport, MqttTransport
 from simulator.control.auth import IngestionCredentials
 from simulator.fault_injection import FaultInjector, FaultMode
 from simulator.logging import log
@@ -42,18 +42,32 @@ class SensorEngine:
             self.store.initialize(
                 settings.machine_count, settings.scenario, settings.initial_state, identity
             )
-            self.metrics.refresh(self.store)
+            self.metrics.refresh(
+                self.store,
+                max_records=settings.spool_max_records,
+                max_bytes=settings.spool_max_bytes,
+            )
         except Exception:
             self.store.close()
             raise
-        self.client = BackendClient(
-            str(settings.backend_base_url),
-            timeout_seconds=settings.timeout_seconds,
-            max_retries=0,
-            transport=transport,
-            credentials=IngestionCredentials(settings),
-            observe=lambda outcome: self.metrics.attempts.labels(outcome).inc(),
-        )
+        if settings.transport_mode == "mqtt" and transport is None:
+            self.client: DeliveryTransport = MqttTransport(
+                settings.mqtt_host,
+                port=settings.mqtt_port,
+                topic_prefix=settings.mqtt_topic_prefix,
+                qos=settings.mqtt_qos,
+                timeout_seconds=settings.timeout_seconds,
+                observe=lambda outcome: self.metrics.attempts.labels(outcome).inc(),
+            )
+        else:
+            self.client = BackendClient(
+                str(settings.backend_base_url),
+                timeout_seconds=settings.timeout_seconds,
+                max_retries=0,
+                transport=transport,
+                credentials=IngestionCredentials(settings),
+                observe=lambda outcome: self.metrics.attempts.labels(outcome).inc(),
+            )
         self.stop_event = threading.Event()
         self.wake_event = threading.Event()
         self.thread = None
@@ -97,6 +111,8 @@ class SensorEngine:
             self.build,
             max_records=self.settings.spool_max_records,
             max_bytes=self.settings.spool_max_bytes,
+            max_records_per_machine=self.settings.spool_max_records_per_machine,
+            on_drop=lambda reason: self.metrics.dropped.labels(reason).inc(),
         )
         if event:
             self.metrics.generated.inc()
@@ -136,7 +152,11 @@ class SensorEngine:
                 else "rejected"
             )
         self.store.finish(
-            row["event_id"], status=status, error=result.error, next_at=time.time() + delay
+            row["event_id"],
+            status=status,
+            error=result.error,
+            next_at=time.time() + delay,
+            quarantine_max_records=self.settings.quarantine_max_records,
         )
 
     def dispatch_once(self):
@@ -156,6 +176,7 @@ class SensorEngine:
             self.settings.spool_ttl_seconds,
             available,
             exclude_machines=tuple(self.inflight),
+            quarantine_max_records=self.settings.quarantine_max_records,
         ):
             machine_id = row["machine_id"]
             if machine_id not in self.inflight:
@@ -182,11 +203,18 @@ class SensorEngine:
                 self.build,
                 max_records=self.settings.spool_max_records,
                 max_bytes=self.settings.spool_max_bytes,
+                max_records_per_machine=self.settings.spool_max_records_per_machine,
+                on_drop=lambda reason: self.metrics.dropped.labels(reason).inc(),
             )
             if events:
                 self.metrics.generated.inc(len(events))
                 self.generated += len(events)
         self.dispatch_once()
+        self.metrics.refresh(
+            self.store,
+            max_records=self.settings.spool_max_records,
+            max_bytes=self.settings.spool_max_bytes,
+        )
         self.last_tick = time.monotonic()
 
     def run(self):

@@ -50,7 +50,7 @@ class AuthenticatedInference:
                 await response(scope, receive, send)
                 return
 
-        if method != "POST" or path != "/api/v1/predict":
+        if method != "POST" or path not in {"/api/v1/predict", "/api/v1/predict/batch"}:
             await self.app(scope, receive, send)
             return
 

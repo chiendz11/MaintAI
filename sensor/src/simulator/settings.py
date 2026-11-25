@@ -1,6 +1,7 @@
 """Validated configuration for the single durable Sensor controller."""
 
 import ipaddress
+import math
 import os
 from pathlib import Path
 from typing import Literal
@@ -15,6 +16,7 @@ INTERNAL_HOSTS = {
     "127.0.0.1",
     "::1",
     "kafka",
+    "mosquitto",
     "postgres",
     "keycloak",
     "business-api",
@@ -83,8 +85,15 @@ class RuntimeSettings(SimulatorConfig):
     oauth_client_id: str = ""
     oauth_secret_file: Path | None = None
     oauth_scope: str = "sensor:write"
-    spool_max_records: int = Field(default=10000, ge=1)
-    spool_max_bytes: int = Field(default=32_000_000, ge=1024)
+    transport_mode: Literal["http", "mqtt"] = "http"
+    mqtt_host: str = "mosquitto"
+    mqtt_port: int = Field(default=1883, ge=1, le=65535)
+    mqtt_topic_prefix: str = "maintai/v1/site/local/machines"
+    mqtt_qos: Literal[1] = 1
+    spool_max_records: int = Field(default=100_000, ge=1)
+    spool_max_bytes: int = Field(default=134_217_728, ge=1024)
+    spool_max_records_per_machine: int | None = Field(default=None, ge=1)
+    quarantine_max_records: int = Field(default=10_000, ge=1)
     spool_ttl_seconds: float = Field(default=86400, gt=0)
     retry_max_seconds: float = Field(default=60, ge=1, le=300)
     send_workers: int = Field(default=16, ge=1, le=64)
@@ -101,16 +110,39 @@ class RuntimeSettings(SimulatorConfig):
             raise ValueError("Shared runtime requires HTTPS issuer and JWKS URL")
         if not safe_url(str(self.backend_base_url), local=local):
             raise ValueError("Ingestion requires HTTPS (HTTP loopback only in local mode)")
-        if self.ingestion_auth == "none" and not (local and loopback(self.backend_base_url.host)):
+        if (
+            self.transport_mode == "http"
+            and self.ingestion_auth == "none"
+            and not (local and loopback(self.backend_base_url.host))
+        ):
             raise ValueError("Anonymous ingestion is limited to explicit local mode and loopback")
-        if self.ingestion_auth == "token_file" and self.ingestion_token_file is None:
+        if (
+            self.transport_mode == "http"
+            and self.ingestion_auth == "token_file"
+            and (self.ingestion_token_file is None)
+        ):
             raise ValueError("Ingestion token file is required")
-        if self.ingestion_auth == "oauth" and not (
-            safe_url(self.oauth_token_url, local=local)
-            and self.oauth_client_id
-            and self.oauth_secret_file
+        if (
+            self.transport_mode == "http"
+            and self.ingestion_auth == "oauth"
+            and not (
+                safe_url(self.oauth_token_url, local=local)
+                and self.oauth_client_id
+                and self.oauth_secret_file
+            )
         ):
             raise ValueError("OAuth needs approved token URL, client ID and secret file")
+        if self.transport_mode == "mqtt":
+            if not self.mqtt_host.strip():
+                raise ValueError("MQTT host is required when SIM_TRANSPORT_MODE=mqtt")
+            if not self.mqtt_topic_prefix.strip() or any(
+                ch in self.mqtt_topic_prefix for ch in ("+", "#")
+            ):
+                raise ValueError("MQTT topic prefix must be explicit without wildcards")
+        if self.spool_max_records_per_machine is None:
+            self.spool_max_records_per_machine = math.ceil(
+                self.spool_max_records / max(1, self.machine_count) * 1.5
+            )
         if self.interval_ms <= 0:
             raise ValueError("Durable runtime requires a positive per-machine interval")
         for origin in self.cors_origins:
