@@ -1,4 +1,4 @@
-> **Implementation update 25/11/2026 (`MaintAI@7f79d8d`, `MaintAI-gitops@16c70f6`):** Trên môi trường local `k3d`, đường dẫn chính đã bổ sung **Mosquitto 2.1.4 + `ingestion-mqtt-bridge` (1 replica, `Recreate`, không `$share`)** song song HTTP `ingestion-api`, **KServe `v0.18.1` + Knative Serving `v1.21.3` + Kourier `v1.21.1` (KPA `min=2/max=6`, `UVICORN_WORKERS=1`, `/api/v1/predict/batch`)** cho `ml-service-champion`, **Per-Key Micro-Batching (`PROCESSING_MAX_BATCH_PER_KEY=16`, `per_key=1`)** và **Commit Batching (`KAFKA_COMMIT_BATCH_SIZE=16`)**. Chi tiết số đo xem [HIGH_THROUGHPUT_KSERVE_MQTT_ARCHITECTURE_REPORT.md](../reports/HIGH_THROUGHPUT_KSERVE_MQTT_ARCHITECTURE_REPORT.md).
+> **Implementation update 25/11/2026 (`MaintAI`, `MaintAI-gitops`):** Trên môi trường local `k3d`, đường dẫn chính chạy **Mosquitto 2.1.4 + 1 Deployment `ingestion-api` hợp nhất (`replicas: 1`, `Recreate`, `INGESTION_MQTT_ENABLED=true`, không `$share`, giữ đồng thời HTTP `POST /api/v1/sensor-readings` và MQTT TLS/auth sẵn sàng cho production)**, **KServe `v0.18.1` + Knative Serving `v1.21.3` + Kourier `v1.21.1` (KPA `min=2/max=6`, `UVICORN_WORKERS=1`, `/api/v1/predict/batch`)** cho `ml-service-champion`, **Per-Key Micro-Batching (`PROCESSING_MAX_BATCH_PER_KEY=16`, `per_key=1`)** và **Commit Batching (`KAFKA_COMMIT_BATCH_SIZE=16`)**. Chi tiết số đo xem [HIGH_THROUGHPUT_KSERVE_MQTT_ARCHITECTURE_REPORT.md](../reports/HIGH_THROUGHPUT_KSERVE_MQTT_ARCHITECTURE_REPORT.md).
 
 > **Source update23/10 — SDK0.2.0/bundle1.1.0:** keyed runner/coordinator,
 > durable handler/DB fence, ordered relay, migration002 và transport wrappers đã
@@ -31,9 +31,9 @@ ghi metadata bằng pool quyền hẹp. Không processed archive hoặc cleanup 
 |---|---|---|---|---|
 | Business React Frontend | Deployment + Service `frontend`, image/config riêng | Lưu lượng người dùng | Business REST/SSE, không có DB credentials | Người1, release độc lập Simulator |
 | Simulator UI riêng | Deployment + Service `simulator-ui`, React/client/demo + Dockerfile riêng; chưa build/deploy | Người vận hành demo | Sensor Control API0.3.0, provider HTTP đã test local | Người4, release độc lập Business và Sensor backend |
-| Simulator + Control | Deployment + internal Service | Kịch bản demo | SQLite/WAL state/spool v2 (`100k`/`128 MiB`), `SIM_TRANSPORT_MODE=mqtt\|http`, `Recreate` | Ban đầu 1 replica, không phải PLC |
-| Mosquitto Broker | Deployment (`Recreate`) + Service + PVC (`sync-wave: '-30'`) | MQTT QoS 1 broker (local) | Persistent `/mosquitto/data/` (1Gi), `allow-sensor-ingestion-to-mosquitto` | Tách lớp edge transport, không thay Kafka |
-| Ingestion API + MQTT Bridge | 2 Deployments (`ingestion-api` + `ingestion-mqtt-bridge`, 1 replica `Recreate`) | HTTP RPS / MQTT ingress, ACK p95 | Kafka `publish_batch` + `lz4` + `KAFKA_LINGER_MS=2` | Auth, envelope validation, non-`$share` QoS 1 bridge ACK sau Kafka |
+| Simulator + Control | Deployment + internal Service | Kịch bản demo | SQLite/WAL state/spool v2 (`100k`/`128 MiB`), `SIM_TRANSPORT_MODE=mqtt\|http`, `Recreate` | Ban đầu 1 replica, hỗ trợ MQTT TLS/auth ở production |
+| Mosquitto Broker | Deployment (`Recreate`) + Service + PVC (`sync-wave: '-30'`) | MQTT QoS 1 broker (local) | Persistent `/mosquitto/data/` (1Gi), `allow-sensor-ingestion-to-mosquitto` | Tách lớp edge transport, không thay Kafka; production bật TLS `8883` + auth/mTLS |
+| Ingestion API (Unified HTTP + MQTT Bridge) | 1 Deployment (`ingestion-api`, 1 replica `Recreate`) + Service | MQTT ingress / HTTP RPS, ACK p95 | Kafka `publish_batch` (`poll(0.005)`) + `lz4` + `KAFKA_LINGER_MS=2` | Auth, envelope validation, non-`$share` QoS 1 bridge ACK sau Kafka + HTTP `/sensor-readings` fallback |
 | Processing Worker | Deployment | Kafka lag/age, keyed queue, ML/DB throughput | Ghi `processing_db`, gọi `/api/v1/predict/batch` | `PROC-ORDER-01`: `per_key=1` FIFO + micro-batching (`<=16`) + safe-prefix offset coordinator |
 | Processing Read API | **Deployment + Service riêng** | History RPS/p95, export backlog | SELECT dữ liệu gốc + metadata RW quyền hẹp; raw S3 read/exports write | Snapshot/export runner cùng runtime; **không** cần history_db |
 | Processing Outbox Relay | Deployment | Pending/blocked-key age | Quyền outbox có giới hạn + Kafka producer (`publish_batch`, `lz4`) | Ordered dispatch theo `(topic,machine_id)` |
@@ -84,8 +84,7 @@ flowchart LR
   end
   subgraph CLUSTER[Kubernetes: namespace MaintAI]
     MOSQ[Mosquitto · Deployment + PVC]
-    BR[ingestion-mqtt-bridge · 1 Deployment Recreate]
-    ING[ingestion-api · Deployment]
+    ING[ingestion-api · 1 Deployment Recreate MQTT+HTTP]
     K[(Kafka · topics)]
     PW[processing-worker · keyed FIFO + micro-batch]
     PR[processing-read-api · Deployment]
@@ -111,10 +110,9 @@ flowchart LR
   end
   SUI -->|Control HTTP có auth| SIM
   SIM -->|MQTT QoS 1 + Spool v2| MOSQ
-  MOSQ -->|non-$share QoS 1| BR
+  MOSQ -->|non-$share QoS 1| ING
   SIM -.->|HTTP fallback| ING
-  BR -->|publish_batch + lz4| K
-  ING -->|sensor.readings / sensor.rejected| K
+  ING -->|publish_batch poll 5ms + lz4| K
   K -->|Nhóm Processing| PW
   K -->|Nhóm Archive| ST
   K -->|Nhóm Business| BC

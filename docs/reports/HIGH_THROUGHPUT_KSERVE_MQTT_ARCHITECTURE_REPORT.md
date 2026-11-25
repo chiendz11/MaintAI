@@ -11,10 +11,10 @@
 Để tháo các nút cổ chai khi tăng tải **50 máy × 1 Hz** (`SIM_MACHINE_COUNT=50`, `SIM_INTERVAL_MS=1000`), burst và phục hồi sau gián đoạn (**Recovery 30s–30m**) mà **không phá vỡ thứ tự dữ liệu theo máy**, hệ thống áp dụng các quyết định sau:
 
 1. **Giữ nghiêm ngặt `PROC-ORDER-01` (`per_key = 1`, Keyed FIFO):** Mỗi `machine_id` chỉ có tối đa `1` tác vụ đang thực thi tại một thời điểm trong `processing-worker`, commit offset Kafka theo *safe completed prefix* từng partition. **Không** sử dụng cơ chế Hybrid out-of-order hay `AlertResequencer` (nhánh thử nghiệm được lưu trữ tại tag `archive/hybrid-ordering-benchmark`, commit `67a748a`).
-2. **Thay HTTP per-reading trên hot path sensor bằng MQTT QoS 1 (giữ HTTP `POST /api/v1/sensor-readings` song song):** `sensor` kết nối bền bỉ qua TCP tới Eclipse Mosquitto nội bộ thay vì mở hàng chục HTTP+JWT calls/giây, đồng thời `ingestion-api` giữ nguyên endpoint HTTP cũ (`2` replicas) để bảo đảm tương thích ngược 100%.
+2. **Thay HTTP per-reading trên hot path sensor bằng MQTT QoS 1 và hợp nhất 1 Deployment `ingestion-api`:** `sensor` kết nối bền bỉ qua TCP tới Eclipse Mosquitto nội bộ thay vì mở hàng chục HTTP+JWT calls/giây. Trên cụm, `ingestion-api` được hợp nhất thành **1 Deployment duy nhất** (`replicas: 1`, `strategy: Recreate`, `INGESTION_MQTT_ENABLED=true`, đã gỡ `ingestion-mqtt-bridge`, `ingestion-api-hpa` và `ingestion-api-pdb`) vừa chạy MQTT QoS 1 Bridge (không `$share`), vừa giữ HTTP endpoint `POST /api/v1/sensor-readings` để tương thích ngược 100%.
 3. **Nâng cấp SQLite Spool v2 (`O(1)` & chống starvation):** Loại bỏ `SELECT COUNT(*), SUM(size)` toàn bảng mỗi tick, tách quarantine khỏi `pending`, và áp quota theo máy kết hợp xoay vòng round-robin.
 4. **KServe `InferenceService` + Knative Serving + KPA + Vectorized Batch ML:** Chuyển `ml-service-champion` sang KServe custom predictor container (`minReplicas=2`, `maxReplicas=6`, `UVICORN_WORKERS=1`) hỗ trợ cả `/api/v1/predict/batch` và `/api/v1/predict`, đi kèm zero-pandas NumPy fast path.
-5. **Kafka Pipelining & Synchronous Commit Batching:** Pipelined `publish_batch()` với `KAFKA_LINGER_MS=2` + `lz4` trên producer; gộp `commit` đồng bộ theo batch ở `business-consumer` mà vẫn giữ serial bounded-prefetch `ConsumerRunner` (`64/32`).
+5. **Kafka Pipelining & Synchronous Commit Batching:** Pipelined `publish_batch()` với `poll(0.005)` (giảm jitter xuống `5 ms` khi nhiều HTTP thread poll song song), `KAFKA_LINGER_MS=2` + `lz4` trên producer; gộp `commit` đồng bộ theo batch ở `business-consumer` mà vẫn giữ serial bounded-prefetch `ConsumerRunner` (`64/32`).
 
 ---
 
@@ -25,13 +25,12 @@ flowchart LR
   subgraph EDGE["Nguồn mô phỏng & Edge"]
     SUI["Simulator UI (:8080)"] -->|JWT OIDC Control| SEN["sensor (1 pod Recreate)\nSQLite Spool v2 (100k / 128 MiB)"]
     SEN -->|MQTT QoS 1\n.../machines/{id}/telemetry| MQ["Mosquitto 2.1.4 (:1883)\nPVC local-mosquitto-data"]
-    SEN -.->|HTTP fallback| ING["ingestion-api (2 pods :8000)\nPOST /api/v1/sensor-readings"]
+    SEN -.->|HTTP fallback :8000| ING
   end
 
-  subgraph BRIDGE["Ingestion → Kafka"]
-    MQ -->|No $share, QoS 1| BR["ingestion-mqtt-bridge (1 pod Recreate)\nBatch 32 / 5ms, PUBACK sau Kafka ACK"]
-    BR -->|publish_batch, lz4, linger=2ms| K1[("Kafka 12 partitions\nsensor.readings / sensor.rejected")]
-    ING -->|publish| K1
+  subgraph BRIDGE["Ingestion (Unified Single Deployment) → Kafka"]
+    MQ -->|No $share, QoS 1| ING["ingestion-api (1 pod Recreate)\nMQTT Bridge 32/5ms (PUBACK sau Kafka) + HTTP /sensor-readings"]
+    ING -->|publish_batch (poll 5ms), lz4, linger=2ms| K1[("Kafka 12 partitions\nsensor.readings / sensor.rejected")]
   end
 
   subgraph PROC["Processing (PROC-ORDER-01)"]
@@ -63,7 +62,7 @@ flowchart LR
 - **Transport (`sensor/src/simulator/client.py`, `settings.py`):**
   - Tách protocol `DeliveryTransport` với 2 implementation: `BackendClient` (HTTP) và `MqttTransport` (`paho-mqtt` v2).
   - `MqttTransport` duy trì kết nối bền bỉ, cấu hình Last Will `.../controller/status = OFFLINE` và Birth `ONLINE`, publish QoS 1 tới `maintai/v1/site/local/machines/{machine_id}/telemetry`, và chỉ trả `outcome="accepted"` sau khi nhận `PUBACK`.
-  - Chọn qua `SIM_TRANSPORT_MODE` (`mqtt` ở overlay local, mặc định `http` để giữ an toàn/tương thích).
+  - Chọn qua `SIM_TRANSPORT_MODE` (`mqtt` ở overlay local, mặc định `http` để giữ an toàn/tương thích); hỗ trợ đầy đủ `SIM_MQTT_TLS_ENABLED`, `SIM_MQTT_CA_CERTS`, `SIM_MQTT_CERTFILE`/`KEYFILE`, `SIM_MQTT_USERNAME`, `SIM_MQTT_PASSWORD`/`PASSWORD_FILE` (fail-closed ở môi trường external không phải internal loopback).
 - **Spool v2 & Chống Starvation (`sensor/src/simulator/ordering/store.py`, `metrics.py`):**
   - Nâng `schema_version` từ `1 → 2` với auto-migration idempotent trên `/state/state.sqlite3`.
   - Bảng `spool_quarantine` tách riêng bản ghi `expired` và `rejected` (FIFO tự cắt khi vượt `SIM_QUARANTINE_MAX_RECORDS=10000`), giữ bản ghi `auth` trong `spool`.
@@ -71,18 +70,19 @@ flowchart LR
   - Quota mặc định mới: `spool_max_records=100_000`, `spool_max_bytes=134_217_728` (128 MiB), giới hạn per-machine `spool_max_records_per_machine` kết hợp `round_robin_offset` mỗi tick để chống starvation cho các máy cuối danh sách (`M-040`..`M-050`).
   - Không silent drop: tăng `maintai_simulator_spool_dropped_total{reason}` + log warning; xuất đầy đủ gauges `maintai_simulator_spool_records{status}`, `maintai_simulator_spool_bytes`, `maintai_simulator_spool_quota_ratio`.
 
-### 3.2. Mosquitto + `ingestion-mqtt-bridge` + Kafka Pipelining
+### 3.2. Mosquitto + Unified `ingestion-api` (MQTT Bridge) + Kafka Pipelining
 
 - **Broker (`MaintAI-gitops/local/platform/mosquitto.yaml`, `mosquitto.conf`):**
   - Image `eclipse-mosquitto:2@sha256:fa12172a051310efe5bcb7a6a11b77bd5faacb82cbacd7742aa758bf024fd8e4` (`mosquitto 2.1.4`), non-root `uid=1883`, `persistence true` trên PVC `local-mosquitto-data` (1 GiB `local-path`), `max_inflight_messages 128`, `max_queued_messages 100000`.
   - `PersistentVolumeClaim/local-mosquitto-data` và `Service/mosquitto` đặt cùng `sync-wave: '-30'` với `Deployment/mosquitto` để tránh deadlock `WaitForFirstConsumer` của `local-path` trên Argo CD, được bảo vệ bằng `NetworkPolicy/allow-sensor-ingestion-to-mosquitto`.
-- **Single-Pod Bridge (`MaintAI/ingestion-api/src/maintai_ingestion/mqtt_bridge.py`, `MaintAI-gitops/environments/local/apps/ingestion-mqtt-bridge.yaml`):**
-  - Chạy `replicas: 1` với `strategy: Recreate`, **cấm** topic filter `$share/...` trong `config.py` và `mqtt_bridge.py` nhằm giữ nguyên thứ tự FIFO từng máy khi đọc từ Mosquitto.
+- **Unified Single-Pod Ingestion (`MaintAI/ingestion-api/src/maintai_ingestion/mqtt_bridge.py`, `config.py`, `MaintAI-gitops/environments/local/apps/kustomization.yaml`):**
+  - Hợp nhất vào `Deployment/ingestion-api` duy nhất với `replicas: 1`, `strategy: Recreate`, `INGESTION_MQTT_ENABLED=true` (gỡ `ingestion-mqtt-bridge`, `ingestion-api-hpa` và `ingestion-api-pdb`), đồng thời giữ HTTP `POST /api/v1/sensor-readings`. **Cấm** topic filter `$share/...` trong `config.py` và `mqtt_bridge.py` nhằm giữ nguyên thứ tự FIFO từng máy khi đọc từ Mosquitto.
   - Subscribe `maintai/v1/site/+/machines/+/telemetry` (chấp nhận cả `("/telemetry", "/readings")` và ACK ngay các message `/status` không thuộc telemetry), gom batch `INGESTION_MQTT_BATCH_SIZE=32` / `INGESTION_MQTT_BATCH_WAIT_MS=5`, `INGESTION_MQTT_MAX_INFLIGHT=256`.
   - Chỉ gọi `client.ack(mid, qos=1)` sau khi `KafkaPublisher.publish_batch()` xác nhận durability từ Kafka (hoặc quarantine `sensor.rejected` cho `400/422`); giữ nguyên un-ACKed khi gặp `503/504` để Mosquitto giao lại.
+  - Hỗ trợ đầy đủ MQTT TLS & Auth/mTLS cho production (`INGESTION_MQTT_TLS_ENABLED`, `INGESTION_MQTT_CA_CERTS`, `INGESTION_MQTT_CERTFILE`/`KEYFILE`, `INGESTION_MQTT_USERNAME`, `INGESTION_MQTT_PASSWORD`/`PASSWORD_FILE`), fail-closed khi `INGESTION_ENV=shared` kết nối tới broker ngoài cluster mà thiếu TLS + auth/mTLS.
 - **Kafka Producer Pipelining (`messaging/src/maintai_messaging/producer.py`, `config.py`):**
-  - Thêm `publish_batch(events)` đẩy toàn bộ `produce()` trước rồi `poll()` chờ callback trong 1 broker RTT, **không giữ `self._lock`** khi chờ broker ACK.
-  - Bổ sung `KAFKA_LINGER_MS=2` (`0..20`) và `KAFKA_COMPRESSION_TYPE=lz4` cho `ingestion-api`, `ingestion-mqtt-bridge`, `processing-worker` và `processing-outbox-relay`.
+  - Thêm `publish_batch(events)` đẩy toàn bộ `produce()` trước rồi `poll(min(0.005, ...))` (bước polling `5 ms` thay cho `50 ms` để tránh jitter khi nhiều HTTP thread đồng thời chờ callback) trong 1 broker RTT, **không giữ `self._lock`** khi chờ broker ACK.
+  - Bổ sung `KAFKA_LINGER_MS=2` (`0..20`) và `KAFKA_COMPRESSION_TYPE=lz4` cho `ingestion-api`, `processing-worker` và `processing-outbox-relay`.
 
 ### 3.3. KServe `InferenceService` + Knative KPA + Vectorized Batch ML
 
@@ -112,7 +112,7 @@ Sau khi triển khai hoàn chỉnh lên `main` và khắc phục 3 vấn đề v
 | :--- | :--- | :--- |
 | **`sensor` (`1` pod)** | `50/50 RUNNING`; `42,609 → 43,188` (**+579** bản ghi, `ACCEPTED = 43,188`) | `PUBACK` ~`0.4–0.6 ms`; SQLite spool `pending=0`, `bytes=0`, `0` drops |
 | **`mosquitto` (`1` pod)** | Hoạt động bình thường trên port `1883`, PVC `local-mosquitto-data` `Bound` | Không lỗi kết nối hoặc quyền ghi `/mosquitto/data` |
-| **`ingestion-mqtt-bridge` (`1` pod)** | `/health/ready` `200 UP` (`mqtt: true`, `kafka: true`); `accepted`: `1,436 → 2,022` (**+586**) | Không lỗi/drop dữ liệu Kafka; nhận topic `.../telemetry` |
+| **`ingestion-api` (`1` pod `Recreate`, hợp nhất MQTT + HTTP)** | `/health/ready` `200 UP` (`mqtt: true`, `kafka: true`); steady-state đo ban đầu trên bridge đạt `accepted: 1,436 → 2,022` (**+586**) | Không lỗi/drop dữ liệu Kafka; nhận topic `.../telemetry` và giữ `/api/v1/sensor-readings` |
 | **Kafka (`kafka-0`)** | Lag nhóm real-time: `local-processing-v1=4`, `local-business-live-v1=5`, `local-business-prediction-v1=2`, `local-business-alert-v1=0` | Nhóm archive `local-m6-...-raw-archive-v1` giữ batch lag `700` |
 | **`processing-worker` (`6` pods) & `processing_db`** | `sensor_events`: `1,447 → 2,035`; `processing_results`/`predictions`/`risk_decisions`: `1,447 → 2,036` | `maintai_processing_frontier_stall_seconds = 0.0` trên cả 6 pods |
 | **KServe `ml-service-champion` (`2` pods) & `ml-service-shadow`** | Champion xử lý cân bằng `1,060` + `1,077` = `2,137` `SUCCESS`; latency nội bộ ~`0.86 ms/req`; Shadow trả `200 OK` | Test trực tiếp `POST /api/v1/predict` và `/api/v1/predict/batch` qua `ml-service-mirror:8001` đều trả `200 OK` |
@@ -122,6 +122,6 @@ Sau khi triển khai hoàn chỉnh lên `main` và khắc phục 3 vấn đề v
 
 ## 5. Giới Hạn Kiểm Chứng & Những Điểm Không Tự Suy Diễn
 
-1. **Steady-state vs Burst/Recovery thực tế trên cụm:** Đo kiểm trên xác nhận tải ổn định `50 msg/s` (`batch_size=1` ở steady-state, KServe ở `minReplicas=2`). Kịch bản nén spool và xả dồn (tạm dừng `ingestion-mqtt-bridge` trong 30 giây – 30 phút để kích hoạt hàng đợi spool lớn, gọi `/api/v1/predict/batch` nhiều phần tử và KPA scale `2 → 6` pods) đã có unit/endpoint tests nhưng cần phiên load-test riêng trên cụm để thu thập p95 recovery time.
-2. **Local `k3d` ≠ Production HA:** Cụm local dùng 1 node `k3d`, 1 broker Kafka, 1 replica `mosquitto` + `ingestion-mqtt-bridge` và LocalStack in-memory (cần seed lại secret vào LocalStack qua `seed_localstack_secrets.py` + `localdev.history.seed()` nếu cụm khởi động lại). Production AWS phải sử dụng EKS multi-AZ, MSK/Strimzi replication `3`/`minISR=2`, ECR image digests, và AWS Secrets Manager thật.
-3. **Metric instrumentation phụ trên MQTT Bridge:** `maintai_metric_samples_dropped_total{reason="SOURCE_TIME_MISSING"}` tăng cùng nhịp `accepted` trên `ingestion-mqtt-bridge` vì luồng MQTT gọi thẳng `gateway.handle_batch` mà không qua HTTP middleware gán `RequestObservation`; điều này không ảnh hưởng tới dữ liệu Kafka.
+1. **Steady-state vs Burst/Recovery thực tế trên cụm:** Đo kiểm trên xác nhận tải ổn định `50 msg/s` (`batch_size=1` ở steady-state, KServe ở `minReplicas=2`). Kịch bản nén spool và xả dồn (tạm dừng `ingestion-api` trong 30 giây – 30 phút để kích hoạt hàng đợi spool lớn, gọi `/api/v1/predict/batch` nhiều phần tử và KPA scale `2 → 6` pods) đã có unit/endpoint tests nhưng cần phiên load-test riêng trên cụm để thu thập p95 recovery time.
+2. **Local `k3d` ≠ Production HA:** Cụm local dùng 1 node `k3d`, 1 broker Kafka, 1 replica `mosquitto` + `ingestion-api` (plaintext `mosquitto:1883` giới hạn trong cluster bằng `NetworkPolicy`) và LocalStack in-memory (cần seed lại secret vào LocalStack qua `seed_localstack_secrets.py` + `localdev.history.seed()` nếu cụm khởi động lại). Production AWS phải sử dụng EKS multi-AZ, MSK/Strimzi replication `3`/`minISR=2`, MQTT TLS port `8883` + username/password hoặc mTLS (`INGESTION_MQTT_TLS_ENABLED=true`, `SIM_MQTT_TLS_ENABLED=true`), ECR image digests, và AWS Secrets Manager thật.
+3. **Metric instrumentation phụ trên MQTT Bridge:** `maintai_metric_samples_dropped_total{reason="SOURCE_TIME_MISSING"}` tăng cùng nhịp `accepted` trên luồng MQTT trong `ingestion-api` vì luồng MQTT gọi thẳng `gateway.handle_batch` mà không qua HTTP middleware gán `RequestObservation`; điều này không ảnh hưởng tới dữ liệu Kafka.

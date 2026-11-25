@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import queue
+import ssl
 import threading
 import time
 from dataclasses import dataclass
@@ -22,6 +23,19 @@ class QueuedMqttMessage:
     topic: str
     payload: bytes
     received_at: float
+
+
+def _configure_mqtt_security(client, settings) -> None:
+    if settings.mqtt_tls_enabled:
+        client.tls_set(
+            ca_certs=settings.mqtt_ca_certs or None,
+            certfile=settings.mqtt_certfile or None,
+            keyfile=settings.mqtt_keyfile or None,
+            cert_reqs=ssl.CERT_REQUIRED,
+            tls_version=ssl.PROTOCOL_TLS_CLIENT,
+        )
+    if settings.mqtt_username:
+        client.username_pw_set(settings.mqtt_username, settings.mqtt_password or None)
 
 
 class MqttKafkaBridge:
@@ -53,6 +67,7 @@ class MqttKafkaBridge:
             )
             client.max_inflight_messages_set(settings.mqtt_max_inflight)
             client.reconnect_delay_set(min_delay=1, max_delay=10)
+        _configure_mqtt_security(client, settings)
         self.client = client
         self.client.on_connect = self._on_connect
         self.client.on_disconnect = self._on_disconnect

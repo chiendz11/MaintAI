@@ -169,3 +169,111 @@ def test_mqtt_bridge_acks_only_after_kafka_durability():
     assert acked_fail == 0
     assert bridge_fail.client.acks == []
     assert bridge_fail.deferred_count == 1
+
+
+def test_mqtt_settings_tls_and_auth_validation(tmp_path):
+    ca_file = tmp_path / "kafka-ca.crt"
+    ca_file.write_text(
+        "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n", encoding="utf-8"
+    )
+    password_file = tmp_path / "mqtt.pass"
+    password_file.write_text("s3cr3t\n", encoding="utf-8")
+    base_shared = {
+        "INGESTION_ENV": "shared",
+        "INGESTION_HOST": "0.0.0.0",
+        "AUTH_MODE": "oidc",
+        "OIDC_ISSUER": "https://idp.example.com/realms/maintai",
+        "OIDC_JWKS_URL": "https://idp.example.com/realms/maintai/certs",
+        "OIDC_ROLES_CLAIM": "roles",
+        "OIDC_MACHINES_CLAIM": "machines",
+        "KAFKA_LOCAL_MODE": "false",
+        "KAFKA_BOOTSTRAP_SERVERS": "kafka.prod.internal:9093",
+        "KAFKA_SECURITY_PROTOCOL": "SASL_SSL",
+        "KAFKA_SASL_USERNAME": "ingestion",
+        "KAFKA_SASL_PASSWORD": "kafka-password",
+        "KAFKA_SSL_CA_LOCATION": str(ca_file),
+        "PRODUCER_GIT_SHA": "a" * 40,
+        "BUSINESS_PUBLIC_ORIGIN": "https://api.maintai.example.com",
+        "INGESTION_MQTT_ENABLED": "true",
+        "INGESTION_MQTT_TOPIC_FILTER": "maintai/v1/site/+/machines/+/telemetry",
+        "INGESTION_MQTT_SOURCE_SUBJECT": "mqtt-sim",
+        "INGESTION_MQTT_ALLOWED_MACHINE_IDS": "M-001",
+    }
+    internal_shared = AppSettings.from_env({**base_shared, "INGESTION_MQTT_HOST": "mosquitto"})
+    assert internal_shared.mqtt_tls_enabled is False
+
+    # Shared external MQTT without TLS/auth must fail closed.
+    for bad_env in (
+        {**base_shared, "INGESTION_MQTT_HOST": "broker.example.com"},
+        {
+            **base_shared,
+            "INGESTION_MQTT_HOST": "broker.example.com",
+            "INGESTION_MQTT_TLS_ENABLED": "true",
+        },
+        {
+            **base_shared,
+            "INGESTION_MQTT_HOST": "mosquitto",
+            "INGESTION_MQTT_CA_CERTS": "/certs/ca.crt",
+        },
+        {
+            **base_shared,
+            "INGESTION_MQTT_HOST": "mosquitto",
+            "INGESTION_MQTT_TLS_ENABLED": "true",
+            "INGESTION_MQTT_CERTFILE": "/certs/client.crt",
+        },
+        {
+            **base_shared,
+            "INGESTION_MQTT_HOST": "mosquitto",
+            "INGESTION_MQTT_PASSWORD": "secret",
+        },
+    ):
+        try:
+            AppSettings.from_env(bad_env)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"Expected ValueError for {bad_env}")
+
+    secure_settings = AppSettings.from_env(
+        {
+            **base_shared,
+            "INGESTION_MQTT_HOST": "broker.example.com",
+            "INGESTION_MQTT_PORT": "8883",
+            "INGESTION_MQTT_TLS_ENABLED": "true",
+            "INGESTION_MQTT_CA_CERTS": "/certs/ca.crt",
+            "INGESTION_MQTT_USERNAME": "ingestion-bridge",
+            "INGESTION_MQTT_PASSWORD_FILE": str(password_file),
+        }
+    )
+    assert secure_settings.mqtt_tls_enabled is True
+    assert secure_settings.mqtt_password == "s3cr3t"
+
+    class _RecordingMqttClient(FakeMqttClient):
+        def __init__(self):
+            super().__init__()
+            self.tls_args = None
+            self.auth_args = None
+
+        def tls_set(self, **kwargs):
+            self.tls_args = kwargs
+
+        def username_pw_set(self, username, password=None):
+            self.auth_args = (username, password)
+
+    contracts = ContractRegistry()
+    obs = Observability()
+    producer = ObservedPublisher(
+        KafkaPublisher(
+            secure_settings.kafka, "ingestion", contracts=contracts, client=FakeProducerClient()
+        ),
+        obs,
+    )
+    recorder = _RecordingMqttClient()
+    MqttKafkaBridge(
+        secure_settings,
+        IngestionGateway(producer, secure_settings.business_origin, contracts=contracts),
+        client=recorder,
+    )
+    assert recorder.tls_args is not None
+    assert recorder.tls_args["ca_certs"] == "/certs/ca.crt"
+    assert recorder.auth_args == ("ingestion-bridge", "s3cr3t")

@@ -119,7 +119,7 @@ class KafkaPublisher:
             and any(not callbacks[idx] for idx in enqueued_indices)
             and time.monotonic() < deadline
         ):
-            self.client.poll(min(0.05, max(0, deadline - time.monotonic())))
+            self.client.poll(min(0.005, max(0, deadline - time.monotonic())))
 
         results: list[Delivery | Exception] = []
         for idx in range(len(prepared)):
