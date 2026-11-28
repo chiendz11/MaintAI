@@ -47,14 +47,13 @@ class _FakeBotoS3:
 
 
 def test_drift_worker_s3_output_validates_in_business_drift_catalog(tmp_path):
+    from backend.shared.monitoring.catalog import DriftCatalog
+    from backend.shared.monitoring.s3 import S3Reports
     from drift_monitor.config import DriftConfig
     from drift_monitor.models import Features, RuntimeSample
     from drift_monitor.reference import build_reference
     from drift_monitor.report import evaluate
     from drift_monitor.s3_publisher import publish_drift_report
-
-    from backend.shared.monitoring.catalog import DriftCatalog
-    from backend.shared.monitoring.s3 import S3Reports
 
     samples = [
         RuntimeSample(

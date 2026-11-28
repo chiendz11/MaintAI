@@ -4,9 +4,9 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-from botocore.exceptions import ClientError
 import jsonschema
 import pytest
+from botocore.exceptions import ClientError
 
 from drift_monitor.models import DriftStatus
 from drift_monitor.report import evaluate

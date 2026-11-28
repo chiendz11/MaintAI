@@ -127,9 +127,7 @@ class WorkerSettings:
         database = urlparse(database_url)
         if database.scheme not in {"postgres", "postgresql"} or not database.hostname:
             raise ValueError("Explicit Business owner PostgreSQL URL is required")
-        profile = env.get(
-            "BUSINESS_WORKER_PROFILE", env.get("BUSINESS_CONSUMER_PROFILE", "shared")
-        )
+        profile = env.get("BUSINESS_WORKER_PROFILE", env.get("BUSINESS_CONSUMER_PROFILE", "shared"))
         if profile not in {"shared", "local-test"}:
             raise ValueError("Unsupported Business Worker profile")
         host = env.get("BUSINESS_WORKER_HOST", "0.0.0.0")
