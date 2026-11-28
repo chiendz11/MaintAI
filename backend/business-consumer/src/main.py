@@ -13,6 +13,7 @@ def make_handlers(
     evidence=None,
     alert_channel=None,
     generations=False,
+    redis_bus=None,
 ):
     from backend.shared.alerts.notifications import ALERT_CHANNEL
     from backend.shared.alerts.repository import AlertRepository
@@ -24,13 +25,16 @@ def make_handlers(
     from .handlers.telemetry import build_handler as telemetry
 
     profiles = default_contracts().topology["profiles"]
+    channel = notification_channel or DEFAULT_CHANNEL
     handlers = {
         role: builder(
             connection_factory,
             settings.group_prefix + profiles[role]["group_id"],
             metrics=metrics,
-            notify=Notifier(notification_channel or DEFAULT_CHANNEL),
+            notify=Notifier(channel),
             generations=generations,
+            redis_bus=redis_bus,
+            notification_channel=channel,
         )
         for role, builder in (("business-live", telemetry), ("business-prediction", prediction))
     }
@@ -39,7 +43,11 @@ def make_handlers(
         settings.group_prefix + profiles["business-alert"]["group_id"],
         evidence=evidence,
         metrics=metrics,
-        repository=AlertRepository(connection_factory, channel=alert_channel or ALERT_CHANNEL),
+        repository=AlertRepository(
+            connection_factory,
+            channel=alert_channel or ALERT_CHANNEL,
+            redis_bus=redis_bus,
+        ),
     )
     return handlers
 

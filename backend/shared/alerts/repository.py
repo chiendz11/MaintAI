@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import logging
 from datetime import timedelta
 from uuid import uuid4
 
@@ -33,9 +34,18 @@ def public(row):
 
 
 class AlertRepository:
-    def __init__(self, connection_factory, *, clock=now, channel=ALERT_CHANNEL, metrics=None):
+    def __init__(
+        self,
+        connection_factory,
+        *,
+        clock=now,
+        channel=ALERT_CHANNEL,
+        metrics=None,
+        redis_bus=None,
+    ):
         self.connection_factory, self.clock, self.channel = connection_factory, clock, channel
         self.metrics = metrics
+        self.redis_bus = redis_bus
 
     def check(self):
         with self.connection_factory() as connection:
@@ -58,7 +68,7 @@ class AlertRepository:
             values[row["machine_id"]].append(row["alert_id"])
         return values
 
-    def create_or_dedupe(self, connection, event, evidence):
+    def create_or_dedupe(self, connection, event, evidence, *, out_hint=None):
         signal = event.payload
         validate_evidence(signal, evidence)
         machine = connection.execute(
@@ -136,7 +146,16 @@ class AlertRepository:
                 decision,
             ),
         )
-        emit(connection, row, decision, created=created, channel=self.channel)
+        hint = emit(
+            connection,
+            row,
+            decision,
+            created=created,
+            channel=self.channel,
+            pg_notify=self.redis_bus is None,
+        )
+        if out_hint is not None:
+            out_hint.append(hint)
         return disposition, row["severity"], evidence["source_server_accepted_at"]
 
     def list(self, machines, *, status=None, severity=None, machine_id=None, limit=50, offset=0):
@@ -234,13 +253,26 @@ class AlertRepository:
                 (target, timestamp, alert_id),
             )
             audit.record(connection, alert_id, row["status"], target, actor, body, timestamp)
-            emit(connection, {**row, "status": target}, timestamp, channel=self.channel)
+            hint = emit(
+                connection,
+                {**row, "status": target},
+                timestamp,
+                channel=self.channel,
+                pg_notify=self.redis_bus is None,
+            )
             value = {
                 "alert_id": alert_id,
                 "previous_status": row["status"],
                 "status": target,
                 "updated_at": timestamp.isoformat(),
             }
+        if self.redis_bus is not None:
+            try:
+                self.redis_bus.publish_alert(self.channel, hint)
+            except Exception:
+                logging.getLogger("maintai.business.alerts").warning(
+                    "Redis alert publish failed; notification preserved in Postgres"
+                )
         if self.metrics is not None:
             try:
                 self.metrics.transition(row["status"], target)

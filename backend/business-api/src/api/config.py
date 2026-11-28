@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 
 from backend.shared.copilot.config import M7Settings
 from backend.shared.projections.config import generations_enabled
+from backend.shared.redis_bus import RedisSettings
 from backend.shared.service_auth import INTERNAL_HOSTS, ServiceOAuthConfig, loopback  # noqa: F401
 from business_sse.hub import SSESettings
 
@@ -30,6 +31,7 @@ class Settings:
     m7: M7Settings | None = None
     projection_generations: bool = False
     processing_oauth: ServiceOAuthConfig | None = None
+    redis: RedisSettings | None = None
 
     @classmethod
     def from_env(cls, env=None):
@@ -109,4 +111,5 @@ class Settings:
             M7Settings.from_env(env, local=local),
             generations_enabled(env),
             processing_oauth,
+            RedisSettings.from_env(env, local=local),
         )

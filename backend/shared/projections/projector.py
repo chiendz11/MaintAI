@@ -15,7 +15,7 @@ class Projector:
         self.notify = notify
         self.generations = generations
 
-    def __call__(self, connection, event, record, outbox):
+    def apply(self, connection, event, record, outbox, *, pg_notify=True):
         generation = None
         if self.generations:
             from backend.shared.projections.generations import current, gate
@@ -35,9 +35,12 @@ class Projector:
             from backend.shared.projections.generations import capture
 
             capture(connection, event, record)
-        if result.changed and self.notify is not None:
+        if pg_notify and result.changed and self.notify is not None:
             self.notify(connection, event.key)
-        return result.telemetry_visible
+        return result
+
+    def __call__(self, connection, event, record, outbox):
+        return self.apply(connection, event, record, outbox).telemetry_visible
 
 
 def load(connection, machine, *, generation=None):

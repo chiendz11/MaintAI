@@ -37,6 +37,8 @@ INTERNAL_HOSTS = {
     "storage-consumer",
     "minio",
     "rag-service",
+    "redis",
+    "valkey",
 }
 
 MAX_CREDENTIAL_FILE_READ = 16385

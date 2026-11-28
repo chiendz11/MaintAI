@@ -1,6 +1,7 @@
 """Inbox skips duplicate HTTP reads; evidence and business effects are atomic."""
 
 import hashlib
+import logging
 
 from maintai_messaging.errors import IdentityConflict
 from maintai_messaging.postgres import TransactionalHandler
@@ -21,12 +22,13 @@ class AlertHandler:
             raise ValueError("Unexpected Alert subscription")
         applied = False
         result = None
+        hints = []
 
         def callback(connection, decoded, source, outbox):
             nonlocal applied, result
             # SDK has already checked its inbox. No machine lock is held during HTTP.
             evidence = self.evidence.fetch(decoded.payload)
-            result = self.repository.create_or_dedupe(connection, decoded, evidence)
+            result = self.repository.create_or_dedupe(connection, decoded, evidence, out_hint=hints)
             applied = True
 
         try:
@@ -48,6 +50,15 @@ class AlertHandler:
                     ),
                 )
             raise
+        redis_bus = getattr(self.repository, "redis_bus", None)
+        if applied and redis_bus is not None:
+            for hint in hints:
+                try:
+                    redis_bus.publish_alert(self.repository.channel, hint)
+                except Exception:
+                    logging.getLogger("maintai.business.alerts").warning(
+                        "Redis alert publish failed; notification preserved in Postgres"
+                    )
         if self.metrics is not None:
             try:
                 self.metrics.committed(event, duplicate=not applied, telemetry_visible=False)

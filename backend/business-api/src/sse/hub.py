@@ -11,12 +11,14 @@ from dataclasses import dataclass, field
 from uuid import uuid4
 
 import psycopg
+import redis.asyncio as aioredis
 from api.auth import RegistryFailure
 from backend.shared.alerts.notifications import ALERT_CHANNEL
 from backend.shared.alerts.notifications import parse as parse_alert_hint
 from backend.shared.notifications import DEFAULT_CHANNEL, Notifier, machine_key, parse_hint
 from maintai_messaging.contracts import canonical_json
 from psycopg import sql
+from redis.exceptions import RedisError
 
 
 @dataclass(frozen=True)
@@ -91,6 +93,9 @@ class NotificationHub:
         metrics=None,
         alert_repository=None,
         m7_factory=None,
+        redis_settings=None,
+        redis_bus=None,
+        redis_async_factory=None,
     ):
         self.repository, self.dsn = repository, dsn
         self.settings, self.metrics = settings or SSESettings(), metrics
@@ -103,6 +108,13 @@ class NotificationHub:
         self.alert_hints = deque()
         self.m7_factory = m7_factory
         self.m7_hints = deque()
+        self.redis_settings = redis_settings
+        self.redis_bus = redis_bus
+        self.redis_async_factory = redis_async_factory
+
+    @property
+    def uses_redis(self):
+        return self.redis_settings is not None or self.redis_async_factory is not None
 
     def _metric(self, name, *args):
         if self.metrics is not None:
@@ -167,12 +179,42 @@ class NotificationHub:
         if not due_entries:
             return
         snapshots_by_machine = None
-        if len(due_entries) > 1 and hasattr(self.repository, "live_many"):
+        machines = [machine for _, _, machine in due_entries]
+        if self.redis_bus is not None:
+            try:
+                redis_snapshots = await asyncio.wait_for(
+                    asyncio.to_thread(self.redis_bus.read_live_many, machines), 5
+                )
+                if not isinstance(redis_snapshots, dict):
+                    raise ValueError("Invalid Redis live snapshot batch")
+                snapshots_by_machine = dict(redis_snapshots)
+            except (RedisError, OSError, ValueError, TimeoutError):
+                logging.getLogger("maintai.business.sse").warning(
+                    "Redis live snapshot read failed; falling back to Postgres"
+                )
+                snapshots_by_machine = {}
+            missed = [m for m in machines if snapshots_by_machine.get(m) is None]
+            if missed:
+                try:
+                    if len(missed) > 1 and hasattr(self.repository, "live_many"):
+                        fallback = await asyncio.wait_for(
+                            asyncio.to_thread(self.repository.live_many, missed), 5
+                        )
+                        if not isinstance(fallback, dict):
+                            raise ValueError("Invalid batch live snapshot result")
+                        snapshots_by_machine.update(fallback)
+                    else:
+                        for missed_machine in missed:
+                            snapshots_by_machine[missed_machine] = await asyncio.wait_for(
+                                asyncio.to_thread(self.repository.live, missed_machine), 5
+                            )
+                except (psycopg.Error, ValueError, TimeoutError):
+                    self.disconnect_all("OTHER")
+                    return
+        elif len(due_entries) > 1 and hasattr(self.repository, "live_many"):
             try:
                 snapshots_by_machine = await asyncio.wait_for(
-                    asyncio.to_thread(
-                        self.repository.live_many, [machine for _, _, machine in due_entries]
-                    ),
+                    asyncio.to_thread(self.repository.live_many, machines),
                     5,
                 )
                 if not isinstance(snapshots_by_machine, dict):
@@ -367,7 +409,83 @@ class NotificationHub:
                 subscription.pending += len(frame)
                 self.pending_bytes += len(frame)
 
+    async def _listen_redis(self):
+        delay = 1
+        channels = [self.settings.channel]
+        if self.alert_repository is not None:
+            channels.append(self.settings.alert_channel)
+        if self.m7_factory is not None:
+            channels.append("maintai_business_m7_v1")
+        while not self.stopping.is_set():
+            client = None
+            pubsub = None
+            try:
+                client = (
+                    self.redis_async_factory()
+                    if self.redis_async_factory is not None
+                    else aioredis.from_url(
+                        self.redis_settings.url, **self.redis_settings.client_kwargs()
+                    )
+                )
+                await client.ping()
+                pubsub = client.pubsub(ignore_subscribe_messages=True)
+                await pubsub.subscribe(*channels)
+                self.connection = client
+                self.ready, delay = True, 1
+                while not self.stopping.is_set():
+                    message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                    if message is None:
+                        continue
+                    raw_channel = message.get("channel")
+                    raw_data = message.get("data")
+                    channel = (
+                        bytes(raw_channel).decode("utf-8")
+                        if isinstance(raw_channel, (bytes, bytearray))
+                        else str(raw_channel)
+                    )
+                    payload = (
+                        bytes(raw_data).decode("utf-8")
+                        if isinstance(raw_data, (bytes, bytearray))
+                        else str(raw_data)
+                    )
+                    try:
+                        if channel == "maintai_business_m7_v1":
+                            self.invalidate_m7(payload)
+                        elif channel == self.settings.alert_channel:
+                            self.invalidate_alert(payload)
+                        else:
+                            self.invalidate(parse_hint(payload))
+                    except (ValueError, RecursionError):
+                        continue
+            except (RedisError, OSError, ValueError):
+                self.ready = False
+                self.disconnect_all("NOTIFY_LOST")
+                try:
+                    await asyncio.wait_for(self.stopping.wait(), delay)
+                except TimeoutError:
+                    pass
+                delay = min(delay * 2, 30)
+            finally:
+                self.connection = None
+                self.ready = False
+                for resource in (pubsub, client):
+                    if resource is None:
+                        continue
+                    try:
+                        closer = getattr(resource, "aclose", None) or getattr(
+                            resource, "close", None
+                        )
+                        if closer is not None:
+                            result = closer()
+                            if asyncio.iscoroutine(result):
+                                await result
+                    except Exception:
+                        pass
+
     async def _listen(self):
+        if self.uses_redis:
+            await self._listen_redis()
+            return
         delay = 1
         while not self.stopping.is_set():
             try:

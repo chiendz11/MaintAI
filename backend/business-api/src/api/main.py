@@ -10,6 +10,7 @@ from backend.shared.alerts.repository import AlertRepository
 from backend.shared.persistence.pool import ConnectionPool
 from backend.shared.persistence.projections import ProjectionRepository
 from backend.shared.persistence.registry import RegistryRepository
+from backend.shared.redis_bus import BusinessRedisBus
 from backend.shared.service_auth import ServiceOAuthTokenProvider
 from business_processing_client import ProcessingStatusClient
 from business_sse.hub import NotificationHub
@@ -24,8 +25,10 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Business REST/SSE snapshots and event status API")
     parser.parse_args(argv)
     pool = None
+    redis_bus = None
     try:
         settings = Settings.from_env()
+        redis_bus = BusinessRedisBus(settings.redis) if settings.redis is not None else None
         pool = ConnectionPool(
             settings.database_url,
             size=12,
@@ -57,7 +60,11 @@ def main(argv=None):
                 token_provider=token_provider,
             )
         logging.basicConfig(level=logging.INFO, format="%(message)s")
-        alerts = AlertRepository(repository.connection_factory, channel=settings.sse.alert_channel)
+        alerts = AlertRepository(
+            repository.connection_factory,
+            channel=settings.sse.alert_channel,
+            redis_bus=redis_bus,
+        )
         projections = ProjectionRepository(
             repository.connection_factory,
             alert_reader=alerts.active,
@@ -66,12 +73,20 @@ def main(argv=None):
         from backend.shared.copilot.repository import BriefRepository
         from backend.shared.monitoring.runtime import catalog
 
-        briefs = BriefRepository(repository.connection_factory) if settings.m7 else None
+        briefs = (
+            BriefRepository(repository.connection_factory, redis_bus=redis_bus)
+            if settings.m7
+            else None
+        )
         if settings.m7:
             with repository.connection_factory() as connection:
                 connection.execute("SELECT job_id FROM brief_jobs LIMIT 0")
                 connection.execute("SELECT singleton FROM drift_catalog_state LIMIT 0")
-        monitoring = catalog(settings.m7, repository.connection_factory) if settings.m7 else None
+        monitoring = (
+            catalog(settings.m7, repository.connection_factory, redis_bus=redis_bus)
+            if settings.m7
+            else None
+        )
         uvicorn.run(
             create_app(
                 repository,
@@ -94,6 +109,8 @@ def main(argv=None):
                     m7_factory=repository.connection_factory
                     if settings.m7 or settings.projection_generations
                     else None,
+                    redis_settings=settings.redis,
+                    redis_bus=redis_bus,
                 ),
             ),
             host=settings.host,
@@ -107,5 +124,7 @@ def main(argv=None):
         print(f"Business registry failed: {type(exc).__name__}", file=sys.stderr)
         return 1
     finally:
+        if redis_bus is not None:
+            redis_bus.close()
         if pool is not None:
             pool.close()

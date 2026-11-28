@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import logging
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
@@ -9,6 +10,7 @@ import jwt
 from maintai_messaging.contracts import canonical_json, strict_json
 
 from backend.shared.alerts.domain import AlertError
+from backend.shared.copilot.repository import CHANNEL as M7_CHANNEL
 from backend.shared.copilot.repository import emit
 from backend.shared.copilot.schemas import valid
 
@@ -26,12 +28,14 @@ class DriftCatalog:
         services=None,
         heartbeat=None,
         stale_after=900,
+        redis_bus=None,
     ):
         if len(cursor_key) < 32:
             raise ValueError("Drift cursor key requires at least 32 bytes")
         self.factory, self.store, self.key = factory, store, cursor_key
         self.model_version, self.services, self.heartbeat = model_version, services, heartbeat
         self.stale_after = stale_after
+        self.redis_bus = redis_bus
 
     def _report(self, manifest):
         try:
@@ -72,6 +76,7 @@ class DriftCatalog:
                 raise AlertError(503, "DRIFT_CATALOG_CONFLICT")
             return
         report = self._report(manifest)
+        hint = None
         with self.factory() as connection, connection.transaction():
             inserted = connection.execute(
                 """INSERT INTO drift_catalog
@@ -89,7 +94,13 @@ class DriftCatalog:
                 ),
             ).fetchone()
             if inserted:
-                emit(connection, "drift.updated", None, {"report_id": manifest["report_id"]})
+                hint = emit(
+                    connection,
+                    "drift.updated",
+                    None,
+                    {"report_id": manifest["report_id"]},
+                    pg_notify=self.redis_bus is None,
+                )
             else:
                 existing = connection.execute(
                     "SELECT manifest_sha256 FROM drift_catalog WHERE report_id=%s",
@@ -97,6 +108,13 @@ class DriftCatalog:
                 ).fetchone()
                 if existing["manifest_sha256"] != digest:
                     raise AlertError(503, "DRIFT_CATALOG_CONFLICT")
+        if hint is not None and self.redis_bus is not None:
+            try:
+                self.redis_bus.publish_m7(M7_CHANNEL, hint)
+            except Exception:
+                logging.getLogger("maintai.business.monitoring").warning(
+                    "Redis M7 drift publish failed; notification preserved in Postgres"
+                )
 
     def _entries(self, entries):
         failed = False

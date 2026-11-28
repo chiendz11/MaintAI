@@ -6,6 +6,7 @@ import time
 
 import uvicorn
 from backend.shared.persistence.pool import ConnectionPool
+from backend.shared.redis_bus import BusinessRedisBus
 from confluent_kafka.admin import AdminClient
 from maintai_messaging.service import serve_consumers
 
@@ -17,6 +18,9 @@ def serve(settings, *, stop=None, connection_factory=None):
     stop = stop if stop is not None else threading.Event()
     pool = ConnectionPool(settings.database_url) if connection_factory is None else None
     factory = connection_factory or pool
+    redis_bus = (
+        BusinessRedisBus(settings.redis) if getattr(settings, "redis", None) is not None else None
+    )
     metrics = Metrics(stop=stop)
     from backend.shared.alerts.evidence import EvidenceClient
     from backend.shared.service_auth import ServiceOAuthTokenProvider
@@ -55,7 +59,7 @@ def serve(settings, *, stop=None, connection_factory=None):
             )
             runners = [
                 BriefRunner(
-                    BriefRepository(factory),
+                    BriefRepository(factory, redis_bus=redis_bus),
                     RAGClient(
                         settings.m7.rag_url,
                         settings.m7.rag_token_file,
@@ -64,8 +68,9 @@ def serve(settings, *, stop=None, connection_factory=None):
                     ),
                     stop,
                     metrics=job_metrics,
+                    redis_bus=redis_bus,
                 ),
-                CatalogRunner(catalog(settings.m7, factory), stop),
+                CatalogRunner(catalog(settings.m7, factory, redis_bus=redis_bus), stop),
             ]
         if settings.projection_generations:
             from backend.shared.projections.generations import current
@@ -180,6 +185,7 @@ def serve(settings, *, stop=None, connection_factory=None):
                 alert_channel=settings.alert_channel,
                 generations=settings.projection_generations,
                 evidence=evidence,
+                redis_bus=redis_bus,
             ),
             stop,
         )
@@ -191,6 +197,8 @@ def serve(settings, *, stop=None, connection_factory=None):
         stop.set()
         for runner in runners:
             runner.close()
+        if redis_bus is not None:
+            redis_bus.close()
         server.should_exit = True
         if monitor_thread.ident is not None:
             monitor_thread.join(timeout=6)
