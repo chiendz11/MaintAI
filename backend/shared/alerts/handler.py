@@ -23,12 +23,18 @@ class AlertHandler:
         applied = False
         result = None
         hints = []
+        redis_bus = getattr(self.repository, "redis_bus", None)
 
         def callback(connection, decoded, source, outbox):
             nonlocal applied, result
             # SDK has already checked its inbox. No machine lock is held during HTTP.
             evidence = self.evidence.fetch(decoded.payload)
-            result = self.repository.create_or_dedupe(connection, decoded, evidence, out_hint=hints)
+            if redis_bus is not None:
+                result = self.repository.create_or_dedupe(
+                    connection, decoded, evidence, out_hint=hints
+                )
+            else:
+                result = self.repository.create_or_dedupe(connection, decoded, evidence)
             applied = True
 
         try:
@@ -50,7 +56,6 @@ class AlertHandler:
                     ),
                 )
             raise
-        redis_bus = getattr(self.repository, "redis_bus", None)
         if applied and redis_bus is not None:
             for hint in hints:
                 try:
