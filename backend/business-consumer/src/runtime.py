@@ -37,37 +37,52 @@ def serve(settings, *, stop=None, connection_factory=None):
     )
     runners = []
     job_metrics = None
-    if settings.m7:
-        from backend.shared.copilot.metrics import JobMetrics
-        from backend.shared.copilot.repository import BriefRepository
-        from backend.shared.copilot.runner import BriefRunner
-        from backend.shared.monitoring.runtime import CatalogRunner, catalog
-        from rag_client import RAGClient
+    rebuild_metrics = None
+    if getattr(settings, "run_workers", True):
+        if settings.m7:
+            from backend.shared.copilot.metrics import JobMetrics
+            from backend.shared.copilot.repository import BriefRepository
+            from backend.shared.copilot.runner import BriefRunner
+            from backend.shared.monitoring.runtime import CatalogRunner, catalog
+            from backend.shared.service_auth import ServiceOAuthTokenProvider
+            from rag_client import RAGClient
 
-        job_metrics = JobMetrics(metrics.registry)
-        runners = [
-            BriefRunner(
-                BriefRepository(factory),
-                RAGClient(settings.m7.rag_url, settings.m7.rag_token_file, local=settings.m7.local),
-                stop,
-                metrics=job_metrics,
-            ),
-            CatalogRunner(catalog(settings.m7, factory), stop),
-        ]
-    if settings.projection_generations:
+            job_metrics = JobMetrics(metrics.registry)
+            rag_token_provider = (
+                ServiceOAuthTokenProvider(settings.m7.rag_oauth)
+                if settings.m7.rag_oauth is not None
+                else None
+            )
+            runners = [
+                BriefRunner(
+                    BriefRepository(factory),
+                    RAGClient(
+                        settings.m7.rag_url,
+                        settings.m7.rag_token_file,
+                        token_provider=rag_token_provider,
+                        local=settings.m7.local,
+                    ),
+                    stop,
+                    metrics=job_metrics,
+                ),
+                CatalogRunner(catalog(settings.m7, factory), stop),
+            ]
+        if settings.projection_generations:
+            from backend.shared.projections.generations import current
+            from backend.shared.projections.metrics import RebuildMetrics
+
+            with factory() as connection:
+                current(connection)
+            rebuild_metrics = RebuildMetrics(metrics.registry)
+        if settings.rebuild is not None:
+            from backend.shared.projections.runtime import build_runner
+
+            runners.append(build_runner(settings, stop, token_provider=token_provider))
+    elif settings.projection_generations:
         from backend.shared.projections.generations import current
 
         with factory() as connection:
             current(connection)
-    if settings.rebuild is not None:
-        from backend.shared.projections.runtime import build_runner
-
-        runners.append(build_runner(settings, stop, token_provider=token_provider))
-    rebuild_metrics = None
-    if settings.projection_generations:
-        from backend.shared.projections.metrics import RebuildMetrics
-
-        rebuild_metrics = RebuildMetrics(metrics.registry)
     failed = threading.Event()
     previous = {}
     server = uvicorn.Server(

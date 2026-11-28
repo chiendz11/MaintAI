@@ -146,7 +146,6 @@ INTERNAL_HOSTS = {
     "processing-worker",
     "processing-read-api",
     "processing-outbox-relay",
-    "ingestion-api",
     "sensor",
     "storage-consumer",
     "ml-service",

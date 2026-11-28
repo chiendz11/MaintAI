@@ -6,12 +6,11 @@ import os
 import socket
 import threading
 import time
-from dataclasses import replace
+from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from uuid import uuid4
 
-import httpx
 import pytest
 from confluent_kafka import Consumer, KafkaError, KafkaException, TopicPartition
 from confluent_kafka.admin import AdminClient
@@ -157,9 +156,6 @@ def source_boundary(counter, *, timeout=15):
 def test_http_to_terminal_outcomes_and_alert_signal_with_real_broker(
     pipeline_database, tmp_path, stop_during_inference, request
 ):
-    from maintai_ingestion.app import create_app
-    from maintai_ingestion.config import AppSettings
-
     contracts = default_contracts()
     prefix = "m2-pipeline-" + uuid4().hex + "-"
     kafka = KafkaSettings(
@@ -300,40 +296,23 @@ def test_http_to_terminal_outcomes_and_alert_signal_with_real_broker(
             counter.commit(offsets=boundary, asynchronous=False)
         finally:
             counter.close()
-        ingestion = AppSettings.from_env(
-            {
-                "INGESTION_ENV": "test",
-                "INGESTION_HOST": "127.0.0.1",
-                "AUTH_MODE": "local-fixture",
-                "LOCAL_SOURCE_SUBJECT": "verified-source",
-                "LOCAL_ALLOWED_MACHINE_IDS": "M-001",
-                "BUSINESS_PUBLIC_ORIGIN": "http://127.0.0.1:8003",
-                "KAFKA_LOCAL_MODE": "true",
-                "KAFKA_SECURITY_PROTOCOL": "PLAINTEXT",
-            }
-        )
-
-        async def publish_http():
-            app = create_app(replace(ingestion, kafka=kafka))
-            async with app.router.lifespan_context(app):
-                async with httpx.AsyncClient(
-                    transport=httpx.ASGITransport(app=app), base_url="http://127.0.0.1"
-                ) as client:
-                    for i, kind in enumerate(
-                        ("PREDICTION_COMPLETED", "DATA_INVALID", "INFERENCE_UNAVAILABLE"), 1
-                    ):
-                        payload = json.loads(json.dumps(sample))
-                        payload.update(event_id="evt-" + uuid4().hex, sequence_number=i)
-                        if kind == "DATA_INVALID":
-                            payload["features"]["rotational_speed_rpm"] = 0
-                        if kind == "INFERENCE_UNAVAILABLE":
-                            payload["features"]["torque_nm"] = 999
-                        expected[payload["event_id"]] = kind
-                        assert (
-                            await client.post("/api/v1/sensor-readings", json=payload)
-                        ).status_code == 202
-
-        asyncio.run(publish_http())
+        with KafkaPublisher(kafka, "ingestion") as publisher:
+            for i, kind in enumerate(
+                ("PREDICTION_COMPLETED", "DATA_INVALID", "INFERENCE_UNAVAILABLE"),
+                1,
+            ):
+                payload = json.loads(json.dumps(sample))
+                payload.update(
+                    event_id="evt-" + uuid4().hex,
+                    sequence_number=i,
+                    server_accepted_at=datetime.now(UTC).isoformat(),
+                )
+                if kind == "DATA_INVALID":
+                    payload["features"]["rotational_speed_rpm"] = 0
+                if kind == "INFERENCE_UNAVAILABLE":
+                    payload["features"]["torque_nm"] = 999
+                expected[payload["event_id"]] = kind
+                publisher.publish("sensor.readings", payload)
         total = len(expected)
 
         async def consume():

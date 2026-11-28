@@ -11,6 +11,7 @@ from drift_monitor.models import DriftReport, DriftStatus, RuntimeSample
 from drift_monitor.reference import ReferenceError, load_reference
 from drift_monitor.report import evaluate
 from drift_monitor.repository import Repository
+from drift_monitor.s3_publisher import publish_drift_report
 
 
 @dataclass
@@ -74,6 +75,22 @@ def run_worker(
         reused = stored is not None
         report = stored if reused else repository.save_report(report)
         success = report.overall_status != DriftStatus.ERROR
+        if config.s3_bucket:
+            try:
+                pub = publish_drift_report(config, report, published_at=now)
+                log(
+                    "drift_report_s3_published",
+                    report_id=report.report_id,
+                    manifest_key=pub["manifest_key"],
+                )
+            except Exception as exc:
+                log(
+                    "drift_s3_publish_failed",
+                    error_type=type(exc).__name__,
+                    report_id=report.report_id,
+                )
+                if config.s3_required:
+                    return RunResult(report, 1, reused, "S3_PUBLISH_UNAVAILABLE")
         metrics = render_metrics(
             report,
             repository.counts(),

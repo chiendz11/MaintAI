@@ -34,8 +34,8 @@ runtime folders và1 platform descriptor MLflow riêng. Mỗi folder có `runtim
 và `Dockerfile`; đây là metadata
 inventory, **không phải Kubernetes manifests hoặc bằng chứng mọi entrypoint đã implement**.
 
-- `ingestion-api/`, `storage-consumer/`, `frontend/`, `rag-service/`: mỗi root là
-  một planned Deployment.
+- `ingestion-connect/`, `storage-consumer/`, `frontend/`, `rag-service/`: mỗi root là
+  một Deployment (tầng ingestion dùng Redpanda Connect image `maintai-ingestion-connect`).
 - `sensor-simulator-UI/`: static React frontend riêng, demo/live client; Sensor0.3.0 provider đã implement; chưa deploy.
 - `backend/`: Business owner, có hai runtime `business-api/`, `business-consumer/`.
 - `processing/`: Processing owner, có `worker/`, `read-api/`, `outbox-relay/`.
@@ -144,7 +144,8 @@ vào các module rỗng. Lượt chuẩn hóa OBS-01 ngày2026-10-25 dọn bốn
 `src/`; HTTP/auth/guards/metrics thực thi ở package trên. SDK0.2.0/bundle1.1.0
 được pin từ lượt cập nhật ordering trước đó; cleanup này không đổi wire/bundle.
 Sensor0.3.0 đã có ACK202 client riêng. Local tests và image smoke không thay
-nghiệm thu shared OIDC/TLS/ACL, k3d hoặc đo tải; xem [runbook M1](../../ingestion-api/README.md).
+nghiệm thu shared OIDC/TLS/ACL, k3d hoặc đo tải; xem [Sensor README](../../sensor/README.md).
+*(Ghi chú: tầng Ingestion Python/FastAPI `ingestion-api/` đã được gỡ bỏ và thay thế bằng kiến trúc thuần MQTT `EMQX -> Redpanda Connect -> Kafka`.)*
 
 
 ## Source M5

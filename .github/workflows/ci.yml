@@ -34,7 +34,7 @@ jobs:
       - name: Check component folders
         run: |
           test -f README.md
-          for component in sensor ingestion-api processing storage-consumer backend frontend sensor-simulator-UI ml-service rag-service drift-worker messaging; do
+          for component in sensor ingestion-connect processing storage-consumer backend frontend sensor-simulator-UI ml-service rag-service drift-worker messaging; do
             test -d "$component"
             printf 'Found %s/\n' "$component"
           done
@@ -120,6 +120,7 @@ jobs:
           python messaging/scripts/lock_contracts.py --check
           maintai-kafka validate-contracts
           python -m pytest -c messaging/pyproject.toml messaging/tests/unit processing/tests --junitxml=artifacts/kafka-unit.xml
+          python -m pytest contracts/tests/test_redpanda_connect_config.py
 
       - name: Build source distribution and wheel with bundled contracts
         run: |
@@ -455,69 +456,6 @@ jobs:
 
       - name: Verify static image, config, probes and API boundary
         run: python3 .github/scripts/container_smoke.py ui --image maintai-simulator-ui:ci
-  ingestion-ci:
-    name: Ingestion API unit and HTTP contracts
-    needs: structure
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
-        with:
-          python-version: '3.12'
-      - name: Build internal SDK and install locked app dependencies
-        run: |
-          python -m pip install build==1.6.1 setuptools==84.0.0 wheel==0.48.0
-          python -m build messaging --wheel --outdir /tmp/m1-wheels
-          python -m pip install --no-deps /tmp/m1-wheels/maintai_messaging-0.3.1-py3-none-any.whl
-          python -m pip install --find-links /tmp/m1-wheels -r ingestion-api/requirements-dev.lock
-          python -m pip install --no-deps --no-build-isolation -e ./ingestion-api
-      - name: Lint, unit, contract and installed artifacts
-        run: |
-          ruff check ingestion-api
-          ruff format --check ingestion-api
-          python -m pytest ingestion-api/tests/unit ingestion-api/tests/contract
-          python -m pip check
-          python -m build ingestion-api --wheel --outdir /tmp/m1-wheels
-          python messaging/scripts/lock_contracts.py --check
-
-  ingestion-integration:
-    name: Ingestion real Kafka and container
-    needs: ingestion-ci
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      MAINTAI_INGESTION_INTEGRATION: '1'
-      MAINTAI_INGESTION_CONTAINER_TEST: '1'
-      KAFKA_TEST_BOOTSTRAP_SERVERS: 127.0.0.1:19092
-      MAINTAI_INGESTION_IMAGE: maintai-ingestion:m1-local
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
-        with:
-          python-version: '3.12'
-      - name: Install internal SDK and app test dependencies
-        run: |
-          python -m pip install build==1.6.1 setuptools==84.0.0 wheel==0.48.0
-          python -m build messaging --wheel --outdir /tmp/m1-wheels
-          python -m pip install --no-deps /tmp/m1-wheels/maintai_messaging-0.3.1-py3-none-any.whl
-          python -m pip install --find-links /tmp/m1-wheels -r ingestion-api/requirements-dev.lock
-          python -m pip install --no-deps --no-build-isolation -e ./ingestion-api
-      - name: Start isolated broker
-        run: docker compose -p maintai-m1 -f messaging/tests/integration/compose.yaml up -d --wait kafka
-      - name: Verify real broker ACK and quarantine
-        run: python -m pytest ingestion-api/tests/integration/test_http_kafka.py
-      - name: Build installed runtime image and verify fixture OIDC with Kafka
-        run: |
-          docker build -f ingestion-api/Dockerfile -t maintai-ingestion:m1-local .
-          python -m pytest ingestion-api/tests/integration/test_container.py
-      - name: Stop CI broker (retain no application state)
-        if: ${{ always() }}
-        run: docker compose -p maintai-m1 -f messaging/tests/integration/compose.yaml down
 
   storage-ci:
     name: Storage Consumer (Python ${{ matrix.python }})
@@ -937,8 +875,8 @@ jobs:
           python -m build messaging --wheel --outdir /tmp/m2-wheels
           python -m build --no-isolation storage-consumer --wheel --outdir /tmp/m2-wheels
           python -m pip install --no-deps /tmp/m2-wheels/maintai_messaging-0.3.1-py3-none-any.whl
-          python -m pip install --find-links /tmp/m2-wheels -r processing/requirements-dev.lock -r backend/requirements-dev.lock -r ingestion-api/requirements-dev.lock
-          python -m pip install --no-deps --no-build-isolation -e ./processing -e ./backend -e ./ingestion-api
+          python -m pip install --find-links /tmp/m2-wheels -r processing/requirements-dev.lock -r backend/requirements-dev.lock
+          python -m pip install --no-deps --no-build-isolation -e ./processing -e ./backend
       - name: Start isolated M2 integration dependencies
         run: docker compose -p maintai-m6-ci -f processing/read-api/tests/compose.yaml up -d --build --wait --wait-timeout 180
       - name: Build installed runtime images
@@ -995,8 +933,8 @@ jobs:
           python -m build --no-isolation messaging --wheel --outdir /tmp/m4-wheels
           python -m build --no-isolation storage-consumer --wheel --outdir /tmp/m4-wheels
           python -m pip install --no-deps /tmp/m4-wheels/maintai_messaging-0.3.1-py3-none-any.whl
-          python -m pip install --find-links /tmp/m4-wheels -r processing/requirements-dev.lock -r backend/requirements-dev.lock -r ingestion-api/requirements-dev.lock
-          python -m pip install --no-deps --no-build-isolation -e ./processing -e ./backend -e ./ingestion-api
+          python -m pip install --find-links /tmp/m4-wheels -r processing/requirements-dev.lock -r backend/requirements-dev.lock
+          python -m pip install --no-deps --no-build-isolation -e ./processing -e ./backend
       - name: Check fixture source and install locked frontend
         run: |
           ruff check frontend/tests/provider --config backend/pyproject.toml
@@ -1034,7 +972,6 @@ jobs:
       fail-fast: false
       matrix:
         component:
-          - ingestion-api
           - processing
           - backend
           - frontend
@@ -1081,8 +1018,6 @@ jobs:
       - mlflow-source-ci
       - keycloak-image-ci
       - component-ci
-      - ingestion-ci
-      - ingestion-integration
       - processing-ci
       - processing-integration
       - frontend-ci

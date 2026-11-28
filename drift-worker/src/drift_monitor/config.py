@@ -47,6 +47,10 @@ class DriftConfig(BaseModel):
     metrics_job: str = "maintai-drift-worker"
     environment: str = "local"
     timeout_seconds: float = Field(default=5, gt=0)
+    s3_bucket: str | None = Field(default=None, min_length=1)
+    s3_region: str = Field(default="us-east-1", min_length=1)
+    s3_endpoint: str | None = None
+    s3_required: bool = False
 
     @model_validator(mode="after")
     def coherent_window(self) -> "DriftConfig":
@@ -106,9 +110,18 @@ class DriftConfig(BaseModel):
             "oidc_client_id": "DRIFT_OIDC_CLIENT_ID",
             "oidc_client_secret_file": "DRIFT_OIDC_CLIENT_SECRET_FILE",
             "environment": "ENVIRONMENT",
+            "s3_bucket": "DRIFT_S3_BUCKET",
+            "s3_region": "DRIFT_S3_REGION",
+            "s3_endpoint": "DRIFT_S3_ENDPOINT",
+            "s3_required": "DRIFT_S3_REQUIRED",
         }
         values.update(
-            {field: os.environ[name] for field, name in env_names.items() if name in os.environ}
+            {
+                field: os.environ[name]
+                for field, name in env_names.items()
+                if name in os.environ
+                and not (field in {"s3_bucket", "s3_endpoint"} and not os.environ[name].strip())
+            }
         )
         values.update({key: value for key, value in (overrides or {}).items() if value is not None})
         return cls.model_validate(values)

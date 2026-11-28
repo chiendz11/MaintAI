@@ -274,7 +274,7 @@ def test_mqtt_tls_and_auth_settings_and_transport(tmp_path, runtime_settings):
             "auth_mode": "jwt",
             "jwt_issuer": "https://keycloak.local/realms/maintai",
             "jwks_url": "https://keycloak.local/realms/maintai/certs",
-            "backend_base_url": "https://ingestion-api.local",
+            "backend_base_url": "https://edge-ingest.local",
             "transport_mode": "mqtt",
             "mqtt_host": "mosquitto",
             "mqtt_port": 1883,

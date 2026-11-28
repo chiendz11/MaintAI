@@ -18,12 +18,11 @@ với entrypoint khác. Chi tiết ở [deployment map](architecture/README.md) 
 
 ```text
 MaintAI/
-├── architecture/                    # 14 app +1 platform descriptor; không phải manifests
+├── architecture/                    # 13 app + 2 platform descriptors; không phải manifests
 ├── docs/                            # Target v1.4 + chức năng/readiness/chi tiết kế thừa
 ├── contracts/                       # v1.3/ là baseline máy đọc được1.3.2
 ├── messaging/                       # Thư viện Kafka Python dùng chung; không deployment
-├── sensor/                          # [Deployment] target simulator + control API
-├── ingestion-api/                   # [Deployment] HTTP envelope → Kafka ACK 202
+├── sensor/                          # [Deployment] target simulator + control API (MQTT QoS 1)
 ├── processing/                      # OWNER Processing; không là một Deployment
 │   ├── worker/                      # [Deployment] DQ → ML client → risk → outbox
 │   ├── read-api/                    # [Deployment] internal status/history/window API
@@ -57,7 +56,7 @@ không phải Kubernetes YAML, image đã build hoặc entrypoint hoạt động
 
 ## Luồng mục tiêu
 
-Sensor → Ingestion API → Kafka `sensor.readings`, sau đó có ba consumer groups:
+Sensor → EMQX MQTTS → Redpanda Connect → Kafka `sensor.readings`, sau đó có ba consumer groups:
 Processing (DQ/ML/risk), Business live projection và Storage raw archive. Processing
 outbox phát `inference.results`/`alert.signals`; Business Consumer cập nhật latest
 snapshots/alerts, rồi PG NOTIFY/pubsub → Business API replicas → SSE/UI.
@@ -68,9 +67,9 @@ Business DB chỉ chứa latest projections và business data, không full raw h
 
 ## Đã có gì và còn thiếu gì
 
-- [Ingestion M1](ingestion-api/README.md) có HTTP/auth/ACK-first quarantine,
-  health/metrics, tests local real Kafka và image smoke; shared OIDC/TLS/ACL và
-  GitOps deployment chưa nghiệm thu. HTTP Ingestion1.4.0 độc lập các API1.3.2.
+- Tầng Ingestion sử dụng **EMQX (`hash_topic`) -> Redpanda Connect (`$share/maintai-ingest`) -> Kafka**
+  (`sensor.readings` / `sensor.rejected` với 4 headers chuẩn và `lz4` idempotent), thay thế
+  `ingestion-api` Python trước đây (xem cấu trúc pipeline tại [contracts/tests/test_redpanda_connect_config.py](contracts/tests/test_redpanda_connect_config.py)).
 
 - Sensor0.3.0 có ACK202, SQLite/WAL sequence/spool/receipts, scoped JWT Control API,
   scheduler/sender riêng và OBS-01 metrics. Image/deployment chưa verify.

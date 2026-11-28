@@ -15,7 +15,6 @@ SCHEMAS = {
     "monitoring.schema.json",
     "runtime.schema.json",
     "raw-catalog-m6.schema.json",
-    "ingestion.schema.json",
     "history-m6.schema.json",
     "brief-request.schema.json",
     "common.schema.json",

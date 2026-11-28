@@ -4,7 +4,7 @@
   "description": "Planned target1.3.2 source/workload inventory; implementation_status remains independent. Source owners are not deployments.",
   "runtime_descriptors": [
     "sensor/runtime.json",
-    "ingestion-api/runtime.json",
+    "ingestion-connect/runtime.json",
     "processing/worker/runtime.json",
     "processing/read-api/runtime.json",
     "processing/outbox-relay/runtime.json",

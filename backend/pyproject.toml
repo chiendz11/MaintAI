@@ -12,6 +12,7 @@ dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.30,<1", "psycopg[binary]>=3.2,<
 [project.scripts]
 maintai-business-api = "api.main:main"
 maintai-business-consumer = "business_consumer.main:main"
+maintai-business-worker = "business_consumer.worker:main"
 maintai-business-migrate = "backend.shared.persistence.migration:main"
 maintai-business-rebuild = "backend.shared.projections.cli:main"
 maintai-business-provision = "backend.shared.persistence.provision:main"
@@ -21,7 +22,7 @@ packages = ["backend", "backend.shared", "backend.shared.persistence", "backend.
 package-dir = {rag_client = "business-api/src/rag_client", backend = ".", api = "business-api/src/api", business_consumer = "business-consumer/src", business_processing_client = "business-api/src/processing_client", business_sse = "business-api/src/sse"}
 
 [tool.setuptools.data-files]
-"share/maintai-business/contracts" = ["../contracts/v1.3/schemas/brief-request.schema.json", "../contracts/v1.3/schemas/business.schema.json", "../contracts/v1.3/schemas/common.schema.json", "../contracts/v1.3/schemas/drift-reference.schema.json", "../contracts/v1.3/schemas/drift-report.schema.json", "../contracts/v1.3/schemas/features.schema.json", "../contracts/v1.3/schemas/history-m6.schema.json", "../contracts/v1.3/schemas/ingestion.schema.json", "../contracts/v1.3/schemas/maintenance-brief.schema.json", "../contracts/v1.3/schemas/monitoring.schema.json", "../contracts/v1.3/schemas/prediction.schema.json", "../contracts/v1.3/schemas/raw-catalog-m6.schema.json", "../contracts/v1.3/schemas/runtime.schema.json"]
+"share/maintai-business/contracts" = ["../contracts/v1.3/schemas/brief-request.schema.json", "../contracts/v1.3/schemas/business.schema.json", "../contracts/v1.3/schemas/common.schema.json", "../contracts/v1.3/schemas/drift-reference.schema.json", "../contracts/v1.3/schemas/drift-report.schema.json", "../contracts/v1.3/schemas/features.schema.json", "../contracts/v1.3/schemas/history-m6.schema.json", "../contracts/v1.3/schemas/maintenance-brief.schema.json", "../contracts/v1.3/schemas/monitoring.schema.json", "../contracts/v1.3/schemas/prediction.schema.json", "../contracts/v1.3/schemas/raw-catalog-m6.schema.json", "../contracts/v1.3/schemas/runtime.schema.json"]
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib -q"

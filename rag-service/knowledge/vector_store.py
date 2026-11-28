@@ -1,9 +1,9 @@
 
-import os
 import json
-import psycopg
-import numpy as np
+import os
 
+import numpy as np
+import psycopg
 from dotenv import load_dotenv
 from langchain_core.documents import Document
 
@@ -34,23 +34,22 @@ class PostgresVectorStore:
 
         inserted = 0
 
-        with psycopg.connect(self.connection_string) as conn:
-            with conn.cursor() as cursor:
-                for doc, vector in zip(documents, embeddings):
-                    cursor.execute(
-                        """
-                        INSERT INTO knowledge_chunks
-                            (content, embedding, metadata)
-                        VALUES (%s, %s::vector, %s::jsonb)
-                        ON CONFLICT DO NOTHING
-                        """,
-                        (
-                            doc.page_content,
-                            self._vector_to_string(vector),
-                            json.dumps(doc.metadata, ensure_ascii=False),
-                        ),
-                    )
-                    inserted += cursor.rowcount
+        with psycopg.connect(self.connection_string) as conn, conn.cursor() as cursor:
+            for doc, vector in zip(documents, embeddings):
+                cursor.execute(
+                    """
+                    INSERT INTO knowledge_chunks
+                        (content, embedding, metadata)
+                    VALUES (%s, %s::vector, %s::jsonb)
+                    ON CONFLICT DO NOTHING
+                    """,
+                    (
+                        doc.page_content,
+                        self._vector_to_string(vector),
+                        json.dumps(doc.metadata, ensure_ascii=False),
+                    ),
+                )
+                inserted += cursor.rowcount
 
         print(
             f"Inserted {inserted}/{len(documents)} chunks; "
@@ -62,41 +61,51 @@ class PostgresVectorStore:
         self,
         query_embedding,
         top_k: int = 3,
-        filters: dict | None = None
+        filters: dict | None = None,
+        max_distance: float | None = None,
     ) -> list[Document]:
         if top_k <= 0:
             return []
+        threshold = (
+            float(os.getenv("RAG_MAX_COSINE_DISTANCE", "0.65"))
+            if max_distance is None
+            else float(max_distance)
+        )
+        if not np.isfinite(threshold) or threshold <= 0.0 or threshold > 2.0:
+            raise ValueError("RAG_MAX_COSINE_DISTANCE must be in (0.0, 2.0]")
         vector_str = self._vector_to_string(query_embedding)
         filter_json = json.dumps(
             filters or {},
             ensure_ascii=False
         )
-        with psycopg.connect(self.connection_string) as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    """
-                        SELECT
-                            id,
-                            content,
-                            metadata,
-                            embedding <=> %s::vector AS distance
-                        FROM knowledge_chunks
-                        WHERE metadata @> %s::jsonb
-                        AND jsonb_typeof(metadata) = 'object'
-                        AND NULLIF(BTRIM(metadata->>'document_id'), '') IS NOT NULL
-                        AND NULLIF(BTRIM(metadata->>'document_version'), '') IS NOT NULL
-                        AND NULLIF(BTRIM(metadata->>'section'), '') IS NOT NULL
-                        AND NULLIF(BTRIM(metadata->>'page'), '') IS NOT NULL
-                        ORDER BY distance ASC
-                        LIMIT %s
-                    """,
-                    (
-                        vector_str,
-                        filter_json,
-                        top_k
-                    )
-                )
-                rows = cursor.fetchall()
+        with psycopg.connect(self.connection_string) as conn, conn.cursor() as cursor:
+            cursor.execute(
+                """
+                    SELECT
+                        id,
+                        content,
+                        metadata,
+                        embedding <=> %s::vector AS distance
+                    FROM knowledge_chunks
+                    WHERE metadata @> %s::jsonb
+                    AND jsonb_typeof(metadata) = 'object'
+                    AND NULLIF(BTRIM(metadata->>'document_id'), '') IS NOT NULL
+                    AND NULLIF(BTRIM(metadata->>'document_version'), '') IS NOT NULL
+                    AND NULLIF(BTRIM(metadata->>'section'), '') IS NOT NULL
+                    AND NULLIF(BTRIM(metadata->>'page'), '') IS NOT NULL
+                    AND (embedding <=> %s::vector) <= %s
+                    ORDER BY distance ASC
+                    LIMIT %s
+                """,
+                (
+                    vector_str,
+                    filter_json,
+                    vector_str,
+                    threshold,
+                    top_k,
+                ),
+            )
+            rows = cursor.fetchall()
         documents = []
         for chunk_id, content, metadata, distance in rows:
             document = Document(
@@ -115,22 +124,21 @@ class PostgresVectorStore:
         document_id: str,
         document_version: str,
     ) -> bool:
-        with psycopg.connect(self.connection_string) as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    """
-                    SELECT EXISTS (
-                        SELECT 1
-                        FROM knowledge_chunks
-                        WHERE metadata @> %s::jsonb
-                    )
-                    """,
-                    (
-                        json.dumps({
-                            "document_id": document_id,
-                            "document_version": document_version,
-                        }),
-                    ),
+        with psycopg.connect(self.connection_string) as conn, conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM knowledge_chunks
+                    WHERE metadata @> %s::jsonb
                 )
-                return bool(cursor.fetchone()[0])
+                """,
+                (
+                    json.dumps({
+                        "document_id": document_id,
+                        "document_version": document_version,
+                    }),
+                ),
+            )
+            return bool(cursor.fetchone()[0])
 
