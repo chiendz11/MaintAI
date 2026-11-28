@@ -428,8 +428,8 @@ SQL001/002, model thresholds hoặc trạng thái app/image/deployment còn pend
 
 Ingestion có FastAPI runtime với SDK gateway/publisher, JWT/JWKS verifier, bounded
 raw-body/admission, ACK-first accepted/rejected, response adapter, health/metrics
-và graceful shutdown. HTTP Ingestion OpenAPI tăng MINOR1.4.0; các OpenAPI khác
-vẫn1.3.2, Kafka bundle/wire không đổi. Xem [runbook](../../ingestion-api/README.md).
+và graceful shutdown. HTTP Ingestion1.4.0 tăng MINOR1.4.0; các OpenAPI khác
+vẫn1.3.2, Kafka bundle/wire không đổi. *(Cập nhật: `ingestion-api` Python/FastAPI đã được gỡ bỏ khi chuyển sang `EMQX -> Redpanda Connect -> Kafka`.)*
 
 Unit/HTTP contracts, real Kafka localhost29092 và installed image smoke dùng JWT
 chữ ký với JWKS fixture local được kiểm tra riêng. Không suy shared OIDC provider,

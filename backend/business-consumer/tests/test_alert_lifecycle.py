@@ -167,7 +167,9 @@ def test_lifecycle_scope_feedback_terminal_and_snapshot(business_database):
         "ACKNOWLEDGED",
         "IN_PROGRESS",
         "RESOLVED",
+        "RESOLVED",
     ]
+    assert "[Feedback: CONFIRMED_ISSUE / NOT_AVAILABLE]" in (detail["history"][-1]["note"] or "")
     assert repo.list({"different"})["total"] == 0
     with pytest.raises(AlertError) as error:
         repo.detail(aid, {"different"})

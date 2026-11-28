@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import time
 from pathlib import Path
 
@@ -174,12 +175,13 @@ def register_parser(subparsers) -> None:
 
 
 def run_cli(args: argparse.Namespace) -> int:
+    env_dry_run = os.environ.get("PUBLISH_DRY_RUN", "false").strip().lower() in {"1", "true", "yes"}
     result = publish_shadow_pr(
         directory=args.directory,
         release_context_path=args.context,
         gitops_repo=args.gitops_repo,
         base_branch=args.base_branch,
-        dry_run=args.dry_run,
+        dry_run=args.dry_run or env_dry_run,
         local_gitops_dir=args.local_gitops_dir,
     )
     print(json.dumps(result, indent=2))

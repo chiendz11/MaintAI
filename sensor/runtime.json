@@ -17,12 +17,12 @@
   "kafka_subscriptions": [],
   "kafka_publications": [],
   "interfaces": [
-    "HTTP Ingestion API",
+    "MQTT QoS 1 Telemetry (EMQX -> Redpanda Connect -> Kafka)",
     "Sensor Control API for Simulator UI"
   ],
   "boundaries": [
     "Single controller with local persistent SQLite/WAL state, durable sequence/spool/receipts; process lock and Recreate required; no multi-controller HA claim.",
-    "SensorRequest wire1.3.0 and HTTP202 ACK; Control baseline1.3.2 authenticated/scoped; no inference/risk/alert work.",
+    "SensorRequest wire1.3.0 over MQTT QoS 1; Control baseline1.3.2 authenticated/scoped; no inference/risk/alert work.",
     "Independent UI, same five closed Control operations; live rate/counters/preview require a reviewed contract extension."
   ],
   "dockerfile": "sensor/Dockerfile",

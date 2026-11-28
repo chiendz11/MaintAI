@@ -32,7 +32,6 @@ INTERNAL_HOSTS = {
     "storage-consumer",
     "minio",
     "rag-service",
-    "ingestion-api",
 }
 
 

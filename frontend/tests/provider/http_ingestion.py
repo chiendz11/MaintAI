@@ -1,54 +1,57 @@
-"""Real HTTP Ingestion wrapper with signed fixture auth and real Kafka ACKs."""
+"""Local HTTP test publisher with signed fixture auth and real Kafka ACKs."""
 
-from maintai_ingestion.app import create_app
-from maintai_ingestion.auth import OidcIdentityVerifier
-from maintai_ingestion.config import AppSettings
+from datetime import UTC, datetime
+
+import jwt
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from maintai_messaging.consumer import Record
 from maintai_messaging.contracts import default_contracts
 from maintai_messaging.producer import KafkaPublisher
 
 
+def _signing_key(jwks: dict, kid: str | None):
+    for key in jwks.get("keys", []):
+        if kid is None or key.get("kid") == kid:
+            return jwt.PyJWK.from_dict(key).key
+    raise HTTPException(status_code=401, detail="Unknown signing key")
+
+
 def application(kafka, issuer, jwks, receipts):
-    class CapturePublisher:
-        def __init__(self, settings):
-            self.settings = settings
-            self.publisher = KafkaPublisher(settings, "ingestion")
+    """Build a test-only FastAPI app that publishes sensor readings to Kafka."""
+    publisher = KafkaPublisher(kafka, "ingestion")
+    contracts = default_contracts()
+    app = FastAPI()
 
-        def publish(self, topic, payload):
-            ack = self.publisher.publish(topic, payload)
-            event = default_contracts().encode(topic, payload)
-            if topic == "sensor.readings":
-                receipts[event.message_id] = (
-                    event,
-                    Record(topic, ack.partition, ack.offset, event.key.encode(), event.wire_bytes),
-                )
-            return ack
+    @app.post("/api/v1/sensor-readings")
+    async def ingest(request: Request):
+        auth = request.headers.get("Authorization", "")
+        if not auth.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Missing bearer token")
+        token = auth.removeprefix("Bearer ").strip()
+        header = jwt.get_unverified_header(token)
+        jwt.decode(
+            token,
+            _signing_key(jwks, header.get("kid")),
+            algorithms=["RS256"],
+            issuer=issuer,
+            audience="ingestion",
+            options={"require": ["exp", "iss", "aud", "sub"]},
+        )
+        payload = await request.json()
+        payload.setdefault("server_accepted_at", datetime.now(UTC).isoformat())
+        ack = publisher.publish("sensor.readings", payload)
+        event = contracts.encode("sensor.readings", payload)
+        receipts[event.message_id] = (
+            event,
+            Record(
+                "sensor.readings", ack.partition, ack.offset, event.key.encode(), event.wire_bytes
+            ),
+        )
+        return JSONResponse({"status": "ACCEPTED", "event_id": event.message_id}, status_code=202)
 
-        def close(self):
-            self.publisher.close()
+    @app.on_event("shutdown")
+    def shutdown():
+        publisher.close()
 
-    settings = AppSettings.from_env(
-        {
-            "INGESTION_ENV": "test",
-            "INGESTION_HOST": "127.0.0.1",
-            "AUTH_MODE": "oidc",
-            "BUSINESS_PUBLIC_ORIGIN": "http://127.0.0.1:18031",
-            "OIDC_ISSUER": issuer,
-            "OIDC_JWKS_URL": issuer + "/jwks",
-            "OIDC_AUDIENCE": "ingestion",
-            "OIDC_ROLES_CLAIM": "roles",
-            "OIDC_MACHINES_CLAIM": "machines",
-            "KAFKA_LOCAL_MODE": "true",
-            "KAFKA_SECURITY_PROTOCOL": "PLAINTEXT",
-            "KAFKA_BOOTSTRAP_SERVERS": kafka.bootstrap_servers,
-        }
-    )
-    verifier = OidcIdentityVerifier(
-        issuer=issuer,
-        audience="ingestion",
-        algorithms=("RS256",),
-        roles_claim="roles",
-        machines_claim="machines",
-        fetch_jwks=lambda: jwks,
-    )
-    return create_app(settings, publisher_factory=CapturePublisher, verifier=verifier)
+    return app

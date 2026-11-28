@@ -22,3 +22,29 @@ def record(connection, alert_id, before, after, actor, body, timestamp):
             timestamp,
         ),
     )
+
+
+def record_feedback(connection, alert_id, current_status, actor, payload, timestamp):
+    verdict = payload.get("technician_verdict", "UNKNOWN")
+    rec = payload.get("recommendation_feedback", "NOT_AVAILABLE")
+    comment = str(payload.get("comment") or "").strip()
+    summary = f"[Feedback: {verdict} / {rec}]"
+    if comment:
+        summary = f"{summary} {comment[:200]}"
+    event_type = "CREATED" if current_status == "OPEN" else current_status
+    connection.execute(
+        """INSERT INTO alert_events
+        (alert_event_id,alert_id,event_type,from_status,to_status,actor_id,note,details,timestamp)
+        VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+        (
+            "ae_" + uuid4().hex,
+            alert_id,
+            event_type,
+            current_status,
+            current_status,
+            None if actor is None else actor.encode("utf-8"),
+            summary.encode("utf-8"),
+            canonical_json({"feedback": payload}),
+            timestamp,
+        ),
+    )

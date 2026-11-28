@@ -40,13 +40,13 @@
       "path": "docs/architecture/implementation-readiness.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "141bf778d8edd6389a827d310a9fe52d0066151b13d086830fea8387eaf02738"
+      "sha256": "490a2d11ab46ea52676cb56242dcb9fbd42751b9ce122dde1478ae2dbf1b18c4"
     },
     {
       "path": "docs/architecture/repository-layout.md",
       "source_filename": null,
       "upstream_sha256": null,
-      "sha256": "38dc29da423fbaf47de85aadb8822edb98d74abbf34bc02febee09ff8d9c3af0"
+      "sha256": "26e5509465d488f0b3ffdbd242ff8b0674e09ea7e92e74b916a753c28a50b7c9"
     },
     {
       "path": "docs/reports/legacy-artifact-audit.md",
@@ -270,7 +270,7 @@
       "sha256": "80fa2f68602a45edabff123fcfde9f850ee89e419a9ee161e471f84c992d4eb6"
     },
     {
-      "path": "docs/design-basis/report/Nhóm-8_MaintAI_Kien-truc.pdf",
+      "path": "docs/design-basis/report/Nh\u00f3m-8_MaintAI_Kien-truc.pdf",
       "source_filename": null,
       "upstream_sha256": null,
       "sha256": "e69bc9ac3cc6e8ff362f070cafaff99788614e62bb8ce59a6a6273fe4645e065"
@@ -448,9 +448,9 @@
       "revision": "1.2.3",
       "adopted_on": "2026-10-23",
       "document": "docs/design-basis/README.md",
-      "scope": "Self-contained eight-page academic report renamed to Nhóm-8_MaintAI_Kien-truc.pdf, with all four member names and student IDs on the first page. First-page spacing accommodates the roster; architectural content and the other seven pages are preserved. Two A4 landscape pages retain vector architecture/deployment diagrams. Initial100 machines x1 reading/s and scale-ready design unchanged; no runtime, wire, SQL, default or retention change.",
+      "scope": "Self-contained eight-page academic report renamed to Nh\u00f3m-8_MaintAI_Kien-truc.pdf, with all four member names and student IDs on the first page. First-page spacing accommodates the roster; architectural content and the other seven pages are preserved. Two A4 landscape pages retain vector architecture/deployment diagrams. Initial100 machines x1 reading/s and scale-ready design unchanged; no runtime, wire, SQL, default or retention change.",
       "requirements_source": {
-        "filename": "CHỦ ĐỀ 3_Requirement.docx",
+        "filename": "CH\u1ee6 \u0110\u1ec0 3_Requirement.docx",
         "sha256": "349d6f3c20fd338dedc63474e6fc24eec763154ac2f139b7a3627101093105c0",
         "paragraph_reference": "Pxxx counts all w:p elements in document.xml including empty and table paragraphs"
       }

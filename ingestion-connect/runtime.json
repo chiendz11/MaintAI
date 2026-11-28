@@ -1,0 +1,33 @@
+{
+  "descriptor_kind": "MaintAIRuntime",
+  "schema_version": "1.0.0",
+  "target_contract_revision": "1.3.2",
+  "runtime_id": "ingestion-connect",
+  "workload_kind": "Deployment",
+  "code_owner": "ingestion-connect",
+  "implementation_status": "implemented_mqtt_connect",
+  "image_group": "ingestion-connect",
+  "image_digest": null,
+  "entrypoint_status": "implemented_redpanda_connect",
+  "purpose": "Stateless MQTT->Kafka ingestion bridge consuming EMQX $share/maintai-ingest QoS 1 messages and routing validated AI4I events to sensor.readings or HASH_ONLY rejections to sensor.rejected.",
+  "source_paths": [
+    "ingestion-connect/connect.yaml"
+  ],
+  "logical_database": null,
+  "kafka_subscriptions": [],
+  "kafka_publications": [
+    "sensor.readings",
+    "sensor.rejected"
+  ],
+  "interfaces": [
+    "EMQX MQTT QoS 1 ($share/maintai-ingest)",
+    "Prometheus /metrics and /ready /ping (:4195)"
+  ],
+  "boundaries": [
+    "Stateless MQTT->Kafka router: schema/allowlist envelope guard only; zero DB, DQ/ML, or SSE logic.",
+    "Emits sensor.readings (1.3.0) and sensor.rejected (1.4.0 HASH_ONLY) with lz4 + idempotent_write and 4 required Kafka headers."
+  ],
+  "dockerfile": "ingestion-connect/Dockerfile",
+  "dockerfile_status": "implemented_ready",
+  "implemented_contract_revision": "1.3.2"
+}

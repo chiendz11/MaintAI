@@ -81,7 +81,8 @@ def test_alert_http_lifecycle_and_fleet_are_backed_by_owner_data(registry_databa
             ).status_code == 201
             detail = (await c.get(url, headers=viewer)).json()
             assert detail["alert"]["status"] == "RESOLVED"
-            assert len(detail["history"]) == 3
+            assert len(detail["history"]) == 4
+            assert "[Feedback: CONFIRMED_ISSUE / USEFUL]" in (detail["history"][-1]["note"] or "")
             fleet = (await c.get("/api/v1/machines", headers=viewer)).json()
             assert fleet["items"][0]["active_alert_count"] == 0
             assert (

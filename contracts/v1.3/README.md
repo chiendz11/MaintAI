@@ -31,7 +31,6 @@ validator, không phải dữ liệu production hoặc endpoint implementation.
 | Spec | Caller / boundary |
 | --- | --- |
 | [Business](openapi/openapi-business.yaml) | Main UI REST/SSE, scoped reads/actions/jobs; không ingest/control |
-| [Ingestion](openapi/openapi-ingestion.yaml) | Sensor; envelope guard + broker ACK202 |
 | [Processing](openapi/openapi-processing.yaml) | Business/Drift service identities; hot/archive history/status/VALID windows |
 | [Simulator](openapi/openapi-simulator.yaml) | Simulator UI riêng; Sensor backend, persisted control version |
 | [ML](openapi/openapi-ml.yaml) | Processing, fitted preprocessing+predict, provider1.1 |

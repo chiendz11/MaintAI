@@ -6,6 +6,7 @@ from pathlib import Path
 
 import httpx
 import yaml
+
 from maintai_automation.github_pr import GitHubPullRequestClient
 from maintai_automation.gitops_yaml import GitOpsContractError
 from maintai_automation.promote import run_promote_shadow
@@ -219,3 +220,29 @@ class PublishAndPromoteTest(unittest.TestCase):
         gh = GitHubPullRequestClient(token="ghp_testtoken", client=client)
         with self.assertRaises(GitOpsContractError):
             run_promote_shadow(decommission_shadow=True, github_client=gh)
+
+    def test_cli_respects_publish_dry_run_env(self):
+        import argparse
+        import os
+        from unittest.mock import patch
+
+        from maintai_automation.publish import run_cli
+
+        args = argparse.Namespace(
+            directory=Path("/tmp/slot"),
+            context=None,
+            gitops_repo=None,
+            base_branch=None,
+            dry_run=False,
+            local_gitops_dir=None,
+        )
+        with (
+            patch.dict(os.environ, {"PUBLISH_DRY_RUN": "true"}),
+            patch(
+                "maintai_automation.publish.publish_shadow_pr",
+                return_value={"mode": "dry-run"},
+            ) as mock_pub,
+        ):
+            rc = run_cli(args)
+        self.assertEqual(rc, 0)
+        self.assertTrue(mock_pub.call_args.kwargs["dry_run"])

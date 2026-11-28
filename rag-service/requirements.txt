@@ -5,6 +5,8 @@ uvicorn[standard]>=0.28.0
 pydantic>=2.6.0
 pydantic-settings>=2.2.0
 httpx>=0.28.1
+PyJWT>=2.10.0
+cryptography>=44.0.0
 
 # PDF Parsing
 PyMuPDF

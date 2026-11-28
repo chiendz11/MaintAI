@@ -67,7 +67,7 @@ EXPECTED_DEPLOYMENTS=(
   "business-api"
   "business-consumer"
   "frontend"
-  "ingestion-api"
+  "redpanda-connect"
   "ml-service"
   "ml-service-shadow"
   "mlflow"

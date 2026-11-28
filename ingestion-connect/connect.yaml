@@ -1,0 +1,117 @@
+http:
+  address: 0.0.0.0:4195
+  enabled: true
+
+metrics:
+  prometheus: {}
+
+input:
+  mqtt:
+    urls:
+      - ${MQTT_URL:tcp://emqx:1883}
+    topics:
+      - $share/maintai-ingest/maintai/v1/site/+/machines/+/telemetry
+    qos: 1
+    client_id: ${POD_NAME:redpanda-connect}
+
+pipeline:
+  processors:
+    - bloblang: |
+        let raw = content()
+        let parsed = $raw.parse_json().catch(null)
+        let f = $parsed.features
+        let has_features = $f.type() == "object" &&
+          ["L", "M", "H"].contains($f.product_type.string().catch("")) &&
+          ($f.air_temperature_k.type() == "number") &&
+          ($f.process_temperature_k.type() == "number") &&
+          ($f.rotational_speed_rpm.type() == "number" && $f.rotational_speed_rpm > 0) &&
+          ($f.torque_nm.type() == "number") &&
+          ($f.tool_wear_min.type() == "number" && $f.tool_wear_min >= 0)
+        let valid_envelope = $parsed != null &&
+          $parsed.schema_version == "1.3.0" &&
+          $parsed.event_id.type() == "string" && $parsed.event_id.length() > 0 &&
+          $parsed.machine_id.type() == "string" && $parsed.machine_id.length() > 0 &&
+          $parsed.stream_epoch.type() == "string" && $parsed.stream_epoch.length() > 0 &&
+          $parsed.sequence_number.type() == "number" && $parsed.sequence_number >= 1 &&
+          $parsed.received_at.type() == "string" && $parsed.received_at.length() > 0 &&
+          $parsed.source == "AI4I_SIMULATOR" &&
+          $has_features
+
+        let rej_id = "rej_" + uuid_v4()
+        let corr_id = if $valid_envelope {
+          $parsed.correlation_id.string().catch("corr_" + $parsed.event_id)
+        } else {
+          $parsed.correlation_id.string().catch("corr_" + uuid_v4())
+        }
+
+        meta valid = if $valid_envelope { "true" } else { "false" }
+        meta schema_version = if $valid_envelope { "1.3.0" } else { "1.4.0" }
+        meta message_id = if $valid_envelope { $parsed.event_id } else { $rej_id }
+        meta correlation_id = $corr_id
+        meta producer_git_sha = env("PRODUCER_GIT_SHA").or("redpanda-connect")
+
+        root = if $valid_envelope {
+          {
+            "schema_version": "1.3.0",
+            "event_id": $parsed.event_id,
+            "machine_id": $parsed.machine_id,
+            "stream_epoch": $parsed.stream_epoch,
+            "sequence_number": $parsed.sequence_number.number().int64(),
+            "received_at": $parsed.received_at,
+            "source": "AI4I_SIMULATOR",
+            "features": {
+              "product_type": $f.product_type,
+              "air_temperature_k": $f.air_temperature_k,
+              "process_temperature_k": $f.process_temperature_k,
+              "rotational_speed_rpm": $f.rotational_speed_rpm,
+              "torque_nm": $f.torque_nm,
+              "tool_wear_min": $f.tool_wear_min
+            },
+            "correlation_id": $corr_id,
+            "server_accepted_at": now().ts_format("2006-01-02T15:04:05.000000Z07:00")
+          }
+        } else {
+          {
+            "schema_version": "1.4.0",
+            "rejection_id": $rej_id,
+            "source_identity": meta("mqtt_topic").or("mqtt-edge"),
+            "request_id": $parsed.event_id.string().catch("req_" + uuid_v4()),
+            "correlation_id": $corr_id,
+            "rejected_at": now().ts_format("2006-01-02T15:04:05.000000Z07:00"),
+            "reason": if $parsed == null { "MALFORMED_JSON" } else { "VALIDATION_FAILED" },
+            "payload_disposition": "HASH_ONLY",
+            "payload_sha256": $raw.hash("sha256").encode("hex"),
+            "payload_size_bytes": $raw.length(),
+            "validation_errors": if $parsed == null {
+              [{"field": "$", "code": "MALFORMED_JSON"}]
+            } else {
+              [{"field": "payload", "code": "SCHEMA_VIOLATION"}]
+            }
+          }
+        }
+
+output:
+  switch:
+    cases:
+      - check: meta("valid") == "true"
+        output:
+          kafka_franz:
+            seed_brokers:
+              - ${KAFKA_BROKERS:kafka:9092}
+            topic: ${KAFKA_TOPIC_READINGS:sensor.readings}
+            key: ${! json("machine_id") }
+            compression: lz4
+            idempotent_write: true
+            metadata:
+              include_patterns:
+                - "^(schema_version|message_id|correlation_id|producer_git_sha)$"
+      - output:
+          kafka_franz:
+            seed_brokers:
+              - ${KAFKA_BROKERS:kafka:9092}
+            topic: ${KAFKA_TOPIC_REJECTED:sensor.rejected}
+            compression: lz4
+            idempotent_write: true
+            metadata:
+              include_patterns:
+                - "^(schema_version|message_id|correlation_id|producer_git_sha)$"

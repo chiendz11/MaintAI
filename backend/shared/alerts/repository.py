@@ -253,6 +253,7 @@ class AlertRepository:
             row = self._locked(connection, alert_id, machines)
             timestamp = self.clock(connection)
             value = feedback.record(connection, alert_id, actor, payload, timestamp)
+            audit.record_feedback(connection, alert_id, row["status"], actor, payload, timestamp)
             emit(connection, row, timestamp, channel=self.channel)
         return value
 
