@@ -270,6 +270,7 @@ def create_app(
             database = False
         oidc = verifier.check()
         listener = notifications is None or notifications.ready
+        redis_ready = notifications.ready if getattr(notifications, "uses_redis", False) else None
         healthy = database and oidc and listener
         return JSONResponse(
             {
@@ -278,6 +279,7 @@ def create_app(
                     "database": database,
                     "oidc_keys": oidc,
                     **({"notifications": listener} if notifications is not None else {}),
+                    **({"redis": redis_ready} if redis_ready is not None else {}),
                 },
             },
             status_code=200 if healthy else 503,

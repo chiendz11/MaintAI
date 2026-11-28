@@ -120,7 +120,7 @@ def health(config):
     return observe
 
 
-def catalog(config, factory):
+def catalog(config, factory, *, redis_bus=None):
     from pathlib import Path
 
     from .catalog import DriftCatalog
@@ -132,4 +132,5 @@ def catalog(config, factory):
         Path(config.cursor_key_file).read_bytes(),
         model_version=config.model_version,
         services=health(config),
+        redis_bus=redis_bus,
     )

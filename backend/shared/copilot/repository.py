@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import logging
 from urllib.parse import quote
 from uuid import uuid4
 
@@ -14,7 +15,7 @@ from backend.shared.notifications import machine_key
 CHANNEL = "maintai_business_m7_v1"
 
 
-def emit(connection, kind, machine, data):
+def emit(connection, kind, machine, data, *, pg_notify=True):
     identifier = uuid4().hex
     timestamp = connection.execute("SELECT clock_timestamp() AS value").fetchone()["value"]
     value = {
@@ -28,19 +29,16 @@ def emit(connection, kind, machine, data):
         "INSERT INTO business_m7_notifications(notification_id,machine_id,event) VALUES(%s,%s,%s)",
         (identifier, machine, canonical_json(value)),
     )
-    connection.execute(
-        "SELECT pg_notify(%s,%s)",
-        (
-            CHANNEL,
-            json.dumps(
-                {
-                    "version": 1,
-                    "machine_key": machine_key(machine) if machine else "0" * 64,
-                    "notification_id": identifier,
-                }
-            ),
-        ),
+    hint = json.dumps(
+        {
+            "version": 1,
+            "machine_key": machine_key(machine) if machine else "0" * 64,
+            "notification_id": identifier,
+        }
     )
+    if pg_notify:
+        connection.execute("SELECT pg_notify(%s,%s)", (CHANNEL, hint))
+    return hint
 
 
 def accepted(row):
@@ -53,8 +51,20 @@ def accepted(row):
 
 
 class BriefRepository:
-    def __init__(self, factory):
+    def __init__(self, factory, *, redis_bus=None):
         self.factory = factory
+        self.redis_bus = redis_bus
+
+    def _publish_m7_hints(self, hints):
+        if self.redis_bus is None:
+            return
+        for hint in hints:
+            try:
+                self.redis_bus.publish_m7(CHANNEL, hint)
+            except Exception:
+                logging.getLogger("maintai.business.copilot").warning(
+                    "Redis M7 notification publish failed; notification stored in Postgres"
+                )
 
     def enqueue(self, alert_id, machines, actor, key, intent):
         if not isinstance(key, str) or not key.strip() or len(key.encode()) > 256:
@@ -65,6 +75,8 @@ class BriefRepository:
         request_hash = hashlib.sha256(
             canonical_json({"alert_id": alert_id, "intent": intent})
         ).hexdigest()
+        stream_job_id = None
+        hints = []
         with self.factory() as connection, connection.transaction():
             connection.execute(
                 "SELECT pg_advisory_xact_lock(hashtextextended(%s,0))", (actor + ":" + key_hash,)
@@ -116,6 +128,7 @@ class BriefRepository:
                 "AND evidence_sha256=%s AND status IN ('QUEUED','RUNNING')",
                 (alert_id, intent, stored["evidence_sha256"]),
             ).fetchone()
+            created = job is None
             if job is None:
                 job = connection.execute(
                     "INSERT INTO brief_jobs(job_id,alert_id,machine_id,actor_id,"
@@ -142,8 +155,19 @@ class BriefRepository:
                 "ON CONFLICT(alert_id) DO UPDATE SET job_id=excluded.job_id",
                 (alert_id, job["job_id"]),
             )
-            self._notify(connection, job)
-            return accepted(job)
+            hints.append(self._notify(connection, job))
+            if created and job["status"] == "QUEUED":
+                stream_job_id = job["job_id"]
+            response = accepted(job)
+        self._publish_m7_hints(hints)
+        if self.redis_bus is not None and stream_job_id is not None:
+            try:
+                self.redis_bus.enqueue_brief_job(stream_job_id)
+            except Exception:
+                logging.getLogger("maintai.business.copilot").warning(
+                    "Redis Stream brief enqueue failed; row durable in Postgres for worker sweep"
+                )
+        return response
 
     @staticmethod
     def _audit(connection, job, event):
@@ -153,14 +177,40 @@ class BriefRepository:
         )
 
     def _notify(self, connection, row, success=False):
-        emit(
+        return emit(
             connection,
             "brief.ready" if success else "brief.updated",
             row["machine_id"],
             {"job_id": row["job_id"], "alert_id": row["alert_id"]},
+            pg_notify=self.redis_bus is None,
         )
 
+    def _validate_and_attach_input(self, connection, row, hints):
+        from .schemas import valid
+
+        raw = bytes(row["input"])
+        try:
+            payload = json.loads(raw)
+            correct = hashlib.sha256(raw).hexdigest() == row["input_sha256"] and valid(
+                "brief-request", payload
+            )
+        except (ValueError, TypeError):
+            correct = False
+        if not correct:
+            connection.execute(
+                "UPDATE brief_jobs SET status='FAILED',error_code="
+                "'BRIEF_INPUT_INVALID',lease_owner=NULL,lease_until=NULL,"
+                "updated_at=clock_timestamp() WHERE job_id=%s",
+                (row["job_id"],),
+            )
+            self._audit(connection, row["job_id"], "FAILED")
+            hints.append(self._notify(connection, row))
+            return None
+        row["input"] = payload
+        return row
+
     def claim(self, owner):
+        hints = []
         with self.factory() as connection, connection.transaction():
             expired = connection.execute("""UPDATE brief_jobs SET
                 status=CASE WHEN deadline<=clock_timestamp() THEN 'EXPIRED' ELSE 'FAILED' END,
@@ -172,7 +222,7 @@ class BriefRepository:
                 RETURNING *""").fetchall()
             for row in expired:
                 self._audit(connection, row["job_id"], row["status"])
-                self._notify(connection, row)
+                hints.append(self._notify(connection, row))
             row = connection.execute(
                 """WITH candidate AS (
                 SELECT job_id FROM brief_jobs WHERE deadline>clock_timestamp()
@@ -187,28 +237,59 @@ class BriefRepository:
             ).fetchone()
             if row:
                 self._audit(connection, row["job_id"], "RUNNING")
-                from .schemas import valid
+                row = self._validate_and_attach_input(connection, row, hints)
+        self._publish_m7_hints(hints)
+        return row
 
-                raw = bytes(row["input"])
-                try:
-                    payload = json.loads(raw)
-                    correct = hashlib.sha256(raw).hexdigest() == row["input_sha256"] and valid(
-                        "brief-request", payload
-                    )
-                except (ValueError, TypeError):
-                    correct = False
-                if not correct:
-                    connection.execute(
-                        "UPDATE brief_jobs SET status='FAILED',error_code="
-                        "'BRIEF_INPUT_INVALID',lease_owner=NULL,lease_until=NULL,"
-                        "updated_at=clock_timestamp() WHERE job_id=%s",
-                        (row["job_id"],),
-                    )
-                    self._audit(connection, row["job_id"], "FAILED")
-                    self._notify(connection, row)
-                    return None
-                row["input"] = payload
-            return row
+    def claim_by_id(self, owner, job_id):
+        hints = []
+        claimed = None
+        disposition = "DONE"
+        with self.factory() as connection, connection.transaction():
+            row = connection.execute(
+                "SELECT *, clock_timestamp() AS _now FROM brief_jobs WHERE job_id=%s FOR UPDATE",
+                (job_id,),
+            ).fetchone()
+            if row is None or row["status"] in {"SUCCEEDED", "FAILED", "EXPIRED"}:
+                return None, "DONE"
+            now_ts = row["_now"]
+            lease_expired = row["lease_until"] is None or row["lease_until"] <= now_ts
+            if row["deadline"] <= now_ts or (
+                row["attempts"] >= row["max_attempts"]
+                and (row["status"] == "QUEUED" or lease_expired)
+            ):
+                new_status = "EXPIRED" if row["deadline"] <= now_ts else "FAILED"
+                err = (
+                    "BRIEF_DEADLINE_EXCEEDED"
+                    if row["deadline"] <= now_ts
+                    else "BRIEF_ATTEMPTS_EXHAUSTED"
+                )
+                expired = connection.execute(
+                    "UPDATE brief_jobs SET status=%s,error_code=%s,updated_at=clock_timestamp(),"
+                    "lease_owner=NULL,lease_until=NULL WHERE job_id=%s RETURNING *",
+                    (new_status, err, job_id),
+                ).fetchone()
+                self._audit(connection, expired["job_id"], expired["status"])
+                hints.append(self._notify(connection, expired))
+                disposition = "DONE"
+            elif row["status"] == "RUNNING" and not lease_expired:
+                disposition = "DEFER"
+            elif row["next_attempt_at"] > now_ts:
+                disposition = "DEFER_BACKOFF"
+            else:
+                updated = connection.execute(
+                    """UPDATE brief_jobs SET status='RUNNING',attempts=attempts+1,
+                    lease_owner=%s,
+                    lease_until=LEAST(deadline,clock_timestamp()+interval '90 seconds'),
+                    fencing_token=fencing_token+1,updated_at=clock_timestamp()
+                    WHERE job_id=%s RETURNING *""",
+                    (owner, job_id),
+                ).fetchone()
+                self._audit(connection, updated["job_id"], "RUNNING")
+                claimed = self._validate_and_attach_input(connection, updated, hints)
+                disposition = "CLAIMED" if claimed is not None else "DONE"
+        self._publish_m7_hints(hints)
+        return claimed, disposition
 
     def heartbeat(self, claim):
         with self.factory() as connection:
@@ -233,6 +314,7 @@ class BriefRepository:
         return self._finish(claim, code=code, retryable=retryable, delay=delay)
 
     def _finish(self, claim, *, output=None, code=None, retryable=False, delay=1):
+        hints = []
         with self.factory() as connection, connection.transaction():
             row = connection.execute(
                 """SELECT * FROM brief_jobs WHERE job_id=%s AND status='RUNNING'
@@ -257,8 +339,9 @@ class BriefRepository:
                 ),
             )
             self._audit(connection, row["job_id"], status)
-            self._notify(connection, row, success=bool(output))
-            return True
+            hints.append(self._notify(connection, row, success=bool(output)))
+        self._publish_m7_hints(hints)
+        return True
 
     def job(self, job_id, machines):
         with self.factory() as connection:

@@ -17,6 +17,7 @@ INTERNAL_HOSTS = {
     "::1",
     "kafka",
     "mosquitto",
+    "emqx",
     "postgres",
     "keycloak",
     "business-api",

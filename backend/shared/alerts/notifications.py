@@ -11,7 +11,7 @@ from backend.shared.notifications import Notifier, machine_key
 ALERT_CHANNEL = "maintai_business_alert_v1"
 
 
-def emit(connection, alert, timestamp, *, created=False, channel=ALERT_CHANNEL):
+def emit(connection, alert, timestamp, *, created=False, channel=ALERT_CHANNEL, pg_notify=True):
     Notifier(channel)
     identifier = uuid4().hex
     value = {
@@ -29,19 +29,16 @@ def emit(connection, alert, timestamp, *, created=False, channel=ALERT_CHANNEL):
         VALUES(%s,%s,%s,%s,%s)""",
         (identifier, alert["machine_id"], alert["alert_id"], canonical_json(value), timestamp),
     )
-    connection.execute(
-        "SELECT pg_notify(%s,%s)",
-        (
-            channel,
-            json.dumps(
-                {
-                    "version": 1,
-                    "machine_key": machine_key(alert["machine_id"]),
-                    "notification_id": identifier,
-                }
-            ),
-        ),
+    hint = json.dumps(
+        {
+            "version": 1,
+            "machine_key": machine_key(alert["machine_id"]),
+            "notification_id": identifier,
+        }
     )
+    if pg_notify:
+        connection.execute("SELECT pg_notify(%s,%s)", (channel, hint))
+    return hint
 
 
 def parse(raw):

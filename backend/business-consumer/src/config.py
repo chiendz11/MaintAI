@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 from backend.shared.copilot.config import M7Settings
 from backend.shared.notifications import DEFAULT_CHANNEL, Notifier
 from backend.shared.projections.config import RebuildSettings, generations_enabled
+from backend.shared.redis_bus import RedisSettings
 from backend.shared.service_auth import INTERNAL_HOSTS, ServiceOAuthConfig, loopback  # noqa: F401
 from maintai_messaging.config import KafkaSettings
 
@@ -28,6 +29,7 @@ class Settings:
     rebuild: RebuildSettings | None = None
     processing_oauth: ServiceOAuthConfig | None = None
     run_workers: bool = True
+    redis: RedisSettings | None = None
 
     @classmethod
     def from_env(cls, env=None):
@@ -103,6 +105,7 @@ class Settings:
             RebuildSettings.from_env(env, local=local),
             processing_oauth,
             run_workers_raw == "true",
+            RedisSettings.from_env(env, local=local),
         )
 
 
@@ -119,6 +122,7 @@ class WorkerSettings:
     projection_generations: bool = False
     rebuild: RebuildSettings | None = None
     processing_oauth: ServiceOAuthConfig | None = None
+    redis: RedisSettings | None = None
 
     @classmethod
     def from_env(cls, env=None):
@@ -170,4 +174,5 @@ class WorkerSettings:
             projection_generations=generations_enabled(env),
             rebuild=RebuildSettings.from_env(env, local=local),
             processing_oauth=processing_oauth,
+            redis=RedisSettings.from_env(env, local=local),
         )
